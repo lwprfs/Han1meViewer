@@ -20,6 +20,20 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlin.time.Duration.Companion.days
 import kotlin.time.ExperimentalTime
 
+enum class SiteType {
+    HANIME, MISSAV, HENTAIMAMA, JAVCHU  // Added JAVCHU
+}
+
+// These constants need to be defined or imported
+// If they don't exist, define them here or use strings directly
+object MissAvConstants {
+    val MISSAV_URL = arrayOf("https://missav.ws", "https://missav.live", "https://missav.ai")
+}
+
+object HentaiMamaConstants {
+    const val BASE_URL = "https://hentaimama.io"
+}
+
 object Preferences {
     private const val USAGE_NOTICE_ACCEPTED = "usage_notice_accepted"
 
@@ -101,6 +115,23 @@ object Preferences {
         }
 
     // 設定 相關
+
+    var siteType: SiteType
+        get() = try {
+            SiteType.valueOf(preferenceSp.getString("site_type", SiteType.HANIME.name) ?: SiteType.HANIME.name)
+        } catch (_: IllegalArgumentException) {
+            SiteType.HANIME
+        }
+        set(value) = preferenceSp.edit { putString("site_type", value.name) }
+
+    val missAvBaseUrl: String
+        get() = preferenceSp.getString("missav_base_url", MissAvConstants.MISSAV_URL[0]) ?: MissAvConstants.MISSAV_URL[0]
+
+    val hentaiMamaBaseUrl: String
+        get() = preferenceSp.getString("hentaimama_base_url", HentaiMamaConstants.BASE_URL) ?: HentaiMamaConstants.BASE_URL
+
+    val javchuBaseUrl: String
+        get() = preferenceSp.getString("javchu_base_url", "https://javchu.com") ?: "https://javchu.com"
 
     val switchPlayerKernel: String
         get() = preferenceSp.getString(
@@ -187,19 +218,29 @@ object Preferences {
             "com.yenaly.han1meviewer.LauncherAliasDefault") ?: "com.yenaly.han1meviewer.LauncherAliasDefault"
 
     val baseUrl: String
-        get() {
-            if (useCustomMirrorSite && customMirrorSite.isNotBlank()) {
-                val url = if (appendCustomMirrorPath) customMirrorSite else customMirrorSite.toRootUrl()
-                return url.toRetrofitBaseUrl()
+        get() = when (siteType) {
+            SiteType.MISSAV -> missAvBaseUrl
+            SiteType.HENTAIMAMA -> hentaiMamaBaseUrl
+            SiteType.JAVCHU -> javchuBaseUrl
+            SiteType.HANIME -> {
+                if (useCustomMirrorSite && customMirrorSite.isNotBlank()) {
+                    val url = if (appendCustomMirrorPath) customMirrorSite else customMirrorSite.toRootUrl()
+                    return url.toRetrofitBaseUrl()
+                }
+                preferenceSp.getString(SettingsPreferenceKeys.DOMAIN_NAME, HANIME_URL[0])
+                    ?: HANIME_URL[0]
             }
-            return preferenceSp.getString(SettingsPreferenceKeys.DOMAIN_NAME, HANIME_URL[0])
-                ?: HANIME_URL[0]
         }
 
     val homeUrl: String
-        get() {
-            if (useCustomMirrorSite && customMirrorSite.isNotBlank()) return customMirrorSite
-            return baseUrl
+        get() = when (siteType) {
+            SiteType.MISSAV -> missAvBaseUrl
+            SiteType.HENTAIMAMA -> hentaiMamaBaseUrl
+            SiteType.JAVCHU -> javchuBaseUrl
+            SiteType.HANIME -> {
+                if (useCustomMirrorSite && customMirrorSite.isNotBlank()) return customMirrorSite
+                baseUrl
+            }
         }
 
     val useCustomMirrorSite: Boolean
@@ -374,5 +415,15 @@ object Preferences {
                 SpeedLimitInterceptor.NO_LIMIT_INDEX
             )
             return SpeedLimitInterceptor.SPEED_BYTES[index]
+        }
+
+    val missAvUuid: String
+        get() {
+            var uuid = preferenceSp.getString("missav_uuid", null)
+            if (uuid == null) {
+                uuid = java.util.UUID.randomUUID().toString()
+                preferenceSp.edit { putString("missav_uuid", uuid) }
+            }
+            return uuid
         }
 }

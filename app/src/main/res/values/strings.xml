@@ -920,6 +920,8 @@
     <string name="home_category_layout_summary">目前顯示 %1$d / %2$d 個欄目</string>
     <string name="home_category_layout_dialog_summary">長按並拖動欄目可調整順序，關閉開關即可隱藏欄目。</string>
     <string name="debug">除錯</string>
+    <string name="missav">MissAV</string>
+    <string name="hentaimama">HentaiMama</string>
     <string name="crash_title">出了點小問題…</string>
     <string name="crash_message">程式遇到了意外狀況，可能是太興奮了🥵\n請重新啟動，或是回報給開發者～</string>
     <string name="crash_restart">重新啟動！</string>

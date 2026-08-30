@@ -21,9 +21,20 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
@@ -37,6 +48,7 @@ import com.yenaly.han1meviewer.HanimeConstants.HANIME_URL
 import com.yenaly.han1meviewer.PermissionRequester
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.logout
 import com.yenaly.han1meviewer.ui.bridge.VideoPageHost
 import com.yenaly.han1meviewer.ui.navigation.main.AccountRoute
@@ -54,6 +66,16 @@ import com.yenaly.yenaly_libs.utils.textFromClipboard
 import kotlinx.coroutines.flow.MutableSharedFlow
 import java.util.Locale
 
+// MissAV imports
+import com.yenaly.han1meviewer.MissAV.MissAvConstants
+import com.yenaly.han1meviewer.MissAV.MissAvHistoryRoute
+import com.yenaly.han1meviewer.MissAV.MissAvNavHost
+import com.yenaly.han1meviewer.MissAV.MissAvSearchRoute
+
+// HentaiMama imports
+import com.yenaly.han1meviewer.HentaiMama.HentaiMamaConstants
+import com.yenaly.han1meviewer.HentaiMama.HentaiMamaNavHost
+
 /**
  * @project Hanime1
  * @author Yenaly Liew
@@ -68,11 +90,15 @@ class MainActivity : FrameActivity(), PermissionRequester {
     private val pendingNavigationRequests = MutableSharedFlow<Intent>(extraBufferCapacity = 1)
     private var currentVideoHost: VideoPageHost? = null
 
+    // These are required by MainActivityContent
     var showSiteSwitchConfirm by mutableStateOf(false)
         private set
     var showLogoutConfirm by mutableStateOf(false)
         private set
     private var logoutCloseCurrentPage = false
+    
+    // Site selection dialog state
+    private var showSiteSelectDialog by mutableStateOf(false)
 
     companion object {
         private const val REQUEST_WRITE_EXTERNAL_STORAGE = 1234
@@ -112,6 +138,17 @@ class MainActivity : FrameActivity(), PermissionRequester {
                 onSwitchSiteClick = { requestSiteSwitch() },
                 onNavigateControllerReady = { controller -> navController = controller },
             )
+            
+            // Show site selection dialog if triggered
+            if (showSiteSelectDialog) {
+                SiteSelectionDialog(
+                    onDismiss = { showSiteSelectDialog = false },
+                    onSiteSelected = { siteType ->
+                        switchToSite(siteType)
+                        showSiteSelectDialog = false
+                    }
+                )
+            }
         }
     }
 
@@ -271,6 +308,8 @@ class MainActivity : FrameActivity(), PermissionRequester {
         }
     }
 
+    // ===== Site Switch Methods (required by MainActivityContent) =====
+
     fun requestSiteSwitch() {
         showSiteSwitchConfirm = true
     }
@@ -281,29 +320,11 @@ class MainActivity : FrameActivity(), PermissionRequester {
 
     fun confirmSiteSwitch() {
         showSiteSwitchConfirm = false
-        val currentSite = Preferences.baseUrl
-        val avSite = HANIME_URL[3]
-        val selectedBaseUrl = Preferences.selectedBaseUrl
-        if (currentSite in ANIME_URL) {
-            Preferences.preferenceSp.edit(true) {
-                putString(SettingsPreferenceKeys.SELECTED_BASE_URL, currentSite)
-                putString(SettingsPreferenceKeys.DOMAIN_NAME, avSite)
-            }
-        } else {
-            Preferences.preferenceSp.edit(true) {
-                putString(SettingsPreferenceKeys.SELECTED_BASE_URL, selectedBaseUrl)
-                putString(SettingsPreferenceKeys.DOMAIN_NAME, selectedBaseUrl)
-            }
-        }
-        Handler(Looper.getMainLooper()).postDelayed({
-            ActivityManager.restart(killProcess = true)
-        }, 500)
+        // Show the site selection dialog
+        showSiteSelectDialog = true
     }
 
-    fun gotoLoginActivity() {
-        val intent = Intent(this, LoginActivity::class.java)
-        loginDataLauncher.launch(intent)
-    }
+    // ===== Logout Methods (required by MainActivityContent) =====
 
     fun requestLogout(closeCurrentPageOnConfirm: Boolean) {
         logoutCloseCurrentPage = closeCurrentPageOnConfirm
@@ -327,6 +348,95 @@ class MainActivity : FrameActivity(), PermissionRequester {
         viewModel.getHomePage()
     }
 
+    // ===== Site Switch Logic =====
+
+    private fun switchToSite(siteType: SiteType) {
+        when (siteType) {
+            SiteType.HANIME -> {
+                // Check if currently on Javchu
+                val currentUrl = Preferences.baseUrl
+                if (currentUrl.contains("javchu")) {
+                    // Switch to regular Hanime
+                    switchToHanime()
+                } else {
+                    // Already on Hanime, just restart
+                    Preferences.siteType = SiteType.HANIME
+                    restartApp()
+                }
+            }
+            SiteType.MISSAV -> {
+                switchToMissAV()
+            }
+            SiteType.HENTAIMAMA -> {
+                switchToHentaiMama()
+            }
+            SiteType.JAVCHU -> {
+                switchToJavchu()
+            }
+        }
+    }
+
+    private fun switchToHanime() {
+        Preferences.siteType = SiteType.HANIME
+        val currentSite = Preferences.baseUrl
+        val avSite = HANIME_URL[3]
+        val selectedBaseUrl = Preferences.selectedBaseUrl
+        if (currentSite in ANIME_URL) {
+            Preferences.preferenceSp.edit(true) {
+                putString(SettingsPreferenceKeys.SELECTED_BASE_URL, currentSite)
+                putString(SettingsPreferenceKeys.DOMAIN_NAME, avSite)
+                putBoolean(SettingsPreferenceKeys.USE_CUSTOM_MIRROR_SITE, false)
+            }
+        } else {
+            Preferences.preferenceSp.edit(true) {
+                putString(SettingsPreferenceKeys.SELECTED_BASE_URL, selectedBaseUrl)
+                putString(SettingsPreferenceKeys.DOMAIN_NAME, selectedBaseUrl)
+                putBoolean(SettingsPreferenceKeys.USE_CUSTOM_MIRROR_SITE, false)
+            }
+        }
+        restartApp()
+    }
+
+    private fun switchToMissAV() {
+        Preferences.siteType = SiteType.MISSAV
+        Preferences.preferenceSp.edit(true) {
+            putString("missav_base_url", MissAvConstants.MISSAV_URL[0])
+            putBoolean(SettingsPreferenceKeys.USE_CUSTOM_MIRROR_SITE, false)
+        }
+        restartApp()
+    }
+
+    private fun switchToHentaiMama() {
+        Preferences.siteType = SiteType.HENTAIMAMA
+        Preferences.preferenceSp.edit(true) {
+            putString("hentaimama_base_url", HentaiMamaConstants.BASE_URL)
+            putBoolean(SettingsPreferenceKeys.USE_CUSTOM_MIRROR_SITE, false)
+        }
+        restartApp()
+    }
+
+    private fun switchToJavchu() {
+        Preferences.siteType = SiteType.JAVCHU
+        Preferences.preferenceSp.edit(true) {
+            putString(SettingsPreferenceKeys.DOMAIN_NAME, "https://javchu.com")
+            putString(SettingsPreferenceKeys.SELECTED_BASE_URL, "https://javchu.com")
+            putString(SettingsPreferenceKeys.CUSTOM_MIRROR_SITE, "https://javchu.com")
+            putBoolean(SettingsPreferenceKeys.USE_CUSTOM_MIRROR_SITE, true)
+        }
+        restartApp()
+    }
+
+    private fun restartApp() {
+        Handler(Looper.getMainLooper()).postDelayed({
+            ActivityManager.restart(killProcess = true)
+        }, 500)
+    }
+
+    fun gotoLoginActivity() {
+        val intent = Intent(this, LoginActivity::class.java)
+        loginDataLauncher.launch(intent)
+    }
+
     fun showVideoDetailFragment(videoCode: String, fileUri: String? = null) {
         navController.navigateSafely(VideoRoute(videoCode, fileUri))
     }
@@ -334,6 +444,8 @@ class MainActivity : FrameActivity(), PermissionRequester {
     fun registerCurrentVideoHost(host: VideoPageHost?) {
         currentVideoHost = host
     }
+
+    // ===== Permission Handling =====
 
     private var onGranted: (() -> Unit)? = null
     private var onDenied: (() -> Unit)? = null
@@ -428,5 +540,58 @@ class MainActivity : FrameActivity(), PermissionRequester {
 
     fun togglePlayPause() {
         currentVideoHost?.togglePlayPause()
+    }
+
+    // ===== Composable Dialog =====
+
+    @Composable
+    private fun SiteSelectionDialog(
+        onDismiss: () -> Unit,
+        onSiteSelected: (SiteType) -> Unit
+    ) {
+        val sites = listOf(
+            "Hanime" to SiteType.HANIME,
+            "MissAV" to SiteType.MISSAV,
+            "HentaiMama" to SiteType.HENTAIMAMA,
+            "Javchu" to SiteType.JAVCHU
+        )
+        
+        val currentSite = Preferences.siteType
+        var selectedSite by mutableStateOf(currentSite)
+        
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("Select Site") },
+            text = {
+                Column {
+                    sites.forEach { (name, site) ->
+                        val isSelected = selectedSite == site
+                        
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            RadioButton(
+                                selected = isSelected,
+                                onClick = {
+                                    selectedSite = site
+                                    onSiteSelected(site)
+                                }
+                            )
+                            Text(
+                                text = name,
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = onDismiss) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
