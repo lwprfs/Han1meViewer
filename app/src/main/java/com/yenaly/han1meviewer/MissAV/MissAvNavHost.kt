@@ -1,9 +1,11 @@
+// app/src/main/java/com/yenaly/han1meviewer/MissAV/MissAvNavHost.kt
 package com.yenaly.han1meviewer.MissAV
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
@@ -11,8 +13,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.yenaly.han1meviewer.ui.activity.MainActivity
+import com.yenaly.han1meviewer.ui.navigation.NavigationManager
 import com.yenaly.han1meviewer.ui.navigation.navigateSafely
 import com.yenaly.han1meviewer.ui.navigation.main.MainDestinationSpec
+import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -37,13 +41,17 @@ fun MissAvNavHost(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp),
 ) {
+    LaunchedEffect(Unit) {
+        delay(50)
+        NavigationManager.initialize(navController, com.yenaly.han1meviewer.SiteType.MISSAV)
+    }
+    
     NavHost(
         navController = navController,
         startDestination = MissAvHomeRoute,
         modifier = modifier,
     ) {
         composable<MissAvHomeRoute> {
-            // Only apply padding to home screen
             Box(modifier = Modifier.padding(contentPadding)) {
                 MissAvHomeScreen(
                     onNavigateToVideo = { code, path ->
@@ -52,12 +60,18 @@ fun MissAvNavHost(
                     onNavigateToSearch = { query ->
                         navController.navigateSafely(MissAvSearchRoute(query))
                     },
+                    onSwitchSite = {
+                        // Open the site switch dialog
+                        activity.requestSiteSwitch()
+                    },
+                    onNavigateToHistory = {
+                        navController.navigateSafely(MissAvHistoryRoute)
+                    }
                 )
             }
         }
         composable<MissAvSearchRoute> {
             val route = it.toRoute<MissAvSearchRoute>()
-            // No padding wrapper - search screen has its own internal padding
             MissAvSearchScreen(
                 initialQuery = route.query,
                 onBack = { navController.popBackStack() },
@@ -68,7 +82,6 @@ fun MissAvNavHost(
         }
         composable<MissAvVideoRoute> {
             val route = it.toRoute<MissAvVideoRoute>()
-            // No padding wrapper - video screen has its own Scaffold
             MissAvVideoScreen(
                 videoCode = route.videoCode,
                 path = route.path,
@@ -82,7 +95,6 @@ fun MissAvNavHost(
             )
         }
         composable<MissAvHistoryRoute> {
-            // No padding wrapper - history screen has its own Scaffold
             MissAvHistoryScreen(
                 onNavigateToVideo = { code, path ->
                     navController.navigateSafely(MissAvVideoRoute(code, path))

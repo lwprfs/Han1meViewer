@@ -21,6 +21,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.toRoute
 import com.yenaly.han1meviewer.ui.activity.MainActivity
 import com.yenaly.han1meviewer.ui.navigation.navigateSafely
+import com.yenaly.han1meviewer.ui.screen.account.AccountScreen
 import com.yenaly.han1meviewer.ui.screen.account.AvatarCropScreen
 import com.yenaly.han1meviewer.ui.screen.home.CreatorCenterScreen
 import com.yenaly.han1meviewer.ui.navigation.settings.DownloadSettingsRoute
@@ -42,6 +43,7 @@ import com.yenaly.han1meviewer.ui.navigation.settings.SettingsScaffold
 import com.yenaly.han1meviewer.ui.navigation.settings.SharedHKeyframesRoute
 import com.yenaly.han1meviewer.ui.navigation.settings.SharedHKeyframesRouteScreen
 import com.yenaly.han1meviewer.ui.screen.account.AccountScreen
+import com.yenaly.han1meviewer.ui.screen.account.AvatarCropScreen
 import com.yenaly.han1meviewer.ui.viewmodel.CreatorCenterViewModel
 import com.yenaly.han1meviewer.ui.viewmodel.UserAccountViewModel
 import kotlinx.serialization.json.Json
@@ -70,22 +72,19 @@ fun MainNavHost(
     NavHost(
         navController = navController,
         startDestination = HomeRoute,
-        // 新页面进入：从右侧滑入，同时伴随淡入，且带有回弹感
         enterTransition = {
             slideIntoContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.Start,
                 animationSpec = tween(450, easing = FastOutSlowInEasing)
             ) + fadeIn(animationSpec = tween(450))
         },
-        // 旧页面退出：向左轻微偏移，同时缩小并淡出，营造被“压在下面”的感觉
         exitTransition = {
             slideOutOfContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                targetOffset = { it / 3 }, // 只偏移 1/3 的宽度
+                targetOffset = { it / 3 },
                 animationSpec = tween(450, easing = FastOutSlowInEasing)
             ) + scaleOut(targetScale = 0.9f) + fadeOut(animationSpec = tween(300))
         },
-        // 弹出（返回）新页面进入：从左侧滑入，由 0.9 放大恢复，营造“浮上来”的感觉
         popEnterTransition = {
             slideIntoContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.End,
@@ -93,7 +92,6 @@ fun MainNavHost(
                 animationSpec = tween(450, easing = FastOutSlowInEasing)
             ) + scaleIn(initialScale = 0.9f) + fadeIn(animationSpec = tween(450))
         },
-        // 弹出（返回）旧页面退出：向右侧滑出，同时淡出
         popExitTransition = {
             slideOutOfContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.End,

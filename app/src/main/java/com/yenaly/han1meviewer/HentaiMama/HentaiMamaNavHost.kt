@@ -1,13 +1,17 @@
+// app/src/main/java/com/yenaly/han1meviewer/HentaiMama/HentaiMamaNavHost.kt
 package com.yenaly.han1meviewer.HentaiMama
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.yenaly.han1meviewer.ui.activity.MainActivity
+import com.yenaly.han1meviewer.ui.navigation.NavigationManager
 import com.yenaly.han1meviewer.ui.navigation.navigateSafely
 import com.yenaly.han1meviewer.ui.navigation.main.MainDestinationSpec
+import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -27,6 +31,11 @@ fun HentaiMamaNavHost(
     onOpenDrawer: () -> Unit,
     onDestinationChanged: (MainDestinationSpec) -> Unit,
 ) {
+    LaunchedEffect(Unit) {
+        delay(50)
+        NavigationManager.initialize(navController, com.yenaly.han1meviewer.SiteType.HENTAIMAMA)
+    }
+    
     NavHost(
         navController = navController,
         startDestination = HentaiMamaHomeRoute,
@@ -34,7 +43,6 @@ fun HentaiMamaNavHost(
         composable<HentaiMamaHomeRoute> {
             HentaiMamaHomeScreen(
                 onNavigateToVideo = { code ->
-                    // Navigate to video with proper path
                     navController.navigateSafely(HentaiMamaVideoRoute(code, "/$code"))
                 },
                 onNavigateToSearch = { query ->
@@ -61,10 +69,7 @@ fun HentaiMamaNavHost(
                     navController.popBackStack() 
                 },
                 onNavigateToVideo = { code ->
-                    // IMPORTANT: Pop the current video screen before navigating to a new one
-                    // This prevents back stack issues
                     navController.popBackStack()
-                    // Navigate to the new episode
                     navController.navigateSafely(HentaiMamaVideoRoute(code, "/$code"))
                 },
                 onNavigateToSearch = { query ->

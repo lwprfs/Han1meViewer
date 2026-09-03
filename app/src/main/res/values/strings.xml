@@ -813,7 +813,6 @@
     <string name="version_check_failed">\n⚠️ 版本檢查失敗</string>
     <string name="switch_site">切換站點</string>
     <string name="current_site">當前站點：</string>
-    <string name="confirm_switch_site">確定要切換站點嗎？</string>
     <string name="webview_exception">系統 WebView 元件異常，Cloudflare驗證頁面載入失敗！</string>
     <string name="disable_predictive_back_title">關閉預測性返回動畫</string>
     <string name="disable_predictive_back_summary">開啟後，返回手勢只有在鬆手後才會觸發返回，避免觀看影片時因誤觸返回手勢而暫停播放</string>
@@ -937,6 +936,9 @@
     <string name="crash_details">看看哪裡出錯了</string>
     <string name="crash_report">回報錯誤</string>
     <string name="crash_copy">複製錯誤訊息</string>
+    <string name="switched_to_site">Switched to %s</string>
+    <string name="confirm_switch_site">Switch Site?</string>
+    <string name="site_selection">Select Site</string>
     <string-array name="loading_hints">
         <item>哼，才、才沒有讓你久等呢！只是數據跑得慢了一點點而已！</item>
         <item>笨蛋！盯著看它也不會變快啦！……好啦，再等我三秒鐘！</item>

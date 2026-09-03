@@ -1,3 +1,4 @@
+// app/src/main/java/com/yenaly/han1meviewer/HanimeApplication.kt
 package com.yenaly.han1meviewer
 
 import android.content.ComponentName
@@ -24,6 +25,12 @@ import com.yenaly.yenaly_libs.base.YenalyApplication
 import com.yenaly.yenaly_libs.utils.LanguageHelper
 import `is`.xyz.mpv.MPVLib
 import java.net.ProxySelector
+
+// MissAV imports
+import com.yenaly.han1meviewer.MissAV.MissAvNetwork
+
+// HentaiMama imports
+import com.yenaly.han1meviewer.HentaiMama.HentaiMamaNetwork
 
 /**
  * @project Hanime1
@@ -75,6 +82,10 @@ class HanimeApplication : YenalyApplication() {
     override fun onCreate() {
         super.onCreate()
         if (!isMainProcess()) return
+        
+        // Initialize network modules FIRST
+        initNetworks()
+        
         initCrashX()
         ThemeUtils.applyDarkModeFromPreferences(this)
         if (Preferences.useDynamicColor){
@@ -95,6 +106,27 @@ class HanimeApplication : YenalyApplication() {
         }
         val selected = Preferences.fakeLauncherIcon
         switchLauncher(selected)
+    }
+
+    /**
+     * Initialize all network modules
+     */
+    private fun initNetworks() {
+        try {
+            // Initialize MissAV Network
+            MissAvNetwork.init(applicationContext)
+            Log.d(TAG, "MissAvNetwork initialized successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to initialize MissAvNetwork", e)
+        }
+
+        try {
+            // Initialize HentaiMama Network
+            HentaiMamaNetwork.rebuildNetwork()
+            Log.d(TAG, "HentaiMamaNetwork initialized successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to initialize HentaiMamaNetwork", e)
+        }
     }
 
     private fun initFirebase() {
@@ -143,6 +175,7 @@ class HanimeApplication : YenalyApplication() {
         ).setName("App Update").build()
         nm.createNotificationChannel(appUpdateChannel)
     }
+    
     fun switchLauncher(alias: String) {
         val pm = packageManager
 

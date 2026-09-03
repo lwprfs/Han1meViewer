@@ -21,11 +21,13 @@ import com.yenaly.yenaly_libs.utils.findActivityOrNull
  * @author Yenaly Liew
  * @time 2023/11/26 026 17:42
  */
-class HKeyframeRvAdapter(
+class HKeyframesRvAdapter(
     private val videoCode: String,
+    private val onModifyKeyframe: (String, HKeyframeEntity.Keyframe, HKeyframeEntity.Keyframe) -> Unit,
+    private val onRemoveKeyframe: (String, HKeyframeEntity.Keyframe) -> Unit,
     keyframe: HKeyframeEntity? = null,
 ) : BaseQuickAdapter<HKeyframeEntity.Keyframe, QuickViewHolder>(
-    keyframe?.keyframes.orEmpty(),COMPARATOR
+    keyframe?.keyframes.orEmpty(), COMPARATOR
 ) {
 
     init {
@@ -107,15 +109,11 @@ class HKeyframeRvAdapter(
                                 val pos = values.getOrElse(0) { item.position.toString() }
                                     .toLongOrNull() ?: item.position
                                 val prompt = values.getOrElse(1) { item.prompt.orEmpty() }
-                                context.findActivityOrNull<MainActivity>()?.let { activity ->
-                                    activity.viewModel.modifyHKeyframe(
-                                        videoCode, item, HKeyframeEntity.Keyframe(
-                                            position = pos,
-                                            prompt = prompt
-                                        )
-                                    )
-                                    GlobalToasts.show(context.getString(R.string.modify_success), level = GlobalToasts.ToastLevel.SUCCESS)
-                                }
+                                onModifyKeyframe(videoCode, item, HKeyframeEntity.Keyframe(
+                                    position = pos,
+                                    prompt = prompt
+                                ))
+                                GlobalToasts.show(context.getString(R.string.modify_success), level = GlobalToasts.ToastLevel.SUCCESS)
                             },
                         )
                     )
@@ -132,10 +130,8 @@ class HKeyframeRvAdapter(
                             confirmText = context.getString(R.string.confirm),
                             dismissText = context.getString(R.string.cancel),
                             onConfirm = {
-                                context.findActivityOrNull<MainActivity>()?.let { activity ->
-                                    activity.viewModel.removeHKeyframe(videoCode, item)
-                                    GlobalToasts.show(context.getString(R.string.delete_success), level = GlobalToasts.ToastLevel.SUCCESS)
-                                }
+                                onRemoveKeyframe(videoCode, item)
+                                GlobalToasts.show(context.getString(R.string.delete_success), level = GlobalToasts.ToastLevel.SUCCESS)
                             },
                         )
                     )

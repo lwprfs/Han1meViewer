@@ -7,13 +7,26 @@ import kotlinx.coroutines.withContext
 
 object MissAvHistoryRepo {
 
+    @Volatile
+    private var isInitialized = false
+
+    @Volatile
     private lateinit var appContext: Context
 
     fun init(context: Context) {
-        appContext = context.applicationContext
+        if (isInitialized) return
+        synchronized(this) {
+            if (isInitialized) return
+            appContext = context.applicationContext
+            isInitialized = true
+            android.util.Log.d("MissAvHistoryRepo", "Initialized")
+        }
     }
 
     private val dao: MissAvHistoryDao by lazy {
+        if (!isInitialized) {
+            throw IllegalStateException("MissAvHistoryRepo not initialized")
+        }
         MissAvDatabase.getInstance(appContext).missAvHistoryDao()
     }
 

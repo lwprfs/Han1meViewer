@@ -1,3 +1,4 @@
+// app/src/main/java/com/yenaly/han1meviewer/MissAV/MissAvNetwork.kt
 package com.yenaly.han1meviewer.MissAV
 
 import android.content.Context
@@ -12,21 +13,45 @@ import java.util.concurrent.TimeUnit
 
 object MissAvNetwork {
 
+    @Volatile
     private var _missAvService: MissAvService? = null
+    @Volatile
     private var _baseUrl: String? = null
+    @Volatile
     private var _okHttpClient: OkHttpClient? = null
 
+    @Volatile
+    private var isInitialized = false
+    @Volatile
     private var appContext: Context? = null
 
+    /**
+     * Initialize the network module with application context
+     * This MUST be called before using any network functions
+     */
     fun init(context: Context) {
-        appContext = context.applicationContext
+        if (isInitialized) return
+        synchronized(this) {
+            if (isInitialized) return
+            appContext = context.applicationContext
+            isInitialized = true
+            android.util.Log.d("MissAvNetwork", "Initialized")
+        }
     }
 
     private val context: Context
-        get() = appContext ?: throw IllegalStateException("MissAvNetwork not initialized")
+        get() {
+            if (!isInitialized) {
+                throw IllegalStateException("MissAvNetwork not initialized. Call MissAvNetwork.init() first.")
+            }
+            return appContext ?: throw IllegalStateException("MissAvNetwork context is null")
+        }
 
     val missAvService: MissAvService
         get() {
+            if (!isInitialized) {
+                throw IllegalStateException("MissAvNetwork not initialized. Call MissAvNetwork.init() first.")
+            }
             val currentBaseUrl = Preferences.missAvBaseUrl
             if (_missAvService == null || _baseUrl != currentBaseUrl) {
                 _baseUrl = currentBaseUrl

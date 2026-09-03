@@ -1,3 +1,4 @@
+// app/src/main/java/com/yenaly/han1meviewer/MissAV/MissAvViewModel.kt
 package com.yenaly.han1meviewer.MissAV
 
 import android.app.Application
@@ -17,7 +18,6 @@ class MissAvViewModel(application: Application) : AndroidViewModel(application) 
 
     companion object {
         private const val TAG = "MissAvViewModel"
-        private const val MAX_RETRY_COUNT = 2
     }
 
     private val _homePageFlow = MutableStateFlow<WebsiteState<MissAvHomePage>>(WebsiteState.Loading)
@@ -32,27 +32,19 @@ class MissAvViewModel(application: Application) : AndroidViewModel(application) 
     private val _videoFlow = MutableStateFlow<VideoLoadingState<MissAvVideoInfo>>(VideoLoadingState.Loading)
     val videoFlow = _videoFlow.asStateFlow()
 
-    private var retryCount = 0
-
     fun getHomePage() {
         viewModelScope.launch {
             try {
+                Log.d(TAG, "getHomePage: Starting")
                 _homePageFlow.value = WebsiteState.Loading
+                
                 MissAvNetworkRepo.getHomePage().collect { state ->
                     if (!isActive) return@collect
+                    Log.d(TAG, "getHomePage: Received state: ${state::class.simpleName}")
                     if (state is WebsiteState.Error) {
                         Log.e(TAG, "Home page error: ${state.throwable.message}")
-                        if (state.throwable is java.net.SocketTimeoutException) {
-                            _homePageFlow.value = WebsiteState.Error(
-                                IllegalStateException("Network timeout. The site may be under heavy load.")
-                            )
-                        } else {
-                            _homePageFlow.value = state
-                        }
-                    } else {
-                        retryCount = 0
-                        _homePageFlow.value = state
                     }
+                    _homePageFlow.value = state
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Home page exception", e)
@@ -88,10 +80,12 @@ class MissAvViewModel(application: Application) : AndroidViewModel(application) 
     ) {
         viewModelScope.launch {
             try {
+                Log.d(TAG, "getGenreVideos: $genrePath, page=$page")
                 val videos = MissAvNetworkRepo.getGenreVideosSync(genrePath, page, sort, filter)
+                Log.d(TAG, "getGenreVideos: Found ${videos.size} videos for $genrePath")
                 onResult(videos)
             } catch (e: Exception) {
-                Log.e(TAG, "Genre videos error", e)
+                Log.e(TAG, "Genre videos error for $genrePath", e)
                 onResult(emptyList())
             }
         }
@@ -165,7 +159,6 @@ class MissAvViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun retryHomePage() {
-        retryCount = 0
         getHomePage()
     }
 

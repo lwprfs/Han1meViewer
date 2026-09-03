@@ -1,3 +1,4 @@
+// app/src/main/java/com/yenaly/han1meviewer/Preferences.kt
 package com.yenaly.han1meviewer
 
 import android.content.SharedPreferences
@@ -21,11 +22,10 @@ import kotlin.time.Duration.Companion.days
 import kotlin.time.ExperimentalTime
 
 enum class SiteType {
-    HANIME, MISSAV, HENTAIMAMA, JAVCHU  // Added JAVCHU
+    HANIME, MISSAV, HENTAIMAMA, JAVCHU
 }
 
 // These constants need to be defined or imported
-// If they don't exist, define them here or use strings directly
 object MissAvConstants {
     val MISSAV_URL = arrayOf("https://missav.ws", "https://missav.live", "https://missav.ai")
 }
@@ -37,19 +37,12 @@ object HentaiMamaConstants {
 object Preferences {
     private const val USAGE_NOTICE_ACCEPTED = "usage_notice_accepted"
 
-    /**
-     * [Preference][androidx.preference.PreferenceFragmentCompat]自帶的SP
-     */
     val preferenceSp: SharedPreferences
         get() = PreferenceManager.getDefaultSharedPreferences(
             applicationContext
         )
 
     // app 相關
-
-    /**
-     * 是否登入，一般跟[loginCookie]一起賦值
-     */
     var isAlreadyLogin: Boolean
         get() = getSpValue(ALREADY_LOGIN, false)
         set(value) {
@@ -66,9 +59,6 @@ object Preferences {
     val savedUserId: String
         get() = preferenceSp.getString(SAVED_USER_ID,"") ?: ""
 
-    /**
-     * 保存的string格式的登入cookie
-     */
     var loginCookie
         get() = CookieString(getSpValue(LOGIN_COOKIE, EMPTY_STRING))
         set(value) {
@@ -86,8 +76,6 @@ object Preferences {
         }
     val cloudFlareCookieStateFlow = MutableStateFlow(cloudFlareCookie)
 
-    // 更新 相關
-
     private const val UPDATE_NODE_ID = "update_node_id"
 
     var updateNodeId: String
@@ -104,7 +92,6 @@ object Preferences {
     val useCIUpdateChannel
         get() = preferenceSp.getBoolean(SettingsPreferenceKeys.USE_CI_UPDATE_CHANNEL, false)
 
-    // Check if show update dialog.
     @OptIn(ExperimentalTime::class)
     val isUpdateDialogVisible: Boolean
         get() {
@@ -115,7 +102,6 @@ object Preferences {
         }
 
     // 設定 相關
-
     var siteType: SiteType
         get() = try {
             SiteType.valueOf(preferenceSp.getString("site_type", SiteType.HANIME.name) ?: SiteType.HANIME.name)
@@ -217,40 +203,97 @@ object Preferences {
             SettingsPreferenceKeys.FAKE_LAUNCHER_ICON,
             "com.yenaly.han1meviewer.LauncherAliasDefault") ?: "com.yenaly.han1meviewer.LauncherAliasDefault"
 
+    // ==================== FIXED: baseUrl Logic ====================
     val baseUrl: String
-        get() = when (siteType) {
-            SiteType.MISSAV -> missAvBaseUrl
-            SiteType.HENTAIMAMA -> hentaiMamaBaseUrl
-            SiteType.JAVCHU -> javchuBaseUrl
-            SiteType.HANIME -> {
+        get() {
+            // JAVCHU: Always use fixed URL, ignore custom mirror settings
+            if (siteType == SiteType.JAVCHU) {
+                return "https://javchu.com/"
+            }
+            
+            // HANIME: Allow custom mirror site if enabled
+            if (siteType == SiteType.HANIME) {
                 if (useCustomMirrorSite && customMirrorSite.isNotBlank()) {
                     val url = if (appendCustomMirrorPath) customMirrorSite else customMirrorSite.toRootUrl()
                     return url.toRetrofitBaseUrl()
                 }
-                preferenceSp.getString(SettingsPreferenceKeys.DOMAIN_NAME, HANIME_URL[0])
-                    ?: HANIME_URL[0]
+                return preferenceSp.getString(SettingsPreferenceKeys.DOMAIN_NAME, HanimeConstants.HANIME_URL[0])
+                    ?: HanimeConstants.HANIME_URL[0]
             }
+            
+            // MISSAV
+            if (siteType == SiteType.MISSAV) {
+                return missAvBaseUrl
+            }
+            
+            // HENTAIMAMA
+            if (siteType == SiteType.HENTAIMAMA) {
+                return hentaiMamaBaseUrl
+            }
+            
+            // Fallback
+            return HanimeConstants.HANIME_URL[0]
         }
 
+    // ==================== FIXED: homeUrl Logic ====================
     val homeUrl: String
         get() = when (siteType) {
+            SiteType.JAVCHU -> "https://javchu.com"
+            SiteType.HANIME -> {
+                if (useCustomMirrorSite && customMirrorSite.isNotBlank()) {
+                    customMirrorSite
+                } else {
+                    baseUrl
+                }
+            }
             SiteType.MISSAV -> missAvBaseUrl
             SiteType.HENTAIMAMA -> hentaiMamaBaseUrl
-            SiteType.JAVCHU -> javchuBaseUrl
-            SiteType.HANIME -> {
-                if (useCustomMirrorSite && customMirrorSite.isNotBlank()) return customMirrorSite
-                baseUrl
-            }
         }
 
+    // ==================== FIXED: useCustomMirrorSite ====================
     val useCustomMirrorSite: Boolean
-        get() = preferenceSp.getBoolean(SettingsPreferenceKeys.USE_CUSTOM_MIRROR_SITE, false)
+        get() {
+            // JAVCHU: Always false, no custom mirror
+            if (siteType == SiteType.JAVCHU) {
+                return false
+            }
+            return preferenceSp.getBoolean(SettingsPreferenceKeys.USE_CUSTOM_MIRROR_SITE, false)
+        }
 
+    // ==================== FIXED: customMirrorSite ====================
     val customMirrorSite: String
-        get() = preferenceSp.getString(SettingsPreferenceKeys.CUSTOM_MIRROR_SITE, EMPTY_STRING).orEmpty()
+        get() {
+            // JAVCHU: Always empty, no custom mirror
+            if (siteType == SiteType.JAVCHU) {
+                return ""
+            }
+            return preferenceSp.getString(SettingsPreferenceKeys.CUSTOM_MIRROR_SITE, EMPTY_STRING).orEmpty()
+        }
 
+    // ==================== FIXED: appendCustomMirrorPath ====================
     val appendCustomMirrorPath: Boolean
-        get() = preferenceSp.getBoolean(SettingsPreferenceKeys.APPEND_CUSTOM_MIRROR_PATH, true)
+        get() {
+            // JAVCHU: Always true but never used since custom mirror is disabled
+            if (siteType == SiteType.JAVCHU) {
+                return true
+            }
+            return preferenceSp.getBoolean(SettingsPreferenceKeys.APPEND_CUSTOM_MIRROR_PATH, true)
+        }
+
+    // ==================== NEW: displayUrl for UI ====================
+    val displayUrl: String
+        get() = when (siteType) {
+            SiteType.JAVCHU -> "https://javchu.com (Fixed)"
+            SiteType.HANIME -> {
+                if (useCustomMirrorSite && customMirrorSite.isNotBlank()) {
+                    "$customMirrorSite (Custom)"
+                } else {
+                    baseUrl
+                }
+            }
+            SiteType.MISSAV -> missAvBaseUrl
+            SiteType.HENTAIMAMA -> hentaiMamaBaseUrl
+        }
 
     private fun String.toRetrofitBaseUrl(): String = if (endsWith('/')) this else "$this/"
 
@@ -284,13 +327,11 @@ object Preferences {
     val dohTimeoutSeconds: Int
         get() = preferenceSp.getInt(SettingsPreferenceKeys.DOH_TIMEOUT_SECONDS, 10)
 
-    // 關鍵H幀 相關
-
     val whenCountdownRemind: Int
         get() = preferenceSp.getInt(
             SettingsPreferenceKeys.WHEN_COUNTDOWN_REMIND,
             HJzvdStd.DEF_COUNTDOWN_SEC
-        ) * 1_000 // 越不了界，最大就30_000ms而已
+        ) * 1_000
 
     val showCommentWhenCountdown: Boolean
         get() = preferenceSp.getBoolean(
@@ -316,8 +357,6 @@ object Preferences {
             false
         )
 
-    // 代理 相關
-
     val proxyType: Int
         get() = preferenceSp.getInt(
             SettingsPreferenceKeys.PROXY_TYPE,
@@ -330,17 +369,12 @@ object Preferences {
     val proxyPort: Int
         get() = preferenceSp.getInt(SettingsPreferenceKeys.PROXY_PORT, -1)
 
-    // 隐私 相關
-
     val isAnalyticsEnabled: Boolean
         get() = preferenceSp.getBoolean(SettingsPreferenceKeys.USE_ANALYTICS, true)
-
-    // 下载 相關
 
     val downloadCountLimit: Int
         get() = preferenceSp.getInt(
             SettingsPreferenceKeys.DOWNLOAD_COUNT_LIMIT,
-            // HanimeDownloadManager.MAX_CONCURRENT_DOWNLOAD_DEF
             HanimeDownloadManagerV2.MAX_CONCURRENT_DOWNLOAD_DEF
         )
 
@@ -372,42 +406,36 @@ object Preferences {
     val tabletMode: Boolean
         get() = preferenceSp.getBoolean(SettingsPreferenceKeys.TABLET_MODE, false)
 
-    /**
-     * MPV播放器设置
-     */
-    val mpvProfile: String // 预设模式
+    val mpvProfile: String
         get() = preferenceSp.getString(SettingsPreferenceKeys.MPV_PROFILE, "fast") ?: "fast"
 
-    val enableGPUNextRenderer: Boolean // gpu-next 渲染器
+    val enableGPUNextRenderer: Boolean
         get() = preferenceSp.getBoolean(SettingsPreferenceKeys.ENABLE_GPU_NEXT_RENDERER, false)
 
-    val mpvInterpolation: Boolean  // 插帧相关
+    val mpvInterpolation: Boolean
         get() = preferenceSp.getBoolean(SettingsPreferenceKeys.MPV_INTERPOLATION, false)
 
-    val mpvDeband: Boolean  // 去色带
+    val mpvDeband: Boolean
         get() = preferenceSp.getBoolean(SettingsPreferenceKeys.MPV_DEBAND, true)
 
-    val mpvFramedrop: Boolean  // GPU 繁忙时允许丢帧
+    val mpvFramedrop: Boolean
         get() = preferenceSp.getBoolean(SettingsPreferenceKeys.MPV_FRAMEDROP, true)
 
-    val mpvHwdec: String  // 硬件解码
+    val mpvHwdec: String
         get() = preferenceSp.getString(SettingsPreferenceKeys.MPV_HWDEC, "Auto")?: "Auto"
 
-    val mpvCacheSecs: Int  // 预缓存秒数
+    val mpvCacheSecs: Int
         get() = preferenceSp.getInt(SettingsPreferenceKeys.MPV_CACHE_SECS, 60)
 
-    val mpvTlsVerify: Boolean  // 忽略证书验证
+    val mpvTlsVerify: Boolean
         get() = preferenceSp.getBoolean(SettingsPreferenceKeys.MPV_TLS_VERIFY, true)
 
-    val mpvNetworkTimeout: Int  // 请求超时
+    val mpvNetworkTimeout: Int
         get() = preferenceSp.getInt(SettingsPreferenceKeys.MPV_NETWORK_TIMEOUT, 10)
 
     val customMpvParams: String
         get() = preferenceSp.getString(SettingsPreferenceKeys.CUSTOM_PARAMS,"")?: ""
 
-    /**
-     * 对应关系详见 [SpeedLimitInterceptor.SPEED_BYTES]
-     */
     val downloadSpeedLimit: Long
         get() {
             val index = preferenceSp.getInt(

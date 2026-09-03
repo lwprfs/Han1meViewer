@@ -1,3 +1,4 @@
+// app/src/main/java/com/yenaly/han1meviewer/ui/activity/MainActivity.kt
 package com.yenaly.han1meviewer.ui.activity
 
 import android.Manifest
@@ -30,6 +31,7 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -43,54 +45,49 @@ import androidx.fragment.app.FragmentActivity
 import androidx.navigation.NavHostController
 import androidx.preference.PreferenceManager
 import com.google.android.material.snackbar.Snackbar
-import com.yenaly.han1meviewer.HanimeConstants.ANIME_URL
-import com.yenaly.han1meviewer.HanimeConstants.HANIME_URL
+import com.yenaly.han1meviewer.HanimeConstants
 import com.yenaly.han1meviewer.PermissionRequester
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.logout
+import com.yenaly.han1meviewer.logic.network.HanimeNetwork
 import com.yenaly.han1meviewer.ui.bridge.VideoPageHost
+import com.yenaly.han1meviewer.ui.navigation.NavigationManager
 import com.yenaly.han1meviewer.ui.navigation.main.AccountRoute
-import com.yenaly.han1meviewer.ui.navigation.main.VideoRoute
+import com.yenaly.han1meviewer.ui.navigation.main.UnifiedMainNavHost
 import com.yenaly.han1meviewer.ui.navigation.navigateSafely
 import com.yenaly.han1meviewer.ui.navigation.settings.SettingsPreferenceKeys
 import com.yenaly.han1meviewer.ui.screen.home.homepage.HomePageViewModel
 import com.yenaly.han1meviewer.ui.screen.main.MainActivityContent
 import com.yenaly.han1meviewer.ui.component.GlobalToasts
 import com.yenaly.han1meviewer.videoUrlRegex
-import com.yenaly.yenaly_libs.ActivityManager
 import com.yenaly.yenaly_libs.base.frame.FrameActivity
 import com.yenaly.yenaly_libs.utils.showSnackBar
 import com.yenaly.yenaly_libs.utils.textFromClipboard
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.util.Locale
 
 // MissAV imports
 import com.yenaly.han1meviewer.MissAV.MissAvConstants
-import com.yenaly.han1meviewer.MissAV.MissAvHistoryRoute
-import com.yenaly.han1meviewer.MissAV.MissAvNavHost
-import com.yenaly.han1meviewer.MissAV.MissAvSearchRoute
+import com.yenaly.han1meviewer.MissAV.MissAvNetwork
 
 // HentaiMama imports
 import com.yenaly.han1meviewer.HentaiMama.HentaiMamaConstants
-import com.yenaly.han1meviewer.HentaiMama.HentaiMamaNavHost
+import com.yenaly.han1meviewer.HentaiMama.HentaiMamaNetwork
 
-/**
- * @project Hanime1
- * @author Yenaly Liew
- * @time 2022/06/08 008 17:35
- */
 class MainActivity : FrameActivity(), PermissionRequester {
 
-    val viewModel by viewModels<HomePageViewModel>()
+    val viewModel: HomePageViewModel by viewModels()
 
     lateinit var navController: NavHostController
     private var showAuthGuard by mutableStateOf(true)
     private val pendingNavigationRequests = MutableSharedFlow<Intent>(extraBufferCapacity = 1)
     private var currentVideoHost: VideoPageHost? = null
 
-    // These are required by MainActivityContent
+    // Site switching state
     var showSiteSwitchConfirm by mutableStateOf(false)
         private set
     var showLogoutConfirm by mutableStateOf(false)
@@ -99,20 +96,29 @@ class MainActivity : FrameActivity(), PermissionRequester {
     
     // Site selection dialog state
     private var showSiteSelectDialog by mutableStateOf(false)
+    
+    // Force recomposition on site change
+    private val _siteChanged = mutableStateOf(0L)
+    
+    // Site switch state for controlled navigation
+    private val _siteSwitchState = MutableStateFlow<SiteType?>(null)
+    private val siteSwitchState = _siteSwitchState.asStateFlow()
 
     companion object {
         private const val REQUEST_WRITE_EXTERNAL_STORAGE = 1234
         const val ACTION_TOGGLE_PLAY = "com.yenaly.han1meviewer.ACTION_TOGGLE_PLAY"
     }
 
-    // 登錄完了後讓activity刷新主頁
+    // Login data launcher
     private val loginDataLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == RESULT_OK) {
                 viewModel.getHomePage()
             }
         }
+    
     private var hasAuthenticated = false
+    
     private val pipActionReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             Log.i("pipmode", "✅ onReceive called with action: ${intent?.action}")
@@ -127,6 +133,26 @@ class MainActivity : FrameActivity(), PermissionRequester {
 
     private fun initData() {
         setContent {
+            // Handle site switch navigation after recomposition
+            LaunchedEffect(siteSwitchState, _siteChanged) {
+                siteSwitchState.collect { siteType ->
+                    siteType?.let {
+                        // Longer delay to ensure NavHost recomposition completes
+                        kotlinx.coroutines.delay(400)
+                        Log.d("MainActivity", "LaunchedEffect: navigating to $it")
+                        
+                        // First, clear everything
+                        NavigationManager.clearBackStack()
+                        
+                        // Then navigate to the appropriate home
+                        NavigationManager.switchSite(it)
+                        
+                        // Clear the state so we don't repeat
+                        _siteSwitchState.value = null
+                    }
+                }
+            }
+            
             MainActivityContent(
                 activity = this,
                 viewModel = viewModel,
@@ -136,7 +162,12 @@ class MainActivity : FrameActivity(), PermissionRequester {
                 onLogoutClick = { requestLogout(false) },
                 onRequireLogin = { gotoLoginActivity() },
                 onSwitchSiteClick = { requestSiteSwitch() },
-                onNavigateControllerReady = { controller -> navController = controller },
+                onNavigateControllerReady = { controller -> 
+                    navController = controller
+                    NavigationManager.initialize(controller, Preferences.siteType)
+                    Log.d("MainActivity", "NavController initialized with site: ${Preferences.siteType}")
+                },
+                siteChangeKey = _siteChanged.value,
             )
             
             // Show site selection dialog if triggered
@@ -178,7 +209,6 @@ class MainActivity : FrameActivity(), PermissionRequester {
                     }
                 )
             } else {
-                // Android 7~8，不支持 BiometricPrompt
                 GlobalToasts.show(getString(R.string.not_compact_lock_screen), level = GlobalToasts.ToastLevel.WARNING)
                 hasAuthenticated = true
                 showAuthGuard = false
@@ -202,6 +232,238 @@ class MainActivity : FrameActivity(), PermissionRequester {
         pendingNavigationRequests.tryEmit(intent)
     }
 
+    // Site Switch Methods
+    fun requestSiteSwitch() {
+        showSiteSwitchConfirm = true
+    }
+
+    fun dismissSiteSwitch() {
+        showSiteSwitchConfirm = false
+    }
+
+    fun confirmSiteSwitch() {
+        showSiteSwitchConfirm = false
+        showSiteSelectDialog = true
+    }
+
+    // Logout Methods
+    fun requestLogout(closeCurrentPageOnConfirm: Boolean) {
+        logoutCloseCurrentPage = closeCurrentPageOnConfirm
+        showLogoutConfirm = true
+    }
+
+    fun dismissLogoutConfirm() {
+        showLogoutConfirm = false
+    }
+
+    fun confirmLogout() {
+        showLogoutConfirm = false
+        if (logoutCloseCurrentPage) {
+            navController.popBackStack()
+        }
+        logoutWithRefresh()
+    }
+
+    fun logoutWithRefresh() {
+        logout()
+        viewModel.getHomePage()
+        NavigationManager.clearBackStack()
+        NavigationManager.navigateToHome()
+    }
+
+    // Site Switch Logic - COMPLETE FIX
+    private fun switchToSite(siteType: SiteType) {
+        Log.d("MainActivity", "switchToSite called: $siteType")
+        Log.d("MainActivity", "Current baseUrl before: ${Preferences.baseUrl}")
+        
+        // Save preference FIRST
+        Preferences.siteType = siteType
+        
+        // Update base URL and network based on site type
+        when (siteType) {
+            SiteType.HANIME -> {
+                // Hanime: Restore custom mirror site settings if they exist
+                val savedCustomMirror = Preferences.preferenceSp.getString(
+                    SettingsPreferenceKeys.CUSTOM_MIRROR_SITE, ""
+                ) ?: ""
+                val savedUseCustomMirror = Preferences.preferenceSp.getBoolean(
+                    SettingsPreferenceKeys.USE_CUSTOM_MIRROR_SITE, false
+                )
+                
+                // If the saved custom mirror is not empty and it's a Hanime mirror,
+                // restore it. Otherwise, use default Hanime.
+                if (savedCustomMirror.isNotBlank() && 
+                    (savedCustomMirror.contains("hanime1.me") || 
+                     savedCustomMirror.contains("hanime1.com") ||
+                     savedUseCustomMirror)) {
+                    Log.d("MainActivity", "Restoring custom mirror: $savedCustomMirror")
+                    // Keep the custom mirror settings
+                } else {
+                    // Reset to default Hanime
+                    Preferences.preferenceSp.edit(true) {
+                        putString(SettingsPreferenceKeys.DOMAIN_NAME, HanimeConstants.HANIME_URL[0])
+                        putString(SettingsPreferenceKeys.SELECTED_BASE_URL, HanimeConstants.HANIME_URL[0])
+                        putString(SettingsPreferenceKeys.CUSTOM_MIRROR_SITE, "")
+                        putBoolean(SettingsPreferenceKeys.USE_CUSTOM_MIRROR_SITE, false)
+                        putBoolean(SettingsPreferenceKeys.APPEND_CUSTOM_MIRROR_PATH, true)
+                    }
+                }
+                HanimeNetwork.rebuildNetwork()
+            }
+            SiteType.JAVCHU -> {
+                // Javchu: ALWAYS fixed URL, no custom mirror
+                Preferences.preferenceSp.edit(true) {
+                    putString(SettingsPreferenceKeys.DOMAIN_NAME, "https://javchu.com")
+                    putString(SettingsPreferenceKeys.SELECTED_BASE_URL, "https://javchu.com")
+                    putString(SettingsPreferenceKeys.CUSTOM_MIRROR_SITE, "")
+                    putBoolean(SettingsPreferenceKeys.USE_CUSTOM_MIRROR_SITE, false)
+                    putBoolean(SettingsPreferenceKeys.APPEND_CUSTOM_MIRROR_PATH, true)
+                }
+                HanimeNetwork.rebuildNetwork()
+            }
+            SiteType.MISSAV -> {
+                Preferences.preferenceSp.edit(true) {
+                    putString("missav_base_url", MissAvConstants.MISSAV_URL[0])
+                    putBoolean(SettingsPreferenceKeys.USE_CUSTOM_MIRROR_SITE, false)
+                }
+                MissAvNetwork.rebuildNetwork()
+            }
+            SiteType.HENTAIMAMA -> {
+                Preferences.preferenceSp.edit(true) {
+                    putString("hentaimama_base_url", HentaiMamaConstants.BASE_URL)
+                    putBoolean(SettingsPreferenceKeys.USE_CUSTOM_MIRROR_SITE, false)
+                }
+                HentaiMamaNetwork.rebuildNetwork()
+            }
+        }
+        
+        Log.d("MainActivity", "New baseUrl after: ${Preferences.baseUrl}")
+        Log.d("MainActivity", "New displayUrl: ${Preferences.displayUrl}")
+        
+        // Force recomposition of NavHost with a new key
+        _siteChanged.value = System.currentTimeMillis()
+        
+        // Trigger navigation after recomposition via StateFlow
+        _siteSwitchState.value = siteType
+        
+        // Show confirmation with the actual URL being used
+        Handler(Looper.getMainLooper()).postDelayed({
+            val urlDisplay = if (siteType == SiteType.JAVCHU) {
+                "Javchu (Fixed: https://javchu.com)"
+            } else {
+                Preferences.displayUrl
+            }
+            GlobalToasts.show(
+                getString(R.string.switched_to_site, urlDisplay),
+                level = GlobalToasts.ToastLevel.SUCCESS
+            )
+        }, 600)
+    }
+
+    fun gotoLoginActivity() {
+        val intent = Intent(this, LoginActivity::class.java)
+        loginDataLauncher.launch(intent)
+    }
+
+    fun showVideoDetailFragment(videoCode: String, fileUri: String? = null) {
+        NavigationManager.navigateToVideo(videoCode)
+    }
+
+    fun registerCurrentVideoHost(host: VideoPageHost?) {
+        currentVideoHost = host
+    }
+
+    // Permission Handling
+    private var onGranted: (() -> Unit)? = null
+    private var onDenied: (() -> Unit)? = null
+    private var onPermanentlyDenied: (() -> Unit)? = null
+    
+    override fun requestStoragePermission(
+        onGranted: () -> Unit,
+        onDenied: () -> Unit,
+        onPermanentlyDenied: () -> Unit
+    ) {
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+            val permission = Manifest.permission.WRITE_EXTERNAL_STORAGE
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    permission
+                ) == PackageManager.PERMISSION_GRANTED
+            ) {
+                onGranted()
+            } else {
+                this.onGranted = onGranted
+                this.onDenied = onDenied
+                this.onPermanentlyDenied = onPermanentlyDenied
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(permission),
+                    REQUEST_WRITE_EXTERNAL_STORAGE
+                )
+            }
+        } else {
+            onGranted() // Android 10+ doesn't need permission
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+
+        if (requestCode == REQUEST_WRITE_EXTERNAL_STORAGE) {
+            val permission = permissions.getOrNull(0)
+            val grantResult = grantResults.getOrNull(0)
+
+            if (permission == Manifest.permission.WRITE_EXTERNAL_STORAGE) {
+                when {
+                    grantResult == PackageManager.PERMISSION_GRANTED -> {
+                        onGranted?.invoke()
+                    }
+                    shouldShowRequestPermissionRationale(permission) -> {
+                        onDenied?.invoke()
+                    }
+                    else -> {
+                        onPermanentlyDenied?.invoke()
+                    }
+                }
+                onGranted = null
+                onDenied = null
+                onPermanentlyDenied = null
+            }
+        }
+    }
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        val currentFragment = currentVideoHost
+
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        val allowPip = prefs.getBoolean("allow_pip_mode", true)
+
+        Log.i("pipmode", "enter pip mode?\n$currentFragment\nallowpip:$allowPip\n")
+
+        if (currentFragment?.shouldEnterPip() == true && allowPip) {
+            Log.i("pipmode", "enter pip mode")
+            currentFragment.enterPipMode()
+        }
+    }
+
+    override fun onPictureInPictureModeChanged(
+        isInPictureInPictureMode: Boolean,
+        newConfig: Configuration
+    ) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        currentVideoHost?.onPipModeChanged(isInPictureInPictureMode)
+    }
+
+    fun togglePlayPause() {
+        currentVideoHost?.togglePlayPause()
+    }
+
+    // Helper Methods
     private fun isDeviceSecureCompat(context: Context): Boolean {
         val km = context.getSystemService(KEYGUARD_SERVICE) as KeyguardManager
         return km.isDeviceSecure
@@ -220,13 +482,8 @@ class MainActivity : FrameActivity(), PermissionRequester {
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                     onSuccess()
                 }
-
-                override fun onAuthenticationFailed() {
-                    // 指纹被识别但不匹配（单次）
-                }
-
+                override fun onAuthenticationFailed() {}
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                    // 取消、锁定、连续失败后触发
                     onFailed()
                 }
             }
@@ -308,242 +565,7 @@ class MainActivity : FrameActivity(), PermissionRequester {
         }
     }
 
-    // ===== Site Switch Methods (required by MainActivityContent) =====
-
-    fun requestSiteSwitch() {
-        showSiteSwitchConfirm = true
-    }
-
-    fun dismissSiteSwitch() {
-        showSiteSwitchConfirm = false
-    }
-
-    fun confirmSiteSwitch() {
-        showSiteSwitchConfirm = false
-        // Show the site selection dialog
-        showSiteSelectDialog = true
-    }
-
-    // ===== Logout Methods (required by MainActivityContent) =====
-
-    fun requestLogout(closeCurrentPageOnConfirm: Boolean) {
-        logoutCloseCurrentPage = closeCurrentPageOnConfirm
-        showLogoutConfirm = true
-    }
-
-    fun dismissLogoutConfirm() {
-        showLogoutConfirm = false
-    }
-
-    fun confirmLogout() {
-        showLogoutConfirm = false
-        if (logoutCloseCurrentPage) {
-            navController.popBackStack()
-        }
-        logoutWithRefresh()
-    }
-
-    fun logoutWithRefresh() {
-        logout()
-        viewModel.getHomePage()
-    }
-
-    // ===== Site Switch Logic =====
-
-    private fun switchToSite(siteType: SiteType) {
-        when (siteType) {
-            SiteType.HANIME -> {
-                // Check if currently on Javchu
-                val currentUrl = Preferences.baseUrl
-                if (currentUrl.contains("javchu")) {
-                    // Switch to regular Hanime
-                    switchToHanime()
-                } else {
-                    // Already on Hanime, just restart
-                    Preferences.siteType = SiteType.HANIME
-                    restartApp()
-                }
-            }
-            SiteType.MISSAV -> {
-                switchToMissAV()
-            }
-            SiteType.HENTAIMAMA -> {
-                switchToHentaiMama()
-            }
-            SiteType.JAVCHU -> {
-                switchToJavchu()
-            }
-        }
-    }
-
-    private fun switchToHanime() {
-        Preferences.siteType = SiteType.HANIME
-        val currentSite = Preferences.baseUrl
-        val avSite = HANIME_URL[3]
-        val selectedBaseUrl = Preferences.selectedBaseUrl
-        if (currentSite in ANIME_URL) {
-            Preferences.preferenceSp.edit(true) {
-                putString(SettingsPreferenceKeys.SELECTED_BASE_URL, currentSite)
-                putString(SettingsPreferenceKeys.DOMAIN_NAME, avSite)
-                putBoolean(SettingsPreferenceKeys.USE_CUSTOM_MIRROR_SITE, false)
-            }
-        } else {
-            Preferences.preferenceSp.edit(true) {
-                putString(SettingsPreferenceKeys.SELECTED_BASE_URL, selectedBaseUrl)
-                putString(SettingsPreferenceKeys.DOMAIN_NAME, selectedBaseUrl)
-                putBoolean(SettingsPreferenceKeys.USE_CUSTOM_MIRROR_SITE, false)
-            }
-        }
-        restartApp()
-    }
-
-    private fun switchToMissAV() {
-        Preferences.siteType = SiteType.MISSAV
-        Preferences.preferenceSp.edit(true) {
-            putString("missav_base_url", MissAvConstants.MISSAV_URL[0])
-            putBoolean(SettingsPreferenceKeys.USE_CUSTOM_MIRROR_SITE, false)
-        }
-        restartApp()
-    }
-
-    private fun switchToHentaiMama() {
-        Preferences.siteType = SiteType.HENTAIMAMA
-        Preferences.preferenceSp.edit(true) {
-            putString("hentaimama_base_url", HentaiMamaConstants.BASE_URL)
-            putBoolean(SettingsPreferenceKeys.USE_CUSTOM_MIRROR_SITE, false)
-        }
-        restartApp()
-    }
-
-    private fun switchToJavchu() {
-        Preferences.siteType = SiteType.JAVCHU
-        Preferences.preferenceSp.edit(true) {
-            putString(SettingsPreferenceKeys.DOMAIN_NAME, "https://javchu.com")
-            putString(SettingsPreferenceKeys.SELECTED_BASE_URL, "https://javchu.com")
-            putString(SettingsPreferenceKeys.CUSTOM_MIRROR_SITE, "https://javchu.com")
-            putBoolean(SettingsPreferenceKeys.USE_CUSTOM_MIRROR_SITE, true)
-        }
-        restartApp()
-    }
-
-    private fun restartApp() {
-        Handler(Looper.getMainLooper()).postDelayed({
-            ActivityManager.restart(killProcess = true)
-        }, 500)
-    }
-
-    fun gotoLoginActivity() {
-        val intent = Intent(this, LoginActivity::class.java)
-        loginDataLauncher.launch(intent)
-    }
-
-    fun showVideoDetailFragment(videoCode: String, fileUri: String? = null) {
-        navController.navigateSafely(VideoRoute(videoCode, fileUri))
-    }
-
-    fun registerCurrentVideoHost(host: VideoPageHost?) {
-        currentVideoHost = host
-    }
-
-    // ===== Permission Handling =====
-
-    private var onGranted: (() -> Unit)? = null
-    private var onDenied: (() -> Unit)? = null
-    private var onPermanentlyDenied: (() -> Unit)? = null
-    override fun requestStoragePermission(
-        onGranted: () -> Unit,
-        onDenied: () -> Unit,
-        onPermanentlyDenied: () -> Unit
-    ) {
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
-            val permission = Manifest.permission.WRITE_EXTERNAL_STORAGE
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    permission
-                ) == PackageManager.PERMISSION_GRANTED
-            ) {
-                onGranted()
-            } else {
-                this.onGranted = onGranted
-                this.onDenied = onDenied
-                this.onPermanentlyDenied = onPermanentlyDenied
-                ActivityCompat.requestPermissions(
-                    this,
-                    arrayOf(permission),
-                    REQUEST_WRITE_EXTERNAL_STORAGE
-                )
-            }
-        } else {
-            onGranted() // Android 10+ 不需要权限
-        }
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-
-        if (requestCode == REQUEST_WRITE_EXTERNAL_STORAGE) {
-            val permission = permissions.getOrNull(0)
-            val grantResult = grantResults.getOrNull(0)
-
-            if (permission == Manifest.permission.WRITE_EXTERNAL_STORAGE) {
-                when {
-                    grantResult == PackageManager.PERMISSION_GRANTED -> {
-                        onGranted?.invoke()
-                    }
-
-                    shouldShowRequestPermissionRationale(permission) -> {
-                        onDenied?.invoke()
-                    }
-
-                    else -> {
-                        // 永久拒绝（勾选“不再询问”）
-                        onPermanentlyDenied?.invoke()
-                    }
-                }
-                // 清除引用，防止内存泄露
-                onGranted = null
-                onDenied = null
-                onPermanentlyDenied = null
-            }
-        }
-    }
-
-    override fun onUserLeaveHint() {
-        super.onUserLeaveHint()
-        val currentFragment = currentVideoHost
-
-        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
-        val allowPip = prefs.getBoolean("allow_pip_mode", true)
-
-        Log.i("pipmode", "enter pip mode?\n$currentFragment\nallowpip:$allowPip\n")
-
-        if (currentFragment?.shouldEnterPip() == true && allowPip) {
-            Log.i("pipmode", "enter pip mode")
-            currentFragment.enterPipMode()
-        }
-    }
-
-    override fun onPictureInPictureModeChanged(
-        isInPictureInPictureMode: Boolean,
-        newConfig: Configuration
-    ) {
-        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
-
-        val currentFragment = currentVideoHost
-
-        currentFragment?.onPipModeChanged(isInPictureInPictureMode)
-    }
-
-    fun togglePlayPause() {
-        currentVideoHost?.togglePlayPause()
-    }
-
-    // ===== Composable Dialog =====
-
+    // Composable Dialog
     @Composable
     private fun SiteSelectionDialog(
         onDismiss: () -> Unit,

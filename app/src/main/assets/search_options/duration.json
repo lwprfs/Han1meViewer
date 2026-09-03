@@ -11,7 +11,7 @@
   {
     "lang": {
       "zh-rCN": "1分钟以上",
-      "en": "More than 1 minute",
+      "en": "1min",
       "zh-rTW": "1分鐘以上",
       "ja": "1分以上"
     },
@@ -20,7 +20,7 @@
   {
     "lang": {
       "zh-rCN": "5分钟以上",
-      "en": "More than 5 minute",
+      "en": "5min",
       "zh-rTW": "5分鐘以上",
       "ja": "5分以上"
     },
@@ -29,7 +29,7 @@
   {
     "lang": {
       "zh-rCN": "10分钟以上",
-      "en": "More than 10 minutes",
+      "en": "10min+",
       "zh-rTW": "10分鐘以上",
       "ja": "10分以上"
     },
@@ -38,7 +38,7 @@
   {
     "lang": {
       "zh-rCN": "20分钟以上",
-      "en": "More than 20 minutes",
+      "en": "20min+",
       "zh-rTW": "20分鐘以上",
       "ja": "20分以上"
     },
@@ -47,7 +47,7 @@
   {
     "lang": {
       "zh-rCN": "30分钟以上",
-      "en": "More than 30 minutes",
+      "en": "30min+",
       "zh-rTW": "30分鐘以上",
       "ja": "30分以上"
     },
@@ -56,7 +56,7 @@
   {
     "lang": {
       "zh-rCN": "60分钟以上",
-      "en": "More than 60 minutes",
+      "en": "60min+",
       "zh-rTW": "60分鐘以上",
       "ja": "60分以上"
     },
@@ -65,7 +65,7 @@
   {
     "lang": {
       "zh-rCN": "0~10分钟",
-      "en": "0~10 minutes",
+      "en": "0~10min",
       "zh-rTW": "0~10分鐘",
       "ja": "0〜10分"
     },
@@ -74,7 +74,7 @@
   {
     "lang": {
       "zh-rCN": "0~20分钟",
-      "en": "0~20 minutes",
+      "en": "0~20min",
       "zh-rTW": "0~20分鐘以上",
       "ja": "0〜20分"
     },

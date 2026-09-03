@@ -1,3 +1,4 @@
+// app/src/main/java/com/yenaly/han1meviewer/ui/screen/main/MainActivityContent.kt
 package com.yenaly.han1meviewer.ui.screen.main
 
 import android.content.Intent
@@ -36,8 +37,9 @@ import com.yenaly.han1meviewer.ui.component.GlobalDialogHost
 import com.yenaly.han1meviewer.ui.component.GlobalToasts
 import com.yenaly.han1meviewer.ui.component.GlobalToastHost
 import com.yenaly.han1meviewer.ui.component.UsageNoticeDialog
+import com.yenaly.han1meviewer.ui.navigation.NavigationManager
 import com.yenaly.han1meviewer.ui.navigation.main.MainDestinationSpec
-import com.yenaly.han1meviewer.ui.navigation.main.MainNavHost
+import com.yenaly.han1meviewer.ui.navigation.main.UnifiedMainNavHost
 import com.yenaly.han1meviewer.ui.navigation.main.handleMainIntent
 import com.yenaly.han1meviewer.ui.navigation.main.navigateDrawerDestination
 import com.yenaly.han1meviewer.ui.theme.HanimeTheme
@@ -64,13 +66,24 @@ fun MainActivityContent(
     onRequireLogin: () -> Unit,
     onSwitchSiteClick: () -> Unit,
     onNavigateControllerReady: (NavHostController) -> Unit,
+    siteChangeKey: Long = 0L,
 ) {
     HanimeTheme {
         val windowBackground = MaterialTheme.colorScheme.background
         LaunchedEffect(windowBackground) {
             activity.window.setBackgroundDrawable(windowBackground.toArgb().toDrawable())
         }
+        
+        // FIXED: Call rememberNavController() directly in composable context
+        // This is a @Composable function, so it must be called at the top level of a composable
         val composeNavController = rememberNavController()
+        
+        // Use LaunchedEffect to initialize NavigationManager when site changes
+        LaunchedEffect(siteChangeKey) {
+            onNavigateControllerReady(composeNavController)
+            NavigationManager.initialize(composeNavController, Preferences.siteType)
+        }
+        
         val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
         val scope = rememberCoroutineScope()
         var currentMainDestination by remember { mutableStateOf(MainDestinationSpec.Home) }
@@ -96,20 +109,19 @@ fun MainActivityContent(
         val headerIsLoading = isLoggedIn && homeState is PageState.Loading
         val selectedDrawerDestination = currentMainDestination.drawerDestination
 
-        LaunchedEffect(composeNavController) {
-            onNavigateControllerReady(composeNavController)
-        }
         LaunchedEffect(Unit) {
             pendingNavigationRequests.collect { intent ->
                 composeNavController.handleMainIntent(intent)
             }
         }
+        
         LaunchedEffect(Unit) {
             AppViewModel.pendingUpdateDialog.collect { latest ->
                 Preferences.lastUpdatePopupTime = kotlin.time.Clock.System.now().epochSeconds
                 pendingUpdate = latest
             }
         }
+        
         LaunchedEffect(viewModel) {
             viewModel.sessionExpiredMessage.collect { event ->
                 if (event.message != null) {
@@ -119,6 +131,7 @@ fun MainActivityContent(
                 }
             }
         }
+        
         LaunchedEffect(homeState) {
             if (homeState is PageState.Error) {
                 val throwable = (homeState as PageState.Error).throwable
@@ -127,6 +140,7 @@ fun MainActivityContent(
                 }
             }
         }
+        
         MainActivityScaffold(
             drawerState = drawerState,
             drawerEnabled = currentMainDestination.drawerEnabled,
@@ -161,7 +175,7 @@ fun MainActivityContent(
             },
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
-                MainNavHost(
+                UnifiedMainNavHost(
                     activity = activity,
                     navController = composeNavController,
                     isDrawerOpen = isDrawerOpen,
@@ -173,7 +187,9 @@ fun MainActivityContent(
                     onDestinationChanged = { destination ->
                         currentMainDestination = destination
                     },
+                    siteChangeKey = siteChangeKey,
                 )
+                
                 if (showAuthGuard) {
                     Box(
                         modifier = Modifier
@@ -202,6 +218,7 @@ fun MainActivityContent(
                         },
                     )
                 }
+                
                 UsageNoticeDialog(
                     visible = showUsageNotice,
                     onAccepted = {

@@ -36,6 +36,7 @@ import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.network.DohConfig
 import com.yenaly.han1meviewer.logic.network.HProxySelector
 import com.yenaly.han1meviewer.ui.component.ChoiceDialog
+import com.yenaly.han1meviewer.ui.component.SettingInfoItem
 import com.yenaly.han1meviewer.ui.component.SettingNavigationItem
 import com.yenaly.han1meviewer.ui.component.SettingSwitchItem
 import com.yenaly.han1meviewer.ui.component.lazy.LazyColumn
@@ -95,6 +96,8 @@ fun NetworkSettingsScreen(
     appendCustomMirrorPath: Boolean,
     customMirrorTestResult: String?,
     isCustomMirrorTesting: Boolean,
+    showCustomMirror: Boolean = true,
+    isJavchu: Boolean = false,
     onDomainChange: (String) -> Unit,
     onSaveCustomMirrorSite: (Boolean, String, Boolean) -> Unit,
     onTestCustomMirrorSite: (String, Boolean) -> Unit,
@@ -212,13 +215,29 @@ fun NetworkSettingsScreen(
             )
         }
 
-        item {
-            SettingNavigationItem(
-                title = stringResource(R.string.custom_mirror_site),
-                summary = if (useCustomMirrorSite && customMirrorSite.isNotBlank()) customMirrorSite else stringResource(R.string.custom_mirror_site_hint),
-                iconRes = R.drawable.baseline_domain_24,
-                onClick = { showCustomMirrorSiteDialog = true },
-            )
+        // Custom Mirror Site - Only show if not Javchu
+        if (showCustomMirror) {
+            item {
+                SettingNavigationItem(
+                    title = stringResource(R.string.custom_mirror_site),
+                    summary = if (useCustomMirrorSite && customMirrorSite.isNotBlank()) 
+                        customMirrorSite 
+                    else 
+                        stringResource(R.string.custom_mirror_site_hint),
+                    iconRes = R.drawable.baseline_domain_24,
+                    onClick = { showCustomMirrorSiteDialog = true },
+                )
+            }
+        } else if (isJavchu) {
+            // Show fixed URL info for Javchu
+            item {
+                SettingInfoItem(
+                    title = stringResource(R.string.domain_name),
+                    summary = "Javchu uses a fixed URL",
+                    valueText = "https://javchu.com",
+                    iconRes = R.drawable.baseline_domain_24,
+                )
+            }
         }
 
         item {
@@ -779,19 +798,19 @@ private fun NetworkSettingsScreenPreview() {
         NetworkSettingsScreen(
             state = NetworkSettingsUiState(
                 domainName = "https://hanime1.me/",
-                domainDisplay = "hanime1.me (默认)",
-                proxySummary = "系统代理",
+                domainDisplay = "hanime1.me (Default)",
+                proxySummary = "System Proxy",
                 useBuiltInHosts = false,
                 useCustomMirrorSite = false,
                 customMirrorSite = "",
                 appendCustomMirrorPath = true,
                 useDoH = false,
-                dohSummary = "关闭",
-                delaySummary = "启用内建Hosts后可侦测延迟状况\n不启用为实际解析位址",
+                dohSummary = "Disabled",
+                delaySummary = "Enable built-in hosts to detect latency",
             ),
             domainOptions = listOf(
-                "hanime1.me (默认)" to "https://hanime1.me/",
-                "hanime1.com (备用)" to "https://hanime1.com/",
+                "hanime1.me (Default)" to "https://hanime1.me/",
+                "hanime1.com (Backup)" to "https://hanime1.com/",
             ),
             currentHost = "https://hanime1.me/",
             delayResults = listOf(
@@ -809,6 +828,8 @@ private fun NetworkSettingsScreenPreview() {
             appendCustomMirrorPath = true,
             customMirrorTestResult = null,
             isCustomMirrorTesting = false,
+            showCustomMirror = true,
+            isJavchu = false,
             proxyType = HProxySelector.TYPE_SYSTEM,
             proxyIp = "",
             proxyPort = -1,

@@ -23,6 +23,7 @@ import androidx.core.net.toUri
 import com.yenaly.han1meviewer.EMPTY_STRING
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.logic.Parser
 import com.yenaly.han1meviewer.logic.network.DohConfig
 import com.yenaly.han1meviewer.logic.network.HDns
@@ -91,6 +92,11 @@ fun NetworkSettingsRouteScreen() {
     var pendingDohCustomUrl by remember { mutableStateOf(Preferences.dohCustomUrl) }
     var pendingDohBootstrapIps by remember { mutableStateOf(Preferences.dohBootstrapIps) }
     var pendingDohTimeoutSeconds by remember { mutableIntStateOf(Preferences.dohTimeoutSeconds) }
+    
+    // Check if current site is Javchu
+    val isJavchu = Preferences.siteType == SiteType.JAVCHU
+    val showCustomMirror = !isJavchu
+
     val delayResults = remember { mutableStateListOf<DelayResultUi>() }
     val dohTestResults = remember { mutableStateListOf<DohTestResultUi>() }
     val delayHandler = remember { Handler(Looper.getMainLooper()) }
@@ -99,6 +105,7 @@ fun NetworkSettingsRouteScreen() {
     val uiState = remember(refreshKey, context) { buildNetworkSettingsUiState(context) }
     val networkTimeoutText = stringResource(R.string.network_timeout_text)
     val invalidIpOrPort = stringResource(R.string.invalid_ip_or_port)
+
     fun stopDelayTest() {
         isDelayTesting = false
         delayHandler.removeCallbacksAndMessages(null)
@@ -186,7 +193,7 @@ fun NetworkSettingsRouteScreen() {
 
     NetworkSettingsScreen(
         state = uiState,
-        domainOptions = buildDomainOptions(context),
+        domainOptions = buildDomainOptions(),
         currentHost = currentHost,
         delayResults = delayResults,
         dohTestResults = dohTestResults,
@@ -200,15 +207,18 @@ fun NetworkSettingsRouteScreen() {
         dohCustomUrl = Preferences.dohCustomUrl,
         dohBootstrapIps = Preferences.dohBootstrapIps,
         dohTimeoutSeconds = Preferences.dohTimeoutSeconds,
-        useCustomMirrorSite = Preferences.useCustomMirrorSite,
-        customMirrorSite = Preferences.customMirrorSite,
-        appendCustomMirrorPath = Preferences.appendCustomMirrorPath,
+        useCustomMirrorSite = if (isJavchu) false else Preferences.useCustomMirrorSite,
+        customMirrorSite = if (isJavchu) "" else Preferences.customMirrorSite,
+        appendCustomMirrorPath = if (isJavchu) true else Preferences.appendCustomMirrorPath,
         customMirrorTestResult = customMirrorTestResult,
         isCustomMirrorTesting = isCustomMirrorTesting,
+        showCustomMirror = showCustomMirror,
+        isJavchu = isJavchu,
         onDomainChange = { newValue ->
             val origin = Preferences.baseUrl
             if (newValue != origin) {
                 pendingDomainValue = newValue
+                // Reset custom mirror settings when domain changes
                 pendingUseCustomMirrorSite = false
                 pendingCustomMirrorSite = Preferences.customMirrorSite
                 pendingAppendCustomMirrorPath = Preferences.appendCustomMirrorPath
@@ -216,6 +226,8 @@ fun NetworkSettingsRouteScreen() {
             }
         },
         onSaveCustomMirrorSite = { enabled, url, appendPath ->
+            if (isJavchu) return@NetworkSettingsScreen
+            
             val normalizedUrl = normalizeCustomMirrorSite(url)
             if (enabled && normalizedUrl == null) {
                 showCustomMirrorValidationError = true
@@ -237,6 +249,8 @@ fun NetworkSettingsRouteScreen() {
             }
         },
         onTestCustomMirrorSite = { url, appendPath ->
+            if (isJavchu) return@NetworkSettingsScreen
+            
             val normalizedUrl = normalizeCustomMirrorSite(url)
             if (normalizedUrl == null) {
                 customMirrorTestResult = context.getString(R.string.custom_mirror_site_invalid)
@@ -481,7 +495,7 @@ fun NetworkSettingsRouteScreen() {
 private fun buildNetworkSettingsUiState(context: Context): NetworkSettingsUiState {
     return NetworkSettingsUiState(
         domainName = Preferences.baseUrl,
-        domainDisplay = buildDomainOptions(context).firstOrNull { it.second == Preferences.baseUrl }?.first
+        domainDisplay = buildDomainOptions().firstOrNull { it.second == Preferences.baseUrl }?.first
             ?: Preferences.baseUrl,
         proxySummary = when (Preferences.proxyType) {
             HProxySelector.TYPE_DIRECT -> context.getString(R.string.direct)
@@ -507,6 +521,13 @@ private fun buildNetworkSettingsUiState(context: Context): NetworkSettingsUiStat
         useDoH = Preferences.useDoH,
         dohSummary = buildDohSummary(context),
         delaySummary = context.getString(R.string.node_latency_sum),
+    )
+}
+
+private fun buildDomainOptions(): List<Pair<String, String>> {
+    return listOf(
+        "hanime1.me (Default)" to "https://hanime1.me/",
+        "hanime1.com (Backup)" to "https://hanime1.com/",
     )
 }
 

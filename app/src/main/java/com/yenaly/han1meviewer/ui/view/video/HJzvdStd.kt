@@ -52,7 +52,7 @@ import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.entity.HKeyframeEntity
 import com.yenaly.han1meviewer.ui.activity.MainActivity
-import com.yenaly.han1meviewer.ui.adapter.HKeyframeRvAdapter
+import com.yenaly.han1meviewer.ui.adapter.HKeyframesRvAdapter
 import com.yenaly.han1meviewer.ui.adapter.SuperResolutionAdapter
 import com.yenaly.han1meviewer.ui.adapter.VideoSpeedAdapter
 import com.yenaly.han1meviewer.ui.component.GlobalDialogs
@@ -222,6 +222,7 @@ class HJzvdStd @JvmOverloads constructor(
             }
             jzDataSource.objects[0] = value
         }
+    
     fun getSuperResolutionArray(): Array<String> = arrayOf(
         context.getString(R.string.super_resolution_off),
         context.getString(R.string.super_resolution_performance),
@@ -253,36 +254,61 @@ class HJzvdStd @JvmOverloads constructor(
     var savedProgress: Long = 0L
     private lateinit var btnResumeProgress: MaterialButton
     private val handler = Handler(Looper.getMainLooper())
-    private val hideResumeBtnRunnable  = Runnable {
+    private val hideResumeBtnRunnable = Runnable {
         btnResumeProgress.visibility = GONE
     }
-    private var hasRestoredProgress  = false
+    private var hasRestoredProgress = false
     lateinit var orientationManager: OrientationManager
     private lateinit var superResolution: TextView
 
     var hKeyframe: HKeyframeEntity? = null
         set(value) {
             field = value
-            hKeyframeAdapter.submitList(value?.keyframes)
-            hKeyframeAdapter.isLocal = value?.let { it.author == null } ?: true
+            hKeyframeAdapter?.submitList(value?.keyframes)
+            hKeyframeAdapter?.isLocal = value?.let { it.author == null } ?: true
         }
 
     var videoCode: String? = null
+        set(value) {
+            field = value
+            // Reinitialize HKeyframeAdapter when videoCode is set
+            if (!value.isNullOrEmpty()) {
+                initHKeyframeAdapter()
+            }
+        }
 
-    private val hKeyframeAdapter: HKeyframeRvAdapter by unsafeLazy { initHKeyframeAdapter() }
+    private var hKeyframeAdapter: HKeyframesRvAdapter? = null
     private val switchPlayerKernel = Preferences.switchPlayerKernel
     var onVideoStateChanged: ((state: Int) -> Unit)? = null
 
     /**
-     * 初始化關鍵H幀的 Adapter，最好不用 lazy
-     *
-     * 但我還是最終用了 lazy，要不然首次 submitList 收不到
+     * 初始化關鍵H幀的 Adapter
      */
-    private fun initHKeyframeAdapter() = run {
-        val videoCode = checkNotNull(this.videoCode) {
-            "If you want to use HKeyframeAdapter, you must set videoCode first."
+    private fun initHKeyframeAdapter() {
+        val videoCode = this.videoCode
+        if (videoCode.isNullOrEmpty()) {
+            // If videoCode is not set yet, create a stub adapter
+            // The adapter will be properly initialized when videoCode is set later
+            hKeyframeAdapter = HKeyframesRvAdapter(
+                videoCode = "",
+                onModifyKeyframe = { _, _, _ -> },
+                onRemoveKeyframe = { _, _ -> }
+            )
+            return
         }
-        HKeyframeRvAdapter(videoCode).apply {
+        hKeyframeAdapter = HKeyframesRvAdapter(
+            videoCode = videoCode,
+            onModifyKeyframe = { code, oldKeyframe, newKeyframe ->
+                context.findActivityOrNull<MainActivity>()?.viewModel?.modifyHKeyframe(
+                    code, oldKeyframe, newKeyframe
+                )
+            },
+            onRemoveKeyframe = { code, keyframe ->
+                context.findActivityOrNull<MainActivity>()?.viewModel?.removeHKeyframe(
+                    code, keyframe
+                )
+            }
+        ).apply {
             setOnItemClickListener { _, _, position ->
                 val keyframe = getItem(position)
                 mediaInterface?.seekTo(keyframe.position)
@@ -290,6 +316,7 @@ class HJzvdStd @JvmOverloads constructor(
             }
         }
     }
+    
     private fun isNeedResumeProgress(): Boolean {
         return savedProgress > 5000 && Preferences.allowResumePlayback && !hasRestoredProgress
     }
@@ -433,6 +460,8 @@ class HJzvdStd @JvmOverloads constructor(
             gestureLock.isSelected = gestureLocked
         }
 
+        // Initialize HKeyframeAdapter with stub adapter if videoCode not set yet
+        initHKeyframeAdapter()
     }
 
     override fun setUp(jzDataSource: JZDataSource?, screen: Int) {
@@ -442,6 +471,7 @@ class HJzvdStd @JvmOverloads constructor(
     fun setUp(jzDataSource: JZDataSource?, screen: Int, kernel: HMediaKernel.Type) {
         setUp(jzDataSource, screen, kernel.clazz)
     }
+    
     fun setControlsVisible(visible: Boolean) {
         findViewById<View>(R.id.tv_speed)?.isVisible = visible
         findViewById<View>(R.id.tv_keyframe)?.isVisible = visible
@@ -450,6 +480,7 @@ class HJzvdStd @JvmOverloads constructor(
         findViewById<View>(R.id.layout_top)?.isVisible = visible
         findViewById<View>(R.id.layout_bottom)?.isVisible = visible
     }
+    
     override fun setUp(jzDataSource: JZDataSource?, screen: Int, clazz: Class<*>) {
         super.setUp(jzDataSource, screen, clazz)
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
@@ -720,6 +751,7 @@ class HJzvdStd @JvmOverloads constructor(
 
         }
     }
+    
     @SuppressLint("InflateParams")
     fun clickSuperResolution() {
         onCLickUiToggleToClear()
@@ -1221,7 +1253,7 @@ class HJzvdStd @JvmOverloads constructor(
         rv.layoutManager = LinearLayoutManager(v.context)
         val adapter = hKeyframeAdapter
         rv.adapter = adapter
-        adapter.setStateViewLayout(
+        adapter?.setStateViewLayout(
             inflate(v.context, R.layout.layout_empty_view, null),
             this@HJzvdStd.context.getString(R.string.here_is_empty) + "\n"
                     + this@HJzvdStd.context.getString(R.string.long_press_to_add_h_keyframe)
@@ -1255,6 +1287,7 @@ class HJzvdStd @JvmOverloads constructor(
             else -> throw IllegalStateException("Invalid sensitivity value: $this")
         }
     }
+    
     private fun updateVideoPlayerSize(fullscreen: Boolean) {
         if (mediaInterface is MpvMediaKernel) {
             val kernel = mediaInterface as MpvMediaKernel
