@@ -1,4 +1,3 @@
-// app/src/main/java/com/yenaly/han1meviewer/Preferences.kt
 package com.yenaly.han1meviewer
 
 import android.content.SharedPreferences
@@ -157,6 +156,9 @@ object Preferences {
 
     val showPlayedIndicator: Boolean
         get() = preferenceSp.getBoolean(SettingsPreferenceKeys.SHOW_PLAYED_INDICATOR,true)
+
+    val watchedProgressThreshold: Int
+        get() = preferenceSp.getInt(SettingsPreferenceKeys.WATCHED_PROGRESS_THRESHOLD, 90)
 
     val searchGridColumnsConfig: SearchGridColumnsConfig
         get() = SearchGridColumnsConfig(
@@ -406,7 +408,13 @@ object Preferences {
     val tabletMode: Boolean
         get() = preferenceSp.getBoolean(SettingsPreferenceKeys.TABLET_MODE, false)
 
-    val mpvProfile: String
+    val showExitConfirm: Boolean
+        get() = preferenceSp.getBoolean(SettingsPreferenceKeys.SHOW_EXIT_CONFIRM, true)
+
+    /**
+     * MPV播放器设置
+     */
+    val mpvProfile: String // 预设模式
         get() = preferenceSp.getString(SettingsPreferenceKeys.MPV_PROFILE, "fast") ?: "fast"
 
     val enableGPUNextRenderer: Boolean
