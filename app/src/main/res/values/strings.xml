@@ -35,6 +35,7 @@
     <string name="collapse">收起</string>
     <string name="expand">展開</string>
     <string name="series_video">系列影片</string>
+    <string name="auto_play_next">自動續播</string>
     <string name="related_video">相關影片</string>
     <string name="now_playing">現正播放</string>
     <string name="view_more_replies">查看 %1$d 則回覆</string>
@@ -140,6 +141,7 @@
     <string name="sort_by_date_descending">時間反排序</string>
     <string name="sort_by_alphabet_ascending">字母正排序</string>
     <string name="sort_by_alphabet_descending">字母反排序</string>
+    <string name="search_downloaded_hint">搜尋已下載影片…</string>
     <string name="h_keyframe_settings">關鍵H幀設定</string>
     <string name="h_keyframes_enable">關鍵H幀，啟動！</string>
     <string name="h_keyframes_enable_tip">該功能關閉後並不會刪除你的歷史資料</string>
@@ -765,6 +767,8 @@
     <string name="show_played_indicator_summary">開啟後將在搜尋結果頁影片封面右上角顯示已播放標記</string>
     <string name="watched_progress_threshold">標記已觀看的進度門檻</string>
     <string name="watched_progress_threshold_summary">播放進度達到該百分比後才標記為已觀看（目前：%1$d%%）</string>
+    <string name="search_pagination">分頁載入</string>
+    <string name="search_pagination_summary">開啟後搜尋結果改用分頁導覽，關閉則使用瀑布流無限載入</string>
     <string name="horizontal_card_count_title">橫向列表可見卡片數</string>
     <string name="horizontal_card_count_summary">可調整首頁與影片詳情相關影片等橫向列表一次可見的卡片數量</string>
     <string name="horizontal_card_count_dialog_hint">依不同螢幕寬度設定橫向列表一次可見的卡片數量</string>

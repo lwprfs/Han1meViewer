@@ -1,6 +1,8 @@
 package com.yenaly.han1meviewer.ui.navigation.main
 
 import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -14,6 +16,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -73,13 +77,15 @@ fun MainNavHost(
         navController = navController,
         startDestination = HomeRoute,
         enterTransition = {
-            slideIntoContainer(
+            if (targetState.isAutoPlayVideo()) EnterTransition.None
+            else slideIntoContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.Start,
                 animationSpec = tween(450, easing = FastOutSlowInEasing)
             ) + fadeIn(animationSpec = tween(450))
         },
         exitTransition = {
-            slideOutOfContainer(
+            if (targetState.isAutoPlayVideo()) ExitTransition.None
+            else slideOutOfContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.Start,
                 targetOffset = { it / 3 },
                 animationSpec = tween(450, easing = FastOutSlowInEasing)
@@ -327,3 +333,6 @@ fun MainNavHost(
         }
     }
 }
+
+private fun NavBackStackEntry.isAutoPlayVideo(): Boolean =
+    destination.hasRoute<VideoRoute>() && toRoute<VideoRoute>().autoPlay
