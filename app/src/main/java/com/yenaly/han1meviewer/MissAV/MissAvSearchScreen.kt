@@ -50,7 +50,7 @@ private val FILTER_OPTIONS = listOf(
 private val GENRE_OPTIONS = listOf(
     "en/release" to "All",
     "en/english-subtitle" to "English Subtitle",
-    "en/uncensored-leak" to "Uncensored Leak",
+    "en/uncensored-leak" to "Uncensored Leak", //dm2208642/en/heyzo
     "en/genres/Hd" to "Hd",
     "en/genres/Exclusive" to "Exclusive",
     "en/genres/Creampie" to "Creampie",
@@ -290,7 +290,22 @@ private val GENRE_OPTIONS = listOf(
     "en/genres/Lewd%20Nasty%20Lady" to "Lewd Nasty Lady",
     "en/genres/Bubble%20Socks" to "Bubble Socks",
     "en/genres/Idol" to "Idol",
-    "en/genres/Time%20Stops" to "Time Stops"
+    "en/genres/Time%20Stops" to "Time Stops",
+    "en/madou" to "Madou",
+    "en/twav" to "TWAV",
+    "en/furuke" to "Furuke",
+    "en/fc2" to "FC2",
+    "en/heyzo" to "HEYZO", //dm2208642/en/heyzo
+    "en/1pondo" to "1pondo", //dm5199603/en/1pondo
+    "en/xxxav" to "xxxav", //dm42/en/xxxav
+    "en/caribbeancom" to "caribbeancom", //dm7704788/en/caribbeancom
+    "en/caribbeancompr" to "caribbeancompr",
+    "en/10musume" to "10musume", //dm7208981/en/10musume
+    "en/pacopacomama" to "pacopacomama", //dm3600557/en/pacopacomama
+    "en/gachinco" to "gachinco", //dm150/en/gachinco
+    "en/marriedslash" to "marriedslash", //dm37/en/marriedslash
+    "en/naughty4610" to "naughty4610", //dm33/en/naughty4610
+    "en/naughty0930" to "naughty0930" //dm37/en/naughty0930
 )
 
 data class ActiveFilters(

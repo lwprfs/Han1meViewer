@@ -30,18 +30,16 @@ import com.yenaly.han1meviewer.ui.theme.SpacingNormal
 import kotlinx.coroutines.delay
 
 private val HOME_CATEGORIES = listOf(
-    HomeCategory("Release Date", "en/release", "released_at"),
-    HomeCategory("Weekly Views", "en/weekly-hot", "released_at"),
-    HomeCategory("Monthly Views", "en/monthly-hot", "released_at"),
-    HomeCategory("Total Views", "en/release", "published_at"),
-    HomeCategory("Uncensored Leak", "en/uncensored-leak", "published_at"),
-    HomeCategory("Creampie", "en/genres/Creampie", "published_at"),
-    HomeCategory("Breast Milk", "en/genres/Breast%20Milk", "published_at"),
+    HomeCategory("Release Date", "en/release", null),
+    HomeCategory("Weekly Views", "en/weekly-hot", null),
+    HomeCategory("Monthly Views", "en/monthly-hot", null),
+    HomeCategory("Total Views", "en/release", null),
+    HomeCategory("Uncensored Leak", "en/uncensored-leak", "today_views"),
+    HomeCategory("Creampie", "en/genres/Creampie", null),
+    HomeCategory("Breast Milk", "en/genres/Breast%20Milk", null),
     HomeCategory("Premature Ejaculation", "en/genres/Premature%20Ejaculation", "published_at"),
-    HomeCategory("Harem", "en/genres/Harem", "published_at"),
-    HomeCategory("Virgin", "en/genres/Virgin", "published_at"),
+    HomeCategory("Virgin", "en/genres/Virgin", "today_views"),
     HomeCategory("Sister", "en/genres/Sister", "published_at"),
-    HomeCategory("Incest", "en/genres/Incest", "published_at"),
 )
 
 data class HomeCategory(

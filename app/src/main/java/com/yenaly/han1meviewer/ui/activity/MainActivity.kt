@@ -1,4 +1,3 @@
-// app/src/main/java/com/yenaly/han1meviewer/ui/activity/MainActivity.kt
 package com.yenaly.han1meviewer.ui.activity
 
 import android.Manifest
