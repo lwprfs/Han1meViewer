@@ -328,7 +328,7 @@ fun MissAvSearchScreen(
             val activeChips = buildList {
                 if (isBrowsing) {
                     selectedGenre?.let { key ->
-                        val label = MissAvOptions.displayName(MissAvGroup.GENRE, key) ?: key
+                        val label = MissAvOptions.genreLabel(key) ?: key
                         add("Genre: $label" to {
                             selectedGenre = null
                             doSearch()

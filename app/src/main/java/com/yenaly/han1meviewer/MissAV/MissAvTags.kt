@@ -4,65 +4,66 @@ import com.yenaly.han1meviewer.util.loadAssetAs
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/**
- * A single selectable option (sort / filter / genre / whatever).
- */
 @Serializable
 data class MissAvTag(
     @SerialName("search_key") val searchKey: String,
     @SerialName("name") val name: String,
+    @SerialName("group") val group: String? = null,
 )
 
-/**
- * Root of assets/missav_options/tags.json.
- *
- * Add new top-level arrays to the JSON to introduce new filter groups
- * without changing this class — just extend it with the new field.
- */
 @Serializable
 data class MissAvTags(
     @SerialName("sort")   val sort: List<MissAvTag> = emptyList(),
     @SerialName("filter") val filter: List<MissAvTag> = emptyList(),
-    @SerialName("genre")  val genre: List<MissAvTag> = emptyList(),
-    // Add more groups later, e.g.:
-    // @SerialName("producer") val producer: List<MissAvTag> = emptyList(),
-) {
-    /** Return any group by its JSON key. */
-    fun group(key: MissAvGroup): List<MissAvTag> = when (key) {
-        MissAvGroup.SORT -> sort
-        MissAvGroup.FILTER -> filter
-        MissAvGroup.GENRE -> genre
-    }
-}
+)
 
-/** Identifies a filter group. Kept as an enum so we can add groups safely. */
 enum class MissAvGroup(val jsonKey: String, val displayName: String) {
     SORT("sort", "Sort"),
     FILTER("filter", "Filter"),
     GENRE("genre", "Genre"),
 }
 
-/**
- * Central access point for MissAV filter options.
- * Loaded once from assets, cached for the process lifetime.
- */
 object MissAvOptions {
 
     val tags: MissAvTags by lazy {
-        loadAssetAs<MissAvTags>("missav_options/tags.json")
-            ?: MissAvTags()
+        loadAssetAs<MissAvTags>("missav_options/tags.json") ?: MissAvTags()
+    }
+
+    val genreOptions: List<MissAvTag> by lazy {
+        loadAssetAs<List<MissAvTag>>("missav_options/genres.json").orEmpty()
     }
 
     val sortOptions: List<MissAvTag> get() = tags.sort
     val filterOptions: List<MissAvTag> get() = tags.filter
-    val genreOptions: List<MissAvTag> get() = tags.genre
 
-    /** The default genre when no genre is selected ("All"). */
     const val DEFAULT_GENRE_KEY = "en/release"
+    const val OTHER_GROUP = "Other"
 
-    /** Look up the display name for a search key. */
+    /** All group names in display order (Other is forced last). */
+    val genreGroupNames: List<String> by lazy {
+        val present = genreOptions.mapNotNull { it.group }.distinct()
+        val ordered = present.filter { it != OTHER_GROUP }
+        ordered + listOfNotNull(OTHER_GROUP.takeIf { it in present })
+    }
+
+    /** Genres inside a given group, sorted alphabetically. */
+    fun genresInGroup(group: String): List<MissAvTag> =
+        genreOptions.filter { it.group == group }.sortedBy { it.name }
+
     fun displayName(group: MissAvGroup, searchKey: String?): String? {
         if (searchKey.isNullOrBlank()) return null
-        return tags.group(group).firstOrNull { it.searchKey == searchKey }?.name
+        val list = when (group) {
+            MissAvGroup.SORT -> sortOptions
+            MissAvGroup.FILTER -> filterOptions
+            MissAvGroup.GENRE -> genreOptions
+        }
+        return list.firstOrNull { it.searchKey == searchKey }?.name
+    }
+
+    /** "Group › Name" label for a selected genre. */
+    fun genreLabel(searchKey: String?): String? {
+        if (searchKey.isNullOrBlank()) return null
+        val tag = genreOptions.firstOrNull { it.searchKey == searchKey } ?: return searchKey
+        return tag.group?.let { "$it › ${tag.name}" } ?: tag.name
     }
 }
