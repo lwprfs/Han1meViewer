@@ -16,14 +16,13 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.ComposeView
-import androidx.core.content.edit
 import androidx.preference.PreferenceManager
-import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.USER_AGENT
 import com.yenaly.han1meviewer.MissAV.MissAvCloudflareCookieManager
 import com.yenaly.han1meviewer.ui.screen.web.CloudflareScreen
 import com.yenaly.han1meviewer.ui.theme.HanimeTheme
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import java.util.Locale
 
 class MissAvCloudflareActivity : AppCompatActivity() {
@@ -79,24 +78,24 @@ class MissAvCloudflareActivity : AppCompatActivity() {
                 setAcceptThirdPartyCookies(wv, true)
             }
 
-            // Only clear cookies for the specific domain
-            val domain = url.substringBefore("/", "")
-            cookieMgr.setCookie(domain, "cf_clearance=; Max-Age=0")
-            cookieMgr.setCookie(domain, "__cf_bm=; Max-Age=0")
-
             webViewClient = object : WebViewClient() {
                 override fun shouldOverrideUrlLoading(
                     view: WebView?,
                     request: WebResourceRequest?,
                 ): Boolean = false
 
-                override fun onPageFinished(view: WebView?, url: String?) {
-                    super.onPageFinished(view, url)
-                    view?.evaluateJavascript("document.querySelector('#challenge-form, #challenge-success-text, #challenge-error-text')") { result ->
+                override fun onPageFinished(view: WebView?, loadedUrl: String?) {
+                    super.onPageFinished(view, loadedUrl)
+                    view?.evaluateJavascript(
+                        "document.querySelector('#challenge-form, #challenge-success-text, #challenge-error-text')"
+                    ) { result ->
                         if (result == "null") {
-                            val cookies = cookieMgr.getCookie(url) ?: ""
+                            val cookies = cookieMgr.getCookie(loadedUrl) ?: ""
                             if (cookies.contains("cf_clearance")) {
-                                MissAvCloudflareCookieManager.saveCloudflareCookie(cookies)
+                                val host = loadedUrl?.toHttpUrlOrNull()?.host
+                                if (host != null) {
+                                    MissAvCloudflareCookieManager.saveCloudflareCookie(host, cookies)
+                                }
                                 cookieMgr.flush()
                                 onFinished?.invoke()
                                 onFinished = null
@@ -119,7 +118,10 @@ class MissAvCloudflareActivity : AppCompatActivity() {
                                 if (!hasChallenge) {
                                     val cookies = cookieMgr.getCookie(url) ?: ""
                                     if (cookies.contains("cf_clearance")) {
-                                        MissAvCloudflareCookieManager.saveCloudflareCookie(cookies)
+                                        val host = url.toHttpUrlOrNull()?.host
+                                        if (host != null) {
+                                            MissAvCloudflareCookieManager.saveCloudflareCookie(host, cookies)
+                                        }
                                         cookieMgr.flush()
                                         onFinished?.invoke()
                                         onFinished = null
@@ -133,7 +135,11 @@ class MissAvCloudflareActivity : AppCompatActivity() {
             }
 
             val cacheBuster = "?_=${System.currentTimeMillis()}"
-            val finalUrl = if (url.contains("?")) "$url&_=${System.currentTimeMillis()}" else "$url$cacheBuster"
+            val finalUrl = if (url.contains("?")) {
+                "$url&_=${System.currentTimeMillis()}"
+            } else {
+                "$url$cacheBuster"
+            }
             loadUrl(finalUrl)
         }
     }
@@ -151,7 +157,6 @@ class MissAvCloudflareActivity : AppCompatActivity() {
     }
 
     private fun applyAppLocale(context: Context): Context {
-        // Use PreferenceManager directly instead of defaultSharedPreferences extension
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
         val lang = prefs.getString("app_language", "system") ?: "system"
         val newLocale = when (lang) {

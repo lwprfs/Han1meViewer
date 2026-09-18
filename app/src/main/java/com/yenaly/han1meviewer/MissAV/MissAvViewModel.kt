@@ -1,4 +1,3 @@
-// app/src/main/java/com/yenaly/han1meviewer/MissAV/MissAvViewModel.kt
 package com.yenaly.han1meviewer.MissAV
 
 import android.app.Application
@@ -9,10 +8,12 @@ import com.yenaly.han1meviewer.logic.model.HanimeInfo
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 class MissAvViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -20,33 +21,158 @@ class MissAvViewModel(application: Application) : AndroidViewModel(application) 
         private const val TAG = "MissAvViewModel"
     }
 
-    private val _homePageFlow = MutableStateFlow<WebsiteState<MissAvHomePage>>(WebsiteState.Loading)
+    private val _homePageFlow =
+        MutableStateFlow<WebsiteState<MissAvHomePage>>(WebsiteState.Loading)
     val homePageFlow = _homePageFlow.asStateFlow()
 
-    private val _popularFlow = MutableStateFlow<PageLoadingState<MissAvHomePage>>(PageLoadingState.Loading)
+    private val _popularFlow =
+        MutableStateFlow<PageLoadingState<MissAvHomePage>>(PageLoadingState.Loading)
     val popularFlow = _popularFlow.asStateFlow()
 
-    private val _searchFlow = MutableStateFlow<PageLoadingState<MutableList<HanimeInfo>>>(PageLoadingState.Loading)
+    private val _videoFlow =
+        MutableStateFlow<VideoLoadingState<MissAvVideoInfo>>(VideoLoadingState.Loading)
+    val videoFlow = _videoFlow.asStateFlow()
+
+    private val _searchFlow =
+        MutableStateFlow<PageLoadingState<MutableList<HanimeInfo>>?>(null)
     val searchFlow = _searchFlow.asStateFlow()
 
-    private val _videoFlow = MutableStateFlow<VideoLoadingState<MissAvVideoInfo>>(VideoLoadingState.Loading)
-    val videoFlow = _videoFlow.asStateFlow()
+    private val _searchResults = MutableStateFlow<List<HanimeInfo>>(emptyList())
+    val searchResults = _searchResults.asStateFlow()
+
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery = _searchQuery.asStateFlow()
+
+    private val _selectedSort = MutableStateFlow<String?>(null)
+    val selectedSort = _selectedSort.asStateFlow()
+
+    private val _selectedFilter = MutableStateFlow<String?>(null)
+    val selectedFilter = _selectedFilter.asStateFlow()
+
+    private val _selectedGenre = MutableStateFlow<String?>(null)
+    val selectedGenre = _selectedGenre.asStateFlow()
+
+    private val _currentPage = MutableStateFlow(1)
+    val currentPage = _currentPage.asStateFlow()
+
+    private val _hasSearched = MutableStateFlow(false)
+    val hasSearched = _hasSearched.asStateFlow()
+
+    private val _hasMorePages = MutableStateFlow(true)
+    val hasMorePages = _hasMorePages.asStateFlow()
+
+    private val _isLoadingMore = MutableStateFlow(false)
+    val isLoadingMore = _isLoadingMore.asStateFlow()
+
+    private var searchJob: Job? = null
+
+    fun setSearchQuery(query: String) { _searchQuery.value = query }
+
+    fun setSort(sort: String?) { _selectedSort.value = sort }
+
+    fun setFilter(filter: String?) { _selectedFilter.value = filter }
+
+    fun setGenre(genre: String?) { _selectedGenre.value = genre }
+
+    fun resetSearch() {
+        searchJob?.cancel()
+        _searchQuery.value = ""
+        _selectedSort.value = null
+        _selectedFilter.value = null
+        _selectedGenre.value = null
+        _currentPage.value = 1
+        _hasSearched.value = false
+        _hasMorePages.value = true
+        _isLoadingMore.value = false
+        _searchResults.value = emptyList()
+        _searchFlow.value = null
+    }
+
+    fun performSearch(resetPage: Boolean = true) {
+        searchJob?.cancel()
+        if (resetPage) {
+            _currentPage.value = 1
+            _searchResults.value = emptyList()
+            _hasMorePages.value = true
+        }
+        _hasSearched.value = true
+        _isLoadingMore.value = true
+
+        val query = _searchQuery.value
+        val isBrowsing = query.isBlank()
+        val genreToUse = if (isBrowsing) {
+            _selectedGenre.value ?: MissAvOptions.DEFAULT_GENRE_KEY
+        } else {
+            MissAvOptions.DEFAULT_GENRE_KEY
+        }
+        val page = _currentPage.value
+
+        searchJob = viewModelScope.launch {
+            runCatching {
+                val flow = when {
+                    genreToUse != MissAvOptions.DEFAULT_GENRE_KEY && query.isBlank() ->
+                        MissAvNetworkRepo.getGenreVideos(genreToUse, page, _selectedSort.value, _selectedFilter.value)
+                    query.isNotBlank() ->
+                        MissAvNetworkRepo.searchVideos(query, page, _selectedSort.value, _selectedFilter.value)
+                    else ->
+                        MissAvNetworkRepo.getGenreVideos(genreToUse, page, _selectedSort.value, _selectedFilter.value)
+                }
+                flow.collect { state ->
+                    if (!isActive) return@collect
+                    _searchFlow.value = state
+                    when (state) {
+                        is PageLoadingState.Success -> {
+                            val incoming = state.info
+                            _searchResults.update { prev ->
+                                if (resetPage) incoming
+                                else (prev + incoming).distinctBy(HanimeInfo::videoCode)
+                            }
+                            if (incoming.isEmpty()) {
+                                _hasMorePages.value = false
+                                _searchFlow.value = PageLoadingState.NoMoreData
+                            }
+                            _isLoadingMore.value = false
+                        }
+                        is PageLoadingState.NoMoreData -> {
+                            _hasMorePages.value = false
+                            _isLoadingMore.value = false
+                        }
+                        is PageLoadingState.Error -> {
+                            _isLoadingMore.value = false
+                        }
+                        is PageLoadingState.Loading -> Unit
+                    }
+                }
+            }.onFailure { e ->
+                Log.e(TAG, "performSearch failure", e)
+                _searchFlow.value = PageLoadingState.Error(e)
+                _isLoadingMore.value = false
+            }
+        }
+    }
+
+    fun loadNextPage() {
+        if (_isLoadingMore.value || !_hasMorePages.value) return
+        if (_searchFlow.value is PageLoadingState.Loading) return
+        _currentPage.value = _currentPage.value + 1
+        performSearch(resetPage = false)
+    }
+
+    fun goToPage(page: Int) {
+        if (_isLoadingMore.value) return
+        _currentPage.value = page
+        performSearch(resetPage = true)
+    }
 
     fun getHomePage() {
         viewModelScope.launch {
-            try {
-                Log.d(TAG, "getHomePage: Starting")
+            runCatching {
                 _homePageFlow.value = WebsiteState.Loading
-                
                 MissAvNetworkRepo.getHomePage().collect { state ->
                     if (!isActive) return@collect
-                    Log.d(TAG, "getHomePage: Received state: ${state::class.simpleName}")
-                    if (state is WebsiteState.Error) {
-                        Log.e(TAG, "Home page error: ${state.throwable.message}")
-                    }
                     _homePageFlow.value = state
                 }
-            } catch (e: Exception) {
+            }.onFailure { e ->
                 Log.e(TAG, "Home page exception", e)
                 _homePageFlow.value = WebsiteState.Error(e)
             }
@@ -55,16 +181,13 @@ class MissAvViewModel(application: Application) : AndroidViewModel(application) 
 
     fun getPopularVideos(page: Int = 1) {
         viewModelScope.launch {
-            try {
+            runCatching {
                 _popularFlow.value = PageLoadingState.Loading
                 MissAvNetworkRepo.getPopularVideos(page).collect { state ->
                     if (!isActive) return@collect
-                    if (state is PageLoadingState.Error) {
-                        Log.e(TAG, "Popular videos error: ${state.throwable.message}")
-                    }
                     _popularFlow.value = state
                 }
-            } catch (e: Exception) {
+            }.onFailure { e ->
                 Log.e(TAG, "Popular videos exception", e)
                 _popularFlow.value = PageLoadingState.Error(e)
             }
@@ -79,90 +202,42 @@ class MissAvViewModel(application: Application) : AndroidViewModel(application) 
         onResult: (List<HanimeInfo>) -> Unit,
     ) {
         viewModelScope.launch {
-            try {
-                Log.d(TAG, "getGenreVideos: $genrePath, page=$page")
-                val videos = MissAvNetworkRepo.getGenreVideosSync(genrePath, page, sort, filter)
-                Log.d(TAG, "getGenreVideos: Found ${videos.size} videos for $genrePath")
-                onResult(videos)
-            } catch (e: Exception) {
+            runCatching {
+                onResult(MissAvNetworkRepo.getGenreVideosSync(genrePath, page, sort, filter))
+            }.onFailure { e ->
                 Log.e(TAG, "Genre videos error for $genrePath", e)
                 onResult(emptyList())
             }
         }
     }
 
-    fun searchVideos(query: String, page: Int = 1, sort: String? = null, filter: String? = null) {
-        viewModelScope.launch {
-            try {
-                MissAvNetworkRepo.searchVideos(query, page, sort, filter).collect { state ->
-                    if (!isActive) return@collect
-                    if (state is PageLoadingState.Error) {
-                        Log.e(TAG, "Search error: ${state.throwable.message}")
-                    }
-                    _searchFlow.value = state
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Search exception", e)
-                _searchFlow.value = PageLoadingState.Error(e)
-            }
-        }
-    }
-
-    fun searchVideosWithGenre(
+    fun searchVideos(
         query: String,
         page: Int = 1,
         sort: String? = null,
-        genre: String? = null,
         filter: String? = null,
     ) {
-        viewModelScope.launch {
-            try {
-                if (genre != null && query.isBlank()) {
-                    MissAvNetworkRepo.getGenreVideos(genre, page, sort, filter).collect { state ->
-                        if (!isActive) return@collect
-                        _searchFlow.value = state
-                    }
-                } else if (query.isNotBlank()) {
-                    MissAvNetworkRepo.searchVideos(query, page, sort, filter).collect { state ->
-                        if (!isActive) return@collect
-                        _searchFlow.value = state
-                    }
-                } else {
-                    MissAvNetworkRepo.getGenreVideos(genre ?: "en/release", page, sort, filter).collect { state ->
-                        if (!isActive) return@collect
-                        _searchFlow.value = state
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Search with genre error", e)
-                _searchFlow.value = PageLoadingState.Error(e)
-            }
-        }
+        setSearchQuery(query)
+        setSort(sort)
+        setFilter(filter)
+        performSearch(resetPage = page == 1)
     }
 
     fun getVideoDetail(path: String) {
         viewModelScope.launch {
-            try {
+            runCatching {
                 _videoFlow.value = VideoLoadingState.Loading
                 MissAvNetworkRepo.getVideoDetail(path).collect { state ->
                     if (!isActive) return@collect
-                    if (state is VideoLoadingState.Error) {
-                        Log.e(TAG, "Video detail error: ${state.throwable.message}")
-                    }
                     _videoFlow.value = state
                 }
-            } catch (e: Exception) {
+            }.onFailure { e ->
                 Log.e(TAG, "Video detail exception", e)
                 _videoFlow.value = VideoLoadingState.Error(e)
             }
         }
     }
 
-    fun retryHomePage() {
-        getHomePage()
-    }
-
-    fun retryVideoDetail(path: String) {
-        getVideoDetail(path)
-    }
+    fun retryHomePage() = getHomePage()
+    fun retryVideoDetail(path: String) = getVideoDetail(path)
 }

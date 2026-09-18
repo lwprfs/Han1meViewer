@@ -53,8 +53,8 @@ fun HentaiMamaHomeScreen(
                 title = {
                     Text(
                         text = "HentaiMama",
-                        modifier = Modifier.clickable { 
-                            onNavigateToSearch(null) 
+                        modifier = Modifier.clickable {
+                            onNavigateToSearch(null)
                         },
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -72,7 +72,7 @@ fun HentaiMamaHomeScreen(
                 val latestVideos = state.info.latestVideos
                     .filter { it.videoCode.isNotEmpty() && it.videoCode != "unknown" }
                 val (cardWidth, _) = rememberCardResponsiveWidth()
-                
+
                 LazyColumn(
                     modifier = Modifier
                         .padding(paddingValues)
@@ -105,7 +105,7 @@ fun HentaiMamaHomeScreen(
                             ) {
                                 items(
                                     items = popularVideos,
-                                    key = { video -> 
+                                    key = { video ->
                                         video.videoCode.ifEmpty { "popular_${System.identityHashCode(video)}" }
                                     }
                                 ) { video ->
@@ -166,7 +166,7 @@ fun HentaiMamaHomeScreen(
             is WebsiteState.Error -> {
                 ErrorContent(
                     message = state.throwable.message ?: "Failed to load home page",
-                    onRetry = { 
+                    onRetry = {
                         viewModel.getHomePage()
                     },
                     modifier = Modifier.padding(paddingValues),

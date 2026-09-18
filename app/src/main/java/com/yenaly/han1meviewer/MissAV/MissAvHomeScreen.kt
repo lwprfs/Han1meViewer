@@ -1,25 +1,49 @@
 package com.yenaly.han1meviewer.MissAV
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yenaly.han1meviewer.R
-import com.yenaly.han1meviewer.logic.model.HanimeInfo
 import com.yenaly.han1meviewer.logic.state.WebsiteState
 import com.yenaly.han1meviewer.ui.component.VideoCardItem
 import com.yenaly.han1meviewer.ui.component.content.ErrorContent
@@ -27,28 +51,6 @@ import com.yenaly.han1meviewer.ui.component.content.LoadingContent
 import com.yenaly.han1meviewer.ui.screen.rememberCardResponsiveWidth
 import com.yenaly.han1meviewer.ui.theme.SpacingLarge
 import com.yenaly.han1meviewer.ui.theme.SpacingNormal
-import kotlinx.coroutines.delay
-
-private val HOME_CATEGORIES = listOf(
-    HomeCategory("Release Date", "en/release", "released_at"),
-    HomeCategory("Weekly Views", "en/weekly-hot", "released_at"),
-    HomeCategory("Monthly Views", "en/monthly-hot", "released_at"),
-    HomeCategory("Total Views", "en/release", "published_at"),
-    HomeCategory("Uncensored Leak", "en/uncensored-leak", "published_at"),
-    HomeCategory("Creampie", "en/genres/Creampie", "published_at"),
-    HomeCategory("Breast Milk", "en/genres/Breast%20Milk", "published_at"),
-    HomeCategory("Premature Ejaculation", "en/genres/Premature%20Ejaculation", "published_at"),
-    HomeCategory("Harem", "en/genres/Harem", "published_at"),
-    HomeCategory("Virgin", "en/genres/Virgin", "published_at"),
-    HomeCategory("Sister", "en/genres/Sister", "published_at"),
-    HomeCategory("Incest", "en/genres/Incest", "published_at"),
-)
-
-data class HomeCategory(
-    val title: String,
-    val genrePath: String,
-    val sort: String?,
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,18 +59,18 @@ fun MissAvHomeScreen(
     onNavigateToSearch: (String?) -> Unit,
     onSwitchSite: () -> Unit,
     onNavigateToHistory: () -> Unit,
+    onNavigateToSettings: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: MissAvViewModel = viewModel(),
+    viewModel: MissAvHomeViewModel,
 ) {
     val homeState by viewModel.homePageFlow.collectAsStateWithLifecycle()
-    val categoryStates = remember { mutableStateMapOf<String, List<HanimeInfo>>() }
-    
+    val categoryRows by viewModel.categoryRows.collectAsStateWithLifecycle()
+
     LaunchedEffect(Unit) {
         viewModel.getHomePage()
-        HOME_CATEGORIES.forEach { category ->
-            viewModel.getGenreVideos(category.genrePath, 1, category.sort) { videos ->
-                categoryStates[category.title] = videos
-            }
+
+        if (categoryRows.isNotEmpty() && categoryRows.all { it.videos.isEmpty() }) {
+            viewModel.refreshAllCategories()
         }
     }
 
@@ -79,29 +81,32 @@ fun MissAvHomeScreen(
                     Text(
                         text = "MissAV",
                         color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.clickable { onNavigateToSearch(null) }
+                        modifier = Modifier.clickable { onNavigateToSearch(null) },
                     )
                 },
                 actions = {
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(Icons.Default.Settings, contentDescription = "Home settings")
+                    }
                     IconButton(onClick = onNavigateToHistory) {
                         Icon(
                             Icons.Default.History,
-                            contentDescription = stringResource(R.string.watch_history)
+                            contentDescription = stringResource(R.string.watch_history),
                         )
                     }
                     IconButton(onClick = onSwitchSite) {
                         Icon(
                             painter = painterResource(R.drawable.ic_baseline_switch_24),
-                            contentDescription = stringResource(R.string.switch_site)
+                            contentDescription = stringResource(R.string.switch_site),
                         )
                     }
                     IconButton(onClick = { onNavigateToSearch(null) }) {
                         Icon(
                             Icons.Default.Search,
-                            contentDescription = stringResource(R.string.search)
+                            contentDescription = stringResource(R.string.search),
                         )
                     }
-                }
+                },
             )
         }
     ) { paddingValues ->
@@ -110,74 +115,55 @@ fun MissAvHomeScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            when (val state = homeState) {
-                is WebsiteState.Loading -> {
-                    if (categoryStates.isEmpty()) {
-                        LoadingContent()
-                    } else {
-                        DisplayContent(
-                            categoryStates = categoryStates,
-                            onNavigateToVideo = onNavigateToVideo,
-                            onNavigateToSearch = onNavigateToSearch
-                        )
-                    }
-                }
-                is WebsiteState.Success -> {
-                    DisplayContent(
-                        categoryStates = categoryStates,
-                        onNavigateToVideo = onNavigateToVideo,
-                        onNavigateToSearch = onNavigateToSearch
-                    )
-                }
-                is WebsiteState.Error -> {
-                    if (categoryStates.isEmpty()) {
-                        ErrorContent(
-                            message = state.throwable.message ?: "Failed to load home page",
-                            onRetry = { 
-                                viewModel.getHomePage()
-                                HOME_CATEGORIES.forEach { category ->
-                                    viewModel.getGenreVideos(category.genrePath, 1, category.sort) { videos ->
-                                        categoryStates[category.title] = videos
-                                    }
-                                }
-                            }
-                        )
-                    } else {
-                        DisplayContent(
-                            categoryStates = categoryStates,
-                            onNavigateToVideo = onNavigateToVideo,
-                            onNavigateToSearch = onNavigateToSearch
-                        )
-                    }
-                }
+            val isLoadingEverything =
+                homeState is WebsiteState.Loading && categoryRows.isEmpty()
+            val isErrorEverything =
+                homeState is WebsiteState.Error && categoryRows.isEmpty()
+
+            when {
+                isLoadingEverything -> LoadingContent()
+
+                isErrorEverything -> ErrorContent(
+                    message = (homeState as WebsiteState.Error).throwable.message
+                        ?: "Failed to load home page",
+                    onRetry = {
+                        viewModel.getHomePage(force = true)
+                        viewModel.refreshAllCategories()
+                    },
+                )
+
+                else -> HomeContent(
+                    homeState = homeState,
+                    categoryRows = categoryRows,
+                    onRetryCategory = viewModel::retryCategory,
+                    onNavigateToVideo = onNavigateToVideo,
+                    onNavigateToSearch = onNavigateToSearch,
+                )
             }
         }
     }
 }
 
 @Composable
-private fun DisplayContent(
-    categoryStates: Map<String, List<HanimeInfo>>,
+private fun HomeContent(
+    homeState: WebsiteState<MissAvHomePage>,
+    categoryRows: List<HomeCategoryRowState>,
+    onRetryCategory: (MissAvHomeCategory) -> Unit,
     onNavigateToVideo: (String, String) -> Unit,
     onNavigateToSearch: (String?) -> Unit,
 ) {
     val (cardWidth, _) = rememberCardResponsiveWidth()
-    
-    val allVideos = categoryStates.values.flatten().distinctBy { it.videoCode }
-    val hasContent = allVideos.isNotEmpty()
-    
-    if (!hasContent) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
+    val popular = (homeState as? WebsiteState.Success)?.info?.popularVideos.orEmpty()
+
+    if (popular.isEmpty() && categoryRows.all { it.videos.isEmpty() && !it.isLoading }) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     text = "No content available",
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(Modifier.height(8.dp))
                 TextButton(onClick = { onNavigateToSearch(null) }) {
                     Text("Try searching")
                 }
@@ -185,42 +171,29 @@ private fun DisplayContent(
         }
         return
     }
-    
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 16.dp),
     ) {
-        item(key = "popular_header") {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
-            ) {
-                Text(
-                    text = "Popular Videos",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
+        if (popular.isNotEmpty()) {
+            item(key = "popular_header") {
+                SectionHeader(
+                    title = "Popular Videos",
+                    onMore = { onNavigateToSearch(null) },
                 )
-                TextButton(onClick = { onNavigateToSearch(null) }) {
-                    Text(stringResource(R.string.more))
-                }
             }
-        }
-        
-        if (allVideos.isNotEmpty()) {
             item(key = "popular_row") {
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(SpacingNormal),
-                    contentPadding = PaddingValues(horizontal = SpacingLarge)
+                    contentPadding = PaddingValues(horizontal = SpacingLarge),
                 ) {
-                    items(allVideos.take(10), key = { it.videoCode }) { video ->
+                    items(popular.take(10), key = { it.videoCode }) { video ->
                         VideoCardItem(
                             modifier = Modifier.width(cardWidth),
                             videoItem = video,
                             isHorizontalCard = true,
-                            onClickVideosItem = { 
+                            onClickVideosItem = {
                                 onNavigateToVideo(video.videoCode, "/en/${video.videoCode}")
                             },
                             onLongClickVideosItem = { _, _ -> },
@@ -230,45 +203,120 @@ private fun DisplayContent(
             }
         }
 
-        HOME_CATEGORIES.forEach { category ->
-            val videos = categoryStates[category.title] ?: emptyList()
-            if (videos.isNotEmpty()) {
-                item(key = "cat_header_${category.title}") {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 8.dp)
-                    ) {
-                        Text(
-                            text = category.title,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.weight(1f)
+        categoryRows.forEach { row ->
+            val key = row.category.key
+
+            item(key = "cat_header_$key") {
+                SectionHeader(
+                    title = row.category.title,
+                    onMore = { onNavigateToSearch(row.category.title) },
+                )
+            }
+
+            item(key = "cat_body_$key") {
+                when {
+                    row.videos.isNotEmpty() -> {
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(SpacingNormal),
+                            contentPadding = PaddingValues(horizontal = SpacingLarge),
+                        ) {
+                            items(row.videos, key = { it.videoCode }) { video ->
+                                VideoCardItem(
+                                    modifier = Modifier.width(cardWidth),
+                                    videoItem = video,
+                                    isHorizontalCard = true,
+                                    onClickVideosItem = {
+                                        onNavigateToVideo(video.videoCode, "/en/${video.videoCode}")
+                                    },
+                                    onLongClickVideosItem = { _, _ -> },
+                                )
+                            }
+                        }
+                    }
+
+                    row.error != null -> {
+                        CategoryErrorRow(
+                            message = row.error,
+                            onRetry = { onRetryCategory(row.category) },
                         )
-                        TextButton(onClick = { onNavigateToSearch(category.title) }) {
-                            Text(stringResource(R.string.more))
-                        }
+                    }
+
+                    else -> {
+                        CategorySkeletonRow(cardWidth = cardWidth)
                     }
                 }
-                item(key = "cat_row_${category.title}") {
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(SpacingNormal),
-                        contentPadding = PaddingValues(horizontal = SpacingLarge)
-                    ) {
-                        items(videos, key = { it.videoCode }) { video ->
-                            VideoCardItem(
-                                modifier = Modifier.width(cardWidth),
-                                videoItem = video,
-                                isHorizontalCard = true,
-                                onClickVideosItem = { 
-                                    onNavigateToVideo(video.videoCode, "/en/${video.videoCode}")
-                                },
-                                onLongClickVideosItem = { _, _ -> },
-                            )
-                        }
-                    }
-                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionHeader(title: String, onMore: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.weight(1f),
+        )
+        TextButton(onClick = onMore) {
+            Text(stringResource(R.string.more))
+        }
+    }
+}
+
+@Composable
+private fun CategorySkeletonRow(cardWidth: androidx.compose.ui.unit.Dp) {
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(SpacingNormal),
+        contentPadding = PaddingValues(horizontal = SpacingLarge),
+        userScrollEnabled = false,
+    ) {
+        items(4) {
+            Box(
+                modifier = Modifier
+                    .width(cardWidth)
+                    .height(140.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+            )
+        }
+    }
+}
+
+@Composable
+private fun CategoryErrorRow(message: String, onRetry: () -> Unit) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = SpacingLarge),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f),
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(
+                Icons.Default.Warning,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(18.dp),
+            )
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = onRetry) {
+                Text(stringResource(R.string.retry))
             }
         }
     }

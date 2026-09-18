@@ -14,7 +14,6 @@ interface HentaiMamaService {
         @Path("page") page: Int,
     ): Response<ResponseBody>
 
-    // New: Popular videos endpoint (same as Tachiyomi extension)
     @GET("advance-search/page/{page}/")
     suspend fun getPopularVideos(
         @Path("page") page: Int,

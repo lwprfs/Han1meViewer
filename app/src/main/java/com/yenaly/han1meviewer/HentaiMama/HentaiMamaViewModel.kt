@@ -25,7 +25,6 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
     private val _videoState = MutableStateFlow<VideoLoadingState<HentaiMamaVideoInfo>>(VideoLoadingState.Loading)
     val videoState = _videoState.asStateFlow()
 
-    // Filter states
     private val _selectedGenre = MutableStateFlow<String?>(null)
     val selectedGenre = _selectedGenre.asStateFlow()
 
@@ -38,17 +37,15 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
     fun getHomePage() {
         viewModelScope.launch {
             Log.d(TAG, "getHomePage called")
-            
-            // Get popular videos first
+
             var popularVideos = emptyList<HanimeInfo>()
-            
+
             HentaiMamaNetworkRepo.getHomePage().collect { state ->
                 when (state) {
                     is WebsiteState.Success -> {
                         Log.d(TAG, "Got popular videos: ${state.info.popularVideos.size}")
                         popularVideos = state.info.popularVideos
-                        
-                        // Now get latest videos
+
                         HentaiMamaNetworkRepo.getLatestVideos(1).collect { latestState ->
                             when (latestState) {
                                 is PageLoadingState.Success -> {
@@ -62,7 +59,7 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
                                 }
                                 is PageLoadingState.Error -> {
                                     Log.e(TAG, "Error getting latest videos, using popular for both")
-                                    // Fallback: use popular videos for both
+
                                     _homeState.value = WebsiteState.Success(
                                         HentaiMamaHomePage(
                                             popularVideos = popularVideos,
@@ -71,7 +68,7 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
                                     )
                                 }
                                 else -> {
-                                    // Keep current state
+
                                 }
                             }
                         }

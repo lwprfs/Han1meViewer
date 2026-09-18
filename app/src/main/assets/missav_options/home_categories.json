@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "categories": [
+    {
+      "key": "release",
+      "title": "Release Date",
+      "genrePath": "en/release",
+      "sort": null,
+      "hidden": false
+    },
+    {
+      "key": "weekly",
+      "title": "Weekly Views",
+      "genrePath": "en/weekly-hot",
+      "sort": null,
+      "hidden": false
+    },
+    {
+      "key": "monthly",
+      "title": "Monthly Views",
+      "genrePath": "en/monthly-hot",
+      "sort": null,
+      "hidden": false
+    },
+    {
+      "key": "total",
+      "title": "Total Views",
+      "genrePath": "en/total-hot",
+      "sort": null,
+      "hidden": false
+    },
+    {
+      "key": "uncensored",
+      "title": "Uncensored Leak",
+      "genrePath": "en/uncensored-leak",
+      "sort": "today_views",
+      "hidden": false
+    },
+    {
+      "key": "creampie",
+      "title": "Creampie",
+      "genrePath": "en/genres/Creampie",
+      "sort": null,
+      "hidden": false
+    },
+    {
+      "key": "breast_milk",
+      "title": "Breast Milk",
+      "genrePath": "en/genres/Breast%20Milk",
+      "sort": null,
+      "hidden": false
+    },
+    {
+      "key": "premature",
+      "title": "Premature Ejaculation",
+      "genrePath": "en/genres/Premature%20Ejaculation",
+      "sort": "published_at",
+      "hidden": false
+    },
+    {
+      "key": "virgin",
+      "title": "Virgin",
+      "genrePath": "en/genres/Virgin",
+      "sort": "today_views",
+      "hidden": false
+    },
+    {
+      "key": "sister",
+      "title": "Sister",
+      "genrePath": "en/genres/Sister",
+      "sort": "published_at",
+      "hidden": false
+    },
+    {
+      "key": "milf",
+      "title": "MILF",
+      "genrePath": "en/genres/MILF",
+      "sort": "published_at",
+      "hidden": true
+    },
+    {
+      "key": "ntr",
+      "title": "NTR",
+      "genrePath": "en/genres/NTR",
+      "sort": "today_views",
+      "hidden": true
+    }
+  ]
+}

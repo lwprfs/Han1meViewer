@@ -27,31 +27,21 @@ data class MissAvHistoryItem(
     val lastPlayedDate: Long?
 ) {
     val formattedWatchDate: String
-        get() {
-            val format = SimpleDateFormat("MMM dd, yyyy • HH:mm", Locale.getDefault())
-            return format.format(Date(watchDate))
-        }
+        get() = SimpleDateFormat("MMM dd, yyyy • HH:mm", Locale.getDefault())
+            .format(Date(watchDate))
 
     val formattedWatchDuration: String
         get() {
-            val minutes = watchDuration / 60000
-            val seconds = (watchDuration % 60000) / 1000
-            return if (minutes > 0) {
-                if (seconds > 0) "${minutes}m ${seconds}s" else "${minutes}m"
-            } else {
-                "${seconds}s"
-            }
+            val m = watchDuration / 60000
+            val s = (watchDuration % 60000) / 1000
+            return if (m > 0) { if (s > 0) "${m}m ${s}s" else "${m}m" } else "${s}s"
         }
 
     val formattedLastPosition: String
         get() {
-            val minutes = lastPosition / 60000
-            val seconds = (lastPosition % 60000) / 1000
-            return if (minutes > 0) {
-                if (seconds > 0) "${minutes}m ${seconds}s" else "${minutes}m"
-            } else {
-                "${seconds}s"
-            }
+            val m = lastPosition / 60000
+            val s = (lastPosition % 60000) / 1000
+            return if (m > 0) { if (s > 0) "${m}m ${s}s" else "${m}m" } else "${s}s"
         }
 
     val progressPercentage: Float
@@ -60,7 +50,8 @@ data class MissAvHistoryItem(
 
 class MissAvHistoryViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val _historyState = MutableStateFlow<PageLoadingState<List<MissAvHistoryItem>>>(PageLoadingState.NoMoreData)
+    private val _historyState =
+        MutableStateFlow<PageLoadingState<List<MissAvHistoryItem>>>(PageLoadingState.NoMoreData)
     val historyState = _historyState.asStateFlow()
 
     private val _historyItems = MutableStateFlow<List<MissAvHistoryItem>>(emptyList())
@@ -77,9 +68,7 @@ class MissAvHistoryViewModel(application: Application) : AndroidViewModel(applic
     private val pageSize = 20
     private var totalCount = 0
 
-    init {
-        MissAvHistoryRepo.init(application)
-    }
+    init { MissAvHistoryRepo.init(application) }
 
     fun loadHistory() {
         viewModelScope.launch {
@@ -91,38 +80,32 @@ class MissAvHistoryViewModel(application: Application) : AndroidViewModel(applic
     suspend fun loadHistoryPage(page: Int) {
         try {
             val dao = MissAvDatabase.getInstance(getApplication()).missAvHistoryDao()
-            
+
             if (page == 1) {
-                totalCount = withContext(Dispatchers.IO) {
-                    dao.getTotalCount()
-                }
+                totalCount = withContext(Dispatchers.IO) { dao.getTotalCount() }
                 if (totalCount == 0) {
                     hasMore = false
                     _historyState.value = PageLoadingState.NoMoreData
                     return
                 }
             }
-            
+
             val offset = (page - 1) * pageSize
-            val histories = withContext(Dispatchers.IO) {
-                dao.getPage(pageSize, offset)
-            }
-            
+            val histories = withContext(Dispatchers.IO) { dao.getPage(pageSize, offset) }
+
             if (histories.isEmpty()) {
                 hasMore = false
-                if (page == 1) {
-                    _historyState.value = PageLoadingState.NoMoreData
-                }
+                if (page == 1) _historyState.value = PageLoadingState.NoMoreData
                 _isLoadingMore.value = false
                 return
             }
-            
-            val pageItems = histories.map { history ->
+
+            val pageItems = histories.map { h ->
                 MissAvHistoryItem(
                     videoInfo = HanimeInfo(
-                        title = history.title,
-                        coverUrl = history.coverUrl,
-                        videoCode = history.videoCode,
+                        title = h.title,
+                        coverUrl = h.coverUrl,
+                        videoCode = h.videoCode,
                         duration = "",
                         views = "",
                         uploadTime = "",
@@ -130,35 +113,27 @@ class MissAvHistoryViewModel(application: Application) : AndroidViewModel(applic
                         currentArtist = "",
                         reviews = "",
                     ),
-                    watchDate = history.watchDate,
-                    watchDuration = history.watchDuration,
-                    lastPosition = history.lastPosition,
-                    totalDuration = history.totalDuration,
-                    watchCount = history.watchCount,
-                    playCount = history.playCount,
-                    isPlayed = history.isPlayed,
-                    lastPlayedDate = history.lastPlayedDate
+                    watchDate = h.watchDate,
+                    watchDuration = h.watchDuration,
+                    lastPosition = h.lastPosition,
+                    totalDuration = h.totalDuration,
+                    watchCount = h.watchCount,
+                    playCount = h.playCount,
+                    isPlayed = h.isPlayed,
+                    lastPlayedDate = h.lastPlayedDate,
                 )
             }
-            
-            _historyItems.update { current ->
-                if (page == 1) pageItems else current + pageItems
-            }
-            
+
+            _historyItems.update { cur -> if (page == 1) pageItems else cur + pageItems }
             currentPage = page
             _loadedPageCount.value = page
             _isLoadingMore.value = false
-            
-            if (pageItems.isNotEmpty()) {
-                _historyState.value = PageLoadingState.Success(pageItems)
-            }
-            
-            val loadedCount = _historyItems.value.size
-            if (loadedCount >= totalCount) {
+            if (pageItems.isNotEmpty()) _historyState.value = PageLoadingState.Success(pageItems)
+
+            if (_historyItems.value.size >= totalCount) {
                 hasMore = false
                 _historyState.value = PageLoadingState.NoMoreData
             }
-            
         } catch (e: Exception) {
             _historyState.value = PageLoadingState.Error(e)
             _isLoadingMore.value = false
@@ -167,16 +142,12 @@ class MissAvHistoryViewModel(application: Application) : AndroidViewModel(applic
 
     fun refresh() {
         viewModelScope.launch {
-            try {
-                currentPage = 1
-                hasMore = true
-                _historyItems.value = emptyList()
-                _loadedPageCount.value = 0
-                _historyState.value = PageLoadingState.Loading
-                loadHistoryPage(1)
-            } catch (e: Exception) {
-                _historyState.value = PageLoadingState.Error(e)
-            }
+            currentPage = 1
+            hasMore = true
+            _historyItems.value = emptyList()
+            _loadedPageCount.value = 0
+            _historyState.value = PageLoadingState.Loading
+            loadHistoryPage(1)
         }
     }
 
@@ -190,35 +161,25 @@ class MissAvHistoryViewModel(application: Application) : AndroidViewModel(applic
 
     fun deleteAllHistory() {
         viewModelScope.launch {
-            try {
-                withContext(Dispatchers.IO) {
-                    MissAvHistoryRepo.deleteAll()
-                }
+            runCatching {
+                withContext(Dispatchers.IO) { MissAvHistoryRepo.deleteAll() }
                 _historyItems.value = emptyList()
                 _historyState.value = PageLoadingState.NoMoreData
                 totalCount = 0
                 hasMore = false
-            } catch (e: Exception) {
-                // Silent failure
             }
         }
     }
 
     fun deleteHistoryItem(videoCode: String) {
         viewModelScope.launch {
-            try {
-                withContext(Dispatchers.IO) {
-                    MissAvHistoryRepo.deleteByVideoCode(videoCode)
-                }
-                _historyItems.update { items ->
-                    items.filter { it.videoInfo.videoCode != videoCode }
-                }
+            runCatching {
+                withContext(Dispatchers.IO) { MissAvHistoryRepo.deleteByVideoCode(videoCode) }
+                _historyItems.update { list -> list.filter { it.videoInfo.videoCode != videoCode } }
                 totalCount = _historyItems.value.size
                 if (_historyItems.value.isEmpty()) {
                     _historyState.value = PageLoadingState.NoMoreData
                 }
-            } catch (e: Exception) {
-                // Silent failure
             }
         }
     }
@@ -230,53 +191,19 @@ class MissAvHistoryViewModel(application: Application) : AndroidViewModel(applic
         currentPosition: Long,
         totalDuration: Long,
         isPlaying: Boolean,
-        wasPlayed: Boolean
+        wasPlayed: Boolean,
     ) {
         viewModelScope.launch {
-            try {
-                withContext(Dispatchers.IO) {
-                    val existing = MissAvHistoryRepo.getByVideoCode(videoCode)
-                    val now = System.currentTimeMillis()
-
-                    val history = if (existing != null) {
-                        val newWatchCount = if (wasPlayed) existing.watchCount + 1 else existing.watchCount
-                        val newPlayCount = if (wasPlayed && isPlaying) existing.playCount + 1 else existing.playCount
-                        val newWatchDuration = if (isPlaying) {
-                            existing.watchDuration + (currentPosition - existing.lastPosition).coerceAtLeast(0)
-                        } else {
-                            existing.watchDuration
-                        }
-
-                        existing.copy(
-                            watchDate = now,
-                            watchDuration = newWatchDuration,
-                            lastPosition = currentPosition,
-                            totalDuration = totalDuration,
-                            watchCount = newWatchCount,
-                            playCount = newPlayCount,
-                            isPlayed = wasPlayed || existing.isPlayed,
-                            lastPlayedDate = if (wasPlayed && isPlaying) now else existing.lastPlayedDate
-                        )
-                    } else {
-                        MissAvHistoryEntity(
-                            videoCode = videoCode,
-                            title = title,
-                            coverUrl = coverUrl,
-                            watchDate = now,
-                            watchDuration = 0,
-                            lastPosition = currentPosition,
-                            totalDuration = totalDuration,
-                            watchCount = if (wasPlayed) 1 else 0,
-                            playCount = if (wasPlayed && isPlaying) 1 else 0,
-                            isPlayed = wasPlayed,
-                            lastPlayedDate = if (wasPlayed && isPlaying) now else null
-                        )
-                    }
-
-                    MissAvHistoryRepo.insertOrUpdate(history)
-                }
-            } catch (e: Exception) {
-                // Silent failure - don't crash video playback
+            runCatching {
+                MissAvHistoryRepo.upsertWatchProgress(
+                    videoCode = videoCode,
+                    title = title,
+                    coverUrl = coverUrl,
+                    currentPosition = currentPosition,
+                    totalDuration = totalDuration,
+                    isPlaying = isPlaying,
+                    wasPlayed = wasPlayed,
+                )
             }
         }
     }

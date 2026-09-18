@@ -1,4 +1,3 @@
-// app/src/main/java/com/yenaly/han1meviewer/HentaiMama/HentaiMamaNavHost.kt
 package com.yenaly.han1meviewer.HentaiMama
 
 import androidx.compose.runtime.Composable
@@ -35,7 +34,7 @@ fun HentaiMamaNavHost(
         delay(50)
         NavigationManager.initialize(navController, com.yenaly.han1meviewer.SiteType.HENTAIMAMA)
     }
-    
+
     NavHost(
         navController = navController,
         startDestination = HentaiMamaHomeRoute,
@@ -65,8 +64,8 @@ fun HentaiMamaNavHost(
             HentaiMamaVideoScreen(
                 videoCode = route.videoCode,
                 path = route.path,
-                onBack = { 
-                    navController.popBackStack() 
+                onBack = {
+                    navController.popBackStack()
                 },
                 onNavigateToVideo = { code ->
                     navController.popBackStack()

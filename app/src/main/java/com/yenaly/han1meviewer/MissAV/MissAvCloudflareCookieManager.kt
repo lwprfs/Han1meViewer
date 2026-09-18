@@ -3,130 +3,110 @@ package com.yenaly.han1meviewer.MissAV
 import android.util.Log
 import com.yenaly.han1meviewer.Preferences
 import okhttp3.Cookie
-import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import java.text.SimpleDateFormat
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 
 object MissAvCloudflareCookieManager {
 
     private const val TAG = "MissAvCloudflareCookie"
-    private const val PREF_MISSAV_CF_COOKIE = "missav_cf_cookie"
-    private const val PREF_MISSAV_CF_EXPIRY = "missav_cf_expiry"
-    private const val FALLBACK_EXPIRY_MS = 30 * 60 * 1000L // 30 minutes
+    private const val PREF_PREFIX_COOKIE = "missav_cf_cookie"
+    private const val PREF_PREFIX_EXPIRY = "missav_cf_expiry"
+    private const val FALLBACK_EXPIRY_MS = 30 * 60 * 1000L
 
-    @Volatile
-    private var cachedCookie: String? = null
+    private val cookieCache = ConcurrentHashMap<String, String>()
 
-    fun saveCloudflareCookie(cookieString: String) {
-        Log.d(TAG, "Saving Cloudflare cookie for MissAV")
-        cachedCookie = cookieString
-        
-        val cfClearance = extractCfClearance(cookieString)
-        var expiry = extractCookieExpiry(cookieString)
-        
-        if (expiry == null) {
-            expiry = System.currentTimeMillis() + FALLBACK_EXPIRY_MS
-            Log.d(TAG, "No expiry found, using fallback: 30 minutes")
-        }
-        
-        if (cfClearance != null) {
-            Preferences.preferenceSp.edit()
-                .putString(PREF_MISSAV_CF_COOKIE, cfClearance)
-                .apply()
-            
-            Preferences.preferenceSp.edit()
-                .putLong(PREF_MISSAV_CF_EXPIRY, expiry)
-                .apply()
-            
-            Log.d(TAG, "Saved cf_clearance: ${cfClearance.take(20)}...")
-        }
+    private fun cookieKey(host: String) = "${PREF_PREFIX_COOKIE}_$host"
+    private fun expiryKey(host: String) = "${PREF_PREFIX_EXPIRY}_$host"
+
+    fun saveCloudflareCookie(host: String, cookieString: String) {
+        val cfClearance = extractCfClearance(cookieString) ?: return
+        val expiry = extractCookieExpiry(cookieString)
+            ?: (System.currentTimeMillis() + FALLBACK_EXPIRY_MS)
+
+        cookieCache[host] = cfClearance
+        Preferences.preferenceSp.edit()
+            .putString(cookieKey(host), cfClearance)
+            .putLong(expiryKey(host), expiry)
+            .apply()
+
+        Log.d(TAG, "Saved cf_clearance for $host")
     }
 
-    fun getCloudflareCookie(): String? {
-        if (cachedCookie != null) return cachedCookie
-        
-        val cookie = Preferences.preferenceSp.getString(PREF_MISSAV_CF_COOKIE, null)
-        val expiry = Preferences.preferenceSp.getLong(PREF_MISSAV_CF_EXPIRY, 0)
-        
-        if (expiry > 0 && System.currentTimeMillis() > expiry) {
-            Log.d(TAG, "Cloudflare cookie expired")
-            clearCloudflareCookie()
+    fun getCloudflareCookie(host: String): String? {
+        cookieCache[host]?.let { return it }
+
+        val cookie = Preferences.preferenceSp.getString(cookieKey(host), null) ?: return null
+        val expiry = Preferences.preferenceSp.getLong(expiryKey(host), 0L)
+
+        if (expiry > 0L && System.currentTimeMillis() > expiry) {
+            Log.d(TAG, "Cookie for $host expired, clearing")
+            clearCloudflareCookie(host)
             return null
         }
-        
-        if (!cookie.isNullOrEmpty()) {
-            cachedCookie = cookie
-            Log.d(TAG, "Loaded saved Cloudflare cookie")
-            return cookie
-        }
-        
-        return null
+
+        cookieCache[host] = cookie
+        return cookie
     }
 
-    fun clearCloudflareCookie() {
-        cachedCookie = null
+    fun clearCloudflareCookie(host: String) {
+        cookieCache.remove(host)
         Preferences.preferenceSp.edit()
-            .remove(PREF_MISSAV_CF_COOKIE)
-            .remove(PREF_MISSAV_CF_EXPIRY)
+            .remove(cookieKey(host))
+            .remove(expiryKey(host))
             .apply()
-        Log.d(TAG, "Cleared Cloudflare cookie")
     }
 
-    fun hasValidCookie(): Boolean {
-        val cookie = getCloudflareCookie()
-        return !cookie.isNullOrEmpty()
+    fun clearAllCloudflareCookies() {
+        cookieCache.clear()
+        val prefs = Preferences.preferenceSp
+        val editor = prefs.edit()
+        prefs.all.keys.forEach { key ->
+            if (key.startsWith("${PREF_PREFIX_COOKIE}_") ||
+                key.startsWith("${PREF_PREFIX_EXPIRY}_")
+            ) {
+                editor.remove(key)
+            }
+        }
+        editor.apply()
+        Log.d(TAG, "Cleared all Cloudflare cookies")
     }
 
     fun getOkHttpCookies(host: String): List<Cookie> {
-        val cookieString = getCloudflareCookie() ?: return emptyList()
-        
+        val cfClearance = getCloudflareCookie(host) ?: return emptyList()
         return try {
-            val httpUrl = "https://$host".toHttpUrl()
-            cookieString.split(';').mapNotNull { cookie ->
-                val parts = cookie.trim().split('=', limit = 2)
-                if (parts.size == 2) {
-                    try {
-                        Cookie.Builder()
-                            .domain(host)
-                            .path("/")  // REQUIRED
-                            .name(parts[0].trim())
-                            .value(parts[1].trim())
-                            .build()
-                    } catch (e: Exception) {
-                        null
-                    }
-                } else {
-                    null
-                }
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to parse cookie", e)
+            listOf(
+                Cookie.Builder()
+                    .domain(host)
+                    .path("/")
+                    .name("cf_clearance")
+                    .value(cfClearance)
+                    .build()
+            )
+        } catch (e: IllegalArgumentException) {
+            Log.e(TAG, "Failed to build cookie for $host", e)
             emptyList()
         }
     }
 
-    private fun extractCfClearance(cookieString: String): String? {
-        val regex = Regex("cf_clearance=([^;]+)")
-        return regex.find(cookieString)?.groupValues?.get(1)
+    fun hasValidCookieForHost(host: String): Boolean =
+        getCloudflareCookie(host) != null
+
+    fun hasValidCookieForUrl(url: String): Boolean {
+        val host = url.toHttpUrlOrNull()?.host ?: return false
+        return hasValidCookieForHost(host)
     }
+
+    private fun extractCfClearance(cookieString: String): String? =
+        Regex("cf_clearance=([^;]+)").find(cookieString)?.groupValues?.get(1)
 
     private fun extractCookieExpiry(cookieString: String): Long? {
-        val regex = Regex("expires=([^;]+)")
-        val expiryStr = regex.find(cookieString)?.groupValues?.get(1) ?: return null
-        return try {
-            val formatter = SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.US)
-            formatter.parse(expiryStr)?.time
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    fun hasValidCookieForHost(host: String): Boolean {
-        val cookie = getCloudflareCookie()
-        if (cookie.isNullOrEmpty()) return false
-        
-        // Cookie is valid if it exists and hasn't expired
-        val expiry = Preferences.preferenceSp.getLong(PREF_MISSAV_CF_EXPIRY, 0)
-        return expiry == 0L || System.currentTimeMillis() < expiry
+        val expiryStr = Regex("expires=([^;]+)").find(cookieString)?.groupValues?.get(1)
+            ?: return null
+        return runCatching {
+            SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.US)
+                .parse(expiryStr)?.time
+        }.getOrNull()
     }
 }

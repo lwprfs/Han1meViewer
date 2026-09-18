@@ -66,8 +66,7 @@ fun HentaiMamaSearchScreen(
         }
         hasSearched = true
         isLoadingMore = true
-        
-        // If query is empty, use filter mode; otherwise use search
+
         if (searchQuery.isNotBlank()) {
             viewModel.searchVideos(currentPage, searchQuery)
         } else {
@@ -86,7 +85,6 @@ fun HentaiMamaSearchScreen(
         viewModel.filterVideos(currentPage)
     }
 
-    // Initial search from navigation
     LaunchedEffect(initialQuery) {
         if (initialQuery != null && initialQuery.isNotEmpty() && !hasSearched) {
             searchQuery = initialQuery
@@ -94,7 +92,6 @@ fun HentaiMamaSearchScreen(
         }
     }
 
-    // Handle search results
     LaunchedEffect(searchState) {
         isLoading = false
         when (val state = searchState) {
@@ -122,17 +119,16 @@ fun HentaiMamaSearchScreen(
         }
     }
 
-    // Load more when scrolling
     LaunchedEffect(gridState) {
         coroutineScope.launch {
             while (true) {
                 delay(200)
                 if (isLoadingMore || !hasMorePages || !hasSearched || allVideos.isEmpty()) continue
-                
+
                 val layoutInfo = gridState.layoutInfo
                 val totalItems = layoutInfo.totalItemsCount
                 if (totalItems == 0) continue
-                
+
                 val lastVisible = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: continue
                 if (lastVisible >= totalItems - 4 && totalItems > 4) {
                     isLoadingMore = true
@@ -157,16 +153,16 @@ fun HentaiMamaSearchScreen(
                     }
                 },
                 actions = {
-                    // Filter toggle button - always visible
+
                     IconButton(
                         onClick = { showFilters = !showFilters }
                     ) {
                         Icon(
-                            Icons.Default.FilterList, 
+                            Icons.Default.FilterList,
                             contentDescription = "Filters",
-                            tint = if (showFilters || selectedGenre != null || selectedProducer != null || selectedOrder != null) 
-                                MaterialTheme.colorScheme.primary 
-                            else 
+                            tint = if (showFilters || selectedGenre != null || selectedProducer != null || selectedOrder != null)
+                                MaterialTheme.colorScheme.primary
+                            else
                                 MaterialTheme.colorScheme.onSurface
                         )
                     }
@@ -175,7 +171,7 @@ fun HentaiMamaSearchScreen(
         }
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues)) {
-            // Search input with Search icon - fixed
+
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -186,15 +182,15 @@ fun HentaiMamaSearchScreen(
                 label = { Text("Search videos...") },
                 trailingIcon = {
                     Row {
-                        // Clear button
+
                         if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { 
-                                searchQuery = "" 
+                            IconButton(onClick = {
+                                searchQuery = ""
                             }) {
                                 Icon(Icons.Default.Clear, contentDescription = "Clear")
                             }
                         }
-                        // Search icon button - always visible
+
                         IconButton(onClick = { doSearch() }) {
                             Icon(Icons.Default.Search, contentDescription = "Search")
                         }
@@ -204,7 +200,6 @@ fun HentaiMamaSearchScreen(
                 keyboardActions = KeyboardActions(onSearch = { doSearch() })
             )
 
-            // Filter Section
             if (showFilters) {
                 Card(
                     modifier = Modifier
@@ -220,7 +215,7 @@ fun HentaiMamaSearchScreen(
                             .padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        // Order Filter
+
                         Column {
                             Text("Order By", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                             Spacer(modifier = Modifier.height(4.dp))
@@ -232,7 +227,7 @@ fun HentaiMamaSearchScreen(
                             ) {
                                 FilterChip(
                                     selected = selectedOrder == null,
-                                    onClick = { 
+                                    onClick = {
                                         viewModel.setOrder(null)
                                         applyFilters()
                                     },
@@ -241,7 +236,7 @@ fun HentaiMamaSearchScreen(
                                 getOrders().forEach { order ->
                                     FilterChip(
                                         selected = selectedOrder == order.id,
-                                        onClick = { 
+                                        onClick = {
                                             viewModel.setOrder(if (selectedOrder == order.id) null else order.id)
                                             applyFilters()
                                         },
@@ -253,7 +248,6 @@ fun HentaiMamaSearchScreen(
 
                         HorizontalDivider()
 
-                        // Genre Filter
                         Column {
                             Text("Genre", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                             Spacer(modifier = Modifier.height(4.dp))
@@ -263,7 +257,7 @@ fun HentaiMamaSearchScreen(
                             ) {
                                 FilterChip(
                                     selected = selectedGenre == null,
-                                    onClick = { 
+                                    onClick = {
                                         viewModel.setGenre(null)
                                         applyFilters()
                                     },
@@ -272,7 +266,7 @@ fun HentaiMamaSearchScreen(
                                 getGenres().forEach { genre ->
                                     FilterChip(
                                         selected = selectedGenre == genre,
-                                        onClick = { 
+                                        onClick = {
                                             viewModel.setGenre(if (selectedGenre == genre) null else genre)
                                             applyFilters()
                                         },
@@ -284,7 +278,6 @@ fun HentaiMamaSearchScreen(
 
                         HorizontalDivider()
 
-                        // Producer Filter
                         Column {
                             Text("Producer", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                             Spacer(modifier = Modifier.height(4.dp))
@@ -294,7 +287,7 @@ fun HentaiMamaSearchScreen(
                             ) {
                                 FilterChip(
                                     selected = selectedProducer == null,
-                                    onClick = { 
+                                    onClick = {
                                         viewModel.setProducer(null)
                                         applyFilters()
                                     },
@@ -303,7 +296,7 @@ fun HentaiMamaSearchScreen(
                                 getProducers().forEach { producer ->
                                     FilterChip(
                                         selected = selectedProducer == producer,
-                                        onClick = { 
+                                        onClick = {
                                             viewModel.setProducer(if (selectedProducer == producer) null else producer)
                                             applyFilters()
                                         },
@@ -313,7 +306,6 @@ fun HentaiMamaSearchScreen(
                             }
                         }
 
-                        // Clear all filters button
                         if (selectedGenre != null || selectedProducer != null || selectedOrder != null) {
                             TextButton(
                                 onClick = {
@@ -328,7 +320,7 @@ fun HentaiMamaSearchScreen(
                     }
                 }
             } else if (selectedGenre != null || selectedProducer != null || selectedOrder != null) {
-                // Show active filters as chips even when filters are collapsed
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -340,12 +332,12 @@ fun HentaiMamaSearchScreen(
                         val orderName = getOrders().find { it.id == selectedOrder }?.name ?: selectedOrder
                         InputChip(
                             selected = true,
-                            onClick = { 
+                            onClick = {
                                 viewModel.setOrder(null)
                                 applyFilters()
                             },
                             label = { Text("Order: $orderName") },
-                            trailingIcon = { 
+                            trailingIcon = {
                                 Icon(Icons.Default.Clear, contentDescription = "Remove", modifier = Modifier.size(16.dp))
                             }
                         )
@@ -353,12 +345,12 @@ fun HentaiMamaSearchScreen(
                     if (selectedGenre != null) {
                         InputChip(
                             selected = true,
-                            onClick = { 
+                            onClick = {
                                 viewModel.setGenre(null)
                                 applyFilters()
                             },
                             label = { Text("Genre: $selectedGenre") },
-                            trailingIcon = { 
+                            trailingIcon = {
                                 Icon(Icons.Default.Clear, contentDescription = "Remove", modifier = Modifier.size(16.dp))
                             }
                         )
@@ -366,12 +358,12 @@ fun HentaiMamaSearchScreen(
                     if (selectedProducer != null) {
                         InputChip(
                             selected = true,
-                            onClick = { 
+                            onClick = {
                                 viewModel.setProducer(null)
                                 applyFilters()
                             },
                             label = { Text("Producer: ${selectedProducer?.take(15)}") },
-                            trailingIcon = { 
+                            trailingIcon = {
                                 Icon(Icons.Default.Clear, contentDescription = "Remove", modifier = Modifier.size(16.dp))
                             }
                         )
@@ -381,7 +373,6 @@ fun HentaiMamaSearchScreen(
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
-            // Results
             when (val state = searchState) {
                 is PageLoadingState.Loading -> {
                     if (allVideos.isEmpty()) LoadingContent()
@@ -454,7 +445,6 @@ private fun DisplayResults(
     }
 }
 
-// Keep the existing filter data functions
 private fun getGenres() = listOf(
     "3D", "Action", "Adventure", "Ahegao", "Anal", "Animal Ears", "Beastiality",
     "Blackmail", "Blowjob", "Bondage", "Brainwashed", "Bukakke", "Cat Girl",

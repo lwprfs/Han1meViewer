@@ -17,7 +17,6 @@ interface MissAvHistoryDao {
     @Query("SELECT * FROM missav_watch_history ORDER BY watchDate DESC")
     suspend fun getAllHistorySync(): List<MissAvHistoryEntity>
 
-    // New: Proper pagination
     @Query("SELECT * FROM missav_watch_history ORDER BY watchDate DESC LIMIT :limit OFFSET :offset")
     suspend fun getPage(limit: Int, offset: Int): List<MissAvHistoryEntity>
 

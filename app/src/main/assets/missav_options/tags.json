@@ -1,0 +1,58 @@
+{
+  "sort": [
+    {
+      "search_key": "released_at",
+      "name": "Release Date"
+    },
+    {
+      "search_key": "published_at",
+      "name": "Recent Update"
+    },
+    {
+      "search_key": "today_views",
+      "name": "Today Views"
+    },
+    {
+      "search_key": "weekly_views",
+      "name": "Weekly Views"
+    },
+    {
+      "search_key": "monthly_views",
+      "name": "Monthly Views"
+    },
+    {
+      "search_key": "views",
+      "name": "Total Views"
+    }
+  ],
+  "filter": [
+    {
+      "search_key": "individual",
+      "name": "Single Actress"
+    },
+    {
+      "search_key": "multiple",
+      "name": "Multiple Actress"
+    },
+    {
+      "search_key": "english-subtitle",
+      "name": "English Subtitle"
+    },
+    {
+      "search_key": "jav",
+      "name": "Japan AV"
+    },
+    {
+      "search_key": "asiaav",
+      "name": "Asia AV"
+    },
+    {
+      "search_key": "uncensored",
+      "name": "Uncensored"
+    },
+    {
+      "search_key": "uncensored-leak",
+      "name": "Uncensored Leak"
+    }
+  ]
+}

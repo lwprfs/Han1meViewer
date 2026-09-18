@@ -35,10 +35,6 @@ object MissAvNetworkRepo {
     private val recommMap: MutableMap<String, String> = ConcurrentHashMap()
     private val uuid by lazy { Preferences.missAvUuid }
 
-    /**
-     * Generic retry function with exponential backoff
-     * The onRetry callback is now suspend so it can call delay
-     */
     private suspend fun <T> retryWithBackoff(
         operation: suspend () -> T,
         maxRetries: Int = MAX_RETRY_COUNT,
@@ -63,9 +59,6 @@ object MissAvNetworkRepo {
         throw lastException ?: IllegalStateException("All retries failed")
     }
 
-    /**
-     * Get home page with retry and Cloudflare handling
-     */
     fun getHomePage() = flow {
         emit(WebsiteState.Loading)
         try {
@@ -81,11 +74,11 @@ object MissAvNetworkRepo {
                             throw IllegalStateException("Failed to parse home page")
                         }
                     } else {
-                        // Check if it's a Cloudflare issue
+
                         when (response.code()) {
                             403 -> {
                                 val errorBody = response.errorBody()?.string() ?: ""
-                                if (errorBody.contains("Just a moment") || 
+                                if (errorBody.contains("Just a moment") ||
                                     errorBody.contains("Cloudflare") ||
                                     errorBody.contains("cf_")) {
                                     Log.w(TAG, "Cloudflare challenge detected")
@@ -111,7 +104,7 @@ object MissAvNetworkRepo {
                 onRetry = { attempt, throwable ->
                     Log.w(TAG, "Home page retry $attempt: ${throwable.message}")
                     if (throwable is CloudFlareBlockedException) {
-                        // Wait longer for Cloudflare challenges
+
                         delay(RETRY_DELAY_MS * 2 * (attempt + 1))
                     }
                 }
@@ -133,9 +126,6 @@ object MissAvNetworkRepo {
         }
     }.flowOn(Dispatchers.IO)
 
-    /**
-     * Get popular videos with retry
-     */
     fun getPopularVideos(page: Int) = flow {
         emit(PageLoadingState.Loading)
         try {
@@ -149,7 +139,7 @@ object MissAvNetworkRepo {
                         when (response.code()) {
                             403 -> {
                                 val errorBody = response.errorBody()?.string() ?: ""
-                                if (errorBody.contains("Just a moment") || 
+                                if (errorBody.contains("Just a moment") ||
                                     errorBody.contains("Cloudflare")) {
                                     throw CloudFlareBlockedException("Cloudflare challenge detected for MissAV")
                                 }
@@ -167,13 +157,10 @@ object MissAvNetworkRepo {
         }
     }.flowOn(Dispatchers.IO)
 
-    /**
-     * Get genre videos with retry (synchronous version)
-     */
     suspend fun getGenreVideosSync(
-        genrePath: String, 
-        page: Int = 1, 
-        sort: String? = null, 
+        genrePath: String,
+        page: Int = 1,
+        sort: String? = null,
         filter: String? = null
     ): List<HanimeInfo> {
         return try {
@@ -190,7 +177,7 @@ object MissAvNetworkRepo {
                         when (response.code()) {
                             403 -> {
                                 val errorBody = response.errorBody()?.string() ?: ""
-                                if (errorBody.contains("Just a moment") || 
+                                if (errorBody.contains("Just a moment") ||
                                     errorBody.contains("Cloudflare")) {
                                     throw CloudFlareBlockedException("Cloudflare challenge detected for MissAV")
                                 }
@@ -207,9 +194,6 @@ object MissAvNetworkRepo {
         }
     }
 
-    /**
-     * Get genre videos with flow
-     */
     fun getGenreVideos(genrePath: String, page: Int = 1, sort: String? = null, filter: String? = null) = flow {
         emit(PageLoadingState.Loading)
         try {
@@ -223,7 +207,7 @@ object MissAvNetworkRepo {
                         when (response.code()) {
                             403 -> {
                                 val errorBody = response.errorBody()?.string() ?: ""
-                                if (errorBody.contains("Just a moment") || 
+                                if (errorBody.contains("Just a moment") ||
                                     errorBody.contains("Cloudflare")) {
                                     throw CloudFlareBlockedException("Cloudflare challenge detected for MissAV")
                                 }
@@ -241,9 +225,6 @@ object MissAvNetworkRepo {
         }
     }.flowOn(Dispatchers.IO)
 
-    /**
-     * Get latest videos with retry
-     */
     fun getLatestVideos(page: Int) = flow {
         emit(PageLoadingState.Loading)
         try {
@@ -257,7 +238,7 @@ object MissAvNetworkRepo {
                         when (response.code()) {
                             403 -> {
                                 val errorBody = response.errorBody()?.string() ?: ""
-                                if (errorBody.contains("Just a moment") || 
+                                if (errorBody.contains("Just a moment") ||
                                     errorBody.contains("Cloudflare")) {
                                     throw CloudFlareBlockedException("Cloudflare challenge detected for MissAV")
                                 }
@@ -275,9 +256,6 @@ object MissAvNetworkRepo {
         }
     }.flowOn(Dispatchers.IO)
 
-    /**
-     * Search videos with retry
-     */
     fun searchVideos(query: String, page: Int, sort: String? = null, filter: String? = null) = flow {
         emit(PageLoadingState.Loading)
         try {
@@ -324,7 +302,7 @@ object MissAvNetworkRepo {
                         when (response.code()) {
                             403 -> {
                                 val errorBody = response.errorBody()?.string() ?: ""
-                                if (errorBody.contains("Just a moment") || 
+                                if (errorBody.contains("Just a moment") ||
                                     errorBody.contains("Cloudflare")) {
                                     throw CloudFlareBlockedException("Cloudflare challenge detected for MissAV")
                                 }
@@ -348,9 +326,6 @@ object MissAvNetworkRepo {
         }
     }.flowOn(Dispatchers.IO)
 
-    /**
-     * Get video detail with retry
-     */
     fun getVideoDetail(path: String) = flow {
         emit(VideoLoadingState.Loading)
         try {
@@ -364,7 +339,7 @@ object MissAvNetworkRepo {
                         when (response.code()) {
                             403 -> {
                                 val errorBody = response.errorBody()?.string() ?: ""
-                                if (errorBody.contains("Just a moment") || 
+                                if (errorBody.contains("Just a moment") ||
                                     errorBody.contains("Cloudflare")) {
                                     throw CloudFlareBlockedException("Cloudflare challenge detected for MissAV")
                                 }
@@ -389,9 +364,6 @@ object MissAvNetworkRepo {
         }
     }.flowOn(Dispatchers.IO)
 
-    /**
-     * Get related videos with retry
-     */
     fun getRelatedVideos(videoId: String) = flow {
         emit(WebsiteState.Loading)
         try {
@@ -412,7 +384,7 @@ object MissAvNetworkRepo {
                         when (response.code()) {
                             403 -> {
                                 val errorBody = response.errorBody()?.string() ?: ""
-                                if (errorBody.contains("Just a moment") || 
+                                if (errorBody.contains("Just a moment") ||
                                     errorBody.contains("Cloudflare")) {
                                     throw CloudFlareBlockedException("Cloudflare challenge detected for MissAV")
                                 }
@@ -431,9 +403,6 @@ object MissAvNetworkRepo {
     }.flowOn(Dispatchers.IO)
 }
 
-/**
- * MissAV API Helper - HMAC signature generation for API requests
- */
 object MissAvApiHelper {
 
     private const val TAG = "MissAvApiHelper"

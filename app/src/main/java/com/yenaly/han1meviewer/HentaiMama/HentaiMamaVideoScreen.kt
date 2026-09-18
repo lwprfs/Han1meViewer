@@ -28,6 +28,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
@@ -61,7 +62,6 @@ fun HentaiMamaVideoScreen(
     val activity = context as? Activity
     val coroutineScope = rememberCoroutineScope()
 
-    // Player states
     var playerStarted by remember { mutableStateOf(false) }
     var currentUrl by remember { mutableStateOf("") }
     var isExtractingUrl by remember { mutableStateOf(false) }
@@ -84,18 +84,27 @@ fun HentaiMamaVideoScreen(
     var videoLinks by remember { mutableStateOf<List<HentaiMamaVideoLink>>(emptyList()) }
     var showPlayButton by remember { mutableStateOf(true) }
     var isFetchingLinks by remember { mutableStateOf(false) }
-    
-    // Episode tracking - CRITICAL for episode switching
+
     var currentEpisodeCode by remember { mutableStateOf(videoCode) }
     var currentEpisodePath by remember { mutableStateOf(path) }
 
     val availableSpeeds = remember { listOf(0.25f, 0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f) }
 
-    // Load video detail when path changes - this is the key fix
+    val playerListener = remember {
+        object : Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) = Unit
+            override fun onPositionDiscontinuity(
+                oldPosition: Player.PositionInfo,
+                newPosition: Player.PositionInfo,
+                reason: Int,
+            ) = Unit
+            override fun onIsPlayingChanged(playing: Boolean) = Unit
+        }
+    }
+
     LaunchedEffect(currentEpisodePath) {
         Log.d("HentaiMamaVideo", "Loading episode: code=$currentEpisodeCode, path=$currentEpisodePath")
-        
-        // Reset all player states
+
         playerStarted = false
         currentUrl = ""
         isExtractingUrl = false
@@ -103,12 +112,10 @@ fun HentaiMamaVideoScreen(
         showPlayButton = true
         videoLinks = emptyList()
         qualityMap = emptyMap()
-        
-        // Reset player
+
         exoPlayer?.release()
         exoPlayer = null
-        
-        // Load new video detail
+
         viewModel.getVideoDetail(currentEpisodePath)
     }
 
@@ -119,25 +126,24 @@ fun HentaiMamaVideoScreen(
         }
     }
 
-    // Function to extract video links and start playing
     fun extractAndPlay() {
         coroutineScope.launch {
             isFetchingLinks = true
             extractionFailed = false
-            
+
             try {
                 val detailBody = withContext(Dispatchers.IO) {
                     val response = HentaiMamaNetwork.service.getVideoDetail(currentEpisodePath)
                     if (response.isSuccessful) response.body()?.string() ?: ""
                     else ""
                 }
-                
+
                 if (detailBody.isEmpty()) {
                     extractionFailed = true
                     isFetchingLinks = false
                     return@launch
                 }
-                
+
                 val links = withContext(Dispatchers.IO) {
                     HentaiMamaParser.videoListParse(
                         detailBody,
@@ -145,7 +151,7 @@ fun HentaiMamaVideoScreen(
                         HentaiMamaConstants.API_URL
                     )
                 }
-                
+
                 if (links.isNotEmpty()) {
                     videoLinks = links
                     qualityMap = links.associate { it.quality to it.url }
@@ -154,7 +160,7 @@ fun HentaiMamaVideoScreen(
                     selectedQuality = bestQuality.quality
                     playerStarted = true
                     showPlayButton = false
-                    
+
                     Toast.makeText(context, "Available: ${links.joinToString(", ") { it.quality }}", Toast.LENGTH_SHORT).show()
                 } else {
                     extractionFailed = true
@@ -169,13 +175,11 @@ fun HentaiMamaVideoScreen(
         }
     }
 
-    // Position update callback
     val onPositionUpdate: (Long, Long) -> Unit = { pos, dur ->
         currentPosition = pos
         duration = dur
     }
 
-    // Fullscreen toggle
     val toggleFullscreen = {
         isFullscreenMode = !isFullscreenMode
         if (isFullscreenMode) {
@@ -223,7 +227,7 @@ fun HentaiMamaVideoScreen(
                         .fillMaxSize(),
                     contentPadding = PaddingValues(bottom = 16.dp)
                 ) {
-                    // Video Player
+
                     item {
                         Box(
                             modifier = Modifier
@@ -254,6 +258,8 @@ fun HentaiMamaVideoScreen(
                                     showQualityMenu = showQualityMenu,
                                     exoPlayer = exoPlayer,
                                     subtitleTextView = subtitleTextView,
+
+                                    playerListener = playerListener,
                                     onPlayerCreated = { player ->
                                         exoPlayer = player
                                         if (currentUrl.isNotEmpty()) {
@@ -280,7 +286,7 @@ fun HentaiMamaVideoScreen(
                                             }
                                         }
                                     },
-                                    onContainerCreated = {},
+
                                     onSubtitleTextViewCreated = { subtitleTextView = it },
                                     onPlayPause = {
                                         exoPlayer?.let { player ->
@@ -406,7 +412,7 @@ fun HentaiMamaVideoScreen(
                                         color = MaterialTheme.colorScheme.surfaceVariant
                                     ) {}
                                 }
-                                
+
                                 Surface(
                                     modifier = Modifier.size(72.dp),
                                     shape = RoundedCornerShape(36.dp),
@@ -426,7 +432,6 @@ fun HentaiMamaVideoScreen(
                         }
                     }
 
-                    // Title
                     item {
                         Text(
                             text = info.title,
@@ -436,7 +441,6 @@ fun HentaiMamaVideoScreen(
                         )
                     }
 
-                    // Description
                     if (!info.description.isNullOrBlank()) {
                         item {
                             var expanded by remember { mutableStateOf(false) }
@@ -456,7 +460,6 @@ fun HentaiMamaVideoScreen(
                         }
                     }
 
-                    // Details
                     item {
                         Column(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
@@ -489,7 +492,6 @@ fun HentaiMamaVideoScreen(
                         }
                     }
 
-                    // Quality options
                     if (videoLinks.size > 1) {
                         item {
                             Column(
@@ -534,14 +536,10 @@ fun HentaiMamaVideoScreen(
                         }
                     }
 
-                    // Divider
                     item {
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
                     }
 
-                    // ============================================================
-                    // EPISODES SECTION - FIXED with proper navigation
-                    // ============================================================
                     if (info.episodes.isNotEmpty()) {
                         item {
                             Text(
@@ -553,33 +551,30 @@ fun HentaiMamaVideoScreen(
                         }
 
                         items(info.episodes) { episode ->
-                            // Get the episode code from the URL
+
                             val episodeCode = episode.url.trimEnd('/').substringAfterLast("/")
-                            
-                            // Check if this is the current episode
-                            val isCurrentEpisode = episodeCode == currentEpisodeCode || 
-                                                  episode.url.contains("/$currentEpisodeCode") ||
-                                                  (episode.episodeNumber != null && 
-                                                   episode.episodeNumber == info.episodes.find { 
-                                                       it.url.contains("/$currentEpisodeCode") 
-                                                   }?.episodeNumber)
-                            
+
+                            val isCurrentEpisode = episodeCode == currentEpisodeCode ||
+                                    episode.url.contains("/$currentEpisodeCode") ||
+                                    (episode.episodeNumber != null &&
+                                            episode.episodeNumber == info.episodes.find {
+                                        it.url.contains("/$currentEpisodeCode")
+                                    }?.episodeNumber)
+
                             Surface(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp, vertical = 4.dp)
                                     .clickable {
-                                        // Extract episode path and code
+
                                         val episodePath = episode.url.removePrefix(HentaiMamaConstants.BASE_URL)
                                         val newCode = episodeCode
-                                        
+
                                         Log.d("HentaiMamaVideo", "Episode clicked: code=$newCode, path=$episodePath")
-                                        
-                                        // Update current episode tracking BEFORE navigation
+
                                         currentEpisodeCode = newCode
                                         currentEpisodePath = episodePath
-                                        
-                                        // Navigate to new episode
+
                                         onNavigateToVideo(newCode)
                                     },
                                 shape = RoundedCornerShape(8.dp),
@@ -605,9 +600,9 @@ fun HentaiMamaVideoScreen(
                                             Text(
                                                 "Episode ${String.format("%.0f", episode.episodeNumber)}",
                                                 style = MaterialTheme.typography.bodySmall,
-                                                color = if (isCurrentEpisode) 
-                                                    MaterialTheme.colorScheme.onPrimaryContainer 
-                                                else 
+                                                color = if (isCurrentEpisode)
+                                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                                else
                                                     MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
@@ -618,8 +613,8 @@ fun HentaiMamaVideoScreen(
                                     ) {
                                         if (!episode.date.isNullOrBlank()) {
                                             Text(
-                                                episode.date, 
-                                                style = MaterialTheme.typography.bodySmall, 
+                                                episode.date,
+                                                style = MaterialTheme.typography.bodySmall,
                                                 color = if (isCurrentEpisode)
                                                     MaterialTheme.colorScheme.onPrimaryContainer
                                                 else
@@ -654,7 +649,6 @@ fun HentaiMamaVideoScreen(
                         }
                     }
 
-                    // Related Videos
                     if (info.relatedVideos.isNotEmpty()) {
                         item {
                             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
@@ -691,9 +685,9 @@ fun HentaiMamaVideoScreen(
                 Log.e("HentaiMamaVideo", "Error loading video: ${state.throwable.message}")
                 ErrorContent(
                     message = state.throwable.message ?: "Failed to load video",
-                    onRetry = { 
+                    onRetry = {
                         Log.d("HentaiMamaVideo", "Retrying: path=$currentEpisodePath")
-                        viewModel.getVideoDetail(currentEpisodePath) 
+                        viewModel.getVideoDetail(currentEpisodePath)
                     },
                     modifier = Modifier.padding(paddingValues)
                 )

@@ -19,7 +19,7 @@ object MissAvVideoUtils {
         val hours = totalSeconds / 3600
         val minutes = (totalSeconds % 3600) / 60
         val seconds = totalSeconds % 60
-        
+
         return if (hours > 0) {
             "%d:%02d:%02d".format(hours, minutes, seconds)
         } else {
@@ -38,18 +38,18 @@ object MissAvVideoUtils {
     fun parseCodeAndExtra(code: String): Pair<String, String?> {
         val suffixPatterns = listOf(
             "uncensored-leak",
-            "english-subtitle", 
+            "english-subtitle",
             "chinese-subtitle",
             "uncensored"
         )
-        
+
         for (suffix in suffixPatterns) {
             if (code.lowercase().endsWith("-$suffix")) {
                 val mainCode = code.substring(0, code.length - suffix.length - 1)
                 return Pair(mainCode, suffix.uppercase())
             }
         }
-        
+
         val parts = code.split("-")
         if (parts.size >= 2) {
             val last = parts.last()
@@ -80,7 +80,7 @@ object MissAvVideoUrls {
     ) {
         val currentPosition = if (keepPosition) player.currentPosition else 0L
         val wasPlaying = player.playWhenReady
-        
+
         val baseUrl = Preferences.missAvBaseUrl
         val dataSourceFactory = DefaultDataSource.Factory(
             context,
@@ -95,15 +95,15 @@ object MissAvVideoUrls {
             androidx.media3.exoplayer.source.ProgressiveMediaSource.Factory(dataSourceFactory)
                 .createMediaSource(mediaItem)
         }
-        
+
         player.setMediaSource(mediaSource)
         player.prepare()
         player.setPlaybackSpeed(speed)
-        
+
         if (keepPosition && currentPosition > 0) {
             player.seekTo(currentPosition)
         }
-        
+
         player.playWhenReady = wasPlaying
     }
 }

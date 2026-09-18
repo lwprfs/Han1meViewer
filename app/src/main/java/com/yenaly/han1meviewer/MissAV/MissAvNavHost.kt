@@ -1,4 +1,3 @@
-// app/src/main/java/com/yenaly/han1meviewer/MissAV/MissAvNavHost.kt
 package com.yenaly.han1meviewer.MissAV
 
 import androidx.compose.foundation.layout.Box
@@ -8,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -21,6 +21,9 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 object MissAvHomeRoute
+
+@Serializable
+object MissAvHomeSettingsRoute
 
 @Serializable
 data class MissAvSearchRoute(val query: String? = null)
@@ -45,7 +48,10 @@ fun MissAvNavHost(
         delay(50)
         NavigationManager.initialize(navController, com.yenaly.han1meviewer.SiteType.MISSAV)
     }
-    
+
+    val sharedMissAvViewModel: MissAvViewModel = viewModel()
+    val sharedHomeViewModel: MissAvHomeViewModel = viewModel()
+
     NavHost(
         navController = navController,
         startDestination = MissAvHomeRoute,
@@ -58,18 +64,30 @@ fun MissAvNavHost(
                         navController.navigateSafely(MissAvVideoRoute(code, path))
                     },
                     onNavigateToSearch = { query ->
+                        if (!query.isNullOrBlank()) {
+                            sharedMissAvViewModel.setSearchQuery(query)
+                        }
                         navController.navigateSafely(MissAvSearchRoute(query))
                     },
-                    onSwitchSite = {
-                        // Open the site switch dialog
-                        activity.requestSiteSwitch()
-                    },
+                    onSwitchSite = { activity.requestSiteSwitch() },
                     onNavigateToHistory = {
                         navController.navigateSafely(MissAvHistoryRoute)
-                    }
+                    },
+                    onNavigateToSettings = {
+                        navController.navigateSafely(MissAvHomeSettingsRoute)
+                    },
+                    viewModel = sharedHomeViewModel,
                 )
             }
         }
+
+        composable<MissAvHomeSettingsRoute> {
+            MissAvHomeSettingsScreen(
+                viewModel = sharedHomeViewModel,
+                onBack = { navController.popBackStack() },
+            )
+        }
+
         composable<MissAvSearchRoute> {
             val route = it.toRoute<MissAvSearchRoute>()
             MissAvSearchScreen(
@@ -78,8 +96,10 @@ fun MissAvNavHost(
                 onNavigateToVideo = { code, path ->
                     navController.navigateSafely(MissAvVideoRoute(code, path))
                 },
+                viewModel = sharedMissAvViewModel,
             )
         }
+
         composable<MissAvVideoRoute> {
             val route = it.toRoute<MissAvVideoRoute>()
             MissAvVideoScreen(
@@ -90,10 +110,15 @@ fun MissAvNavHost(
                     navController.navigateSafely(MissAvVideoRoute(code, "/$code"))
                 },
                 onNavigateToSearch = { query ->
+                    if (!query.isNullOrBlank()) {
+                        sharedMissAvViewModel.setSearchQuery(query)
+                    }
                     navController.navigateSafely(MissAvSearchRoute(query))
                 },
+                viewModel = sharedMissAvViewModel,
             )
         }
+
         composable<MissAvHistoryRoute> {
             MissAvHistoryScreen(
                 onNavigateToVideo = { code, path ->

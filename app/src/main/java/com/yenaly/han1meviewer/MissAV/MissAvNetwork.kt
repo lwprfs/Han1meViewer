@@ -1,4 +1,3 @@
-// app/src/main/java/com/yenaly/han1meviewer/MissAV/MissAvNetwork.kt
 package com.yenaly.han1meviewer.MissAV
 
 import android.content.Context
@@ -25,10 +24,6 @@ object MissAvNetwork {
     @Volatile
     private var appContext: Context? = null
 
-    /**
-     * Initialize the network module with application context
-     * This MUST be called before using any network functions
-     */
     fun init(context: Context) {
         if (isInitialized) return
         synchronized(this) {

@@ -115,11 +115,10 @@ object MissAvParser {
             val data = script.data()
             if (data.isBlank()) continue
 
-            // Try to find m3u8 URL directly in the script
             val m3u8Regex = Regex("""https?://[^"'\s<>]+\.m3u8[^"'\s<>]*""")
             val match = m3u8Regex.find(data)
             if (match != null) return match.value
-            
+
             // Try to find video URL in JavaScript
             val videoRegex = Regex("""["'](https?://[^"'\s<>]+\.(?:mp4|m3u8)[^"'\s<>]*)["']""")
             val videoMatch = videoRegex.find(data)

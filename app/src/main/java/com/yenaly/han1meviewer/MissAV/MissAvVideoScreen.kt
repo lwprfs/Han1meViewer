@@ -9,14 +9,17 @@ import android.os.Build
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.webkit.WebView
-import android.widget.FrameLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -38,6 +41,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.Player
@@ -53,6 +58,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import java.io.File
 
+internal const val QUALITY_UNAVAILABLE = "Unavailable"
+
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun MissAvVideoScreen(
@@ -67,6 +74,7 @@ fun MissAvVideoScreen(
     val videoState by viewModel.videoFlow.collectAsStateWithLifecycle()
     val historyViewModel: MissAvHistoryViewModel = viewModel()
     val normalizedPath = if (path.startsWith("/")) path else "/$path"
+
     var playerStarted by remember { mutableStateOf(false) }
     var capturedUrl by remember { mutableStateOf("") }
     var isExtractingUrl by remember { mutableStateOf(false) }
@@ -79,14 +87,11 @@ fun MissAvVideoScreen(
     var showControls by remember { mutableStateOf(true) }
     var selectedQuality by remember { mutableStateOf("720P") }
     var isFullscreen by remember { mutableStateOf(false) }
-    var playerContainer by remember { mutableStateOf<FrameLayout?>(null) }
-    var containerParent by remember { mutableStateOf<ViewGroup?>(null) }
-    var containerLayoutParams by remember { mutableStateOf<ViewGroup.LayoutParams?>(null) }
     var subtitleUri by remember { mutableStateOf<Uri?>(null) }
     var hasSubtitle by remember { mutableStateOf(false) }
     var subtitleCues by remember { mutableStateOf<List<SubtitleCue>>(emptyList()) }
     var currentSubtitleText by remember { mutableStateOf("") }
-    var availableSpeeds by remember { mutableStateOf(listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f)) }
+    val availableSpeeds = remember { listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f) }
     var currentSpeed by remember { mutableStateOf(1.0f) }
     var showSpeedMenu by remember { mutableStateOf(false) }
     var showQualityMenu by remember { mutableStateOf(false) }
@@ -96,6 +101,7 @@ fun MissAvVideoScreen(
     var showResumeButton by remember { mutableStateOf(false) }
     var savedPosition by remember { mutableStateOf(0L) }
     var historyInitialized by remember { mutableStateOf(false) }
+
     val context = LocalContext.current
     val activity = context as? Activity
 
@@ -103,12 +109,19 @@ fun MissAvVideoScreen(
         if (capturedUrl.isBlank()) {
             emptyMap()
         } else {
-            val qualities = listOf("360p", "480p", "720p", "1080p")
-            linkedMapOf<String, String>().apply {
-                qualities.forEach { quality ->
-                    val url = capturedUrl.replace(Regex("/\\d+p/"), "/$quality/")
-                    put(quality.uppercase(), url)
+            val resolutionSegment = Regex("/(\\d+)p/")
+            if (resolutionSegment.containsMatchIn(capturedUrl)) {
+                val qualities = listOf("360p", "480p", "720p", "1080p")
+                linkedMapOf<String, String>().apply {
+                    qualities.forEach { quality ->
+                        put(
+                            quality.uppercase(),
+                            capturedUrl.replace(resolutionSegment, "/$quality/")
+                        )
+                    }
                 }
+            } else {
+                linkedMapOf(QUALITY_UNAVAILABLE to capturedUrl)
             }
         }
     }
@@ -117,47 +130,78 @@ fun MissAvVideoScreen(
         qualityMap[selectedQuality] ?: qualityMap.values.firstOrNull() ?: ""
     }
 
-    fun releasePlayer() {
-        exoPlayer?.let { player ->
-            player.playWhenReady = false
-            player.stop()
-            player.release()
+    LaunchedEffect(qualityMap) {
+        if (qualityMap.isNotEmpty() && selectedQuality !in qualityMap.keys) {
+            selectedQuality = qualityMap.keys.first()
         }
-        exoPlayer = null
-        webViewRef?.let { webView ->
-            (webView.parent as? ViewGroup)?.removeView(webView)
-            webView.stopLoading()
-            webView.clearHistory()
-            webView.clearCache(true)
-            webView.destroy()
-        }
-        webViewRef = null
-        isPlaying = false
     }
 
-    fun handleBack() {
-        releasePlayer()
-        playerStarted = false
-        isExtractingUrl = false
-        extractionFailed = false
-        capturedUrl = ""
-        onBack()
+    val currentVideoInfo = remember(videoState) {
+        (videoState as? VideoLoadingState.Success)?.info
     }
 
-    fun updateCurrentSubtitle(position: Long) {
-        if (subtitleCues.isNotEmpty()) {
-            val cue = subtitleCues.findLast { position >= it.startTime }
-            val newText = cue?.takeIf { position <= it.endTime }?.text ?: ""
-            if (currentSubtitleText != newText) {
-                currentSubtitleText = newText
-                subtitleTextView?.apply {
-                    text = newText
-                    visibility = if (newText.isNotBlank()) android.view.View.VISIBLE else android.view.View.GONE
-                    invalidate()
+    val playerListener = remember {
+        object : Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                val player = exoPlayer ?: return
+                if (playbackState == Player.STATE_READY) {
+                    duration = player.duration
+                    currentPosition = player.currentPosition
+                    updateSubtitleForPosition(
+                        currentPosition,
+                        subtitleCues,
+                        subtitleTextView,
+                        currentSubtitleText,
+                        onNewText = { currentSubtitleText = it }
+                    )
                 }
             }
-        } else {
-            subtitleTextView?.visibility = android.view.View.GONE
+
+            override fun onPositionDiscontinuity(
+                oldPosition: Player.PositionInfo,
+                newPosition: Player.PositionInfo,
+                reason: Int
+            ) {
+                val player = exoPlayer ?: return
+                currentPosition = player.currentPosition
+                duration = player.duration
+                updateSubtitleForPosition(
+                    currentPosition,
+                    subtitleCues,
+                    subtitleTextView,
+                    currentSubtitleText,
+                    onNewText = { currentSubtitleText = it }
+                )
+            }
+
+            override fun onIsPlayingChanged(playing: Boolean) {
+                val player = exoPlayer ?: return
+                currentPosition = player.currentPosition
+                duration = player.duration
+            }
+        }
+    }
+
+    DisposableEffect(exoPlayer) {
+        val player = exoPlayer
+        player?.addListener(playerListener)
+        onDispose { player?.removeListener(playerListener) }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            exoPlayer?.let { p ->
+                p.setVideoSurfaceView(null)
+                p.stop()
+                p.release()
+            }
+            exoPlayer = null
+            webViewRef?.let { wv ->
+                wv.stopLoading()
+                (wv.parent as? ViewGroup)?.removeView(wv)
+                wv.destroy()
+            }
+            webViewRef = null
         }
     }
 
@@ -165,44 +209,32 @@ fun MissAvVideoScreen(
         try {
             if (uri.scheme == "file") {
                 val file = File(uri.path ?: "")
-                if (!file.exists()) {
-                    Toast.makeText(context, "Subtitle file not found", Toast.LENGTH_SHORT).show()
-                    return
-                }
-                if (file.length() == 0L) {
-                    Toast.makeText(context, "Subtitle file is empty", Toast.LENGTH_SHORT).show()
+                if (!file.exists() || file.length() == 0L) {
+                    Toast.makeText(context, "Subtitle file missing or empty", Toast.LENGTH_SHORT).show()
                     return
                 }
             }
-            
             val cues = SubtitleParser.parseSRT(uri, context)
             if (cues.isNotEmpty()) {
                 subtitleCues = cues
                 hasSubtitle = true
                 subtitleUri = uri
-                currentSubtitleText = ""
-                val currentPos = exoPlayer?.currentPosition ?: 0
-                val cue = cues.findLast { currentPos >= it.startTime }
-                currentSubtitleText = cue?.takeIf { currentPos <= it.endTime }?.text ?: ""
-                subtitleTextView?.apply {
-                    text = currentSubtitleText
-                    visibility = if (currentSubtitleText.isNotBlank()) android.view.View.VISIBLE else android.view.View.GONE
-                    bringToFront()
-                    invalidate()
+                val pos = exoPlayer?.currentPosition ?: 0L
+                updateSubtitleForPosition(pos, cues, subtitleTextView, currentSubtitleText) {
+                    currentSubtitleText = it
                 }
                 Toast.makeText(context, "Loaded ${cues.size} subtitles", Toast.LENGTH_SHORT).show()
             } else {
                 subtitleCues = emptyList()
                 hasSubtitle = false
                 subtitleUri = null
-                Toast.makeText(context, "No subtitles found in file", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, "No subtitles found", Toast.LENGTH_LONG).show()
             }
         } catch (e: Exception) {
             subtitleCues = emptyList()
             hasSubtitle = false
             subtitleUri = null
             Toast.makeText(context, "Failed to load subtitle: ${e.message}", Toast.LENGTH_LONG).show()
-            android.util.Log.e("MissAvVideoScreen", "Subtitle load error", e)
         }
     }
 
@@ -220,68 +252,29 @@ fun MissAvVideoScreen(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            val uri = result.data?.data
-            uri?.let {
-                val extension = it.lastPathSegment?.substringAfterLast('.', "")?.lowercase() ?: ""
-                if (extension == "srt") {
-                    subtitleUri = it
-                    loadSubtitles(it)
+            result.data?.data?.let { uri ->
+                val ext = uri.lastPathSegment?.substringAfterLast('.', "")?.lowercase() ?: ""
+                if (ext == "srt") {
+                    subtitleUri = uri
+                    loadSubtitles(uri)
                 } else {
-                    Toast.makeText(context, "Only .srt files are supported", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Only .srt is supported", Toast.LENGTH_SHORT).show()
                 }
             }
         }
     }
 
     fun openSubtitlePicker() {
-        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
-            addCategory(Intent.CATEGORY_OPENABLE)
-            type = "*/*"
-            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("text/srt", "application/x-subrip", "text/plain"))
-        }
-        subtitleFilePickerLauncher.launch(intent)
-    }
-
-    fun resumeFromSavedPosition() {
-        exoPlayer?.seekTo(savedPosition)
-        showResumeButton = false
-        isPlaying = true
-        exoPlayer?.playWhenReady = true
-        showControls = true
-        wasPlayed = true
-        isFirstPlay = false
-    }
-
-    fun startFromBeginning() {
-        exoPlayer?.seekTo(0)
-        showResumeButton = false
-        isPlaying = true
-        exoPlayer?.playWhenReady = true
-        showControls = true
-        wasPlayed = true
-        isFirstPlay = false
-    }
-
-    fun exitFullscreen() {
-        if (!isFullscreen) return
-        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            activity?.window?.insetsController?.show(
-                android.view.WindowInsets.Type.statusBars() or
-                        android.view.WindowInsets.Type.navigationBars()
-            )
-        } else {
-            @Suppress("DEPRECATION")
-            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
-        }
-        playerContainer?.let { container ->
-            (container.parent as? ViewGroup)?.removeView(container)
-            containerParent?.let { parent ->
-                parent.addView(container, containerLayoutParams)
+        subtitleFilePickerLauncher.launch(
+            Intent(Intent.ACTION_GET_CONTENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "*/*"
+                putExtra(
+                    Intent.EXTRA_MIME_TYPES,
+                    arrayOf("text/srt", "application/x-subrip", "text/plain")
+                )
             }
-        }
-        isFullscreen = false
-        showControls = true
+        )
     }
 
     fun enterFullscreen() {
@@ -296,62 +289,94 @@ fun MissAvVideoScreen(
             @Suppress("DEPRECATION")
             activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
         }
-        playerContainer?.let { container ->
-            containerParent = container.parent as? ViewGroup
-            containerLayoutParams = container.layoutParams
-            (container.parent as? ViewGroup)?.removeView(container)
-            (activity?.window?.decorView as? ViewGroup)?.addView(
-                container,
-                ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-                )
-            )
-        }
         isFullscreen = true
         showControls = true
     }
 
+    fun exitFullscreen() {
+        if (!isFullscreen) return
+        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            activity?.window?.insetsController?.show(
+                android.view.WindowInsets.Type.statusBars() or
+                        android.view.WindowInsets.Type.navigationBars()
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+        }
+        isFullscreen = false
+        showControls = true
+    }
+
     fun changeQuality(quality: String) {
-        if (selectedQuality != quality) {
-            val currentPos = exoPlayer?.currentPosition ?: 0
-            val wasPlaying = exoPlayer?.playWhenReady ?: true
-            val savedSubtitleUri = subtitleUri
-            val savedSubtitleCues = subtitleCues
-            
-            selectedQuality = quality
-            val newUrl = qualityMap[quality] ?: return
-            
-            exoPlayer?.let { player ->
-                val dataSourceFactory = DefaultDataSource.Factory(
-                    context,
-                    DefaultHttpDataSource.Factory().setDefaultRequestProperties(
-                        hashMapOf(
-                            "Referer" to "${Preferences.missAvBaseUrl}/",
-                            "Origin" to Preferences.missAvBaseUrl.trimEnd('/')
-                        )
+        if (selectedQuality == quality) return
+        val currentPos = exoPlayer?.currentPosition ?: 0L
+        val wasPlaying = exoPlayer?.playWhenReady ?: true
+        val savedSubtitleUri = subtitleUri
+        val savedSubtitleCues = subtitleCues
+
+        selectedQuality = quality
+        val newUrl = qualityMap[quality] ?: return
+
+        exoPlayer?.let { player ->
+            val baseUrl = Preferences.missAvBaseUrl
+            val dataSourceFactory = DefaultDataSource.Factory(
+                context,
+                DefaultHttpDataSource.Factory().setDefaultRequestProperties(
+                    hashMapOf(
+                        "Referer" to "$baseUrl/",
+                        "Origin" to baseUrl.trimEnd('/')
                     )
                 )
-                
-                val mediaItem = androidx.media3.common.MediaItem.Builder().setUri(newUrl).build()
-                val mediaSource = if (newUrl.contains(".m3u8")) {
-                    HlsMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
-                } else {
-                    androidx.media3.exoplayer.source.ProgressiveMediaSource.Factory(dataSourceFactory)
-                        .createMediaSource(mediaItem)
-                }
-                
-                player.setMediaSource(mediaSource)
-                player.prepare()
-                player.seekTo(currentPos)
-                player.setPlaybackSpeed(currentSpeed)
-                player.playWhenReady = wasPlaying
-                
-                savedSubtitleUri?.let { uri ->
-                    subtitleCues = savedSubtitleCues
-                    loadSubtitles(uri)
-                    updateCurrentSubtitle(currentPos)
-                }
+            )
+            val mediaItem = androidx.media3.common.MediaItem.Builder().setUri(newUrl).build()
+            val mediaSource = if (newUrl.contains(".m3u8")) {
+                HlsMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
+            } else {
+                androidx.media3.exoplayer.source.ProgressiveMediaSource.Factory(dataSourceFactory)
+                    .createMediaSource(mediaItem)
+            }
+            player.setMediaSource(mediaSource)
+            player.prepare()
+            player.seekTo(currentPos)
+            player.setPlaybackSpeed(currentSpeed)
+            player.playWhenReady = wasPlaying
+
+            if (savedSubtitleUri != null && savedSubtitleCues.isNotEmpty()) {
+                subtitleCues = savedSubtitleCues
+                hasSubtitle = true
+                subtitleUri = savedSubtitleUri
+                updateSubtitleForPosition(
+                    currentPos,
+                    savedSubtitleCues,
+                    subtitleTextView,
+                    currentSubtitleText,
+                ) { currentSubtitleText = it }
+            }
+        }
+    }
+
+    fun performSkip(deltaMillis: Long) {
+        exoPlayer?.let { player ->
+            val pos = player.currentPosition
+            val dur = player.duration
+
+            val target = if (dur > 0 && dur != androidx.media3.common.C.TIME_UNSET) {
+                (pos + deltaMillis).coerceIn(0L, dur)
+            } else {
+                (pos + deltaMillis).coerceAtLeast(0L)
+            }
+
+            val wasPlaying = player.playWhenReady
+            player.seekTo(target)
+            currentPosition = target
+
+            if (!wasPlaying) {
+                player.playWhenReady = true
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    exoPlayer?.let { if (!it.isPlaying) it.playWhenReady = false }
+                }, 250L)
             }
         }
     }
@@ -362,6 +387,7 @@ fun MissAvVideoScreen(
         subtitleUri = null
         currentSubtitleText = ""
         subtitleTextView?.visibility = android.view.View.GONE
+
         viewModel.getVideoDetail(normalizedPath)
         wasPlayed = false
         isFirstPlay = true
@@ -370,11 +396,12 @@ fun MissAvVideoScreen(
         historyInitialized = false
         isPlaying = false
         playerStarted = false
-        
-        val history = MissAvHistoryRepo.getByVideoCode(videoCode)
-        if (history != null && history.lastPosition > 5000) {
-            savedPosition = history.lastPosition
-            showResumeButton = true
+
+        MissAvHistoryRepo.getByVideoCode(videoCode)?.let { history ->
+            if (history.lastPosition > 5000) {
+                savedPosition = history.lastPosition
+                showResumeButton = true
+            }
         }
     }
 
@@ -386,8 +413,8 @@ fun MissAvVideoScreen(
                 videoCode = videoCode,
                 title = info.title,
                 coverUrl = info.coverUrl,
-                currentPosition = 0,
-                totalDuration = 0,
+                currentPosition = 0L,
+                totalDuration = 0L,
                 isPlaying = false,
                 wasPlayed = false
             )
@@ -406,21 +433,22 @@ fun MissAvVideoScreen(
     LaunchedEffect(currentSubtitleText) {
         subtitleTextView?.let { tv ->
             tv.text = currentSubtitleText
-            tv.visibility = if (currentSubtitleText.isNotBlank()) android.view.View.VISIBLE else android.view.View.GONE
+            tv.visibility = if (currentSubtitleText.isNotBlank())
+                android.view.View.VISIBLE else android.view.View.GONE
             tv.invalidate()
         }
     }
 
     LaunchedEffect(capturedUrl) {
         if (capturedUrl.isNotBlank() && isExtractingUrl) {
-            webViewRef?.stopLoading()
-            webViewRef?.let { webView ->
-                (webView.parent as? ViewGroup)?.removeView(webView)
-                webView.destroy()
-            }
-            webViewRef = null
             isExtractingUrl = false
             playerStarted = true
+            webViewRef?.let { wv ->
+                wv.stopLoading()
+                (wv.parent as? ViewGroup)?.removeView(wv)
+                wv.destroy()
+            }
+            webViewRef = null
         }
     }
 
@@ -429,24 +457,18 @@ fun MissAvVideoScreen(
             delay(15000)
             if (isExtractingUrl) {
                 if (capturedUrl.isNotBlank()) {
-                    webViewRef?.stopLoading()
-                    webViewRef?.let { webView ->
-                        (webView.parent as? ViewGroup)?.removeView(webView)
-                        webView.destroy()
-                    }
-                    webViewRef = null
                     isExtractingUrl = false
                     playerStarted = true
                 } else {
-                    webViewRef?.stopLoading()
-                    webViewRef?.let { webView ->
-                        (webView.parent as? ViewGroup)?.removeView(webView)
-                        webView.destroy()
-                    }
-                    webViewRef = null
                     isExtractingUrl = false
                     extractionFailed = true
                 }
+                webViewRef?.let { wv ->
+                    wv.stopLoading()
+                    (wv.parent as? ViewGroup)?.removeView(wv)
+                    wv.destroy()
+                }
+                webViewRef = null
             }
         }
     }
@@ -458,77 +480,45 @@ fun MissAvVideoScreen(
         }
     }
 
-    LaunchedEffect(isPlaying) {
-        while (isActive && isPlaying && hasSubtitle) {
-            delay(100)
-            currentPosition = exoPlayer?.currentPosition ?: 0
+    LaunchedEffect(exoPlayer, isPlaying) {
+        val player = exoPlayer ?: return@LaunchedEffect
+        while (isActive) {
+            delay(200)
+            if (player.playWhenReady) {
+                currentPosition = player.currentPosition
+                duration = player.duration
+                if (hasSubtitle) {
+                    updateSubtitleForPosition(
+                        currentPosition, subtitleCues, subtitleTextView, currentSubtitleText
+                    ) { currentSubtitleText = it }
+                }
+            }
         }
     }
 
-    LaunchedEffect(isPlaying, exoPlayer) {
-        if (!isPlaying || exoPlayer == null) return@LaunchedEffect
-        val info = (videoState as? VideoLoadingState.Success)?.info
-        if (info == null || info.title.isBlank()) return@LaunchedEffect
+    LaunchedEffect(isPlaying, exoPlayer, currentVideoInfo) {
+        val player = exoPlayer ?: return@LaunchedEffect
+        val info = currentVideoInfo ?: return@LaunchedEffect
+        if (!isPlaying) return@LaunchedEffect
+
         wasPlayed = true
         isFirstPlay = false
         showResumeButton = false
-        while (isActive && isPlaying && exoPlayer != null) {
-            val position = exoPlayer?.currentPosition ?: 0
-            val totalDuration = exoPlayer?.duration ?: 0
-            if (totalDuration > 0) {
+
+        while (isActive) {
+            delay(2000)
+            val total = player.duration
+            if (total > 0) {
                 historyViewModel.updateWatchHistory(
                     videoCode = videoCode,
                     title = info.title,
                     coverUrl = info.coverUrl,
-                    currentPosition = position,
-                    totalDuration = totalDuration,
-                    isPlaying = true,
+                    currentPosition = player.currentPosition,
+                    totalDuration = total,
+                    isPlaying = player.playWhenReady,
                     wasPlayed = wasPlayed
                 )
             }
-            delay(2000)
-        }
-    }
-
-    LaunchedEffect(exoPlayer) {
-        exoPlayer?.addListener(object : Player.Listener {
-            override fun onPositionDiscontinuity(
-                oldPosition: Player.PositionInfo,
-                newPosition: Player.PositionInfo,
-                reason: Int
-            ) {
-                val info = (videoState as? VideoLoadingState.Success)?.info
-                if (info == null || info.title.isBlank()) return
-                val position = exoPlayer?.currentPosition ?: 0
-                val totalDuration = exoPlayer?.duration ?: 0
-                if (totalDuration > 0) {
-                    historyViewModel.updateWatchHistory(
-                        videoCode = videoCode,
-                        title = info.title,
-                        coverUrl = info.coverUrl,
-                        currentPosition = position,
-                        totalDuration = totalDuration,
-                        isPlaying = exoPlayer?.playWhenReady ?: false,
-                        wasPlayed = wasPlayed || exoPlayer?.playWhenReady == true
-                    )
-                }
-            }
-        })
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            if (isExtractingUrl) {
-                webViewRef?.stopLoading()
-                webViewRef?.let { webView ->
-                    (webView.parent as? ViewGroup)?.removeView(webView)
-                    webView.destroy()
-                }
-                webViewRef = null
-                isExtractingUrl = false
-            }
-            exitFullscreen()
-            releasePlayer()
         }
     }
 
@@ -536,241 +526,342 @@ fun MissAvVideoScreen(
 
     Scaffold(
         topBar = {
-            if (!isFullscreen) {
-                TopAppBar(
-                    title = { Text("Video", maxLines = 1) },
-                    navigationIcon = {
-                        IconButton(onClick = { handleBack() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                        }
-                    },
-                    actions = {
-                        IconButton(onClick = { 
-                            if (hasSubtitle) {
-                                clearSubtitle()
-                            } else {
-                                openSubtitlePicker()
-                            }
-                        }) {
-                            Icon(
-                                if (hasSubtitle) Icons.Filled.ClosedCaption else Icons.Filled.Subtitles,
-                                contentDescription = "Subtitle",
-                                tint = if (hasSubtitle) Color.Green else Color.White
-                            )
-                        }
+            TopAppBar(
+                title = { Text("Video", maxLines = 1) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                )
-            }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        if (hasSubtitle) clearSubtitle() else openSubtitlePicker()
+                    }) {
+                        Icon(
+                            if (hasSubtitle) Icons.Filled.ClosedCaption else Icons.Filled.Subtitles,
+                            contentDescription = "Subtitle",
+                            tint = if (hasSubtitle) Color.Green else Color.White
+                        )
+                    }
+                }
+            )
         }
     ) { paddingValues ->
         when (val state = videoState) {
             is VideoLoadingState.Loading -> LoadingContent(modifier = Modifier.padding(paddingValues))
+
             is VideoLoadingState.Success -> {
+                val info = state.info
                 val baseUrl = Preferences.missAvBaseUrl
                 val videoPageUrl = baseUrl.trimEnd('/') + normalizedPath
-                val info = state.info
 
-                LazyColumn(
-                    modifier = Modifier
-                        .padding(paddingValues)
+                Column(
+                    modifier = modifier
                         .fillMaxSize()
+                        .padding(paddingValues)
                 ) {
-                    item {
+                    if (isFullscreen) {
                         Box(
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            MissAvVideoPlayer(
-                                playerStarted = playerStarted,
-                                currentUrl = currentUrl,
-                                isExtractingUrl = isExtractingUrl,
-                                extractionFailed = extractionFailed,
-                                capturedUrl = capturedUrl,
-                                videoPageUrl = videoPageUrl,
-                                coverUrl = info.coverUrl,
-                                isPlaying = isPlaying,
-                                currentPosition = currentPosition,
-                                duration = duration,
-                                showControls = showControls,
-                                isFullscreen = isFullscreen,
-                                hasSubtitle = hasSubtitle,
-                                qualityMap = qualityMap,
-                                selectedQuality = selectedQuality,
-                                availableSpeeds = availableSpeeds,
-                                currentSpeed = currentSpeed,
-                                showSpeedMenu = showSpeedMenu,
-                                showQualityMenu = showQualityMenu,
-                                exoPlayer = exoPlayer,
-                                subtitleTextView = subtitleTextView,
-                                showResumeButton = showResumeButton,
-                                savedPosition = savedPosition,
-                                onResumeFromSaved = { resumeFromSavedPosition() },
-                                onStartFromBeginning = { startFromBeginning() },
-                                onPlayerCreated = { player ->
-                                    exoPlayer = player
-                                    val dataSourceFactory = DefaultDataSource.Factory(
-                                        context,
-                                        DefaultHttpDataSource.Factory().setDefaultRequestProperties(
-                                            hashMapOf(
-                                                "Referer" to "${Preferences.missAvBaseUrl}/",
-                                                "Origin" to Preferences.missAvBaseUrl.trimEnd('/')
-                                            )
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(16f / 9f)
+                                .background(Color.Black)
+                        )
+                    } else {
+                        MissAvVideoPlayer(
+                            playerStarted = playerStarted,
+                            currentUrl = currentUrl,
+                            isExtractingUrl = isExtractingUrl,
+                            extractionFailed = extractionFailed,
+                            capturedUrl = capturedUrl,
+                            videoPageUrl = videoPageUrl,
+                            coverUrl = info.coverUrl,
+                            isPlaying = isPlaying,
+                            currentPosition = currentPosition,
+                            duration = duration,
+                            showControls = showControls,
+                            isFullscreen = false,
+                            hasSubtitle = hasSubtitle,
+                            qualityMap = qualityMap,
+                            selectedQuality = selectedQuality,
+                            availableSpeeds = availableSpeeds,
+                            currentSpeed = currentSpeed,
+                            showSpeedMenu = showSpeedMenu,
+                            showQualityMenu = showQualityMenu,
+                            exoPlayer = exoPlayer,
+                            subtitleTextView = subtitleTextView,
+                            showResumeButton = showResumeButton,
+                            savedPosition = savedPosition,
+                            playerListener = playerListener,
+                            onResumeFromSaved = {
+                                exoPlayer?.seekTo(savedPosition)
+                                showResumeButton = false
+                                isPlaying = true
+                                exoPlayer?.playWhenReady = true
+                                showControls = true
+                                wasPlayed = true
+                                isFirstPlay = false
+                            },
+                            onStartFromBeginning = {
+                                exoPlayer?.seekTo(0L)
+                                showResumeButton = false
+                                isPlaying = true
+                                exoPlayer?.playWhenReady = true
+                                showControls = true
+                                wasPlayed = true
+                                isFirstPlay = false
+                            },
+                            onPlayerCreated = { player ->
+                                exoPlayer = player
+                                val dsFactory = DefaultDataSource.Factory(
+                                    context,
+                                    DefaultHttpDataSource.Factory().setDefaultRequestProperties(
+                                        hashMapOf(
+                                            "Referer" to "$baseUrl/",
+                                            "Origin" to baseUrl.trimEnd('/')
                                         )
                                     )
-                                    val mediaItem = androidx.media3.common.MediaItem.Builder().setUri(currentUrl).build()
-                                    val mediaSource = if (currentUrl.contains(".m3u8")) {
-                                        HlsMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
+                                )
+                                val mediaItem = androidx.media3.common.MediaItem.Builder()
+                                    .setUri(currentUrl).build()
+                                val mediaSource = if (currentUrl.contains(".m3u8")) {
+                                    HlsMediaSource.Factory(dsFactory).createMediaSource(mediaItem)
+                                } else {
+                                    androidx.media3.exoplayer.source.ProgressiveMediaSource
+                                        .Factory(dsFactory).createMediaSource(mediaItem)
+                                }
+                                player.setMediaSource(mediaSource)
+                                player.prepare()
+                                player.setPlaybackSpeed(currentSpeed)
+                                if (savedPosition > 0) player.seekTo(savedPosition)
+                                if (isPlaying) player.playWhenReady = true
+                            },
+                            onSubtitleTextViewCreated = { tv -> subtitleTextView = tv },
+                            onSurfaceReleased = { },
+                            onPlayPause = {
+                                exoPlayer?.let { player ->
+                                    if (player.playWhenReady) {
+                                        player.playWhenReady = false
+                                        isPlaying = false
                                     } else {
-                                        androidx.media3.exoplayer.source.ProgressiveMediaSource.Factory(dataSourceFactory)
-                                            .createMediaSource(mediaItem)
-                                    }
-                                    player.setMediaSource(mediaSource)
-                                    player.prepare()
-                                    player.setPlaybackSpeed(currentSpeed)
-                                    if (savedPosition > 0) {
-                                        player.seekTo(savedPosition)
-                                    }
-                                    
-                                    subtitleUri?.let { uri ->
-                                        loadSubtitles(uri)
-                                    }
-                                    
-                                    player.addListener(object : Player.Listener {
-                                        override fun onPlaybackStateChanged(playbackState: Int) {
-                                            if (playbackState == Player.STATE_READY) {
-                                                duration = player.duration
-                                                currentPosition = player.currentPosition
-                                                updateCurrentSubtitle(player.currentPosition)
-                                            }
-                                        }
-                                        override fun onPositionDiscontinuity(
-                                            oldPosition: Player.PositionInfo,
-                                            newPosition: Player.PositionInfo,
-                                            reason: Int
-                                        ) {
-                                            currentPosition = player.currentPosition
-                                            duration = player.duration
-                                            updateCurrentSubtitle(player.currentPosition)
-                                        }
-                                        override fun onIsPlayingChanged(playing: Boolean) {
-                                            if (playing) {
-                                                currentPosition = player.currentPosition
-                                                duration = player.duration
-                                            }
-                                        }
-                                    })
-                                    if (isPlaying) {
                                         player.playWhenReady = true
-                                    }
-                                },
-                                onContainerCreated = { container ->
-                                    playerContainer = container
-                                },
-                                onSubtitleTextViewCreated = { textView ->
-                                    subtitleTextView = textView
-                                },
-                                onPlayPause = {
-                                    exoPlayer?.let { player ->
-                                        if (player.playWhenReady) {
-                                            player.playWhenReady = false
-                                            isPlaying = false
-                                        } else {
-                                            player.playWhenReady = true
-                                            isPlaying = true
-                                            showControls = true
-                                            if (showResumeButton) {
-                                                showResumeButton = false
-                                                wasPlayed = true
-                                                isFirstPlay = false
-                                            }
+                                        isPlaying = true
+                                        showControls = true
+                                        if (showResumeButton) {
+                                            showResumeButton = false
+                                            wasPlayed = true
+                                            isFirstPlay = false
                                         }
-                                    }
-                                },
-                                onSeek = { position ->
-                                    exoPlayer?.seekTo(position)
-                                    currentPosition = position
-                                },
-                                onToggleControls = { showControls = !showControls },
-                                onSpeedChange = { speed ->
-                                    currentSpeed = speed
-                                    exoPlayer?.setPlaybackSpeed(speed)
-                                    showSpeedMenu = false
-                                    showControls = true
-                                },
-                                onQualityChange = { quality ->
-                                    changeQuality(quality)
-                                    showQualityMenu = false
-                                    showControls = true
-                                },
-                                onToggleFullscreen = {
-                                    if (isFullscreen) exitFullscreen() else enterFullscreen()
-                                },
-                                onExitFullscreen = { exitFullscreen() },
-                                onToggleSpeedMenu = { showSpeedMenu = !showSpeedMenu },
-                                onToggleQualityMenu = { showQualityMenu = !showQualityMenu },
-                                onDismissSpeedMenu = { showSpeedMenu = false },
-                                onDismissQualityMenu = { showQualityMenu = false },
-                                onSubtitleToggle = {
-                                    if (hasSubtitle) {
-                                        clearSubtitle()
-                                    } else {
-                                        openSubtitlePicker()
-                                    }
-                                },
-                                onPlayClick = {
-                                    capturedUrl = ""
-                                    extractionFailed = false
-                                    isExtractingUrl = true
-                                    if (savedPosition > 0) {
-                                        showResumeButton = true
-                                    }
-                                },
-                                onRetryExtraction = {
-                                    extractionFailed = false
-                                    capturedUrl = ""
-                                    isExtractingUrl = true
-                                },
-                                onPositionUpdate = { position, totalDuration ->
-                                    currentPosition = position
-                                    duration = totalDuration
-                                    if (hasSubtitle) {
-                                        updateCurrentSubtitle(position)
-                                    }
-                                },
-                                webViewRef = webViewRef,
-                                onWebViewRefChange = { webViewRef = it },
-                                onUrlCaptured = { url ->
-                                    if (capturedUrl.isBlank()) {
-                                        capturedUrl = url
                                     }
                                 }
+                            },
+                            onSeek = { position ->
+                                exoPlayer?.seekTo(position)
+                                currentPosition = position
+                            },
+                            onSkip = { deltaMillis -> performSkip(deltaMillis) },
+                            onToggleControls = { showControls = !showControls },
+                            onSpeedChange = { speed ->
+                                currentSpeed = speed
+                                exoPlayer?.setPlaybackSpeed(speed)
+                                showSpeedMenu = false
+                                showControls = true
+                            },
+                            onQualityChange = { quality ->
+                                changeQuality(quality)
+                                showQualityMenu = false
+                                showControls = true
+                            },
+                            onToggleFullscreen = {
+                                if (isFullscreen) exitFullscreen() else enterFullscreen()
+                            },
+                            onExitFullscreen = { exitFullscreen() },
+                            onToggleSpeedMenu = { showSpeedMenu = !showSpeedMenu },
+                            onToggleQualityMenu = { showQualityMenu = !showQualityMenu },
+                            onDismissSpeedMenu = { showSpeedMenu = false },
+                            onDismissQualityMenu = { showQualityMenu = false },
+                            onSubtitleToggle = {
+                                if (hasSubtitle) clearSubtitle() else openSubtitlePicker()
+                            },
+                            onPlayClick = {
+                                capturedUrl = ""
+                                extractionFailed = false
+                                isExtractingUrl = true
+                                if (savedPosition > 0) showResumeButton = true
+                            },
+                            onRetryExtraction = {
+                                extractionFailed = false
+                                capturedUrl = ""
+                                isExtractingUrl = true
+                            },
+                            onPositionUpdate = { position, total ->
+                                currentPosition = position
+                                duration = total
+                                if (hasSubtitle) {
+                                    updateSubtitleForPosition(
+                                        position, subtitleCues, subtitleTextView, currentSubtitleText
+                                    ) { currentSubtitleText = it }
+                                }
+                            },
+                            webViewRef = webViewRef,
+                            onWebViewRefChange = { webViewRef = it },
+                            onUrlCaptured = { url ->
+                                if (capturedUrl.isBlank()) capturedUrl = url
+                            }
+                        )
+                    }
+
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        item {
+                            MissAvVideoDetails(
+                                info = info,
+                                onNavigateToSearch = onNavigateToSearch,
+                                onSubtitleDownloaded = { uri ->
+                                    subtitleUri = uri
+                                    loadSubtitles(uri)
+                                    currentPosition = exoPlayer?.currentPosition ?: 0L
+                                },
+                                context = context
                             )
                         }
                     }
-
-                    item {
-                        MissAvVideoDetails(
-                            info = info,
-                            onNavigateToSearch = onNavigateToSearch,
-                            onSubtitleDownloaded = { uri ->
-                                subtitleUri = uri
-                                loadSubtitles(uri)
-                                currentPosition = exoPlayer?.currentPosition ?: 0
-                            },
-                            context = context
-                        )
-                    }
                 }
             }
+
             is VideoLoadingState.Error -> ErrorContent(
                 message = state.throwable.message ?: "Failed",
                 onRetry = { viewModel.getVideoDetail(normalizedPath) },
                 modifier = Modifier.padding(paddingValues)
             )
+
             is VideoLoadingState.NoContent -> ErrorContent(
                 message = "No content",
                 onRetry = { viewModel.getVideoDetail(normalizedPath) },
                 modifier = Modifier.padding(paddingValues)
             )
         }
+    }
+
+    if (isFullscreen && videoState is VideoLoadingState.Success) {
+        val info = (videoState as VideoLoadingState.Success).info
+        val baseUrl = Preferences.missAvBaseUrl
+        val videoPageUrl = baseUrl.trimEnd('/') + normalizedPath
+
+        Dialog(
+            onDismissRequest = { exitFullscreen() },
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows = false,
+            ),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+            ) {
+                MissAvVideoPlayer(
+                    playerStarted = playerStarted,
+                    currentUrl = currentUrl,
+                    isExtractingUrl = isExtractingUrl,
+                    extractionFailed = extractionFailed,
+                    capturedUrl = capturedUrl,
+                    videoPageUrl = videoPageUrl,
+                    coverUrl = info.coverUrl,
+                    isPlaying = isPlaying,
+                    currentPosition = currentPosition,
+                    duration = duration,
+                    showControls = showControls,
+                    isFullscreen = true,
+                    hasSubtitle = hasSubtitle,
+                    qualityMap = qualityMap,
+                    selectedQuality = selectedQuality,
+                    availableSpeeds = availableSpeeds,
+                    currentSpeed = currentSpeed,
+                    showSpeedMenu = showSpeedMenu,
+                    showQualityMenu = showQualityMenu,
+                    exoPlayer = exoPlayer,
+                    subtitleTextView = subtitleTextView,
+                    showResumeButton = false,
+                    savedPosition = savedPosition,
+                    playerListener = playerListener,
+                    onPlayerCreated = { },
+                    onSubtitleTextViewCreated = { tv -> subtitleTextView = tv },
+                    onSurfaceReleased = { },
+                    onPlayPause = {
+                        exoPlayer?.let { player ->
+                            if (player.playWhenReady) {
+                                player.playWhenReady = false
+                                isPlaying = false
+                            } else {
+                                player.playWhenReady = true
+                                isPlaying = true
+                                showControls = true
+                            }
+                        }
+                    },
+                    onSeek = { position ->
+                        exoPlayer?.seekTo(position)
+                        currentPosition = position
+                    },
+                    onSkip = { deltaMillis -> performSkip(deltaMillis) },
+                    onToggleControls = { showControls = !showControls },
+                    onSpeedChange = { speed ->
+                        currentSpeed = speed
+                        exoPlayer?.setPlaybackSpeed(speed)
+                        showSpeedMenu = false
+                    },
+                    onQualityChange = { quality ->
+                        changeQuality(quality)
+                        showQualityMenu = false
+                    },
+                    onToggleFullscreen = { exitFullscreen() },
+                    onExitFullscreen = { exitFullscreen() },
+                    onToggleSpeedMenu = { showSpeedMenu = !showSpeedMenu },
+                    onToggleQualityMenu = { showQualityMenu = !showQualityMenu },
+                    onDismissSpeedMenu = { showSpeedMenu = false },
+                    onDismissQualityMenu = { showQualityMenu = false },
+                    onSubtitleToggle = {
+                        if (hasSubtitle) clearSubtitle() else openSubtitlePicker()
+                    },
+                    onPlayClick = { },
+                    onRetryExtraction = { },
+                    onPositionUpdate = { position, total ->
+                        currentPosition = position
+                        duration = total
+                        if (hasSubtitle) {
+                            updateSubtitleForPosition(
+                                position, subtitleCues, subtitleTextView, currentSubtitleText
+                            ) { currentSubtitleText = it }
+                        }
+                    },
+                    webViewRef = webViewRef,
+                    onWebViewRefChange = { webViewRef = it },
+                    onUrlCaptured = { url -> if (capturedUrl.isBlank()) capturedUrl = url },
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
+    }
+}
+
+private fun updateSubtitleForPosition(
+    position: Long,
+    cues: List<SubtitleCue>,
+    tv: TextView?,
+    currentText: String,
+    onNewText: (String) -> Unit,
+) {
+    if (cues.isEmpty()) {
+        tv?.visibility = android.view.View.GONE
+        return
+    }
+    val cue = cues.findLast { position >= it.startTime }
+    val newText = cue?.takeIf { position <= it.endTime }?.text ?: ""
+    if (newText != currentText) {
+        onNewText(newText)
+        tv?.text = newText
+        tv?.visibility = if (newText.isNotBlank())
+            android.view.View.VISIBLE else android.view.View.GONE
+        tv?.invalidate()
     }
 }
