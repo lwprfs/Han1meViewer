@@ -1,4 +1,3 @@
-// app/src/main/java/com/yenaly/han1meviewer/ui/navigation/main/UnifiedMainNavHost.kt
 package com.yenaly.han1meviewer.ui.navigation.main
 
 import androidx.compose.runtime.Composable
@@ -7,7 +6,7 @@ import androidx.compose.runtime.key
 import android.util.Log
 import androidx.navigation.NavHostController
 import com.yenaly.han1meviewer.HentaiMama.HentaiMamaNavHost
-import com.yenaly.han1meviewer.MissAV.MissAvNavHost
+import com.yenaly.han1meviewer.MissAV.ui.navigation.MissAvNavHost
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.ui.activity.MainActivity

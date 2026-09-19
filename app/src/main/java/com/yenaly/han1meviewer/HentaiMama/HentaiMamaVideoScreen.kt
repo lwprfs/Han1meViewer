@@ -34,7 +34,7 @@ import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.hls.HlsMediaSource
 import coil3.compose.AsyncImage
-import com.yenaly.han1meviewer.MissAV.MissAvVideoPlayer
+import com.yenaly.han1meviewer.MissAV.ui.video.MissAvVideoPlayer
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
 import com.yenaly.han1meviewer.ui.component.VideoCardItem

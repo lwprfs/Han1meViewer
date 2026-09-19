@@ -8,14 +8,14 @@ import androidx.navigation.NavHostController
 import com.yenaly.han1meviewer.HentaiMama.HentaiMamaHomeRoute
 import com.yenaly.han1meviewer.HentaiMama.HentaiMamaSearchRoute
 import com.yenaly.han1meviewer.HentaiMama.HentaiMamaVideoRoute
-import com.yenaly.han1meviewer.MissAV.MissAvHomeRoute
-import com.yenaly.han1meviewer.MissAV.MissAvSearchRoute
-import com.yenaly.han1meviewer.MissAV.MissAvVideoRoute
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.ui.navigation.main.HomeRoute
 import com.yenaly.han1meviewer.ui.navigation.main.SearchRoute
 import com.yenaly.han1meviewer.ui.navigation.main.VideoRoute
+import com.yenaly.han1meviewer.MissAV.ui.navigation.MissAvHomeRoute
+import com.yenaly.han1meviewer.MissAV.ui.navigation.MissAvSearchRoute
+import com.yenaly.han1meviewer.MissAV.ui.navigation.MissAvVideoRoute
 
 object NavigationManager {
     

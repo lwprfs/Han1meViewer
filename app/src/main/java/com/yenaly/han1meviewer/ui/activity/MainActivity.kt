@@ -96,10 +96,10 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.Locale
+import com.yenaly.han1meviewer.MissAV.common.MissAvConstants
+import com.yenaly.han1meviewer.MissAV.data.remote.MissAvNetwork
 
 // MissAV imports
-import com.yenaly.han1meviewer.MissAV.MissAvConstants
-import com.yenaly.han1meviewer.MissAV.MissAvNetwork
 
 // HentaiMama imports
 import com.yenaly.han1meviewer.HentaiMama.HentaiMamaConstants

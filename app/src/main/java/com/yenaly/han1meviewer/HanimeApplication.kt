@@ -16,7 +16,6 @@ import com.google.firebase.remoteconfig.remoteConfig
 import com.google.firebase.remoteconfig.remoteConfigSettings
 import com.yenaly.han1meviewer.HentaiMama.HentaiMamaNetwork
 import com.yenaly.han1meviewer.logic.network.HProxySelector
-import com.yenaly.han1meviewer.MissAV.MissAvNetwork
 import com.yenaly.han1meviewer.ui.viewmodel.AppViewModel
 import com.yenaly.han1meviewer.ui.activity.MainActivity
 import com.yenaly.han1meviewer.util.AnimeShaders
@@ -26,7 +25,7 @@ import com.yenaly.yenaly_libs.base.YenalyApplication
 import com.yenaly.yenaly_libs.utils.LanguageHelper
 import `is`.xyz.mpv.MPVLib
 import java.net.ProxySelector
-
+import com.yenaly.han1meviewer.MissAV.data.remote.MissAvNetwork
 
 /**
  * @project Hanime1
