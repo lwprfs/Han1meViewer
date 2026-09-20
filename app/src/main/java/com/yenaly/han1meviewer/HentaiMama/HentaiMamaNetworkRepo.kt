@@ -97,8 +97,7 @@ object HentaiMamaNetworkRepo {
 
             val response = client.newCall(request).execute()
             if (response.isSuccessful) {
-                val body = response.body?.string() ?: EMPTY_STRING
-
+                val body = response.body.string()
                 emit(HentaiMamaParser.parseSearchResults(body, isFilterSearch = true))
             } else {
                 emit(PageLoadingState.Error(IllegalStateException("Filter failed: ${response.code}")))

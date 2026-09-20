@@ -617,6 +617,7 @@ fun MissAvVideoPlayer(
                                 return null
                             }
 
+                            @Deprecated("Deprecated in Java")
                             @Suppress("DEPRECATION")
                             override fun shouldInterceptRequest(
                                 view: WebView?,

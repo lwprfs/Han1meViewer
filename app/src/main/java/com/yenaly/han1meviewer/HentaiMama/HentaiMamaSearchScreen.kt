@@ -115,7 +115,6 @@ fun HentaiMamaSearchScreen(
                 hasMorePages = false
             }
             is PageLoadingState.Loading -> {}
-            else -> {}
         }
     }
 

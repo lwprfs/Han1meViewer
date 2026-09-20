@@ -14,7 +14,7 @@ object HentaiMamaNetwork {
 
     val service: HentaiMamaService
         get() {
-            val currentBaseUrl = Preferences.hentaiMamaBaseUrl ?: HentaiMamaConstants.BASE_URL
+            val currentBaseUrl = Preferences.hentaiMamaBaseUrl
             if (_service == null || _baseUrl != currentBaseUrl) {
                 _baseUrl = currentBaseUrl
                 _service = createService(currentBaseUrl)

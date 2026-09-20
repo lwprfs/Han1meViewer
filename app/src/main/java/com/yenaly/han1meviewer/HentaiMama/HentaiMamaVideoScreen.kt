@@ -25,6 +25,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.MediaItem
@@ -184,10 +187,19 @@ fun HentaiMamaVideoScreen(
         isFullscreenMode = !isFullscreenMode
         if (isFullscreenMode) {
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-            activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+            activity?.window?.let { window ->
+                WindowCompat.setDecorFitsSystemWindows(window, false)
+                WindowInsetsControllerCompat(window, window.decorView).apply {
+                    hide(WindowInsetsCompat.Type.systemBars())
+                    systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                }
+            }
         } else {
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+            activity?.window?.let { window ->
+                WindowCompat.setDecorFitsSystemWindows(window, true)
+                WindowInsetsControllerCompat(window, window.decorView).show(WindowInsetsCompat.Type.systemBars())
+            }
         }
     }
 
@@ -268,7 +280,7 @@ fun HentaiMamaVideoScreen(
                                                     context,
                                                     DefaultHttpDataSource.Factory()
                                                         .setDefaultRequestProperties(
-                                                            hashMapOf("Referer" to (Preferences.hentaiMamaBaseUrl ?: HentaiMamaConstants.BASE_URL))
+                                                            hashMapOf("Referer" to Preferences.hentaiMamaBaseUrl)
                                                         )
                                                 )
                                                 val mediaSource = if (currentUrl.contains(".m3u8")) {
@@ -319,7 +331,7 @@ fun HentaiMamaVideoScreen(
                                                     context,
                                                     DefaultHttpDataSource.Factory()
                                                         .setDefaultRequestProperties(
-                                                            hashMapOf("Referer" to (Preferences.hentaiMamaBaseUrl ?: HentaiMamaConstants.BASE_URL))
+                                                            hashMapOf("Referer" to Preferences.hentaiMamaBaseUrl)
                                                         )
                                                 )
                                                 val mediaSource = if (url.contains(".m3u8")) {
@@ -512,7 +524,7 @@ fun HentaiMamaVideoScreen(
                                                             context,
                                                             DefaultHttpDataSource.Factory()
                                                                 .setDefaultRequestProperties(
-                                                                    hashMapOf("Referer" to (Preferences.hentaiMamaBaseUrl ?: HentaiMamaConstants.BASE_URL))
+                                                                    hashMapOf("Referer" to Preferences.hentaiMamaBaseUrl)
                                                                 )
                                                         )
                                                         val mediaSource = if (link.url.contains(".m3u8")) {

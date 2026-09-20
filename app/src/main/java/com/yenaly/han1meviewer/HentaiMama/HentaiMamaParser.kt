@@ -267,7 +267,7 @@ object HentaiMamaParser {
 
             Log.d(TAG, "videoListParse: POSTing to $apiUrl")
             val postResponse = client.newCall(postRequest).execute()
-            val responseString = postResponse.body?.string() ?: ""
+            val responseString = postResponse.body.string()
             postResponse.close()
 
             Log.d(TAG, "videoListParse: AJAX response length=${responseString.length}")
@@ -294,7 +294,7 @@ object HentaiMamaParser {
                         .addHeader("Referer", baseUrl)
                         .build()
                     val iframeResp = client.newCall(iframeReq).execute()
-                    val pageHtml = iframeResp.body?.string() ?: ""
+                    val pageHtml = iframeResp.body.string()
                     iframeResp.close()
 
                     val videoLink = videoRegex.find(pageHtml)
