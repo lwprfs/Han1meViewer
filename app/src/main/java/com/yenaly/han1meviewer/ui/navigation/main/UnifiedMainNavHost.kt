@@ -21,11 +21,12 @@ fun UnifiedMainNavHost(
     onOpenDrawer: () -> Unit,
     onDestinationChanged: (MainDestinationSpec) -> Unit,
     siteChangeKey: Long = 0L,
+    railVisible: Boolean = false,
 ) {
     val siteType = Preferences.siteType
-    
+
     Log.d("UnifiedMainNavHost", "Current siteType: $siteType, baseUrl: ${Preferences.baseUrl}")
-    
+
     key(siteChangeKey) {
         LaunchedEffect(siteType, siteChangeKey) {
             Log.d("UnifiedMainNavHost", "Initializing for site: $siteType, key: $siteChangeKey")
@@ -42,6 +43,7 @@ fun UnifiedMainNavHost(
                     isDrawerOpen = isDrawerOpen,
                     onOpenDrawer = onOpenDrawer,
                     onDestinationChanged = onDestinationChanged,
+                    railVisible = railVisible,
                 )
             }
             SiteType.MISSAV -> {

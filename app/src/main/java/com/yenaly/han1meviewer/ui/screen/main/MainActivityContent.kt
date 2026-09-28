@@ -198,6 +198,7 @@ fun MainActivityContent(
                         onDestinationChanged = { destination ->
                             currentMainDestination = destination
                         },
+                        siteChangeKey = siteChangeKey,
                         railVisible = railVisible,
                     )
 
