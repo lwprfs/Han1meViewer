@@ -46,8 +46,6 @@ import com.yenaly.han1meviewer.ui.navigation.settings.PlayerSettingsRouteScreen
 import com.yenaly.han1meviewer.ui.navigation.settings.SettingsScaffold
 import com.yenaly.han1meviewer.ui.navigation.settings.SharedHKeyframesRoute
 import com.yenaly.han1meviewer.ui.navigation.settings.SharedHKeyframesRouteScreen
-import com.yenaly.han1meviewer.ui.screen.account.AccountScreen
-import com.yenaly.han1meviewer.ui.screen.account.AvatarCropScreen
 import com.yenaly.han1meviewer.ui.viewmodel.CreatorCenterViewModel
 import com.yenaly.han1meviewer.ui.viewmodel.UserAccountViewModel
 import kotlinx.serialization.json.Json
@@ -59,12 +57,14 @@ fun MainNavHost(
     isDrawerOpen: Boolean,
     onOpenDrawer: () -> Unit,
     onDestinationChanged: (MainDestinationSpec) -> Unit,
+    railVisible: Boolean = false,
 ) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val destinationSpec = MainDestinationSpec.fromDestination(backStackEntry?.destination)
     var pendingAvatarCropResult by remember { mutableStateOf<String?>(null) }
 
     val onBack: () -> Unit = { navController.popBackStack() }
+    val drawerRootOnBack: (() -> Unit)? = if (railVisible) null else onBack
     val onNavigateToVideo: (String) -> Unit = { code -> navController.navigateSafely(VideoRoute(code)) }
     val onNavigateToLocalVideo: (String, String?) -> Unit =
         { code, uri -> navController.navigateSafely(VideoRoute(code, uri)) }
@@ -77,32 +77,48 @@ fun MainNavHost(
         navController = navController,
         startDestination = HomeRoute,
         enterTransition = {
-            if (targetState.isAutoPlayVideo()) EnterTransition.None
-            else slideIntoContainer(
-                towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                animationSpec = tween(450, easing = FastOutSlowInEasing)
-            ) + fadeIn(animationSpec = tween(450))
+            when {
+                targetState.isAutoPlayVideo() -> EnterTransition.None
+                railVisible && isRailSiblingTransition(initialState, targetState) ->
+                    fadeIn(animationSpec = tween(200))
+                else -> slideIntoContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                    animationSpec = tween(450, easing = FastOutSlowInEasing)
+                ) + fadeIn(animationSpec = tween(450))
+            }
         },
         exitTransition = {
-            if (targetState.isAutoPlayVideo()) ExitTransition.None
-            else slideOutOfContainer(
-                towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                targetOffset = { it / 3 },
-                animationSpec = tween(450, easing = FastOutSlowInEasing)
-            ) + scaleOut(targetScale = 0.9f) + fadeOut(animationSpec = tween(300))
+            when {
+                targetState.isAutoPlayVideo() -> ExitTransition.None
+                railVisible && isRailSiblingTransition(initialState, targetState) ->
+                    fadeOut(animationSpec = tween(200))
+                else -> slideOutOfContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                    targetOffset = { it / 3 },
+                    animationSpec = tween(450, easing = FastOutSlowInEasing)
+                ) + scaleOut(targetScale = 0.9f) + fadeOut(animationSpec = tween(300))
+            }
         },
         popEnterTransition = {
-            slideIntoContainer(
-                towards = AnimatedContentTransitionScope.SlideDirection.End,
-                initialOffset = { it / 3 },
-                animationSpec = tween(450, easing = FastOutSlowInEasing)
-            ) + scaleIn(initialScale = 0.9f) + fadeIn(animationSpec = tween(450))
+            if (railVisible && isRailSiblingTransition(initialState, targetState)) {
+                fadeIn(animationSpec = tween(200))
+            } else {
+                slideIntoContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.End,
+                    initialOffset = { it / 3 },
+                    animationSpec = tween(450, easing = FastOutSlowInEasing)
+                ) + scaleIn(initialScale = 0.9f) + fadeIn(animationSpec = tween(450))
+            }
         },
         popExitTransition = {
-            slideOutOfContainer(
-                towards = AnimatedContentTransitionScope.SlideDirection.End,
-                animationSpec = tween(450, easing = FastOutSlowInEasing)
-            ) + fadeOut(animationSpec = tween(300))
+            if (railVisible && isRailSiblingTransition(initialState, targetState)) {
+                fadeOut(animationSpec = tween(200))
+            } else {
+                slideOutOfContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.End,
+                    animationSpec = tween(450, easing = FastOutSlowInEasing)
+                ) + fadeOut(animationSpec = tween(300))
+            }
         }
     ) {
         composable<HomeRoute> {
@@ -110,6 +126,7 @@ fun MainNavHost(
                 activity = activity,
                 isDrawerOpen = isDrawerOpen,
                 onOpenDrawer = onOpenDrawer,
+                showMenuButton = !railVisible,
                 onNavigateToPreview = { navController.navigateSafely(PreviewRoute) },
                 onNavigateToSearch = { query -> navController.navigateSafely(SearchRoute(query = query)) },
                 onNavigateToSearchAdvanced = { params ->
@@ -122,31 +139,31 @@ fun MainNavHost(
         }
         composable<WatchHistoryRoute> {
             WatchHistoryRouteScreen(
-                onBack = onBack,
+                onBack = drawerRootOnBack,
                 onNavigateToVideo = onNavigateToVideo,
             )
         }
         composable<MyFavVideoRoute> {
             FavVideoRouteScreen(
-                onBack = onBack,
+                onBack = drawerRootOnBack,
                 onNavigateToVideo = onNavigateToVideo,
             )
         }
         composable<MyWatchLaterRoute> {
             WatchLaterRouteScreen(
-                onBack = onBack,
+                onBack = drawerRootOnBack,
                 onNavigateToVideo = onNavigateToVideo,
             )
         }
         composable<MyPlaylistRoute> {
             MyPlaylistRouteScreen(
-                onBack = onBack,
+                onBack = drawerRootOnBack,
                 onNavigateToVideo = onNavigateToVideo,
             )
         }
         composable<SubscriptionRoute> {
             SubscriptionRouteScreen(
-                onBack = onBack,
+                onBack = drawerRootOnBack,
                 onNavigateToSearch = { query -> navController.navigateSafely(SearchRoute(query = query)) },
                 onNavigateToVideo = onNavigateToVideo,
             )
@@ -154,13 +171,13 @@ fun MainNavHost(
         composable<DailyCheckInRoute> {
             DailyCheckInRouteScreen(
                 activity = activity,
-                onBack = onBack,
+                onBack = drawerRootOnBack,
                 onNavigateToVideo = onNavigateToVideo,
             )
         }
         composable<DownloadRoute> {
             DownloadRouteScreen(
-                onBack = onBack,
+                onBack = drawerRootOnBack,
                 onNavigateToVideo = onNavigateToVideo,
                 onNavigateToLocalVideo = onNavigateToLocalVideo,
             )
@@ -169,7 +186,7 @@ fun MainNavHost(
             val creatorViewModel: CreatorCenterViewModel = viewModel()
             CreatorCenterScreen(
                 viewModel = creatorViewModel,
-                onBack = onBack,
+                onBack = drawerRootOnBack,
                 onOpenUploadedVideo = { item -> onNavigateToVideo(item.videoCode) },
                 onOpenUploadingVideo = { item -> onNavigateToLocalVideo("-1", item.remoteVideoUrl) },
             )
@@ -308,6 +325,7 @@ fun MainNavHost(
             GetchuPreviewRouteScreen(
                 onBack = onBack,
                 onNavigateToDetail = { id -> navController.navigateSafely(GetchuPreviewDetailRoute(id)) },
+                onNavigateToVideoUrl = { url -> navController.navigateSafely(VideoRoute("-1", url)) },
             )
         }
         composable<GetchuPreviewDetailRoute> {
@@ -336,3 +354,12 @@ fun MainNavHost(
 
 private fun NavBackStackEntry.isAutoPlayVideo(): Boolean =
     destination.hasRoute<VideoRoute>() && toRoute<VideoRoute>().autoPlay
+
+private fun isRailSiblingTransition(
+    initial: NavBackStackEntry,
+    target: NavBackStackEntry,
+): Boolean {
+    val from = MainDestinationSpec.fromDestination(initial.destination)?.drawerDestination
+    val to = MainDestinationSpec.fromDestination(target.destination)?.drawerDestination
+    return from != null && to != null
+}
