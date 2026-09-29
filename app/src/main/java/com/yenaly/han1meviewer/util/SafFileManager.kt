@@ -415,7 +415,7 @@ object SafFileManager {
                 val videoCode = folderDoc.name
                 if (videoCode.isNullOrBlank()) {
                     failure = ImportFailure(
-                        folderDoc.uri?.lastPathSegment ?: "?",
+                        folderDoc.uri.lastPathSegment ?: "?",
                         ImportFailureReason.INVALID_FOLDER_NAME,
                     )
                 } else {

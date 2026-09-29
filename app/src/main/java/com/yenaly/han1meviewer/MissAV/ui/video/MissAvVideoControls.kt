@@ -657,11 +657,9 @@ fun MissAvVideoPlayer(
                 modifier = Modifier.fillMaxSize(),
                 onRelease = { view ->
                     onWebViewRefChange(null)
-                    (view as? WebView)?.let { wv ->
-                        wv.stopLoading()
-                        (wv.parent as? ViewGroup)?.removeView(wv)
-                        wv.destroy()
-                    }
+                    view.stopLoading()
+                    (view.parent as? ViewGroup)?.removeView(view)
+                    view.destroy()
                 },
             )
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

@@ -143,7 +143,7 @@ fun VideoRouteHostScreen(
     }
     var videoTitle by remember(route.videoCode, route.localUri) { mutableStateOf<String?>(null) }
     var isSideRelatedCollapsed by remember { mutableStateOf(false) }
-    var isFullscreen by remember { mutableStateOf(false) }
+    var isPlayerFullscreen by remember { mutableStateOf(false) }
     var youtubeSplit by remember { mutableStateOf(false) }
     val splitActive = remember { mutableStateOf(false) }
     var inlineChildCommentId by rememberSaveable(route.videoCode) {
@@ -529,10 +529,10 @@ fun VideoRouteHostScreen(
             }
         }
         player.fullscreenListener = object : HJzvdStd.FullscreenListener {
-            override fun onFullscreenChanged(isFullscreenNow: Boolean) {
-                isFullscreen = isFullscreenNow
-                jzBackCallback.isEnabled = isFullscreenNow
-                Log.i("JZVD screen state", isFullscreenNow.toString())
+            override fun onFullscreenChanged(isFullscreen: Boolean) {
+                isPlayerFullscreen = isFullscreen
+                jzBackCallback.isEnabled = isFullscreen
+                Log.i("JZVD screen state", isFullscreen.toString())
             }
         }
         shell.setOnOffsetChanged { totalScrollRange, verticalOffset ->
@@ -693,7 +693,7 @@ fun VideoRouteHostScreen(
 
     VideoShellContent(
         isInPipMode = hostUiState.isInPipMode,
-        isFullscreen = isFullscreen,
+        isPlayerFullscreen = isPlayerFullscreen,
         playlistItems = playlistItems,
         relatedItems = relatedItems,
         childCommentId = inlineChildCommentId,

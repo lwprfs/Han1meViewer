@@ -121,7 +121,7 @@ object MissAvSubtitleHelper {
 
                     val html = httpClient.newCall(request).execute().use { response ->
                         if (!response.isSuccessful) null
-                        else response.body?.string()
+                        else response.body.string()
                     } ?: continue
 
                     val document = Jsoup.parse(html)
@@ -182,7 +182,7 @@ object MissAvSubtitleHelper {
 
             val html = httpClient.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) null
-                else response.body?.string()
+                else response.body.string()
             } ?: return@withContext null
 
             if (html.isBlank()) return@withContext null
@@ -255,7 +255,7 @@ object MissAvSubtitleHelper {
 
             val bytes = httpClient.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) null
-                else response.body?.bytes()
+                else response.body.bytes()
             } ?: return@withContext null
 
             if (bytes.isEmpty()) return@withContext null
