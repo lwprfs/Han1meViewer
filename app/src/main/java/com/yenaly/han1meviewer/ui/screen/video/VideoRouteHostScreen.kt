@@ -693,7 +693,7 @@ fun VideoRouteHostScreen(
 
     VideoShellContent(
         isInPipMode = hostUiState.isInPipMode,
-        isPlayerFullscreen = isPlayerFullscreen,
+        isFullscreen = isPlayerFullscreen,
         playlistItems = playlistItems,
         relatedItems = relatedItems,
         childCommentId = inlineChildCommentId,
