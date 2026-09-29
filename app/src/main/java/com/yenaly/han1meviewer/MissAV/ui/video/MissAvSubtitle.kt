@@ -91,6 +91,21 @@ object MissAvSubtitleHelper {
         }
     }
 
+    /**
+     * Searches subtitlecat.com for the given query.
+     *
+     * The results page contains a <table class="sub-table"> where each result is a <tr>:
+     *   <tr>
+     *     <td><a href="subs/...">Title</a> (translated from ...)</td>
+     *     <td class="sub-table__stars">...</td>
+     *     <td class="sub-table__metric">
+     *       <span class="sub-table__metric-label">...Size</span>
+     *       <span class="sub-table__metric-value">47 KB</span>
+     *     </td>
+     *     <td class="sub-table__metric"> ... Downloads ... </td>
+     *     <td class="sub-table__metric"> ... Languages ... </td>
+     *   </tr>
+     */
     suspend fun searchSubtitles(query: String): List<SubtitleResult> = withContext(Dispatchers.IO) {
         try {
             if (query.isBlank()) return@withContext emptyList()
@@ -126,11 +141,14 @@ object MissAvSubtitleHelper {
 
                     val document = Jsoup.parse(html)
 
-                    for (row in document.select("div.sub-single")) {
+                    // Search results are in <table class="sub-table"> -> <tbody> -> <tr>
+                    val rows = document.select("table.sub-table tbody tr")
+                    Log.d(TAG, "Search '$searchTerm': found ${rows.size} rows")
+
+                    for (row in rows) {
                         runCatching {
-                            val titleSpan = row.selectFirst("span:nth-of-type(2)")
-                            val titleElement = titleSpan?.selectFirst("a")
-                                ?: row.selectFirst("a[href]")
+                            // First <td> contains the title link
+                            val titleElement = row.selectFirst("td > a")
                                 ?: return@runCatching
 
                             val title = titleElement.text().trim()
@@ -140,7 +158,29 @@ object MissAvSubtitleHelper {
                             if (href.isBlank()) return@runCatching
 
                             val fullLink = buildFullUrl(href)
-                            val result = SubtitleResult(title = title, link = fullLink)
+
+                            // Extract metric cells (size, downloads, languages)
+                            val metricCells = row.select("td.sub-table__metric")
+
+                            val size = metricCells.getOrNull(0)
+                                ?.selectFirst(".sub-table__metric-value")
+                                ?.text()?.trim() ?: "N/A"
+
+                            val downloads = metricCells.getOrNull(1)
+                                ?.selectFirst(".sub-table__metric-value")
+                                ?.text()?.trim() ?: "N/A"
+
+                            val languages = metricCells.getOrNull(2)
+                                ?.selectFirst(".sub-table__metric-value")
+                                ?.text()?.trim() ?: "N/A"
+
+                            val result = SubtitleResult(
+                                title = title,
+                                link = fullLink,
+                                size = size,
+                                downloads = downloads,
+                                languages = languages,
+                            )
 
                             if (allResults.none { it.link == result.link }) {
                                 allResults.add(result)
@@ -164,6 +204,19 @@ object MissAvSubtitleHelper {
         }
     }
 
+    /**
+     * Fetches a subtitle page and looks for the English (.srt) download link.
+     *
+     * The download page contains <div class="sub-single"> blocks, each with:
+     *   <span><img src="/assets/flags/gb.png"></span>
+     *   <span>English title</span>
+     *   <span><a class="green-link" href="...">Download</a></span>
+     *
+     * Returns:
+     *   - full URL to the .srt file if found
+     *   - empty string "" if no English subtitle exists
+     *   - null on network/parsing error
+     */
     suspend fun checkAndGetSubtitle(pageUrl: String): String? = withContext(Dispatchers.IO) {
         try {
             if (pageUrl.isBlank()) return@withContext null
@@ -215,6 +268,7 @@ object MissAvSubtitleHelper {
                 }
             }
 
+            // No English subtitle found
             ""
         } catch (e: SocketTimeoutException) {
             Log.e(TAG, "Timeout checking subtitle: $pageUrl")
@@ -334,6 +388,7 @@ fun MissAvSubtitleSection(
                     return@launch
                 }
 
+                // Auto-check first 3 results for English availability
                 results.forEachIndexed { index, result ->
                     if (index >= 3) return@forEachIndexed
                     launch {
