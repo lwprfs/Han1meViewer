@@ -1,9 +1,11 @@
 package com.yenaly.han1meviewer.MissAV.ui.video
+
 import android.content.Context
 import android.net.Uri
 import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -33,11 +35,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.USER_AGENT
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.Cache
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.jsoup.Jsoup
@@ -50,18 +54,42 @@ import java.util.concurrent.TimeUnit
 data class SubtitleResult(
     val title: String,
     val link: String,
-    val size: String,
-    val downloads: String,
-    val languages: String,
+    val size: String = "N/A",
+    val downloads: String = "N/A",
+    val languages: String = "N/A",
 )
 
 object MissAvSubtitleHelper {
     private const val SUBTITLE_CAT_BASE = "https://www.subtitlecat.com"
+    private const val TAG = "SubtitleHelper"
 
-    private val client = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(15, TimeUnit.SECONDS)
-        .build()
+    @Volatile
+    private var client: OkHttpClient? = null
+
+    fun init(context: Context) {
+        if (client != null) return
+        synchronized(this) {
+            if (client != null) return
+            val cacheDir = File(context.cacheDir, "subtitle_http_cache")
+            if (!cacheDir.exists()) cacheDir.mkdirs()
+
+            client = OkHttpClient.Builder()
+                .cache(Cache(cacheDir, 10L * 1024 * 1024))
+                .connectTimeout(15, TimeUnit.SECONDS)
+                .readTimeout(20, TimeUnit.SECONDS)
+                .followRedirects(true)
+                .followSslRedirects(true)
+                .build()
+        }
+    }
+
+    private fun requireClient(): OkHttpClient {
+        return client ?: synchronized(this) {
+            client ?: throw IllegalStateException(
+                "MissAvSubtitleHelper.init(context) must be called first"
+            )
+        }
+    }
 
     suspend fun searchSubtitles(query: String): List<SubtitleResult> = withContext(Dispatchers.IO) {
         try {
@@ -70,75 +98,68 @@ object MissAvSubtitleHelper {
             val searchTerms = listOf(
                 query,
                 query.replace(Regex("""\s+"""), ""),
-                query.takeWhile { it.isDigit() },
-            ).distinct()
+                query.substringBefore(" ").take(30),
+            ).distinct().filter { it.length >= 3 }
 
             val allResults = mutableListOf<SubtitleResult>()
+            val httpClient = requireClient()
 
             for (searchTerm in searchTerms) {
-                if (searchTerm.length < 3) continue
+                try {
+                    val encodedQuery = URLEncoder.encode(searchTerm, "UTF-8")
+                    val url = "$SUBTITLE_CAT_BASE/index.php?search=$encodedQuery"
 
-                val encodedQuery = URLEncoder.encode(searchTerm, "UTF-8")
-                val url = "$SUBTITLE_CAT_BASE/index.php?search=$encodedQuery"
+                    val request = Request.Builder()
+                        .url(url)
+                        .header("User-Agent", USER_AGENT)
+                        .header(
+                            "Accept",
+                            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                        )
+                        .header("Accept-Language", "en-US,en;q=0.9")
+                        .build()
 
-                val request = Request.Builder()
-                    .url(url)
-                    .header("User-Agent", USER_AGENT)
-                    .header(
-                        "Accept",
-                        "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                    )
-                    .header("Accept-Language", "en-US,en;q=0.9")
-                    .header("Cache-Control", "no-cache")
-                    .build()
+                    val html = httpClient.newCall(request).execute().use { response ->
+                        if (!response.isSuccessful) null
+                        else response.body?.string()
+                    } ?: continue
 
-                val response = client.newCall(request).execute()
-                if (!response.isSuccessful) continue
+                    val document = Jsoup.parse(html)
 
-                val html = response.body.string()
-                val document = Jsoup.parse(html)
+                    for (row in document.select("div.sub-single")) {
+                        runCatching {
+                            val titleSpan = row.selectFirst("span:nth-of-type(2)")
+                            val titleElement = titleSpan?.selectFirst("a")
+                                ?: row.selectFirst("a[href]")
+                                ?: return@runCatching
 
-                for (row in document.select(
-                    "table.sub-table tbody tr, div.subtitle-item, div.result-item"
-                )) {
-                    runCatching {
-                        val titleElement = row.selectFirst(
-                            "td a, div.title a, a.subtitle-link"
-                        ) ?: return@runCatching
-                        val title = titleElement.text()
-                        if (title.isBlank()) return@runCatching
+                            val title = titleElement.text().trim()
+                            if (title.isBlank()) return@runCatching
 
-                        val link = titleElement.attr("href")
-                        val fullLink = when {
-                            link.startsWith("http") -> link
-                            link.startsWith("/") -> "$SUBTITLE_CAT_BASE$link"
-                            else -> "$SUBTITLE_CAT_BASE/$link"
-                        }
+                            val href = titleElement.attr("href")
+                            if (href.isBlank()) return@runCatching
 
-                        val size = row
-                            .selectFirst("td.sub-table__size-cell, .size-cell, .file-size")
-                            ?.text()
-                            ?.trim()
-                            ?: "Unknown"
+                            val fullLink = buildFullUrl(href)
+                            val result = SubtitleResult(title = title, link = fullLink)
 
-                        val allCells = row.select("td")
-                        val downloads = if (allCells.size > 3) allCells[3].text() else "Unknown"
-                        val languages = if (allCells.size > 4) allCells[4].text() else "Unknown"
-
-                        val result = SubtitleResult(title, fullLink, size, downloads, languages)
-                        if (allResults.none { it.link == result.link }) {
-                            allResults.add(result)
+                            if (allResults.none { it.link == result.link }) {
+                                allResults.add(result)
+                            }
+                        }.onFailure { e ->
+                            Log.w(TAG, "Failed parsing a search row: ${e.message}")
                         }
                     }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Search term '$searchTerm' failed: ${e.message}")
                 }
             }
 
             allResults.distinctBy { it.link }.take(7)
         } catch (e: SocketTimeoutException) {
-            Log.e("SubtitleHelper", "Timeout searching subtitles")
+            Log.e(TAG, "Timeout searching subtitles")
             emptyList()
         } catch (e: Exception) {
-            Log.e("SubtitleHelper", "Error searching subtitles: ${e.message}")
+            Log.e(TAG, "Error searching subtitles: ${e.message}")
             emptyList()
         }
     }
@@ -146,79 +167,121 @@ object MissAvSubtitleHelper {
     suspend fun checkAndGetSubtitle(pageUrl: String): String? = withContext(Dispatchers.IO) {
         try {
             if (pageUrl.isBlank()) return@withContext null
+            val httpClient = requireClient()
 
             val request = Request.Builder()
                 .url(pageUrl)
                 .header("User-Agent", USER_AGENT)
                 .header("Referer", SUBTITLE_CAT_BASE)
+                .header(
+                    "Accept",
+                    "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                )
+                .header("Accept-Language", "en-US,en;q=0.9")
                 .build()
 
-            val response = client.newCall(request).execute()
-            if (!response.isSuccessful) return@withContext null
+            val html = httpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) null
+                else response.body?.string()
+            } ?: return@withContext null
 
-            val html = response.body.string()
+            if (html.isBlank()) return@withContext null
+
             val document = Jsoup.parse(html)
 
-            for (subSingle in document.select(
-                "div.sub-single, .download-section, .subtitle-download"
-            )) {
-
-                subSingle.selectFirst(
+            for (subSingle in document.select("div.sub-single")) {
+                val isEnglish = subSingle.selectFirst(
                     "img[src*=/assets/flags/gb.png], img[src*=/flags/gb.png]"
-                ) ?: continue
+                ) != null
 
-                val href = subSingle.selectFirst(
-                    "a.green-link, a.download-link, a[href$=.srt]"
-                )?.attr("href")
-                if (href.isNullOrEmpty()) continue
+                if (!isEnglish) continue
 
-                val fullUrl = when {
-                    href.startsWith("http") -> href
-                    href.startsWith("/") -> "$SUBTITLE_CAT_BASE$href"
-                    else -> "$SUBTITLE_CAT_BASE/$href"
+                val href = subSingle.selectFirst("a.green-link")?.attr("href")
+                    ?: subSingle.selectFirst("a[href$=.srt]")?.attr("href")
+
+                if (href.isNullOrBlank()) {
+                    return@withContext ""
                 }
-                if (fullUrl.endsWith(".srt", ignoreCase = true) ||
-                    fullUrl.contains("download")
+
+                val fullUrl = buildFullUrl(href)
+
+                return@withContext if (
+                    fullUrl.endsWith(".srt", ignoreCase = true) ||
+                    fullUrl.contains("download", ignoreCase = true)
                 ) {
-                    return@withContext fullUrl
+                    fullUrl
+                } else {
+                    ""
                 }
             }
+
+            ""
+        } catch (e: SocketTimeoutException) {
+            Log.e(TAG, "Timeout checking subtitle: $pageUrl")
             null
         } catch (e: Exception) {
-            Log.e("SubtitleHelper", "Check error: ${e.message}")
+            Log.e(TAG, "Check error for $pageUrl: ${e.message}")
             null
         }
     }
 
-    suspend fun downloadSubtitle(context: Context, url: String, fileName: String): Uri? =
-        withContext(Dispatchers.IO) {
-            try {
-                if (url.isBlank()) return@withContext null
+    suspend fun downloadSubtitle(
+        context: Context,
+        url: String,
+        fileName: String,
+    ): Uri? = withContext(Dispatchers.IO) {
+        try {
+            if (url.isBlank()) return@withContext null
+            val httpClient = requireClient()
 
-                val dir = File(context.getExternalFilesDir("subtitles"), "missav")
-                if (!dir.exists()) dir.mkdirs()
-                val file = File(dir, fileName)
+            val safeFileName = fileName
+                .replace(Regex("""[\\/:*?"<>|]"""), "_")
+                .take(100)
+                .ifBlank { "subtitle.srt" }
 
-                val request = Request.Builder()
-                    .url(url)
-                    .header("User-Agent", USER_AGENT)
-                    .header("Referer", SUBTITLE_CAT_BASE)
-                    .build()
+            val dir = File(context.getExternalFilesDir("subtitles"), "missav")
+            if (!dir.exists() && !dir.mkdirs()) {
+                Log.e(TAG, "Failed to create subtitle directory: ${dir.absolutePath}")
+                return@withContext null
+            }
 
-                val response = client.newCall(request).execute()
-                if (!response.isSuccessful) return@withContext null
+            val file = File(dir, safeFileName)
 
-                val bytes = response.body.bytes()
-                if (bytes.isEmpty()) return@withContext null
+            val request = Request.Builder()
+                .url(url)
+                .header("User-Agent", USER_AGENT)
+                .header("Referer", SUBTITLE_CAT_BASE)
+                .build()
 
-                FileOutputStream(file).use { it.write(bytes) }
+            val bytes = httpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) null
+                else response.body?.bytes()
+            } ?: return@withContext null
 
-                if (file.exists() && file.length() > 0) Uri.fromFile(file) else null
+            if (bytes.isEmpty()) return@withContext null
+
+            FileOutputStream(file).use { it.write(bytes) }
+
+            if (!file.exists() || file.length() == 0L) return@withContext null
+
+            val authority = "${context.packageName}.fileProvider"
+            return@withContext try {
+                FileProvider.getUriForFile(context, authority, file)
             } catch (e: Exception) {
-                Log.e("SubtitleHelper", "Download error: ${e.message}")
+                Log.e(TAG, "FileProvider error: ${e.message}")
                 null
             }
+        } catch (e: Exception) {
+            Log.e(TAG, "Download error: ${e.message}")
+            null
         }
+    }
+
+    private fun buildFullUrl(href: String): String = when {
+        href.startsWith("http://") || href.startsWith("https://") -> href
+        href.startsWith("/") -> "$SUBTITLE_CAT_BASE$href"
+        else -> "$SUBTITLE_CAT_BASE/$href"
+    }
 }
 
 @Composable
@@ -229,6 +292,11 @@ fun MissAvSubtitleSection(
 ) {
     val context = LocalContext.current
 
+    remember(context) {
+        MissAvSubtitleHelper.init(context)
+        true
+    }
+
     var searchResults by remember { mutableStateOf<List<SubtitleResult>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
     var hasSearched by remember { mutableStateOf(false) }
@@ -237,8 +305,7 @@ fun MissAvSubtitleSection(
     var downloadStates by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
     var checkingStates by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
 
-    var englishUrls by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
-
+    var englishUrls by remember { mutableStateOf<Map<String, String?>>(emptyMap()) }
     var downloadedKeys by remember { mutableStateOf<Set<String>>(emptySet()) }
 
     val scope = rememberCoroutineScope()
@@ -267,15 +334,20 @@ fun MissAvSubtitleSection(
                     return@launch
                 }
 
-                results.forEach { result ->
+                results.forEachIndexed { index, result ->
+                    if (index >= 3) return@forEachIndexed
                     launch {
                         val key = result.link
                         checkingStates = checkingStates + (key to true)
-                        val url = MissAvSubtitleHelper
-                            .checkAndGetSubtitle(result.link)
-                            .orEmpty()
-                        englishUrls = englishUrls + (key to url)
-                        checkingStates = checkingStates + (key to false)
+                        try {
+                            val url = MissAvSubtitleHelper.checkAndGetSubtitle(result.link)
+                            englishUrls = englishUrls + (key to url)
+                        } catch (e: Exception) {
+                            Log.e("MissAvSubtitle", "Check failed for $key: ${e.message}")
+                            englishUrls = englishUrls + (key to null)
+                        } finally {
+                            checkingStates = checkingStates + (key to false)
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -288,15 +360,19 @@ fun MissAvSubtitleSection(
 
     fun download(result: SubtitleResult) {
         val key = result.link
-        val url = englishUrls[key].orEmpty()
-        if (url.isEmpty()) return
+        val url = englishUrls[key]
+        if (url.isNullOrEmpty()) return
         if (downloadStates[key] == true) return
         if (key in downloadedKeys) return
 
         downloadStates = downloadStates + (key to true)
         scope.launch {
             try {
-                val fileName = "${videoCode}_subtitle.srt"
+                val ext = url.substringAfterLast('.', "srt").take(5)
+                    .lowercase()
+                    .let { if (it.matches(Regex("[a-z0-9]{1,5}"))) it else "srt" }
+                val fileName = "${videoCode}_subtitle.$ext"
+
                 val uri = MissAvSubtitleHelper.downloadSubtitle(context, url, fileName)
                 if (uri != null) {
                     downloadedKeys = downloadedKeys + key
@@ -320,148 +396,152 @@ fun MissAvSubtitleSection(
         checkingStates = checkingStates + (key to true)
         scope.launch {
             try {
-                val url = MissAvSubtitleHelper
-                    .checkAndGetSubtitle(result.link)
-                    .orEmpty()
+                val url = MissAvSubtitleHelper.checkAndGetSubtitle(result.link)
                 englishUrls = englishUrls + (key to url)
+            } catch (e: Exception) {
+                Log.e("MissAvSubtitle", "Check failed: ${e.message}")
+                englishUrls = englishUrls + (key to null)
             } finally {
                 checkingStates = checkingStates + (key to false)
             }
         }
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+    Box(modifier = modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                text = "Subtitles",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-
-            Surface(
-                modifier = Modifier
-                    .clickable { if (!isLoading) searchSubtitles() }
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                shape = RoundedCornerShape(4.dp),
-                color = MaterialTheme.colorScheme.primary,
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                Text(
+                    text = "Subtitles (subtitlecat.com)",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+
+                Surface(
+                    modifier = Modifier
+                        .clickable { if (!isLoading) searchSubtitles() }
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    shape = RoundedCornerShape(4.dp),
+                    color = MaterialTheme.colorScheme.primary,
                 ) {
-                    if (isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(14.dp),
-                            strokeWidth = 2.dp,
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(14.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                            )
+                        } else {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_baseline_download_24),
+                                contentDescription = "Search",
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                            )
+                        }
+                        Text(
+                            text = if (isLoading) "Searching…" else "Search",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onPrimary,
                         )
-                    } else {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_baseline_download_24),
-                            contentDescription = "Search",
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                        )
                     }
-                    Text(
-                        text = if (isLoading) "Searching…" else "Search",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                    )
                 }
             }
-        }
 
-        when {
-            isLoading -> {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(vertical = 4.dp),
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp,
-                    )
+            when {
+                isLoading && searchResults.isEmpty() -> {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(vertical = 4.dp),
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                        )
+                        Text(
+                            text = "Searching for subtitles…",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+
+                errorMsg != null -> {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(vertical = 4.dp),
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.baseline_error_outline_24),
+                            contentDescription = "Error",
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                        Text(
+                            text = errorMsg.orEmpty(),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
+
+                searchResults.isNotEmpty() -> {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 300.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        itemsIndexed(
+                            items = searchResults,
+                            key = { _, r -> r.link },
+                        ) { index, result ->
+                            val key = result.link
+                            SubtitleResultItem(
+                                result = result,
+                                index = index,
+                                isChecking = checkingStates[key] == true,
+                                isDownloading = downloadStates[key] == true,
+                                isAlreadyDownloaded = key in downloadedKeys,
+                                hasEnglish = englishUrls[key],
+                                onCheck = { checkSingle(result) },
+                                onDownload = { download(result) },
+                            )
+                        }
+                    }
+                }
+
+                !hasSearched -> {
                     Text(
-                        text = "Searching for subtitles…",
+                        text = "Tap Search to find subtitles",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 4.dp),
                     )
                 }
-            }
-
-            errorMsg != null -> {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(vertical = 4.dp),
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.baseline_error_outline_24),
-                        contentDescription = "Error",
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.error,
-                    )
-                    Text(
-                        text = errorMsg.orEmpty(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
-            }
-
-            searchResults.isNotEmpty() -> {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 300.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    itemsIndexed(
-                        items = searchResults,
-                        key = { _, r -> r.link },
-                    ) { index, result ->
-                        val key = result.link
-                        SubtitleResultItem(
-                            result = result,
-                            index = index,
-                            isChecking = checkingStates[key] == true,
-                            isDownloading = downloadStates[key] == true,
-                            isAlreadyDownloaded = key in downloadedKeys,
-                            hasEnglish = englishUrls[key],
-                            onCheck = { checkSingle(result) },
-                            onDownload = { download(result) },
-                        )
-                    }
-                }
-            }
-
-            !hasSearched -> {
-                Text(
-                    text = "Tap Search to find subtitles",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = 4.dp),
-                )
             }
         }
 
         SnackbarHost(
             hostState = snackbarHostState,
-            modifier = Modifier.padding(vertical = 8.dp),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(8.dp),
         )
     }
 }
@@ -473,7 +553,6 @@ fun SubtitleResultItem(
     isChecking: Boolean,
     isDownloading: Boolean,
     isAlreadyDownloaded: Boolean,
-
     hasEnglish: String?,
     onCheck: () -> Unit,
     onDownload: () -> Unit,
@@ -517,7 +596,7 @@ fun SubtitleResultItem(
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    if (result.languages != "Unknown") {
+                    if (result.languages != "N/A" && result.languages != "Unknown") {
                         Text(
                             text = "• ${result.languages}",
                             style = MaterialTheme.typography.labelSmall,
@@ -563,7 +642,6 @@ fun SubtitleResultItem(
                 }
 
                 hasEnglish == null -> {
-
                     ActionSurface(
                         text = "Check",
                         onClick = onCheck,
@@ -573,7 +651,6 @@ fun SubtitleResultItem(
                 }
 
                 hasEnglish.isEmpty() -> {
-
                     Surface(
                         shape = RoundedCornerShape(4.dp),
                         color = MaterialTheme.colorScheme.surfaceContainerHighest,
@@ -592,7 +669,6 @@ fun SubtitleResultItem(
                 }
 
                 else -> {
-
                     ActionSurface(
                         text = "Download",
                         onClick = onDownload,

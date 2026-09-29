@@ -26,21 +26,14 @@ import com.yenaly.yenaly_libs.utils.LanguageHelper
 import `is`.xyz.mpv.MPVLib
 import java.net.ProxySelector
 import com.yenaly.han1meviewer.MissAV.data.remote.MissAvNetwork
+import com.yenaly.han1meviewer.MissAV.ui.video.MissAvSubtitleHelper
 
-/**
- * @project Hanime1
- * @author Yenaly Liew
- * @time 2022/06/08 008 17:32
- */
 class HanimeApplication : YenalyApplication() {
 
     companion object {
         const val TAG = "HanimeApplication"
     }
 
-    /**
-     * 已在 [initCrashX] 中透過 CrashX 處理
-     */
     override val isDefaultCrashHandlerEnabled: Boolean = false
 
     private fun initCrashX() {
@@ -77,13 +70,14 @@ class HanimeApplication : YenalyApplication() {
     override fun onCreate() {
         super.onCreate()
         if (!isMainProcess()) return
-        
-        // Initialize network modules FIRST
+
         initNetworks()
-        
+
+        MissAvSubtitleHelper.init(this)
+
         initCrashX()
         ThemeUtils.applyDarkModeFromPreferences(this)
-        if (Preferences.useDynamicColor){
+        if (Preferences.useDynamicColor) {
             DynamicColors.applyToActivitiesIfAvailable(this)
         }
         ProxySelector.setDefault(HProxySelector())
@@ -120,9 +114,7 @@ class HanimeApplication : YenalyApplication() {
     }
 
     private fun initFirebase() {
-        // 用于处理 Firebase Analytics 初始化
         Firebase.analytics.setAnalyticsCollectionEnabled(Preferences.isAnalyticsEnabled)
-        // 用于处理 Firebase Crashlytics 初始化
         Firebase.crashlytics.apply {
             isCrashlyticsCollectionEnabled = !BuildConfig.DEBUG
             setCustomKeys {
@@ -136,7 +128,6 @@ class HanimeApplication : YenalyApplication() {
                 )
             }
         }
-        // 用于处理 Firebase Remote Config 初始化
         Firebase.remoteConfig.apply {
             setConfigSettingsAsync(remoteConfigSettings {
                 minimumFetchIntervalInSeconds = if (BuildConfig.DEBUG) 0 else 3 * 60 * 60
@@ -165,7 +156,7 @@ class HanimeApplication : YenalyApplication() {
         ).setName("App Update").build()
         nm.createNotificationChannel(appUpdateChannel)
     }
-    
+
     fun switchLauncher(alias: String) {
         val pm = packageManager
 
