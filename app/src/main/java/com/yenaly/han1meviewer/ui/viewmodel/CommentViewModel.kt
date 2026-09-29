@@ -25,11 +25,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/**
- * @project Han1meViewer
- * @author Yenaly Liew
- * @time 2022/06/28 028 14:18
- */
 class CommentViewModel(application: Application) : YenalyViewModel(application) {
 
     data class CommentUiState(
@@ -43,7 +38,7 @@ class CommentViewModel(application: Application) : YenalyViewModel(application) 
     private val commentUiStateMap = mutableMapOf<String, CommentUiState>()
 
     var currentUserId: String? = null
-    //reportMessage为点击举报按钮之后的响应及错误信息
+
     private val _reportMessage = MutableSharedFlow<Message>()
     val reportMessage = _reportMessage.asSharedFlow()
     data class Message(
@@ -132,7 +127,7 @@ class CommentViewModel(application: Application) : YenalyViewModel(application) 
 
     fun getCommentReply(commentId: String) {
         viewModelScope.launch {
-            // 每次获取评论回复时，都会重新加载
+
             _videoReplyStateFlow.value = WebsiteState.Loading
             NetworkRepo.getCommentReply(commentId).collect { state ->
                 _videoReplyStateFlow.value = state
@@ -219,10 +214,7 @@ class CommentViewModel(application: Application) : YenalyViewModel(application) 
                                     item
                                 }
                             }
-//                            prevList.toMutableList().apply {
-//                                this[commentPosition] =
-//                                    this[commentPosition].handleCommentLike(argState.info)
-//                            }
+
                         }
 
                         CommentPlace.CHILD_COMMENT -> _videoReplyFlow.update { prevList ->
@@ -232,10 +224,7 @@ class CommentViewModel(application: Application) : YenalyViewModel(application) 
                                 } else {
                                     item
                                 }
-//                            prevList.toMutableList().apply {
-//                                this[commentPosition] =
-//                                    this[commentPosition].handleCommentLike(argState.info)
-//                            }
+
                             }
                         }
                     }

@@ -22,10 +22,8 @@ class CloudflareInterceptor(
             response.close()
             val url = request.url.toString()
 
-            // 用 CountDownLatch 代替同步锁
             val latch = CountDownLatch(1)
 
-            // 设置回调，用户验证完成后调用
             CloudflareActivity.onFinished = {
                 latch.countDown()
             }
@@ -42,12 +40,9 @@ class CloudflareInterceptor(
                 CloudflareActivity.onFinished?.invoke()
             }
 
-            // 等待 WebView 验证完成
             latch.await()
             return chain.proceed(request)
         }
         return response
     }
 }
-
-

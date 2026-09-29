@@ -10,12 +10,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 
-/**
- * 将文字复制到剪切板
- *
- * @param text    要复制的文字
- * @param label   为此文字设置的用户可见的标签 (optional)
- */
 fun copyTextToClipboard(
     text: CharSequence?,
     label: CharSequence? = null,
@@ -40,11 +34,6 @@ val textsFromClipboard: Sequence<CharSequence?>
         }
     }
 
-/**
- * 剪贴板中最近一次的内容
- *
- * @return 剪贴板中最近一次的内容
- */
 val textFromClipboard: CharSequence?
     get() {
         val context = applicationContext
@@ -58,18 +47,12 @@ val textFromClipboard: CharSequence?
         return null
     }
 
-/**
- * 清除剪切板内容
- */
 fun clearClipboard() {
     val clipboardManager = applicationContext.getSystemService<ClipboardManager>()
     val clipData = ClipData.newPlainText(null, null)
     clipboardManager?.setPrimaryClip(clipData)
 }
 
-/**
- * 监听剪切板内容变化
- */
 fun clipboardFlow(distinct: Boolean): Flow<Sequence<CharSequence?>> {
     return callbackFlow {
         val clipboardManager = applicationContext.getSystemService<ClipboardManager>()

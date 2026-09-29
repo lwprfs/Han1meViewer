@@ -760,7 +760,7 @@ private fun WatchHistoryCard(
                             )
                         },
                         colors = AssistChipDefaults.assistChipColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer, // 改用 primary 强化引导
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
                             labelColor = MaterialTheme.colorScheme.onPrimaryContainer,
                         ),
                         modifier = Modifier.height(28.dp)

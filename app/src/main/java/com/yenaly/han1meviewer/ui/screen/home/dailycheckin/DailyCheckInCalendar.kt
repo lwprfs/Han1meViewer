@@ -34,16 +34,6 @@ import com.yenaly.han1meviewer.R
 import java.time.LocalDate
 import java.time.YearMonth
 
-/**
- * 月历网格组件。展示指定月份的日期格，区分已打卡/今天/未来三种状态。
- *
- * @param yearMonth 目标月份
- * @param records 各日期打卡记录数
- * @param today 今天的日期
- * @param onDateClick 日期点击回调
- * @param onDateLongClick 日期长按回调
- * @param modifier 修饰符
- */
 @Composable
 fun CalendarGrid(
     yearMonth: YearMonth,

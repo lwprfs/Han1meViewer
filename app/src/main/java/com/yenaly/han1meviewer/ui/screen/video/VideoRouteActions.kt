@@ -229,11 +229,6 @@ class VideoRouteActions(
 
     private data class ResolvedGroup(val id: Int, val createdName: String?)
 
-    /**
-     * 解析自动分组：已有同名分组则复用，否则新建。
-     *
-     * @return 目标分组；分组名为空白时返回 null（即不自动分组）
-     */
     private suspend fun resolveAutoGroup(videoData: HanimeVideo, name: String): ResolvedGroup? =
         withContext(Dispatchers.IO) {
             val groupName = name.trim().takeIf { it.isNotEmpty() }
@@ -245,10 +240,6 @@ class VideoRouteActions(
             ResolvedGroup(id = groupId, createdName = groupName.takeIf { existing == null })
         }
 
-    /**
-     * 把同系列中仍处于默认分组（未分组）的影片一并归入目标分组。
-     * 用户手动分过组的影片保持原位。
-     */
     private suspend fun moveUngroupedSeriesToGroup(videoData: HanimeVideo, groupId: Int) {
         val seriesCodes = videoData.playlist?.video?.map { it.videoCode }.orEmpty()
         seriesCodes.forEach { videoCode ->

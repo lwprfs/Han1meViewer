@@ -2,19 +2,10 @@ package com.yenaly.han1meviewer.ui.screen.home.dailycheckin
 
 import com.yenaly.han1meviewer.ui.viewmodel.MonthlyStats
 
-/** 月度统计中打卡类型卡片最大展示数量 */
 internal const val STATS_TYPE_DISPLAY_COUNT = 6
 
-/** 附加成就卡片最大展示数量 */
 internal const val EXTRA_ACHIEVEMENT_DISPLAY_COUNT = 6
 
-/**
- * 成就展示数据。
- *
- * @param emoji 成就图标
- * @param title 成就标题
- * @param subtitle 成就描述
- */
 data class Achievement(
     val emoji: String,
     val title: String,
@@ -22,14 +13,6 @@ data class Achievement(
     val videoCode: String = "",
 )
 
-/**
- * 主成就判定规则。
- *
- * @param check 判定条件
- * @param emoji 图标
- * @param title 已格式化的标题
- * @param subtitle 已格式化的副标题
- */
 data class MainAchievementRule(
     val check: (checkedDays: Int, monthlyTotal: Int, bestStreak: Int) -> Boolean,
     val emoji: String,
@@ -37,14 +20,6 @@ data class MainAchievementRule(
     val subtitle: String,
 )
 
-/**
- * 附加成就判定规则。
- *
- * @param check 判定条件
- * @param emoji 图标
- * @param label 已格式化的标签
- * @param value 已格式化的数值
- */
 data class ExtraAchievementRule(
     val check: (MonthlyStats) -> Boolean,
     val emoji: String,
@@ -53,19 +28,6 @@ data class ExtraAchievementRule(
     val videoCode: String = "",
 )
 
-/**
- * 构建主成就规则表。规则按数组顺序判定，首个匹配即返回。
- *
- * 调用方需在 @Composable 上下文中预先格式化所有字符串后传入。
- *
- * 新增成就：在返回列表追加一条 [MainAchievementRule] 即可。
- *
- * @param checkedDays 当月已打卡天数
- * @param monthlyTotal 当月累计打卡次数
- * @param bestStreak 当月最佳连续天数
- * @param formattedTitles 已格式化的标题 Map（resourceName -> 格式化后文本）
- * @param formattedSubs 已格式化的副标题 Map（resourceName -> 格式化后文本）
- */
 fun buildMainAchievementRules(
     checkedDays: Int,
     monthlyTotal: Int,
@@ -149,16 +111,6 @@ fun buildMainAchievementRules(
     )
 }
 
-/**
- * 构建附加成就规则表。
- *
- * 调用方需在 @Composable 上下文中预先格式化所有标签后传入。
- *
- * 新增成就：在返回列表追加一条 [ExtraAchievementRule] 即可。
- *
- * @param stats 月度统计数据
- * @param formattedLabels 已格式化的标签 Map（resourceName -> 格式化后文本）
- */
 fun buildExtraAchievementRules(
     stats: MonthlyStats,
     formattedLabels: Map<String, String>,
@@ -229,10 +181,6 @@ fun buildExtraAchievementRules(
     )
 }
 
-/**
- * 从规则表中筛选所有满足条件的主成就，按规则顺序排列。
- * 无匹配时返回仅含默认成就的列表。
- */
 fun evaluateMainAchievements(
     rules: List<MainAchievementRule>,
     checkedDays: Int,
@@ -254,9 +202,6 @@ fun evaluateMainAchievements(
     }
 }
 
-/**
- * 从规则表中筛选所有满足条件的附加成就（最多返回 [maxCount] 条）。
- */
 fun evaluateExtraAchievements(
     rules: List<ExtraAchievementRule>,
     stats: MonthlyStats,

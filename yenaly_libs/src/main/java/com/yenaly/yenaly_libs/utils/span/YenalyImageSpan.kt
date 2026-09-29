@@ -7,10 +7,6 @@ import android.graphics.Paint
 import android.graphics.drawable.Drawable
 import android.text.style.ImageSpan
 
-/**
- * Created by luyao
- * on 2019/8/14 9:17
- */
 class YenalyImageSpan(
     drawable: Drawable,
     verticalAlignment: Int = ALIGN_MIDDLE,
@@ -19,21 +15,11 @@ class YenalyImageSpan(
     marginRight: Int = 0
 ) : ImageSpan(drawable, verticalAlignment) {
 
-
     companion object {
-        const val ALIGN_MIDDLE = -100 // 不要和父类重复
+        const val ALIGN_MIDDLE = -100
 
-        /**
-         * A constant indicating that the bottom of this span should be aligned
-         * with the bottom of the surrounding text, i.e., at the same level as the
-         * lowest descender in the text.
-         */
         const val ALIGN_BOTTOM = 0
 
-        /**
-         * A constant indicating that the bottom of this span should be aligned
-         * with the baseline of the surrounding text.
-         */
         const val ALIGN_BASELINE = 1
     }
 

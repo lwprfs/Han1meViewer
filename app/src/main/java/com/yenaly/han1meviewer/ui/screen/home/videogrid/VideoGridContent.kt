@@ -22,17 +22,6 @@ import com.yenaly.han1meviewer.ui.screen.rememberVideoGridColumns
 import com.yenaly.han1meviewer.ui.theme.SpacingNormal
 import kotlinx.coroutines.launch
 
-/**
- * 视频网格 Content 层。纯 UI，不持有 ViewModel。
- *
- * 接收 [VideoGridUiState] 和单个回调集合，负责网格渲染和 LoadMoreFooter。
- *
- * @param uiState 页面 UI 状态
- * @param gridState LazyGrid 滚动状态
- * @param onOpenVideo 打开视频详情回调
- * @param onDeleteItem 删除视频项回调
- * @param onGoToPage 跳转到指定页回调
- */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun VideoGridContent(

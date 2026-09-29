@@ -35,14 +35,6 @@ import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.preview.ComponentPreview
 
-/**
- * 渲染首页顶部栏，包含抽屉入口、搜索入口和新番列表入口。
- *
- * @param onOpenDrawer 点击抽屉按钮时调用。
- * @param onSearchClick 点击搜索框时调用。
- * @param onNavigateToPreview 点击新番按钮时调用。
- * @param modifier 应用于顶部栏根布局的修饰符。
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomePageTopBar(

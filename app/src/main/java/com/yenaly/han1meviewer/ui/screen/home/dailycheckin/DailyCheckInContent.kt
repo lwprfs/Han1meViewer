@@ -40,21 +40,6 @@ import com.yenaly.han1meviewer.R
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 
-/**
- * 打卡日历页面的纯 UI Content 层。
- *
- * 只接收 [DailyCheckInUiState] 和 [DailyCheckInEvent] 回调，不持有 ViewModel。
- *
- * @param paddingValues 从 Scaffold 传入的内边距
- * @param uiState 页面 UI 状态
- * @param onEvent 用户交互事件回调
- * @param showEasterEgg 彩蛋文本（空字符串表示无彩蛋）
- * @param eggVisible 彩蛋是否当前可见
- * @param pagerState 月份翻页状态（UI 框架层，不属于业务状态）
- * @param anchorMonth 翻页锚点月份
- * @param initialPage 初始页索引
- * @param modifier 修饰符
- */
 @Composable
 fun DailyCheckInContent(
     modifier: Modifier = Modifier,
@@ -198,9 +183,6 @@ fun DailyCheckInContent(
     }
 }
 
-/**
- * 预览用 Content 样例。
- */
 @Preview
 @Composable
 private fun PreviewDailyCheckInContent() {

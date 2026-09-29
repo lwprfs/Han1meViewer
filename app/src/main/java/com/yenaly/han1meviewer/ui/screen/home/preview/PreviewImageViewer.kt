@@ -48,13 +48,6 @@ import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
 import com.yenaly.han1meviewer.R
 
-/**
- * 预览图片查看器弹窗。支持翻页浏览、双击/双指缩放。
- *
- * @param imageUrls 图片 URL 列表
- * @param initialPage 初始展示的图片索引
- * @param onDismiss 关闭回调
- */
 @Composable
 fun PreviewImageViewerDialog(
     imageUrls: List<String>,
@@ -197,14 +190,6 @@ fun PreviewImageViewerDialog(
     }
 }
 
-/**
- * 可缩放的预览图片组件。
- *
- * @param imageUrl 图片 URL
- * @param isActivePage 是否为当前活跃页
- * @param onZoomStateChange 缩放状态变化回调
- * @param onDismiss 单击关闭回调
- */
 @Composable
 fun ZoomablePreviewImage(
     imageUrl: String,

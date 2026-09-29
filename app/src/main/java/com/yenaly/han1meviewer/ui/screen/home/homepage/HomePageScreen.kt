@@ -41,13 +41,6 @@ import com.yenaly.han1meviewer.ui.screen.home.homepage.component.HomePageTopBar
 import com.yenaly.han1meviewer.ui.screen.rememberRandomLoadingHint
 import com.yenaly.han1meviewer.util.toNetworkErrorMessageRes
 
-/**
- * 首页容器屏幕，负责连接 ViewModel 状态与导航回调。
- *
- * @param viewModel 提供首页数据与公告数据的 ViewModel。
- * @param isDrawerOpen 侧边抽屉是否已打开。
- * @param modifier 作用于屏幕根布局的修饰符。
- */
 @SuppressLint("LocalContextGetResourceValueCall")
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable

@@ -47,5 +47,3 @@ inline fun Fragment.showSnackBar(
 ) {
     Snackbar.make(view, message, length).apply(action).show()
 }
-
-

@@ -24,35 +24,27 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.io.OutputStream
 
-/**
- * @project Han1meViewer
- * @author Yenaly Liew
- * @since 2025/3/5 20:11
- */
 object HCacheManager {
 
     private const val CACHE_INFO_FILE = "info.json"
 
-    /**
-     * 保存 HanimeVideo 信息，用于下载后直接在 APP 内观看
-     */
     @OptIn(ExperimentalSerializationApi::class)
     @WorkerThread
     fun saveHanimeVideoInfo(context: Context, videoCode: String, info: HanimeVideo) {
-        val folder = HFileManager.getDownloadVideoFolder(context, videoCode) // 已封装 SAF/普通路径
+        val folder = HFileManager.getDownloadVideoFolder(context, videoCode)
         val cacheFile = File(folder, CACHE_INFO_FILE)
         val cacheUri = SafFileManager.getDownloadVideoFileUri(context, videoCode, CACHE_INFO_FILE)
 
         try {
             if (cacheUri != null) {
-                // --- SAF 写入 ---
+
                 context.contentResolver.openOutputStream(cacheUri, "rwt")?.use { os ->
                     HJson.encodeToStream(info, os)
                     Log.d("FileSave", "✅ SAF write completed")
                 } ?: throw IOException("无法打开 SAF Uri 输出流: $cacheUri")
             } else {
                 Log.d("FileSave", "📝 Using regular file write method")
-                // --- 普通文件写入 ---
+
                 cacheFile.atomicWrite { outputStream ->
                     HJson.encodeToStream(info, outputStream)
                     Log.d("FileSave", "✅ Regular write completed")
@@ -75,7 +67,7 @@ object HCacheManager {
                 Preferences.preferenceSp.edit {
                     putBoolean(SettingsPreferenceKeys.USE_PRIVATE_STORAGE, true)
                 }
-                return saveHanimeVideoInfo(context, videoCode, info) // ⬅️ 重试一次
+                return saveHanimeVideoInfo(context, videoCode, info)
             }
 
             Log.e("FileSave", "❌ Save video info failed: ${cacheFile.absolutePath}", e)
@@ -105,7 +97,6 @@ object HCacheManager {
         )
     }
 
-    // 缓解写入冲突 (仅 File 模式下用)
     private fun File.atomicWrite(block: (OutputStream) -> Unit) {
         parentFile?.mkdirs()
         val tempFile = File("$absolutePath.tmp")
@@ -126,9 +117,6 @@ object HCacheManager {
         }
     }
 
-    /**
-     * 加载 HanimeVideo 信息，用于下载后直接在 APP 内观看
-     */
     @OptIn(ExperimentalSerializationApi::class)
     fun loadHanimeVideoInfo(context: Context, videoCode: String): Flow<HanimeVideo?> {
         return flow {

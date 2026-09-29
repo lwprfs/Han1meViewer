@@ -46,7 +46,6 @@ class CreatorCenterViewModel(application: Application) : YenalyViewModel(applica
     private var uploadedRefreshing = false
     private var uploadingRefreshing = false
 
-    /** 对外暴露的唯一 UI 状态流。 */
     val uiState: StateFlow<CreatorCenterUiState> = combine(
         _selectedTab,
         _uploadedItems, _uploadingItems,

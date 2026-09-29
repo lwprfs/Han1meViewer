@@ -7,9 +7,7 @@ import okio.buffer
 
 class SpeedLimitResponseBody(
     private val responseBody: ResponseBody,
-    /**
-     * 0 means no limit
-     */
+
     private val maxSpeed: Long
 ) : ResponseBody() {
 

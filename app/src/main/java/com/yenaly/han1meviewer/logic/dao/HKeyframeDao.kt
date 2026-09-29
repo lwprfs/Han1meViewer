@@ -9,11 +9,6 @@ import androidx.room.Update
 import com.yenaly.han1meviewer.logic.entity.HKeyframeEntity
 import kotlinx.coroutines.flow.Flow
 
-/**
- * @project Han1meViewer
- * @author Yenaly Liew
- * @time 2023/11/12 012 12:39
- */
 @Dao
 abstract class HKeyframeDao {
 
@@ -53,7 +48,7 @@ abstract class HKeyframeDao {
     ) {
         val entity = findBy(videoCode)
         entity?.let {
-            // 按理説一定會有，如果沒有那就是出問題了
+
             if (keyframe == oldKeyframe) return
             removeKeyframe(videoCode, oldKeyframe)
             appendKeyframe(videoCode, entity.title, keyframe)

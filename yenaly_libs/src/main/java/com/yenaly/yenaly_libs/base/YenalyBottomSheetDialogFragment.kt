@@ -10,12 +10,6 @@ import androidx.fragment.app.FragmentActivity
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.yenaly.yenaly_libs.R
 
-/**
- * @ProjectName : YenalyModule
- * @Author : Yenaly Liew
- * @Time : 2022/05/04 004 14:46
- * @Description : Description...
- */
 abstract class YenalyBottomSheetDialogFragment<DB : ViewDataBinding> :
     BottomSheetDialogFragment(), IViewBinding<DB> {
 
@@ -45,27 +39,16 @@ abstract class YenalyBottomSheetDialogFragment<DB : ViewDataBinding> :
         _binding?.unbind()
     }
 
-    /**
-     * 设置dialog风格 (optional)
-     *
-     * 默认为透明，需要自己在rootView上添加背景
-     */
     open fun setStyle() {
         setStyle(STYLE_NORMAL, R.style.YenalyBottomSheetDialog)
     }
 
     abstract fun getViewBinding(layoutInflater: LayoutInflater): DB
 
-    /**
-     * 初始化数据
-     */
     abstract fun initData(savedInstanceState: Bundle?, dialog: Dialog)
 
-    /**
-     * 简化fragment内唤出该dialog的方式
-     */
     fun showIn(fragment: Fragment) {
-    //    val fragmentManager = fragment.requireActivity().supportFragmentManager
+
         val tag = this.javaClass.name
         val fragmentManager = fragment.childFragmentManager
         if (fragmentManager.findFragmentByTag(tag) != null) {
@@ -74,9 +57,6 @@ abstract class YenalyBottomSheetDialogFragment<DB : ViewDataBinding> :
         show(fragmentManager, tag)
     }
 
-    /**
-     * 简化activity内唤出该dialog的方式
-     */
     fun showIn(activity: FragmentActivity) {
         val fragmentManager = activity.supportFragmentManager
         if (fragmentManager.findFragmentByTag(this.javaClass.name) != null) {

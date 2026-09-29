@@ -23,14 +23,6 @@ import com.yenaly.han1meviewer.ui.component.lazy.LazyColumn
 import com.yenaly.han1meviewer.ui.preview.ComponentPreview
 import com.yenaly.han1meviewer.ui.preview.fakeHomePageVideos
 
-/**
- * 下载中 Tab 页面（Content 层）。
- *
- * 接收 [DownloadUiState] + [DownloadEvent] 回调，不持有 ViewModel。
- *
- * @param uiState 页面 UI 状态
- * @param onEvent 用户交互事件回调
- */
 @Composable
 fun DownloadingScreen(
     uiState: DownloadUiState,

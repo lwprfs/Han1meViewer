@@ -92,8 +92,7 @@ fun NetworkSettingsRouteScreen() {
     var pendingDohCustomUrl by remember { mutableStateOf(Preferences.dohCustomUrl) }
     var pendingDohBootstrapIps by remember { mutableStateOf(Preferences.dohBootstrapIps) }
     var pendingDohTimeoutSeconds by remember { mutableIntStateOf(Preferences.dohTimeoutSeconds) }
-    
-    // Check if current site is Javchu
+
     val isJavchu = Preferences.siteType == SiteType.JAVCHU
     val showCustomMirror = !isJavchu
 
@@ -218,7 +217,7 @@ fun NetworkSettingsRouteScreen() {
             val origin = Preferences.baseUrl
             if (newValue != origin) {
                 pendingDomainValue = newValue
-                // Reset custom mirror settings when domain changes
+
                 pendingUseCustomMirrorSite = false
                 pendingCustomMirrorSite = Preferences.customMirrorSite
                 pendingAppendCustomMirrorPath = Preferences.appendCustomMirrorPath
@@ -227,7 +226,7 @@ fun NetworkSettingsRouteScreen() {
         },
         onSaveCustomMirrorSite = { enabled, url, appendPath ->
             if (isJavchu) return@NetworkSettingsScreen
-            
+
             val normalizedUrl = normalizeCustomMirrorSite(url)
             if (enabled && normalizedUrl == null) {
                 showCustomMirrorValidationError = true
@@ -250,7 +249,7 @@ fun NetworkSettingsRouteScreen() {
         },
         onTestCustomMirrorSite = { url, appendPath ->
             if (isJavchu) return@NetworkSettingsScreen
-            
+
             val normalizedUrl = normalizeCustomMirrorSite(url)
             if (normalizedUrl == null) {
                 customMirrorTestResult = context.getString(R.string.custom_mirror_site_invalid)

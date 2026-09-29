@@ -38,10 +38,6 @@ fun HanimeTheme(
     )
 }
 
-/**
- * 纯黑（OLED）模式：保留主题色的同时，将背景与表面色替换为纯黑，
- * 以在 OLED 屏幕上实现熄屏省电效果。
- */
 private fun ColorScheme.toPureBlackColorScheme(): ColorScheme = copy(
     background = Color.Black,
     surface = Color.Black,

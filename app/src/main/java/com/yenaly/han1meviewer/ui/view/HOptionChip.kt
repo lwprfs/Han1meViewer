@@ -20,8 +20,6 @@ class HOptionChip @JvmOverloads constructor(
 ) : AppCompatTextView(context, attrs, defStyleRes), Checkable {
 
     private val cornerRadius = 12.dp.toFloat()
-//    private val unselectedColor = context.getColor(R.color.adv_search_unselected_color)
-//    private val selectedColor = context.getColor(R.color.adv_search_selected_color)
 
     val selectedColor = MaterialColors.getColor(rootView, androidx.appcompat.R.attr.colorPrimary)
     val unselectedColor = MaterialColors.getColor(rootView, com.google.android.material.R.attr.colorPrimaryContainer)
@@ -34,10 +32,10 @@ class HOptionChip @JvmOverloads constructor(
             val bgRes = it.getResourceId(0, 0)
             setBackgroundResource(bgRes)
         }
-        // Set default properties
+
         updatePadding(top = 12.dp, bottom = 12.dp)
         setTextColor(unselectedTextColor)
-        // corner radius drawable
+
         background = GradientDrawable().apply {
             cornerRadius = this@HOptionChip.cornerRadius
             setColor(unselectedColor)

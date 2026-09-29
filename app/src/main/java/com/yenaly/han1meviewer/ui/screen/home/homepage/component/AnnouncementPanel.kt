@@ -44,17 +44,6 @@ import com.yenaly.han1meviewer.ui.preview.ComponentPreview
 import com.yenaly.han1meviewer.ui.preview.fakeAnnouncements
 import com.yenaly.han1meviewer.ui.screen.home.homepage.formatTimestamp
 
-/**
- * 平板大屏下与 Banner 并排显示的公告面板。
- *
- * 与 [AnnouncementCard] 展示同样的数据，但纵向铺满给定高度，以便填充 Banner 限高后空出的
- * 横向空间。
- *
- * @param announcements 要展示的公告列表。
- * @param onAnnouncementClick 点击公告时调用，参数为被点击公告。
- * @param onClose 点击关闭按钮时调用。
- * @param modifier 应用于面板根布局的修饰符，需要由调用方给定宽高。
- */
 @Composable
 fun AnnouncementPanel(
     announcements: List<Announcement>,

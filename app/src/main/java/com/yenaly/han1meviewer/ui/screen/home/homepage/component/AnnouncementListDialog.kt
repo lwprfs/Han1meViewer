@@ -26,12 +26,6 @@ import com.yenaly.han1meviewer.ui.component.lazy.LazyColumn
 import com.yenaly.han1meviewer.ui.preview.ComponentPreview
 import com.yenaly.han1meviewer.ui.preview.fakeAnnouncements
 
-/**
- * 显示完整公告列表弹窗。
- *
- * @param announcements 可供选择的公告列表。
- * @param onDismiss 关闭弹窗时调用。
- */
 @Composable
 fun AnnouncementListDialog(
     announcements: List<Announcement>,

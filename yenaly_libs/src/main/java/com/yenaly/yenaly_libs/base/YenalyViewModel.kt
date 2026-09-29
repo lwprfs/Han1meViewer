@@ -4,12 +4,6 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import com.yenaly.yenaly_libs.utils.unsafeLazy
 
-/**
- * @ProjectName : YenalyModule
- * @Author : Yenaly Liew
- * @Time : 2022/04/20 020 11:37
- * @Description : Description...
- */
 open class YenalyViewModel(
     @JvmField protected val application: Application
 ) : AndroidViewModel(application) {

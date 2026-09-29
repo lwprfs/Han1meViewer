@@ -16,11 +16,6 @@ import com.yenaly.han1meviewer.ui.component.GlobalToasts
 import com.yenaly.han1meviewer.ui.component.TextInputField
 import com.yenaly.yenaly_libs.utils.findActivityOrNull
 
-/**
- * @project Han1meViewer
- * @author Yenaly Liew
- * @time 2023/11/26 026 17:42
- */
 class HKeyframesRvAdapter(
     private val videoCode: String,
     private val onModifyKeyframe: (String, HKeyframeEntity.Keyframe, HKeyframeEntity.Keyframe) -> Unit,
@@ -34,11 +29,6 @@ class HKeyframesRvAdapter(
         isStateViewEnable = true
     }
 
-    /**
-     * 是否是本地关键帧
-     *
-     * @return false if is shared, true otherwise.
-     */
     var isLocal: Boolean = true
 
     var isShared: Boolean = false

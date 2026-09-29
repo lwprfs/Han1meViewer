@@ -62,21 +62,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 
-/**
- * 下载页面 Screen 层。
- *
- * 接收数据流和 [DownloadEvent] 回调，管理 Tab、分组展开等 UI 编排状态。
- * 本地 UI 事件（Tab 切换、分组折叠）由 Screen 处理；业务事件透传给 Route。
- * Content 组件仅接收 UiState + Event 回调。
- *
- * @param downloadingFlow 下载中任务流
- * @param downloadedFlow 已下载视频流
- * @param downloadedGroupsFlow 分组列表流
- * @param collapseDownloadedGroup 默认折叠分组
- * @param onBack 返回回调
- * @param onLoadDownloaded 初始加载已下载列表（一次性调用）
- * @param onEvent 业务事件回调（透传给 Route 层处理）
- */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DownloadScreen(
@@ -167,7 +152,7 @@ fun DownloadScreen(
 
     val handleEvent: (DownloadEvent) -> Unit = { event ->
         when (event) {
-            // 本地 UI 事件：Screen 自行处理
+
             is DownloadEvent.OnToggleGroup -> {
                 downloadedHeaderNodes = downloadedHeaderNodes.map {
                     if (it.groupId == event.groupId) {
@@ -183,7 +168,7 @@ fun DownloadScreen(
             is DownloadEvent.OnPageChange -> {
                 scope.launch { pagerState.animateScrollToPage(event.page) }
             }
-            // 多选事件：Screen 自行处理
+
             is DownloadEvent.OnToggleMultiSelect -> {
                 multiSelectMode = !multiSelectMode
                 if (!multiSelectMode) selectedVideoIds = emptySet()
@@ -205,7 +190,7 @@ fun DownloadScreen(
                 }
             }
             is DownloadEvent.OnBatchMoveRequest -> { pendingBatchMove = true }
-            // 业务事件：透传给 Route
+
             else -> onEvent(event)
         }
     }

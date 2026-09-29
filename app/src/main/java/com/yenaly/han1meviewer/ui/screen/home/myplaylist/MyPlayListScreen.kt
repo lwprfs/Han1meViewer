@@ -49,17 +49,6 @@ import com.yenaly.han1meviewer.ui.component.appbar.HanimeScaffold
 import com.yenaly.han1meviewer.ui.component.content.EmptyContent
 import com.yenaly.han1meviewer.ui.viewmodel.MyPlayListViewModelV2
 
-/**
- * 播放列表页面 Screen 层。
- *
- * 持有 [MyPlayListViewModelV2]，管理缓存、下拉刷新、底部弹窗等状态编排。
- * 渲染委托给 [PlaylistContent] 和 [PlaylistBottomSheet]。
- *
- * @param viewModel 播放列表 ViewModel
- * @param navigateBack 返回回调
- * @param onClickItem 点击视频项回调
- * @param onLongClickItem 长按视频项回调
- */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun PlaylistScreen(

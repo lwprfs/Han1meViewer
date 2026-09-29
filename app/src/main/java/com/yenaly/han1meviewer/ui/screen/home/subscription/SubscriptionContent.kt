@@ -65,16 +65,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
-/**
- * 订阅页面 Content 层。纯 UI，不持有 ViewModel。
- *
- * 接收 [SubscriptionUiState] + [SubscriptionEvent] 回调，
- * 负责顶部作者横向列表、视频网格、加载更多触发等 UI 渲染。
- *
- * @param uiState 页面 UI 状态
- * @param onEvent 用户事件回调
- * @param gridState LazyGrid 滚动状态（UI 框架层）
- */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SubscriptionContent(
@@ -198,9 +188,6 @@ fun SubscriptionContent(
     }
 }
 
-/**
- * 已订阅作者横向列表区域。
- */
 @Composable
 private fun ArtistListSection(
     artists: List<SubscriptionItem>,

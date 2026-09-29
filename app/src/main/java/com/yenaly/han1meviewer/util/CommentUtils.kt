@@ -1,11 +1,5 @@
 package com.yenaly.han1meviewer.util
 
-/**
- * @author misaka10032w
- * @Time 2025.9.4
- * @param timeStr 类似 "2個月前"、"5天前"、"45分鐘前" 的时间字符串
- * 将类似 "2個月前"、"5天前"、"45分鐘前" 的时间字符串解析为分钟数
- */
 fun parseTimeStrToMinutes(timeStr: String): Int {
     return when {
         "分鐘前" in timeStr -> timeStr.removeSuffix("分鐘前").trim().toInt()
@@ -18,13 +12,6 @@ fun parseTimeStrToMinutes(timeStr: String): Int {
     }
 }
 
-/**
- * 安全排序扩展函数
- * @author misaka10032w
- * @Time 2025.9.4
- * @param selector 属性选择器
- * @param descending 是否降序
- */
 fun <Hatsune, Miku : Comparable<Miku>> List<Hatsune>.safeSortedBy(
     selector: (Hatsune) -> Miku?,
     descending: Boolean = false

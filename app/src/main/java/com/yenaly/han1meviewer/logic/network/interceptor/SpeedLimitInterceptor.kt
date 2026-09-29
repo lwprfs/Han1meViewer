@@ -12,7 +12,7 @@ class SpeedLimitInterceptor(var maxSpeed: Long) : Interceptor {
 
         @JvmField
         val SPEED_BYTES = longArrayOf(
-            /* 不限速 */ 0L,
+             0L,
             128 * 1024L, 256 * 1024L, 512 * 1024L,
             1024 * 1024L, 2048 * 1024L, 4096 * 1024L,
             8192 * 1024L, 10240 * 1024L

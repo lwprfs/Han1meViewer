@@ -10,12 +10,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-/**
- * 全局弹窗宿主，用于非 Compose 上下文（RecyclerView 适配器、播放器 View、挂起函数等）
- * 触发 Compose 主题弹窗，避免回退到 themes.xml 的传统配色。
- *
- * 弹窗以队列形式串行展示：多次 [show] 会按顺序逐个弹出，互不覆盖。
- */
 object GlobalDialogs {
 
     sealed interface Request {
@@ -50,9 +44,6 @@ object GlobalDialogs {
     private val _queue = MutableStateFlow<List<QueuedRequest>>(emptyList())
     val queue: StateFlow<List<QueuedRequest>> = _queue.asStateFlow()
 
-    /**
-     * 入队一个弹窗，返回其唯一 id，可用 [dismiss] 按 id 移除。
-     */
     fun show(request: Request): Long {
         val id = ++nextId
         _queue.value = _queue.value + QueuedRequest(id, request)

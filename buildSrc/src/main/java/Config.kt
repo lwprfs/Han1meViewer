@@ -6,10 +6,6 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-/**
- * @author Yenaly Liew
- * @time 2023/11/25 025 17:55
- */
 object Config {
 
     val Project.isRelease: Boolean
@@ -19,18 +15,7 @@ object Config {
 
         const val DEBUG = "debug"
         const val RELEASE = "release"
-//        const val CI = "ci"
 
-        /**
-         * 创建版本号
-         *
-         * @return 版本号和版本名
-         *
-         *         Example:
-         *         ci: 0.1.2-ci+21032500
-         *         release: 0.1.2-release+21032500
-         *         debug (fixed): debug+1
-         */
         fun Project.createVersion(
             major: Int, minor: Int, patch: Int
         ): Pair<Int, String> {
@@ -52,12 +37,6 @@ object Config {
             }
             return versionCode to versionName
         }
-
-        /**
-         * 版本来源，用于区分不同的版本
-         *
-         * @return ci 或 release 或 debug
-         */
 
         val Project.source: String
             get() = System.getenv("HA1_VERSION_SOURCE") ?: kotlin.run {

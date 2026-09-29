@@ -14,12 +14,6 @@ import java.io.ObjectOutputStream
 import java.net.URLDecoder
 import java.net.URLEncoder
 
-/**
- * 创建SharedPreferences
- *
- * @param name sp名称
- * @param mode 模式
- */
 private fun Context.sp(
     name: String = packageName,
     mode: Int = Context.MODE_PRIVATE
@@ -27,14 +21,6 @@ private fun Context.sp(
     return getSharedPreferences(name, mode)
 }
 
-/**
- * 把值存入SharedPreferences内
- *
- * @param Ace   泛型
- * @param key   储存键
- * @param value 储存值
- * @param name  sp名称
- */
 @JvmOverloads
 fun <Ace> putSpValue(
     key: String,
@@ -53,16 +39,6 @@ fun <Ace> putSpValue(
     }
 }
 
-/**
- * 把值从SharedPreferences取出
- *
- * @param Taffy   泛型
- * @param key     储存键
- * @param default 缺省值
- * @param name    sp名称
- *
- * @return 储存值
- */
 @JvmOverloads
 fun <Taffy> getSpValue(
     key: String,
@@ -82,14 +58,6 @@ fun <Taffy> getSpValue(
     }
 }
 
-/**
- * 通过委托方式懒加载获取sp值
- *
- * @param Taffy   泛型
- * @param key     储存键
- * @param default 缺省值
- * @param name    sp名称
- */
 @JvmOverloads
 fun <Taffy> spValue(
     key: String,
@@ -100,12 +68,6 @@ fun <Taffy> spValue(
         getSpValue(key, default, name)
     }
 
-/**
- * 删除sp内特定值
- *
- * @param key  储存键
- * @param name sp名称
- */
 @JvmOverloads
 fun removeSpValue(
     key: String,
@@ -114,11 +76,6 @@ fun removeSpValue(
     applicationContext.sp(name = name).edit { remove(key) }
 }
 
-/**
- * 清除sp的所有内容
- *
- * @param name sp名称
- */
 @JvmOverloads
 fun clearSharedPreferences(
     name: String = applicationContext.packageName
@@ -126,9 +83,6 @@ fun clearSharedPreferences(
     applicationContext.sp(name = name).edit { clear() }
 }
 
-/**
- * 序列化
- */
 private fun <Nyaru> serialize(obj: Nyaru): String {
     val byteArrayOutputStream = ByteArrayOutputStream()
     val objectOutputStream = ObjectOutputStream(byteArrayOutputStream)
@@ -140,9 +94,6 @@ private fun <Nyaru> serialize(obj: Nyaru): String {
     return serStr
 }
 
-/**
- * 反序列化
- */
 private fun <Bekki> deSerialization(str: String?): Bekki {
     val redStr = URLDecoder.decode(str, "UTF-8")
     val byteArrayInputStream = ByteArrayInputStream(redStr.toByteArray(charset("ISO-8859-1")))

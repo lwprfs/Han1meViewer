@@ -45,17 +45,8 @@ import com.yenaly.han1meviewer.ui.preview.fakeAnnouncements
 import com.yenaly.han1meviewer.ui.screen.home.homepage.formatTimestamp
 import kotlin.time.Duration.Companion.seconds
 
-/** 公告轮播的间隔，比图片轮播长一些，留出阅读时间。 */
 internal val AnnouncementAutoScrollInterval = 8.seconds
 
-/**
- * 显示首页紧凑公告轮播卡片。
- *
- * @param announcements 要展示的公告列表。
- * @param onAnnouncementClick 点击公告时调用，参数为被点击公告。
- * @param onClose 点击关闭按钮时调用。
- * @param modifier 应用于公告卡片根布局的修饰符。
- */
 @Composable
 fun AnnouncementCard(
     announcements: List<Announcement>,

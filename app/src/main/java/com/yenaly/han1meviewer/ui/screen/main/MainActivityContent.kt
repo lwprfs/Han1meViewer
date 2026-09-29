@@ -76,11 +76,8 @@ fun MainActivityContent(
             activity.window.setBackgroundDrawable(windowBackground.toArgb().toDrawable())
         }
 
-        // FIXED: Call rememberNavController() directly in composable context
-        // This is a @Composable function, so it must be called at the top level of a composable
         val composeNavController = rememberNavController()
 
-        // Use LaunchedEffect to initialize NavigationManager when site changes
         LaunchedEffect(siteChangeKey) {
             onNavigateControllerReady(composeNavController)
             NavigationManager.initialize(composeNavController, Preferences.siteType)

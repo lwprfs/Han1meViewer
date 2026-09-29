@@ -40,22 +40,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
-/**
- * 可复用的分页导航组件。
- *
- * 该组件在屏幕中央显示一组页码按钮，并提供上一页/下一页的导航功能。
- * 当总页数超过最大可见页数时，会自动显示省略号（"..."），
- * 点击省略号可弹出输入框，支持快速跳转到指定页码。
- *
- * @param currentPage 当前选中的页码，从 1 开始
- * @param totalPages 总页数
- * @param onPageSelected 页码选中回调，返回目标页码（1-based）
- * @param modifier 应用于根 Row 的 Modifier
- * @param maxVisiblePages 最多可见的页码数量（不含上一页/下一页按钮），
- *   必须为大于等于 5 的奇数（如 5, 7, 9），默认值为 5
- *
- * @throws IllegalArgumentException 当 maxVisiblePages < 5 或为偶数时抛出
- */
 @Composable
 fun PaginationPager(
     currentPage: Int,
@@ -116,16 +100,6 @@ fun PaginationPager(
     }
 }
 
-/**
- * 跳转省略号组件（"..."）。
- *
- * 点击省略号时切换为输入框，用户可输入目标页码并提交，
- * 提交后调用 [onJump] 回调并自动退出编辑状态。
- * 输入框会限制输入长度为总页数的位数，并仅允许数字输入。
- *
- * @param totalPages 总页数，用于输入校验和输入长度限制
- * @param onJump 用户确认跳转时的回调，返回目标页码（1-based）
- */
 @Composable
 private fun JumpEllipsisItem(
     totalPages: Int,
@@ -215,16 +189,6 @@ private fun JumpEllipsisItem(
     }
 }
 
-/**
- * 单个页码按钮组件。
- *
- * 使用 [Surface] 实现圆形按钮，选中状态和未选中状态
- * 分别使用不同的主题色进行区分。
- *
- * @param page 页码（从 1 开始）
- * @param isSelected 是否为当前选中页
- * @param onClick 点击该页码时的回调
- */
 @Composable
 private fun PageItem(
     page: Int,
@@ -250,26 +214,6 @@ private fun PageItem(
     }
 }
 
-
-/**
- * 计算分页导航显示的页码列表。
- *
- * 根据当前页码、总页数和最大可见页数，生成用于渲染的页码序列。
- * 返回列表中的 -1 表示左侧省略号，-2 表示右侧省略号，
- * 其他正整数表示具体的页码。
- *
- * 逻辑规则：
- * - 当总页数 ≤ 最大可见页数时，显示全部页码
- * - 当当前页靠近左侧时，右侧显示省略号
- * - 当当前页靠近右侧时，左侧显示省略号
- * - 当当前页在中间时，左右两侧均显示省略号，
- *   并在中间显示以当前页为中心的连续页码段
- *
- * @param current 当前页码（1-based）
- * @param total 总页数
- * @param maxVisible 最大可见页码数量，必须是奇数
- * @return 包含页码和省略号标记（-1/-2）的列表
- */
 private fun calculatePagination(current: Int, total: Int, maxVisible: Int): List<Int> {
     if (total <= maxVisible) return (1..total).toList()
 
@@ -279,7 +223,7 @@ private fun calculatePagination(current: Int, total: Int, maxVisible: Int): List
 
     if (!showLeftEllipsis && showRightEllipsis) {
         for (i in 1..(maxVisible - 2)) result.add(i)
-        result.add(-2) // 右省略
+        result.add(-2)
         result.add(total)
 
     } else if (showLeftEllipsis && !showRightEllipsis) {

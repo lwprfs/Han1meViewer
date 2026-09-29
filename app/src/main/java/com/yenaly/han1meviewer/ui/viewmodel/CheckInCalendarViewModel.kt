@@ -31,7 +31,6 @@ class CheckInCalendarViewModel : ViewModel() {
     private val _monthlyStats = MutableStateFlow(MonthlyStats())
     private val _yearStats = MutableStateFlow(MonthlyStats())
 
-    /** 对外暴露的唯一 UI 状态流。 */
     val uiState: StateFlow<DailyCheckInUiState> = combine(
         _currentMonth, _records, _checkedDays, _monthTotal, _monthlyStats,
     ) { array ->

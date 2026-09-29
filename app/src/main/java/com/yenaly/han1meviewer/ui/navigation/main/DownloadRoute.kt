@@ -138,7 +138,6 @@ fun DownloadRouteScreen(
                 viewModel.updateVideoGroup(video.video.videoCode, event.groupId)
             }
 
-            // 以下事件由 Screen 层自行处理，Route 不关心
             is DownloadEvent.OnToggleGroup,
             is DownloadEvent.OnCreateGroupDialogChange,
             is DownloadEvent.OnPageChange,

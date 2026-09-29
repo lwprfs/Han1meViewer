@@ -28,7 +28,7 @@ data class Announcement(
     @JvmField val imageUrl: String ? = null,
     @JvmField val isActive: Boolean = false
 ) {
-    //firebase初始化需要一个空的构造函数
+
     constructor() : this("", "", null, null, 0L, 1, null, false)
     @OptIn(ExperimentalTime::class)
     fun getFormattedDate(): String {

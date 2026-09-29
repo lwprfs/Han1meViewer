@@ -34,13 +34,10 @@ object HanimeDownloadManager {
 
     private val workManager = WorkManager.getInstance(applicationContext)
 
-    /**
-     * 用于程序初始化时加载所有正在下载的任务
-     */
     suspend fun init() {
         Log.d(TAG, "init")
         val all = DownloadDatabase.instance.hanimeDownloadDao.loadAllDownloadingHanimeOnce()
-        // 前 maxConcurrentDownloadCount 个任务直接下载，后面的任务加入等待队列
+
         for (i in all.indices) {
             if (i < maxConcurrentDownloadCount) {
                 addTask(HanimeDownloadWorker.Args.fromEntity(all[i]), redownload = false)
@@ -50,16 +47,10 @@ object HanimeDownloadManager {
         }
     }
 
-    /**
-     * 通知下载任务完成，开始下一个在等待队列中的任务
-     */
     internal fun notify(entity: HanimeDownloadEntity) = notify(
         HanimeDownloadWorker.Args.fromEntity(entity)
     )
 
-    /**
-     * 通知下载任务完成，开始下一个在等待队列中的任务
-     */
     private fun notify(args: HanimeDownloadWorker.Args) {
         when (args) {
             in downloadingQueue -> {
@@ -75,17 +66,13 @@ object HanimeDownloadManager {
         }
     }
 
-    /**
-     * 添加下载任务，如果任务正在下载中，则不会重复添加；
-     * 如果下载队列已满，则会加入等待队列。
-     */
     fun addTask(args: HanimeDownloadWorker.Args, redownload: Boolean = false) {
         Log.d(TAG, "addTask: $args")
         if (args in downloadingQueue) {
             return
         }
         if (downloadingQueue.size < maxConcurrentDownloadCount) {
-            // 添加新任务
+
             downloadingQueue.offer(args)
             startWork(args, redownload = redownload)
         } else {
@@ -94,20 +81,10 @@ object HanimeDownloadManager {
         }
     }
 
-    /**
-     * 恢复下载任务，如果任务已经在下载队列中，则不会重复添加；
-     * 如果下载队列已满，则会将一个正在下载的任务放到等待队列，
-     * 然后将 [entity] 加入下载队列。
-     */
     fun resumeTask(entity: HanimeDownloadEntity) = resumeTask(
         HanimeDownloadWorker.Args.fromEntity(entity)
     )
 
-    /**
-     * 恢复下载任务，如果任务已经在下载队列中，则不会重复添加；
-     * 如果下载队列已满，则会将一个正在下载的任务放到等待队列，
-     * 然后将 [args] 加入下载队列。
-     */
     fun resumeTask(args: HanimeDownloadWorker.Args) {
         Log.d(TAG, "resumeTask: $args")
         when (args) {
@@ -125,31 +102,19 @@ object HanimeDownloadManager {
         }
     }
 
-    /**
-     * 停止下载任务，如果任务正在下载中，则会立即停止；
-     * 如果任务在等待队列中，则会从等待队列中移除。
-     */
     fun stopTask(args: HanimeDownloadWorker.Args): Operation {
         Log.d(TAG, "stopTask: $args")
         notify(args)
         return stopWork(args)
     }
 
-    /**
-     * 停止下载任务，如果任务正在下载中，则会立即停止；
-     * 如果任务在等待队列中，则会从等待队列中移除。
-     */
     fun stopTask(entity: HanimeDownloadEntity): Operation = stopTask(
         HanimeDownloadWorker.Args.fromEntity(entity)
     )
 
-    /**
-     * 删除下载任务，如果任务正在下载中，则会立即停止并删除；
-     * 如果任务在等待队列中，则会从等待队列中移除。
-     */
     suspend fun deleteTaskCrazily(entity: HanimeDownloadEntity) {
         Log.d(TAG, "deleteTask: ${entity.videoCode}")
-        // 必須另闢蹊徑，通過替換的方式來刪除，要不然無法真正地取消。
+
         val downloadRequest = OneTimeWorkRequestBuilder<HanimeDownloadWorker>()
             .addTag(HanimeDownloadWorker.TAG)
             .setInputData(workDataOf(HanimeDownloadWorker.FAST_PATH_CANCEL to true))
@@ -163,9 +128,6 @@ object HanimeDownloadManager {
         }
     }
 
-    /**
-     * 获取下载状态
-     */
     fun getDownloadState(videoCode: String): DownloadState {
         return when (videoCode) {
             in downloadingQueue -> DownloadState.Downloading

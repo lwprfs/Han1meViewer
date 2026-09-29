@@ -39,11 +39,6 @@ import java.io.File
 import java.util.Locale
 import kotlin.random.Random
 
-/**
- * @project Han1meViewer
- * @author Yenaly Liew
- * @time 2024/03/22 022 21:27
- */
 class HUpdateWorker(
     private val context: Context,
     workerParams: WorkerParameters,
@@ -55,9 +50,6 @@ class HUpdateWorker(
         const val NODE_ID = "node_id"
         const val UPDATE_APK = "update_apk"
 
-        /**
-         * This function is used to enqueue a download task
-         */
         fun enqueue(context: Context, latest: Latest) {
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -76,13 +68,10 @@ class HUpdateWorker(
                 .enqueue()
         }
 
-        /**
-         * This function is used to collect the output of the download task
-         */
         suspend fun collectOutput(context: Context) = WorkManager.getInstance(context)
             .getWorkInfosByTagFlow(TAG)
             .collect { workInfos ->
-                // 只有一個！
+
                 val workInfo = workInfos.firstOrNull()
                 workInfo?.let {
                     when (it.state) {
@@ -128,9 +117,6 @@ class HUpdateWorker(
                 return Result.success(outputData)
             }
 
-            // 具体原因（限额耗尽/密钥失效/Artifact 过期/网络异常）已经有明确分类：
-            // 日志与 Crashlytics 里保留完整诊断（状态码 + 响应体片段），
-            // 通告栏里只放翻译好的具体原因
             error.printStackTrace()
             val diagnostic = HUpdater.errorDetail(error)
             Firebase.crashlytics.recordException(
@@ -164,7 +150,7 @@ class HUpdateWorker(
         notificationManager.notify(downloadId, createNotification(isPending = true))
     }
 
-    private var lastNotifyTime = 0L  // 节流，通知更新太快Android会抛异常
+    private var lastNotifyTime = 0L
     @SuppressLint("MissingPermission")
     private fun updateNotification(progress: Int, fileSize: Long, downloadedSize: Long) {
         val now = System.currentTimeMillis()
@@ -235,8 +221,7 @@ class HUpdateWorker(
 
     @SuppressLint("MissingPermission")
     private fun showFailureNotification(error: Throwable? = null) {
-        // 优先展示分类后的具体原因（限额耗尽 / 密钥失效 / 网络异常…），
-        // 没有分类信息时才退回通用文案
+
         val reason = HUpdater.errorMessage(error)?.takeIf { it.isNotBlank() }
         val notification = NotificationCompat.Builder(context, UPDATE_NOTIFICATION_CHANNEL)
             .setContentTitle(context.getString(R.string.update_download_failed))

@@ -65,18 +65,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 
-/**
- * 全局 Toast 单例，用于替换传统 Toast。
- *
- * 特性：
- * - 全局单例，从任意（含非 Compose）上下文调用；
- * - 连续发出时垂直堆叠（同一位置最多 [MAX_VISIBLE_COUNT] 条，超出丢弃最旧）；
- * - 相同 message + level 会去重，并重置其倒计时；
- * - 支持 [ToastDuration] 多种时长，也可传入自定义毫秒（0 = 常驻，仅可程序化 dismiss）；
- * - 支持 [ToastLevel] 多级强调色（每级不同的背景色），可传入自定义 icon 插槽；
- * - 支持上 / 中 / 下三种位置；
- * - 窗口不拦截触摸与焦点，不影响底层界面交互。
- */
 object GlobalToasts {
 
     enum class ToastLevel {

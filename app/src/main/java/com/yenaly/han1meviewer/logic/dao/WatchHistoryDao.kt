@@ -4,11 +4,6 @@ import androidx.room.*
 import com.yenaly.han1meviewer.logic.entity.WatchHistoryEntity
 import kotlinx.coroutines.flow.Flow
 
-/**
- * @project Han1meViewer
- * @author Yenaly Liew
- * @time 2022/07/02 002 16:47
- */
 @Dao
 abstract class WatchHistoryDao {
 

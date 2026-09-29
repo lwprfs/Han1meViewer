@@ -10,11 +10,6 @@ import okhttp3.OkHttpClient
 import java.net.InetAddress
 import java.util.concurrent.TimeUnit
 
-/**
- * @project Han1meViewer
- * @author Yenaly Liew
- * @time 2024/03/10 010 17:01
- */
 class HDns : Dns {
 
     private data class DohRuntimeConfig(
@@ -40,9 +35,6 @@ class HDns : Dns {
 
         private const val GETCHU_HOSTNAME = "www.getchu.com"
 
-        /**
-         * 添加DNS
-         */
         private operator fun MutableMap<String, List<InetAddress>>.set(
             host: String, ips: List<String>,
         ) {
@@ -51,19 +43,12 @@ class HDns : Dns {
             }
         }
 
-        /**
-         * 解析自定义 IP 列表，逗号分隔
-         */
         fun parseCustomIps(raw: String): List<String> {
             return raw.split(",")
                 .map { it.trim() }
                 .filter { it.isNotEmpty() }
         }
 
-        /**
-         * 验证自定义 IP 列表格式是否有效
-         * @return 无效 IP 的错误信息列表，为空表示全部有效
-         */
         fun validateCustomHosts(raw: String): List<String> {
             val errors = mutableListOf<String>()
             if (raw.isBlank()) return errors

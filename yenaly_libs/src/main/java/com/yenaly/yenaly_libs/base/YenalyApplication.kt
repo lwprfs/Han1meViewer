@@ -9,12 +9,6 @@ import com.yenaly.yenaly_libs.ActivityManager
 import com.yenaly.yenaly_libs.BuildConfig
 import java.lang.ref.WeakReference
 
-/**
- * @ProjectName : YenalyModule
- * @Author : Yenaly Liew
- * @Time : 2022/04/16 016 21:52
- * @Description : Description...
- */
 open class YenalyApplication : Application(), Application.ActivityLifecycleCallbacks {
 
     open val isDefaultCrashHandlerEnabled: Boolean = true
@@ -22,7 +16,7 @@ open class YenalyApplication : Application(), Application.ActivityLifecycleCallb
     override fun onCreate() {
         super.onCreate()
         registerActivityLifecycleCallbacks(this)
-        // do not forget to register the crash dialog activity!
+
         if (isDefaultCrashHandlerEnabled && !BuildConfig.DEBUG)
             YenalyCrashHandler.instance.init(this)
     }

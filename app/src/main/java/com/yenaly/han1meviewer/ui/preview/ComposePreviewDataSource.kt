@@ -22,10 +22,6 @@ import com.yenaly.han1meviewer.ui.screen.home.homepage.HomeCategory
 import com.yenaly.han1meviewer.ui.screen.home.homepage.HomeHeroItem
 import kotlinx.datetime.LocalDate
 
-
-/**
- * Compose预览用数据源
- */
 val fakeArtists = listOf(
     SubscriptionItem("初音未来", "null"),
     SubscriptionItem("绫波丽", "null"),
@@ -459,7 +455,6 @@ const val longText =
             "起功能是否正常。为了触发折叠，这里再补充一些额外内容。超长文本超长文本超长文本超长文本超长文本超长文本超长文本" +
             "超长文本超长文本超长文本超长文本超长文本超长文本超长文本超长文本超长文本超长文本超长文本超长文本超长文本"
 
-
 val fakeVideoIntroduction = HanimeVideo(
     title = "Shishunki no Obenkyou 2",
     coverUrl = fakeHomePageVideos.first().coverUrl,
@@ -549,7 +544,6 @@ val fakeGetchuPreviewItem = GetchuPreview.Item(
     price = "￥4,200"
 )
 
-// 用于Compose预览的静态假数据
 val fakeGetchuPreview = GetchuPreview(
     dateCode = "2024-01",
     groups = listOf(
@@ -575,10 +569,10 @@ val fakeGetchuPreview = GetchuPreview(
                 GetchuPreview.Item(
                     id = "item_003",
                     title = "【再販】進撃の巨人 リヴァイ アクションフィギュア",
-                    brand = null,  // brand可为空
-                    coverUrl = null, // coverUrl可为空
+                    brand = null,
+                    coverUrl = null,
                     detailUrl = "https://example.com/detail/003",
-                    price = null // price可为空
+                    price = null
                 )
             )
         ),

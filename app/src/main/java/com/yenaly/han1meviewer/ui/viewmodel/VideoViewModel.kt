@@ -47,11 +47,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
-/**
- * @project Hanime1
- * @author Yenaly Liew
- * @time 2022/06/17 017 19:01
- */
 class VideoViewModel(application: Application) : YenalyViewModel(application) {
 
     data class IntroScrollState(
@@ -79,10 +74,8 @@ class VideoViewModel(application: Application) : YenalyViewModel(application) {
     )
 
     companion object {
-        /**
-         * 最小的 HKeyframe 保存間隔，暫定 5s
-         */
-        const val MIN_H_KEYFRAME_SAVE_INTERVAL = 5_000 // ms
+
+        const val MIN_H_KEYFRAME_SAVE_INTERVAL = 5_000
     }
     private val videoIntroUiStateMap = mutableMapOf<String, VideoIntroUiState>()
     var videoCode: String = EMPTY_STRING
@@ -92,7 +85,6 @@ class VideoViewModel(application: Application) : YenalyViewModel(application) {
 
     var fromDownload = false
 
-    // 平板横屏模式下，左栏不显示相关视频（右栏已显示）
     var hideRelatedInIntro by mutableStateOf(false)
     var hidePlaylistInIntro by mutableStateOf(false)
     var hKeyframes: HKeyframeEntity? = null
@@ -107,11 +99,6 @@ class VideoViewModel(application: Application) : YenalyViewModel(application) {
     private val _videoHostUiStateFlow = MutableStateFlow(VideoHostUiState())
     val videoHostUiStateFlow = _videoHostUiStateFlow.asStateFlow()
 
-    /**
-     * 同系列影片已歸入的分組 id，作為下載時分組名的推薦項。
-     *
-     * 同系列任意一集在非預設分組中時推薦該分組，否則為 null。
-     */
     val recommendedGroupId: StateFlow<Int?> =
         hanimeVideoFlow
             .map { video -> video?.playlist?.video?.map { it.videoCode }.orEmpty() }
@@ -128,9 +115,6 @@ class VideoViewModel(application: Application) : YenalyViewModel(application) {
                 initialValue = null,
             )
 
-    /**
-     * 已下載分組列表，供下載時自動分組選擇（複用/挑選已有分組）使用。
-     */
     val downloadGroups: StateFlow<List<DownloadGroupEntity>> =
         DatabaseRepo.HanimeDownload.getAllGroups()
             .flowOn(Dispatchers.IO)
@@ -316,8 +300,6 @@ class VideoViewModel(application: Application) : YenalyViewModel(application) {
         return true
     }
 
-
-
     private val _addToFavVideoFlow = MutableSharedFlow<WebsiteState<Boolean>>()
     val addToFavVideoFlow = _addToFavVideoFlow.asSharedFlow()
 
@@ -414,7 +396,6 @@ class VideoViewModel(application: Application) : YenalyViewModel(application) {
         }
     }
 
-    // true代表已关注成功，false代表取消关注成功
     private val _subscribeArtistFlow = MutableSharedFlow<WebsiteState<Boolean>>()
     val subscribeArtistFlow = _subscribeArtistFlow.asSharedFlow()
 
@@ -450,7 +431,6 @@ class VideoViewModel(application: Application) : YenalyViewModel(application) {
         }
     }
 
-    // boolean: 成功 or 失敗，String: 提示信息
     private val _modifyHKeyframeFlow = MutableSharedFlow<Pair<Boolean, String>>()
     val modifyHKeyframeFlow = _modifyHKeyframeFlow.asSharedFlow()
     private val _forceRefresh = MutableSharedFlow<Unit>(replay = 1)

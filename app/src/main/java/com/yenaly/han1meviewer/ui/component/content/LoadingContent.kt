@@ -15,14 +15,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.ui.preview.ComponentPreview
 
-/**
- * 加载状态内容组件。
- *
- * 展示加载指示器和提示文本。
- *
- * @param modifier 修饰符
- * @param message 加载提示文本，默认为"加载中..."
- */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun LoadingContent(

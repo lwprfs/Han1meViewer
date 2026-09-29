@@ -13,6 +13,3 @@ data class CommitComparison(val commits: List<Commit>) {
         }
     }
 }
-
-
-

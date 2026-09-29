@@ -215,21 +215,20 @@ fun NetworkSettingsScreen(
             )
         }
 
-        // Custom Mirror Site - Only show if not Javchu
         if (showCustomMirror) {
             item {
                 SettingNavigationItem(
                     title = stringResource(R.string.custom_mirror_site),
-                    summary = if (useCustomMirrorSite && customMirrorSite.isNotBlank()) 
-                        customMirrorSite 
-                    else 
+                    summary = if (useCustomMirrorSite && customMirrorSite.isNotBlank())
+                        customMirrorSite
+                    else
                         stringResource(R.string.custom_mirror_site_hint),
                     iconRes = R.drawable.baseline_domain_24,
                     onClick = { showCustomMirrorSiteDialog = true },
                 )
             }
         } else if (isJavchu) {
-            // Show fixed URL info for Javchu
+
             item {
                 SettingInfoItem(
                     title = stringResource(R.string.domain_name),

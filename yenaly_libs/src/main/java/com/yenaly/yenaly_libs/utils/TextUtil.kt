@@ -6,13 +6,6 @@ import android.text.format.Formatter
 import androidx.annotation.IntRange
 import java.util.*
 
-/**
- * 把一个秒数转化为时间格式，常用于视频持续时间。
- *
- * 例如：123(s) -> 02:03
- *
- * @author Yenaly Liew
- */
 fun Long.secondToTimeCase(): String {
     val second: Long = this % 60
     var minute: Long = this / 60
@@ -27,13 +20,6 @@ fun Long.secondToTimeCase(): String {
     return if (hour != 0L) "$hourString:$minuteString:$secondString" else "$minuteString:$secondString"
 }
 
-/**
- * 把一个数转化为带万、亿的格式，常用于视频播放量等。
- *
- * 例如：102002 -> 10.2万
- *
- * @author Yenaly Liew
- */
 fun Long.formatPlayCount(): String {
     return when {
         this < 0 -> "0"
@@ -65,15 +51,6 @@ fun Long.formatFileSize(short: Boolean = true): String {
 private val SI_UNITS = arrayOf("B", "kB", "MB", "GB", "TB")
 private val IEC_UNITS = arrayOf("B", "KiB", "MiB", "GiB", "TiB")
 
-/**
- * 把一个数转化为带单位的文件大小格式，常用于文件大小等。
- *
- * 默认使用二进制单位（1024），可以通过 useSi 参数切换为十进制单位（1000）。
- *
- * @param useSi 是否使用十进制单位（1000），默认使用二进制单位（1024）。
- * @param decimalPlaces 小数点位数，默认为 1。
- * @param stripTrailingZeros 如果能整除，是否去除小数点后的 0，默认去除。
- */
 fun Long.formatFileSizeV2(
     useSi: Boolean = false,
     @IntRange(from = 0) decimalPlaces: Int = 1,
@@ -99,15 +76,6 @@ fun Long.formatFileSizeV2(
     }
 }
 
-/**
- * 把一个数转化为带单位的速度格式，常用于下载速度等。
- *
- * 默认使用二进制单位（1024），可以通过 useSi 参数切换为十进制单位（1000）。
- *
- * @param useSi 是否使用十进制单位（1000），默认使用二进制单位（1024）。
- * @param decimalPlaces 小数点位数，默认为 1。
- * @param stripTrailingZeros 如果能整除，是否去除小数点后的 0，默认去除。
- */
 fun Long.formatBytesPerSecond(
     useSi: Boolean = false,
     @IntRange(from = 0) decimalPlaces: Int = 1,

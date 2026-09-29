@@ -27,13 +27,6 @@ import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.ui.component.lazy.LazyColumn
 import kotlinx.coroutines.delay
 
-/**
- * 加载更多底部组件
- * @param state 加载状态
- * @param modifier 修饰符
- * @param textColor 文字颜色
- * @param loadedPage 已加载页数
- */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun LoadMoreFooter(

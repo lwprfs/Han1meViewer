@@ -18,14 +18,6 @@ import androidx.core.view.marginTop
 import androidx.core.view.updateLayoutParams
 import kotlin.math.min
 
-/**
- * 设置view的margins，设置相对位置margins更符合Google标准
- *
- * @param start  view的开始位
- * @param top    view的顶部
- * @param end    view的结束位
- * @param bottom view的底部
- */
 fun View.setMargins(
     start: Int = marginStart,
     top: Int = marginTop,
@@ -45,22 +37,10 @@ fun View.resize(
     height = (height * scaleY).toInt()
 }
 
-/**
- * This function is used to remove a view from its parent ViewGroup.
- * It checks if the parent of the view is a ViewGroup and if so, removes the view from it.
- */
 fun View.removeItself() {
     (parent as? ViewGroup)?.removeView(this)
 }
 
-/**
- * This is a generic function that finds and returns the parent of a view that is of a specific type.
- * It traverses up the view hierarchy until it finds a parent of the specified type.
- * If no parent of the specified type is found, it throws an error.
- *
- * @return The parent of the view that is of the specified type.
- * @throws Error if no parent of the specified type is found.
- */
 inline fun <reified T : View> View.findParent(): T {
     var parent = parent
     while (parent != null) {
@@ -109,9 +89,6 @@ fun View.setRoundCorner(topLeft: Float, topRight: Float, bottomRight: Float, bot
     }
 }
 
-/**
- * 计算纵向可见百分比
- */
 val View.verticalVisiblePercent: Float
     get() {
         val rect = Rect()
@@ -120,9 +97,6 @@ val View.verticalVisiblePercent: Float
         return if (fullHeight == 0) 0F else visibleHeight.toFloat() / fullHeight
     }
 
-/**
- * 计算横向可见百分比
- */
 val View.horizontalVisiblePercent: Float
     get() {
         val rect = Rect()
@@ -131,8 +105,5 @@ val View.horizontalVisiblePercent: Float
         return if (fullWidth == 0) 0F else visibleWidth.toFloat() / fullWidth
     }
 
-/**
- * 计算可见百分比
- */
 val View.visiblePercent: Float
     get() = min(verticalVisiblePercent, horizontalVisiblePercent)

@@ -1,9 +1,5 @@
 package com.yenaly.yenaly_libs
 
-/**
- * @author Yenaly Liew
- * @time 2023/08/29 029 13:58
- */
 abstract class SingleArgSingletonHolder<out T, in A>(private var constructor: ((A) -> T)?) {
     @Volatile
     private var instance: T? = null

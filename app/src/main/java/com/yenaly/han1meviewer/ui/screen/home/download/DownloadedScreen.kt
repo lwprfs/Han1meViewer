@@ -48,14 +48,6 @@ import com.yenaly.han1meviewer.ui.preview.ComponentPreview
 import com.yenaly.han1meviewer.ui.preview.fakeDownloadedGroups
 import com.yenaly.han1meviewer.ui.preview.fakeDownloadedNodes
 
-/**
- * 已下载 Tab 页面（Content 层）。
- *
- * 接收 [DownloadUiState] + [DownloadEvent] 回调，支持多选批量移动和删除。
- *
- * @param uiState 页面 UI 状态
- * @param onEvent 用户交互事件回调
- */
 @Composable
 fun DownloadedScreen(
     uiState: DownloadUiState,
@@ -134,7 +126,7 @@ fun DownloadedScreen(
                             onToggle = { onEvent(DownloadEvent.OnToggleGroup(node.groupId)) },
                             onRename = {
                                 if (node.groupId == DownloadGroupEntity.DEFAULT_GROUP_ID) {
-                                    // 默认分组不可重命名
+
                                 } else if (!uiState.multiSelectMode) {
                                     pendingRename = node
                                 }

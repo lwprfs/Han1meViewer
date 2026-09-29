@@ -27,13 +27,6 @@ import com.yenaly.han1meviewer.ui.preview.ComponentPreview
 import com.yenaly.han1meviewer.ui.preview.fakeHomePageVideos
 import kotlinx.coroutines.launch
 
-/**
- * 预览游览行。水平滚动展示当月最新影片缩略图，选中项高亮。
- *
- * @param latestHanime 影片列表
- * @param selectedIndex 当前选中项索引
- * @param onSelect 选中回调
- */
 @Composable
 fun PreviewTourRow(
     latestHanime: List<HanimeInfo>,

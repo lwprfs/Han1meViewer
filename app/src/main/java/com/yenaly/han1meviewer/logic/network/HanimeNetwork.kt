@@ -1,4 +1,3 @@
-// app/src/main/java/com/yenaly/han1meviewer/logic/network/HanimeNetwork.kt
 package com.yenaly.han1meviewer.logic.network
 
 import com.yenaly.han1meviewer.GETCHU_BASE_URL
@@ -12,11 +11,6 @@ import com.yenaly.han1meviewer.logic.network.service.HanimeMyListService
 import com.yenaly.han1meviewer.logic.network.service.HanimeSubscriptionService
 import android.util.Log
 
-/**
- * @project Hanime1
- * @author Yenaly Liew
- * @time 2022/06/08 008 22:35
- */
 object HanimeNetwork {
     var hanimeService = _hanimeService
         private set
@@ -32,7 +26,7 @@ object HanimeNetwork {
         private set
 
     private val _hanimeService
-        get() = ServiceCreator.create<HanimeBaseService>(Preferences.baseUrl)  // ← Uses current baseUrl
+        get() = ServiceCreator.create<HanimeBaseService>(Preferences.baseUrl)
 
     private val _githubService
         get() = ServiceCreator.createGitHubApi<HGitHubService>()
@@ -41,18 +35,18 @@ object HanimeNetwork {
         get() = ServiceCreator.createGetchu<GetchuService>(GETCHU_BASE_URL)
 
     private val _commentService
-        get() = ServiceCreator.create<HanimeCommentService>(Preferences.baseUrl)  // ← Uses current baseUrl
+        get() = ServiceCreator.create<HanimeCommentService>(Preferences.baseUrl)
 
     private val _myListService
-        get() = ServiceCreator.create<HanimeMyListService>(Preferences.baseUrl)  // ← Uses current baseUrl
+        get() = ServiceCreator.create<HanimeMyListService>(Preferences.baseUrl)
 
     private val _subscriptionService
-        get() = ServiceCreator.create<HanimeSubscriptionService>(Preferences.baseUrl)  // ← Uses current baseUrl
+        get() = ServiceCreator.create<HanimeSubscriptionService>(Preferences.baseUrl)
 
     fun rebuildNetwork() {
         Log.d("HanimeNetwork", "Rebuilding network with baseUrl: ${Preferences.baseUrl}")
         ServiceCreator.rebuildOkHttpClient()
-        // Recreate all services with the current base URL
+
         hanimeService = _hanimeService
         getchuService = _getchuService
         commentService = _commentService

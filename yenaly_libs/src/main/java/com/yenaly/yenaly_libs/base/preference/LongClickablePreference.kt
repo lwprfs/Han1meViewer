@@ -5,11 +5,6 @@ import android.util.AttributeSet
 import androidx.preference.Preference
 import androidx.preference.PreferenceViewHolder
 
-/**
- * @project Han1meViewer
- * @author Yenaly Liew
- * @time 2022/08/25 025 23:26
- */
 open class LongClickablePreference @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null,
 ) : Preference(context, attrs) {

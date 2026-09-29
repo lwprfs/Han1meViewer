@@ -3,8 +3,8 @@ package com.yenaly.han1meviewer.logic.model
 import com.yenaly.han1meviewer.EMPTY_STRING
 
 enum class MyListType(val value: String) {
-    FAV_VIDEO("likes"), // 喜欢的视频
-    WATCH_LATER("saves"), // 稍后再看
+    FAV_VIDEO("likes"),
+    WATCH_LATER("saves"),
     SUBSCRIPTION("SL")
 }
 
@@ -14,6 +14,6 @@ enum class FavStatus(val value: String) {
 }
 
 enum class CommentPlace(val value: String) {
-    COMMENT("comment"), // 主評論
-    CHILD_COMMENT("reply") // 子評論
+    COMMENT("comment"),
+    CHILD_COMMENT("reply")
 }

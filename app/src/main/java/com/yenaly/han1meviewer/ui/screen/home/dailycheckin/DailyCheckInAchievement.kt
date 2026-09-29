@@ -29,17 +29,6 @@ import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.viewmodel.MonthlyStats
 import java.time.LocalDate
 
-/**
- * 成就展示区域。
- *
- * 根据 [checkedDays]、[monthlyTotal]、[bestStreak] 和 [stats] 展示不同等级的成就。
- *
- * @param checkedDays 已打卡天数
- * @param monthlyTotal 月累计打卡次数
- * @param bestStreak 最佳连续天数
- * @param stats 月度统计数据
- * @param modifier 修饰符
- */
 @Composable
 fun AchievementSection(
     modifier: Modifier = Modifier,
@@ -202,14 +191,6 @@ fun AchievementSection(
     }
 }
 
-/**
- * 小型成就卡片，用于 [AchievementSection] 内的横向列表。
- *
- * @param emoji 成就图标 emoji
- * @param value 成就数值
- * @param label 成就描述
- * @param modifier 修饰符
- */
 @Composable
 fun AchievementMiniCard(
     modifier: Modifier = Modifier,

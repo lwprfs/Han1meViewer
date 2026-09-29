@@ -9,12 +9,6 @@ import com.yenaly.yenaly_libs.utils.startActivity
 import java.io.PrintWriter
 import java.io.StringWriter
 
-/**
- * @ProjectName : YenalyModule
- * @Author : Yenaly Liew
- * @Time : 2022/04/21 021 21:15
- * @Description : Description...
- */
 class YenalyCrashHandler private constructor() : Thread.UncaughtExceptionHandler {
 
     private lateinit var mContext: Context

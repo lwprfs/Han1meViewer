@@ -34,12 +34,6 @@ import com.yenaly.han1meviewer.ui.screen.home.creatorcenter.CreatorUploadingPage
 import com.yenaly.han1meviewer.ui.viewmodel.CreatorCenterViewModel
 import kotlinx.coroutines.launch
 
-/**
- * 创作者中心页面 Screen 层。
- *
- * 持有 [CreatorCenterViewModel]，订阅其唯一的 [CreatorCenterViewModel.uiState]，
- * 管理 Tab 切换和帮助弹窗，渲染委托给 Content 组件。
- */
 @Composable
 fun CreatorCenterScreen(
     viewModel: CreatorCenterViewModel,

@@ -24,7 +24,7 @@ plugins {
 android {
     compileSdk = property("compile.sdk")?.toString()?.toIntOrNull()
 
-    val commitSha = if (isRelease) lastCommitSha else "b8eace8" // 方便调试
+    val commitSha = if (isRelease) lastCommitSha else "b8eace8"
 
     // 先 Github Secrets 再读取环境变量，若没有则读取本地文件
 

@@ -11,11 +11,6 @@ import com.chad.library.adapter4.viewholder.QuickViewHolder
 import androidx.core.graphics.toColorInt
 import com.google.android.material.color.MaterialColors
 
-/**
- * @project Han1meViewer
- * @author Yenaly Liew
- * @time 2023/11/26 026 16:09
- */
 class SuperResolutionAdapter(private var currentIndex: Int, items: List<String>) : BaseQuickAdapter<String, QuickViewHolder>(
     items.toMutableList()
 ) {

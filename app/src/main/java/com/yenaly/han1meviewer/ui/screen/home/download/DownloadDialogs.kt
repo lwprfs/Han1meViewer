@@ -50,15 +50,6 @@ import com.yenaly.han1meviewer.ui.component.ConfirmDialog
 import com.yenaly.han1meviewer.ui.component.lazy.LazyColumn
 import com.yenaly.han1meviewer.ui.component.verticalScrollbar
 
-/**
- * 新建/管理分组对话框。
- *
- * @param visible 是否可见
- * @param groups 当前所有分组
- * @param onDismiss 关闭回调
- * @param onConfirm 确认创建回调
- * @param onDeleteGroup 删除分组回调
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateGroupDialog(
@@ -179,15 +170,6 @@ fun CreateGroupDialog(
     }
 }
 
-/**
- * 分组重命名对话框。
- *
- * @param header 目标分组节点
- * @param groups 当前所有分组
- * @param onDismiss 关闭回调
- * @param onConfirm 确认重命名回调
- * @param onDelete 删除此分组回调
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GroupRenameDialog(
@@ -250,14 +232,6 @@ fun GroupRenameDialog(
     }
 }
 
-/**
- * 移动视频到其他分组对话框。
- *
- * @param video 目标视频
- * @param groups 当前所有分组
- * @param onDismiss 关闭回调
- * @param onConfirm 确认移动回调
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MoveGroupDialog(

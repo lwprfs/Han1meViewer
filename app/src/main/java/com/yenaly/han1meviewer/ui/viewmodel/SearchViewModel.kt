@@ -30,11 +30,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/**
- * @project Hanime1
- * @author Yenaly Liew
- * @time 2022/06/13 013 22:29
- */
 class SearchViewModel(
     application: Application,
     private val state: SavedStateHandle

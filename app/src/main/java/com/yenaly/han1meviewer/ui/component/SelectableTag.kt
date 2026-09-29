@@ -39,7 +39,7 @@ fun SelectableTag(
             .clip(RoundedCornerShape(10.dp))
             .background(backgroundColor)
             .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 8.dp), // 内边距
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(

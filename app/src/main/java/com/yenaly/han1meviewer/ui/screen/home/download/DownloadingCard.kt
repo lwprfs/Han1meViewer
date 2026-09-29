@@ -47,15 +47,6 @@ import com.yenaly.han1meviewer.ui.preview.ComponentPreview
 import com.yenaly.han1meviewer.ui.preview.fakeHomePageVideos
 import com.yenaly.yenaly_libs.utils.formatFileSizeV2
 
-/**
- * 下载中任务卡片。
- *
- * @param item 下载实体
- * @param onPause 暂停回调
- * @param onResume 恢复回调
- * @param onDelete 删除回调
- * @param modifier 修饰符
- */
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun DownloadingItemCard(

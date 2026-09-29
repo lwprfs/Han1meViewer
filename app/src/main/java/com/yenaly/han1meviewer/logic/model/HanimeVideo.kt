@@ -6,11 +6,6 @@ import kotlinx.datetime.LocalDate
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
-/**
- * @project Hanime1
- * @author Yenaly Liew
- * @time 2022/06/11 011 20:30
- */
 @Serializable
 data class HanimeVideo(
     val title: String,
@@ -20,17 +15,12 @@ data class HanimeVideo(
     val uploadTime: LocalDate?,
     @Transient val views: String? = null,
 
-    // resolution to video url
     val videoUrls: ResolutionLinkMap,
 
     val tags: List<String>,
-    /**
-     * 注意，這裏的myList是指用戶的播放清單playlist
-     */
+
     @Transient val myList: MyList? = null,
-    /**
-     * 注意，這裏的playlist是指該影片的系列影片，並非用戶的播放清單
-     */
+
     @Transient val playlist: Playlist? = null,
     @Transient val relatedHanimes: List<HanimeInfo> = emptyList(),
     val artist: Artist? = null,
@@ -84,7 +74,6 @@ data class HanimeVideo(
         }
     }
 
-    // 為保證兼容性，不能直接用天數
     val uploadTimeMillis: Long
         get() = uploadTime?.let {
             it.toEpochDays() * 24 * 60 * 60 * 1000

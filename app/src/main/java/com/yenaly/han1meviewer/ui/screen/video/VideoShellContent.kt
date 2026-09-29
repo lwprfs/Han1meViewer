@@ -142,4 +142,3 @@ private fun View.detachFromParent(): View {
     (parent as? ViewGroup)?.removeView(this)
     return this
 }
-

@@ -37,21 +37,8 @@ import com.yenaly.han1meviewer.ui.preview.fakeHeroItems
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
 import com.yenaly.han1meviewer.ui.screen.home.homepage.HomeHeroItem
 
-/** 队列中单行的高度。固定行高使条目数量变化时排版稳定，超出面板高度时列表可滚动。 */
 private val QueueItemHeight = 56.dp
 
-/**
- * 平板大屏下与 Banner 并排显示的待播队列。
- *
- * 与主轮播共用同一份数据，点击某一行即可切换主图，从而让限高后的 Hero 依然能一眼看到
- * 后续内容。当前项以主题色高亮；自动翻页或滑动主图把当前项移出可视区时，队列会跟随滚动，
- * 保证高亮行始终可见。
- *
- * @param items 与主轮播一致的轮播数据。
- * @param currentIndex 当前主图所在的索引。
- * @param onItemClick 点击某一行时调用，参数为该行索引。
- * @param modifier 应用于队列根布局的修饰符，需要由调用方给定宽高。
- */
 @Composable
 fun HeroQueue(
     items: List<HomeHeroItem>,
@@ -65,7 +52,7 @@ fun HeroQueue(
 
     LaunchedEffect(currentIndex, items.size) {
         val target = currentIndex.coerceIn(items.indices)
-        // 当前项仍在可视区内就不打扰，避免用户翻看其他条目时被强行拉回
+
         val isTargetVisible = listState.layoutInfo.visibleItemsInfo.any { it.index == target }
         if (!isTargetVisible) {
             listState.animateScrollToItem(target)
@@ -94,14 +81,6 @@ fun HeroQueue(
     }
 }
 
-/**
- * 待播队列中的单行。
- *
- * @param item 当前行的轮播数据。
- * @param isCurrent 是否为当前主图。
- * @param onClick 点击当前行时调用。
- * @param modifier 应用于当前行根布局的修饰符，需要由调用方给定高度。
- */
 @Composable
 private fun HeroQueueItem(
     item: HomeHeroItem,

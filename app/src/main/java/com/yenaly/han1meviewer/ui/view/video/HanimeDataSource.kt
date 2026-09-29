@@ -32,5 +32,4 @@ class HanimeDataSource : JZDataSource {
 
     private constructor() : super("")
 
-
 }

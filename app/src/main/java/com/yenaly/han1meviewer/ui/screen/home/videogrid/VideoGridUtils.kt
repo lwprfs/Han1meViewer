@@ -4,13 +4,6 @@ import androidx.compose.foundation.lazy.grid.LazyGridState
 import com.yenaly.han1meviewer.logic.model.HanimeInfo
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 
-/**
- * 判断视频网格是否需要加载更多。
- *
- * @param items 当前视频列表
- * @param state 加载状态
- * @return 是否需要触发加载更多
- */
 fun LazyGridState.canLoadMore(
     items: List<HanimeInfo>,
     state: PageLoadingState<*>,

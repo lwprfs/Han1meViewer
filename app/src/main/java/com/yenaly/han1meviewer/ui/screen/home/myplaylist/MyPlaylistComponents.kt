@@ -30,15 +30,6 @@ import com.yenaly.han1meviewer.ui.preview.ComponentPreview
 import com.yenaly.han1meviewer.ui.preview.fakePlaylists
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
 
-/**
- * 播放列表项组件。
- *
- * 以卡片形式展示播放列表封面、标题和视频数量，支持点击交互。
- *
- * @param playlist 播放列表数据
- * @param modifier 修饰符
- * @param onClick 点击回调，为 null 时不可点击
- */
 @Composable
 fun PlaylistItem(
     playlist: Playlists.Playlist,

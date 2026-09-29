@@ -3,11 +3,6 @@ package com.yenaly.han1meviewer.logic.model.github
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/**
- * @project Han1meViewer
- * @author Yenaly Liew
- * @time 2022/09/09 009 21:24
- */
 @Serializable
 data class Release(
     val url: String,
@@ -136,5 +131,3 @@ data class Release(
         val siteAdmin: Boolean,
     )
 }
-
-

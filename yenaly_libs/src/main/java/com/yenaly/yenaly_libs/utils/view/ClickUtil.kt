@@ -23,18 +23,12 @@ fun View.clickFlow(): Flow<View> {
     }
 }
 
-/**
- * 带生命周期的click
- */
 fun View.click(lifecycle: Lifecycle, onClick: View.OnClickListener) {
     clickFlow().onEach {
         onClick.onClick(it)
     }.launchIn(lifecycle.coroutineScope)
 }
 
-/**
- * 延迟点击
- */
 fun View.clickDelayed(
     lifecycle: Lifecycle,
     delayMillis: Long = 500,
@@ -46,26 +40,18 @@ fun View.clickDelayed(
     }.launchIn(lifecycle.coroutineScope)
 }
 
-/**
- * 防止多次点击
- */
 fun View.clickTrigger(
     lifecycle: Lifecycle,
     intervalMillis: Long = 500,
     onClick: View.OnClickListener
 ) = ClickTrigger().bind(this, lifecycle, intervalMillis, onClick)
 
-/**
- * 根据条件判断是否可以点击
- *
- * 使用只需要给View设置一个tag，然后在点击时设置tag为true即可
- */
 fun View.clickWithCondition(
     lifecycle: Lifecycle,
     @IdRes tag: Int,
     onClick: View.OnClickListener
 ) {
-    // 第一次点击总是成功的
+
     setTag(tag, true)
     clickFlow().onEach {
         if (it.getTag(tag) == true) {

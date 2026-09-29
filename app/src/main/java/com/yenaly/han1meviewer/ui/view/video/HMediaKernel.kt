@@ -48,11 +48,6 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.absoluteValue
 
-/**
- * @project Han1meViewer
- * @author Yenaly Liew
- * @time 2024/04/21 021 16:57
- */
 sealed interface HMediaKernel {
     enum class Type(val clazz: Class<out JZMediaInterface>) {
         MediaPlayer(SystemMediaKernel::class.java),
@@ -88,7 +83,7 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
         }
 
         override fun onPlaybackStateChanged(state: Int) {
-            // 这里也可以加上更新，确保播放器状态变更时刷新 UI
+
             val per = _exoPlayer?.bufferedPercentage ?: return
             jzvd.setBufferProgress(per)
         }
@@ -100,9 +95,6 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
 
     private var _exoPlayer: ExoPlayer? = null
 
-    /**
-     * 尽量少用，用了之后容易出bug
-     */
     private val exoPlayer get() = _exoPlayer!!
 
     private var callback: Runnable? = null
@@ -116,7 +108,7 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
     override fun prepare() {
         if (_exoPlayer != null) {
             Log.w(TAG, "prepare called, but player already exists.")
-            return // 防止误调用
+            return
         }
         Log.i(TAG, "prepare")
         val context = jzvd.context
@@ -131,14 +123,11 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
             val trackSelector = DefaultTrackSelector(context, videoTrackSelectionFactory)
 
             val loadControl: LoadControl = DefaultLoadControl.Builder()
-                // .setBufferDurationsMs(360000, 600000, 1000, 5000)
-                // .setPrioritizeTimeOverSizeThresholds(false)
-                // .setTargetBufferBytes(C.LENGTH_UNSET)
+
                 .build()
 
-
             val bandwidthMeter = DefaultBandwidthMeter.Builder(context).build()
-            // 2. Create the player
+
             val renderersFactory = DefaultRenderersFactory(context)
             _exoPlayer = ExoPlayer.Builder(context, renderersFactory)
                 .setTrackSelector(trackSelector)
@@ -148,7 +137,6 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
                     addListener(playerListener)
                 }
 
-            // Produces DataSource instances through which media data is loaded.
             val dataSourceFactory = DefaultDataSource.Factory(
                 context,
                 DefaultHttpDataSource.Factory()
@@ -177,7 +165,6 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
             exoPlayer.setMediaSource(videoSource)
             exoPlayer.prepare()
             exoPlayer.playWhenReady = true
-//            callback = OnBufferingUpdate()
 
             val surfaceTexture = jzvd.textureView?.surfaceTexture
             if (surfaceTexture == null) {
@@ -208,7 +195,7 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
         handler.post {
             jzvd.onVideoSizeChanged(realWidth.toInt(), realHeight)
         }
-        val ratio = realWidth / realHeight // > 1 橫屏， < 1 竖屏
+        val ratio = realWidth / realHeight
         if (ratio > 1) {
             Jzvd.FULLSCREEN_ORIENTATION = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         } else {
@@ -228,10 +215,10 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
 
     override fun isPlaying(): Boolean {
         return runOnPlayerThread{
-         //   _exoPlayer?.playWhenReady ?: false
+
             _exoPlayer?.playWhenReady
         } == true
-      //  return isActuallyPlaying
+
     }
 
     override fun seekTo(time: Long) {
@@ -251,21 +238,17 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
     }
 
     override fun release() {
-        if (mMediaHandler != null && mMediaHandlerThread != null && _exoPlayer != null) { //不知道有没有妖孽
+        if (mMediaHandler != null && mMediaHandlerThread != null && _exoPlayer != null) {
             val tmpHandlerThread = mMediaHandlerThread
             val tmpMediaPlayer = exoPlayer
             SAVED_SURFACE = null
             mMediaHandler?.post {
-                tmpMediaPlayer.release() //release就不能放到主线程里，界面会卡顿
+                tmpMediaPlayer.release()
                 tmpHandlerThread.quit()
                 _exoPlayer = null
             }
         }
     }
-
-
-
-    // 在类里加一个工具方法，用来在线程里同步访问ExoPlayer
 
     inline fun <T> runOnPlayerThread(crossinline block: () -> T?): T? {
         if (Looper.myLooper() == mMediaHandler?.looper) {
@@ -287,22 +270,17 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
         return if (finished) result.get() else null
     }
 
-
-
     override fun getCurrentPosition(): Long {
         return runOnPlayerThread {
             _exoPlayer?.currentPosition
         } ?: 0L
     }
 
-
     override fun getDuration(): Long {
         return runOnPlayerThread {
             _exoPlayer?.duration
         } ?: 0L
     }
-
-
 
     override fun setVolume(leftVolume: Float, rightVolume: Float) {
         mMediaHandler?.post {
@@ -372,15 +350,6 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
         handler?.post { jzvd.onError(1000, 1000) }
     }
 
-//    override fun onPositionDiscontinuity(
-//        oldPosition: Player.PositionInfo,
-//        newPosition: Player.PositionInfo,
-//        reason: Int,
-//    ) {
-//        if (reason == Player.DISCONTINUITY_REASON_SEEK) {
-//            handler?.post { jzvd.onSeekComplete() }
-//        }
-//    }
     override fun onPositionDiscontinuity(
         oldPosition: Player.PositionInfo,
         newPosition: Player.PositionInfo,
@@ -404,14 +373,6 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
         _exoPlayer?.setVideoSurface(surface)
     }
 
-//    override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
-//        if (SAVED_SURFACE == null) {
-//            SAVED_SURFACE = surface
-//            prepare()
-//        } else {
-//            jzvd.textureView.setSurfaceTexture(SAVED_SURFACE)
-//        }
-//    }
     override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
         if (SAVED_SURFACE == null) {
             SAVED_SURFACE = surface
@@ -426,36 +387,16 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
         }
     }
 
-
     override fun onSurfaceTextureSizeChanged(st: SurfaceTexture, width: Int, height: Int) = Unit
 
     override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean = false
 
     override fun onSurfaceTextureUpdated(surface: SurfaceTexture) = Unit
 
-
-//    private inner class OnBufferingUpdate : Runnable {
-//        override fun run() {
-//            _exoPlayer?.bufferedPercentage?.let { per ->
-//                handler.post {
-//                    jzvd.setBufferProgress(per)
-//                }
-//                if (per < 100) {
-//                    handler.postDelayed(this, 300)
-//                } else {
-//                    handler.removeCallbacks(this)
-//                }
-//                return
-//            }
-//            handler.removeCallbacks(this)
-//        }
-//    }
 }
 
-
 class SystemMediaKernel(jzvd: Jzvd) : JZMediaSystem(jzvd), HMediaKernel {
-    // #issue-26: 有的手機長按快進會報錯，合理懷疑是不是因爲沒有加 post
-    // #issue-28: 有的平板长按快进也会报错，结果是 IllegalArgumentException，很奇怪，两次 try-catch 处理试试。
+
     val videoRealWidth: Int get() = mediaPlayer?.videoWidth ?: 0
     val videoRealHeight: Int get() = mediaPlayer?.videoHeight ?: 0
     override fun setSpeed(speed: Float) {
@@ -477,7 +418,7 @@ class SystemMediaKernel(jzvd: Jzvd) : JZMediaSystem(jzvd), HMediaKernel {
 
     override fun onVideoSizeChanged(mediaPlayer: MediaPlayer?, width: Int, height: Int) {
         super.onVideoSizeChanged(mediaPlayer, width, height)
-        val ratio = width.toFloat() / height // > 1 橫屏， < 1 竖屏
+        val ratio = width.toFloat() / height
         if (ratio > 1) {
             Jzvd.FULLSCREEN_ORIENTATION = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         } else {
@@ -485,15 +426,12 @@ class SystemMediaKernel(jzvd: Jzvd) : JZMediaSystem(jzvd), HMediaKernel {
         }
     }
 
-    // #issue-139: 部分机型暂停报错，没判空导致的
     override fun pause() {
         mMediaHandler?.post {
             mediaPlayer?.pause()
         }
     }
 
-    // #issue-crashlytics-c8636c4bb0b8516675cbeb9e8776bf0b:
-    // 有些机器到这里可能会报空指针异常，所以加了个判断，但是不知道为什么会报空指针异常
     override fun isPlaying(): Boolean {
         return mediaPlayer?.isPlaying == true
     }
@@ -525,21 +463,19 @@ class MpvMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd) {
     val defaultSpeed = Preferences.playerSpeed
     private val mpvOptions: Map<String, String>
         get() = buildMap {
-            // 视频输出驱动：GPU 渲染（支持 GLSL 滤镜/Anime4K/插帧）
+
             if (Preferences.enableGPUNextRenderer){
                 put("vo", "gpu-next")
             } else {
                 put("vo", "gpu")
             }
 
-            // 预设模式：fast（性能优先，画质略低；可改为 gpu-hq 追求高画质）
             put("profile", when (Preferences.mpvProfile) {
                 "gpu-hq" -> "gpu-hq"
                 "fast" -> "fast"
                 else -> "default"
             })
 
-            // 解码方式：选择合适的解码器（mediacodec/mediacodec-copy）
             put("hwdec", when (Preferences.mpvHwdec) {
                 "Auto" -> "auto"
                 "HW" -> "mediacodec-copy"
@@ -550,38 +486,34 @@ class MpvMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd) {
                 else -> "auto"
             })
 
-            // 日志等级：fatal → error → warn → info → status → verbose → debug → trace
             put("msg-level", "all=" + if (BuildConfig.DEBUG) "debug" else "warn")
 
-            // 插帧设置
             if (Preferences.mpvInterpolation) {
-                put("interpolation", "yes")      // 启用插帧
-                put("tscale", "oversample")      // 时间插值算法
-                put("video-sync", "display-resample") // 同步刷新率
+                put("interpolation", "yes")
+                put("tscale", "oversample")
+                put("video-sync", "display-resample")
             }
 
-            // 缓存与性能
-            put("cache", "yes")  // 启用解复用缓存
-            put("cache-secs", Preferences.mpvCacheSecs.toString())   // 预缓存秒数
-            put("vd-lavc-threads", Runtime.getRuntime().availableProcessors().toString())  // 视频解码线程数：设为 CPU 核心数，提升多核利用率
+            put("cache", "yes")
+            put("cache-secs", Preferences.mpvCacheSecs.toString())
+            put("vd-lavc-threads", Runtime.getRuntime().availableProcessors().toString())
 
             if (Preferences.mpvFramedrop) {
-                put("framedrop", "vo")  // GPU 繁忙时允许丢帧（保持音画同步，避免卡顿）
+                put("framedrop", "vo")
             } else {
                 put("framedrop", "no")
             }
 
-            put("deband", if (Preferences.mpvDeband) "yes" else "no")  // 去色带
+            put("deband", if (Preferences.mpvDeband) "yes" else "no")
 
-            put("cache-pause", "no")  // 缓存时是否暂停播放
+            put("cache-pause", "no")
 
-            put("network-timeout", Preferences.mpvNetworkTimeout.toString())  // 请求超时
+            put("network-timeout", Preferences.mpvNetworkTimeout.toString())
 
-            put("tls-ca-file", certFile)  // 为播放器指定根证书文件，解决 tls-verify 如果为yes播放失败的问题
+            put("tls-ca-file", certFile)
 
-            put("tls-verify", if (Preferences.mpvTlsVerify) "no" else "yes")  // 是否证书验证 yes、no
+            put("tls-verify", if (Preferences.mpvTlsVerify) "no" else "yes")
 
-            // 单独为MPV播放器配置代理，因为它不走ProxySelector，也不支持socks代理，沟槽的非原生实现
             val proxyIp = Preferences.proxyIp
             val proxyPort = Preferences.proxyPort
             if (proxyIp.isNotBlank() && proxyPort != -1) {
@@ -593,14 +525,13 @@ class MpvMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd) {
             put("user-agent", USER_AGENT)
         }
 
-
     private val observedProperties = listOf(
-        "time-pos" to MPVLib.mpvFormat.MPV_FORMAT_DOUBLE, // 当前播放时间（秒，带小数）
-        "duration" to MPVLib.mpvFormat.MPV_FORMAT_DOUBLE, // 视频总时长（秒）
-        "pause" to MPVLib.mpvFormat.MPV_FORMAT_FLAG,      // 是否暂停（true/false）
-        "playback-active" to MPVLib.mpvFormat.MPV_FORMAT_FLAG, // 播放是否处于活动状态
-        "video-params/w" to MPVLib.mpvFormat.MPV_FORMAT_INT64, // 视频宽度（像素）
-        "video-params/h" to MPVLib.mpvFormat.MPV_FORMAT_INT64, // 视频高度（像素）
+        "time-pos" to MPVLib.mpvFormat.MPV_FORMAT_DOUBLE,
+        "duration" to MPVLib.mpvFormat.MPV_FORMAT_DOUBLE,
+        "pause" to MPVLib.mpvFormat.MPV_FORMAT_FLAG,
+        "playback-active" to MPVLib.mpvFormat.MPV_FORMAT_FLAG,
+        "video-params/w" to MPVLib.mpvFormat.MPV_FORMAT_INT64,
+        "video-params/h" to MPVLib.mpvFormat.MPV_FORMAT_INT64,
         "demuxer-cache-duration" to MPVLib.mpvFormat.MPV_FORMAT_DOUBLE
     )
     fun parseCustomMpvParams(): LinkedHashMap<String, String> {
@@ -695,7 +626,6 @@ class MpvMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd) {
             }, 200)
         }
     }
-
 
     override fun prepare() {
         init()
@@ -801,7 +731,6 @@ class MpvMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd) {
 
     override fun onSurfaceTextureUpdated(surfaceTexture: SurfaceTexture) {}
 
-
     private fun clearSuperResolution() {
         MPVLib.command(arrayOf("change-list", "glsl-shaders", "clr", ""))
     }
@@ -816,7 +745,7 @@ class MpvMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd) {
 
     private val mpvEventObserver = object : MPVLib.EventObserver {
         override fun eventProperty(property: String) {
-//            Log.d(TAG, "eventProperty: $property")
+
         }
 
         override fun eventProperty(property: String, value: Long) {
@@ -824,15 +753,15 @@ class MpvMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd) {
         }
 
         override fun eventProperty(property: String, value: Boolean) {
-//            Log.d(TAG, "eventProperty: $property $value")
+
         }
 
         override fun eventProperty(property: String, value: String) {
-//            Log.d(TAG, "eventProperty: $property $value")
+
         }
 
         override fun eventProperty(property: String, value: Double) {
-//            Log.d(TAG, "eventProperty: $property $value")
+
             when (property) {
                 "time-pos" -> mpvTimePos = value
                 "demuxer-cache-duration" -> mpvCacheDuration = value
@@ -853,23 +782,23 @@ class MpvMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd) {
             handler.post {
                 when (eventId) {
                     MPVLib.mpvEventId.MPV_EVENT_START_FILE -> {
-                        // 文件开始加载
+
                         mpvTimePos = 0.0
                         mpvCacheDuration = 0.0
                         mpvDuration = 0.0
                         jzvd.onStatePreparing()
                     }
                     MPVLib.mpvEventId.MPV_EVENT_FILE_LOADED -> {
-                        // 文件加载成功
+
                         jzvd.onPrepared()
                         MPVLib.setPropertyDouble("speed", defaultSpeed.toDouble())
                     }
                     MPVLib.mpvEventId.MPV_EVENT_PLAYBACK_RESTART -> {
-                        // 播放重新开始
+
                         jzvd.onStatePlaying()
                     }
                     MPVLib.mpvEventId.MPV_EVENT_END_FILE -> {
-                        // 播放结束
+
                         releaseCurrentPfd("MPV_EVENT_END_FILE")
                         jzvd.onCompletion()
                     }

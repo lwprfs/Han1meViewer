@@ -10,15 +10,6 @@ import java.net.ProxySelector
 import java.net.SocketAddress
 import java.net.URI
 
-/**
- * 受 [EhViewer_CN_SXJ 中 EhProxySelector](https://github.com/xiaojieonly/Ehviewer_CN_SXJ/blob/BiLi_PC_Gamer/app/src/main/java/com/hippo/ehviewer/EhProxySelector.java)
- * 的启发，Han1meViewer 也将使用 [HProxySelector] 来实现代理功能。
- *
- * @project Han1meViewer
- * @author Yenaly Liew
- * @time 2023/10/07 007 17:32
- */
-// #issue-15: 添加系统代理功能
 class HProxySelector : ProxySelector() {
 
     private var delegation: ProxySelector? = null
@@ -45,7 +36,6 @@ class HProxySelector : ProxySelector() {
             return port in 0..65535
         }
 
-        // #issue-39: 代理沒有應用到 WebView 上，只能通過此種方式來全局代理。
         fun rebuildNetwork() {
             val properties = System.getProperties()
             when (Preferences.proxyType) {

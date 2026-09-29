@@ -11,11 +11,6 @@ import com.google.android.material.color.MaterialColors
 import com.yenaly.han1meviewer.ui.view.video.HJzvdStd
 import androidx.core.graphics.toColorInt
 
-/**
- * @project Han1meViewer
- * @author Yenaly Liew
- * @time 2023/11/26 026 16:09
- */
 class VideoSpeedAdapter(private var currentIndex: Int) : BaseQuickAdapter<String, QuickViewHolder>(
     HJzvdStd.speedStringArray.toMutableList()
 ) {

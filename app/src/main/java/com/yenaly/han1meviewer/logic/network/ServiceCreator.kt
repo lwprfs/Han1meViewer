@@ -22,11 +22,6 @@ import retrofit2.Retrofit
 import java.io.File
 import java.util.concurrent.TimeUnit
 
-/**
- * @project Hanime1
- * @author Yenaly Liew
- * @time 2022/06/08 008 22:35
- */
 object ServiceCreator {
 
     private val cache = Cache(
@@ -59,9 +54,6 @@ object ServiceCreator {
         .build()
         .create(T::class.java)
 
-    /**
-     * OkHttpClient
-     */
     var hClient: OkHttpClient = buildHClient()
         private set
 
@@ -74,9 +66,6 @@ object ServiceCreator {
     var getchuClient: OkHttpClient = buildGetchuClient()
         private set
 
-    /**
-     * Rebuild OkHttpClient
-     */
     fun rebuildOkHttpClient() {
         hClient = buildHClient()
         getchuClient = buildGetchuClient()
@@ -103,9 +92,6 @@ object ServiceCreator {
             .build()
     }
 
-    /**
-     * Build OkHttpClient
-     */
     private fun buildHClient(): OkHttpClient {
         return OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
@@ -120,9 +106,7 @@ object ServiceCreator {
     }
 
     private fun buildGithubClient(): OkHttpClient {
-        // 令牌可能为空（CI/本地构建时没有配置 HA_GITHUB_TOKEN）。以前这里无条件带上
-        // "Bearer "，会得到一个必然 401 的非法凭证，反而掩盖了真正的原因；
-        // 空令牌时干脆走匿名请求（限额更低，但至少不会自己把自己弄挂）。
+
         val token = BuildConfig.HA_GITHUB_TOKEN.trim()
         if (token.isEmpty()) {
             Log.w("ServiceCreator", "HA_GITHUB_TOKEN 为空，GitHub 请求将以匿名方式进行（限额更低）")

@@ -8,19 +8,13 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.io.File
 
-/**
- * Example local unit test, which will execute on the development machine (host).
- *
- * See [testing documentation](http://d.android.com/tools/testing).
- */
 class UtilUnitTest {
     @Test
     fun formatFileSizeV2_isCorrect() {
-        // Test with default parameters
+
         assertEquals("1 kB", 1000L.formatFileSizeV2(useSi = true))
         assertEquals("1 KiB", 1024L.formatFileSizeV2())
 
-        // Test with different decimal places
         assertEquals(
             "1.00 kB",
             1000L.formatFileSizeV2(useSi = true, decimalPlaces = 2, stripTrailingZeros = false)
@@ -30,11 +24,9 @@ class UtilUnitTest {
             1024L.formatFileSizeV2(decimalPlaces = 2, stripTrailingZeros = false)
         )
 
-        // Test with stripTrailingZeros = false
         assertEquals("1.0 kB", 1000L.formatFileSizeV2(useSi = true, stripTrailingZeros = false))
         assertEquals("1.0 KiB", 1024L.formatFileSizeV2(stripTrailingZeros = false))
 
-        // Test with different sizes
         assertEquals(
             "1.0 MB",
             1_000_000L.formatFileSizeV2(useSi = true, stripTrailingZeros = false)
@@ -46,7 +38,6 @@ class UtilUnitTest {
         )
         assertEquals("1.0 GiB", 1_073_741_824L.formatFileSizeV2(stripTrailingZeros = false))
 
-        // Test with edge cases
         assertEquals("999 B", 999L.formatFileSizeV2(useSi = true))
         assertEquals("1023 B", 1023L.formatFileSizeV2())
         assertEquals("1.0 kB", 1000L.formatFileSizeV2(useSi = true, stripTrailingZeros = false))

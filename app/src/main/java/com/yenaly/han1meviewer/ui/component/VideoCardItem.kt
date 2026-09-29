@@ -39,18 +39,6 @@ import com.yenaly.han1meviewer.ui.preview.fakeVideosItem
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
 import com.yenaly.han1meviewer.util.DisplayTextLocalizer
 
-
-/**
- * 标准视频卡片项组件。
- *
- * 展示视频封面、标题等信息，支持水平和垂直两种布局，支持点击和长按交互。
- * 自适应宽度，由外部布局控制。
- *
- * @param videoItem 视频数据
- * @param isHorizontalCard 是否为水平卡片布局，默认为 true
- * @param onClickVideosItem 点击回调，参数为视频 ID
- * @param onLongClickVideosItem 长按回调，参数为视频 ID 和视频标题
- */
 @Composable
 fun VideoCardItem(
     modifier: Modifier = Modifier,
@@ -117,7 +105,6 @@ fun VideoCardItem(
                     }
                 }
 
-                // 底部半透明遮罩（播放量和时长）
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier

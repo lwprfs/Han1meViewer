@@ -23,11 +23,6 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
 import java.io.FileNotFoundException
 
-/**
- * @project Hanime1
- * @author Yenaly Liew
- * @time 2022/06/22 022 23:00
- */
 object DatabaseRepo {
 
     object HKeyframe {
@@ -37,7 +32,6 @@ object DatabaseRepo {
             if (keyword != null) hKeyframeDao.loadAll(keyword)
             else hKeyframeDao.loadAll()
 
-        // #issue-106: 剧集分类
         @OptIn(ExperimentalSerializationApi::class)
         fun loadAllShared(): Flow<List<HKeyframeType>> = flow {
             val res = applicationContext.assets.let { assets ->
@@ -82,7 +76,7 @@ object DatabaseRepo {
                                     this@t.emit(entity)
                                 }
                         }.onFailure { e ->
-                            // 文件不存在或解析错误
+
                             if (e is FileNotFoundException) {
                                 Log.w("HKeyframe", "未找到关键帧文件: $videoCode.json")
                             } else {
@@ -217,9 +211,6 @@ object DatabaseRepo {
         fun loadAllDownloadingHanime() =
             hanimeDownloadDao.loadAllDownloadingHanime()
 
-        /**
-         * 查询所有视频，并且每个视频要有当前他在的分类
-         */
         fun loadAllDownloadedHanime(
             sortedBy: HanimeDownloadEntity.SortedBy,
             ascending: Boolean,

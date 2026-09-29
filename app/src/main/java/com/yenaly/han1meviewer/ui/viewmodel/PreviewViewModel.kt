@@ -15,11 +15,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/**
- * @project Hanime1
- * @author Yenaly Liew
- * @time 2022/06/23 023 16:47
- */
 class PreviewViewModel(application: Application) : YenalyViewModel(application) {
 
     private val previewCache = linkedMapOf<String, WebsiteState<HanimePreview>>()

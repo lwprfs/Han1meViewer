@@ -9,11 +9,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 
-/**
- * @project Han1meViewer
- * @author Yenaly Liew
- * @time 2022/07/01 001 13:40
- */
 class SettingsViewModel(application: Application) : YenalyViewModel(application) {
 
     fun loadAllHKeyframes(keyword: String? = null) =
@@ -36,7 +31,6 @@ class SettingsViewModel(application: Application) : YenalyViewModel(application)
             DatabaseRepo.HKeyframe.removeKeyframe(videoCode, keyframe)
         }
     }
-
 
     fun modifyHKeyframe(
         videoCode: String,

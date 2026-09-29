@@ -31,18 +31,6 @@ import com.yenaly.han1meviewer.ui.screen.home.homepage.component.CategoryRow
 import com.yenaly.han1meviewer.ui.screen.home.homepage.component.HeroQueue
 import kotlinx.coroutines.launch
 
-/**
- * 渲染首页可滚动内容区域。
- *
- * 轮播数据由官网运营位与下方分类行中的视频混排而成，见 [buildHomeHeroItems]。平板大屏下
- * 轮播会与右侧内容（公告优先，否则为待播队列）以左右分栏的形式组成 Hero 区域，详见
- * [rememberHomeHeroSpec]。
- *
- * @param data 主页数据
- * @param onEvent 主页事件回调
- * @param onCloseAnnouncement 关闭公告时调用。
- * @param modifier 应用于列表根布局的修饰符。
- */
 @Composable
 fun HomePageContent(
     data: HomeData,
@@ -153,7 +141,7 @@ fun HomePageContent(
                         onEvent(HomeUiEvent.OpenVideo(code))
                     },
                     onVideoLongClick = { _, _ ->
-                       // onEvent(HomeUiEvent.LongPressVideoCopy(code, title))
+
                     },
                     modifier = Modifier.padding(vertical = 4.dp)
                 )

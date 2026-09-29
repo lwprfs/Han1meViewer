@@ -38,16 +38,6 @@ import com.yenaly.han1meviewer.R
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-/**
- * 今日打卡卡片。
- *
- * @param today 今天的日期
- * @param count 今日已打卡次数
- * @param maxCount 每日最大打卡数
- * @param onCheckIn 打卡按钮回调
- * @param onClear 清除按钮回调
- * @param modifier 修饰符
- */
 @Composable
 fun TodayCheckInCard(
     modifier: Modifier = Modifier,
@@ -124,14 +114,6 @@ fun TodayCheckInCard(
     }
 }
 
-/**
- * 月度统计卡片。
- *
- * @param checkedDays 已打卡天数
- * @param monthlyTotal 累计打卡次数
- * @param bestStreak 最佳连续天数
- * @param modifier 修饰符
- */
 @Composable
 fun StatsCard(
     checkedDays: Int,
@@ -176,13 +158,6 @@ fun StatsCard(
     }
 }
 
-/**
- * 统计项组件，在 [StatsCard] 和报表中复用。
- *
- * @param icon 图标
- * @param label 标签文字
- * @param value 统计值
- */
 @Composable
 fun RowScope.StatItem(
     icon: ImageVector,

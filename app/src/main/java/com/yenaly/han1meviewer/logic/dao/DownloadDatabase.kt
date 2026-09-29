@@ -14,11 +14,6 @@ import com.yenaly.han1meviewer.logic.entity.download.HanimeDownloadEntity
 import com.yenaly.han1meviewer.logic.state.DownloadState
 import com.yenaly.yenaly_libs.utils.applicationContext
 
-/**
- * @project Han1meViewer
- * @author Yenaly Liew
- * @time 2022/08/07 007 18:26
- */
 @Database(
     entities = [HanimeDownloadEntity::class, DownloadCategoryEntity::class, HanimeCategoryCrossRef::class, DownloadGroupEntity::class],
     version = 5, exportSchema = false
@@ -73,21 +68,15 @@ abstract class DownloadDatabase : RoomDatabase() {
                 """CREATE TABLE IF NOT EXISTS `HanimeCategoryCrossRef` (`videoId` INTEGER NOT NULL, `categoryId` INTEGER NOT NULL, PRIMARY KEY(`videoId`, `categoryId`))"""
             )
             db.execSQL("""CREATE INDEX IF NOT EXISTS `index_HanimeCategoryCrossRef_categoryId` ON `HanimeCategoryCrossRef` (`categoryId`)""")
-            // Add coverUri column
+
             db.execSQL("""ALTER TABLE `HanimeDownloadEntity` ADD COLUMN `coverUri` TEXT NULL""")
 
-            // Add state column with default value (convert from isDownloading)
             db.execSQL("""ALTER TABLE `HanimeDownloadEntity` ADD COLUMN `state` INTEGER NOT NULL DEFAULT ${DownloadState.Mask.UNKNOWN}""")
 
-            // Update state values based on isDownloading
-            // If isDownloading=1, set state to DOWNLOADING (2)
-            // If isDownloading=0,
-            //                     if downloadedLength=length, set state to FINISHED (4)
-            //                     else set state to PAUSED (3)
             db.execSQL(
-                """UPDATE `HanimeDownloadEntity` SET `state` = 
-                    |CASE WHEN `isDownloading` = 1 THEN ${DownloadState.Mask.DOWNLOADING} ELSE 
-                    |CASE WHEN `downloadedLength` = `length` THEN ${DownloadState.Mask.FINISHED} 
+                """UPDATE `HanimeDownloadEntity` SET `state` =
+                    |CASE WHEN `isDownloading` = 1 THEN ${DownloadState.Mask.DOWNLOADING} ELSE
+                    |CASE WHEN `downloadedLength` = `length` THEN ${DownloadState.Mask.FINISHED}
                     |ELSE ${DownloadState.Mask.PAUSED} END END""".trimMargin()
             )
         }
@@ -120,7 +109,7 @@ abstract class DownloadDatabase : RoomDatabase() {
                 videoCode, videoUri, quality, videoUrl,
                 length, downloadedLength, state, id
             )
-            SELECT 
+            SELECT
                 coverUrl, coverUri, title, addDate,
                 videoCode, videoUri, quality,
                 videoUrl, length, downloadedLength, state, id
@@ -136,7 +125,7 @@ abstract class DownloadDatabase : RoomDatabase() {
             db.execSQL(
                 """
                 CREATE TABLE IF NOT EXISTS `download_groups` (
-                    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, 
+                    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                     `name` TEXT NOT NULL,
                     `orderIndex` INTEGER NOT NULL DEFAULT 0
                 )
@@ -145,7 +134,7 @@ abstract class DownloadDatabase : RoomDatabase() {
 
             db.execSQL(
                 """
-                INSERT INTO `download_groups` (`id`, `name`, `orderIndex`) 
+                INSERT INTO `download_groups` (`id`, `name`, `orderIndex`)
                 VALUES (${DownloadGroupEntity.DEFAULT_GROUP_ID}, '${DownloadGroupEntity.DEFAULT_GROUP_NAME}', 0)
                 """.trimIndent()
             )
@@ -181,7 +170,7 @@ abstract class DownloadDatabase : RoomDatabase() {
                     length, downloadedLength, state, id,
                     groupId
                 )
-                SELECT 
+                SELECT
                     coverUrl, coverUri, title, addDate,
                     videoCode, videoUri, quality,
                     videoUrl, length, downloadedLength, state, id,

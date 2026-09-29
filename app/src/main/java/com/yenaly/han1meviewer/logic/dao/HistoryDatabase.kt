@@ -12,11 +12,6 @@ import com.yenaly.han1meviewer.logic.entity.SearchHistoryEntity
 import com.yenaly.han1meviewer.logic.entity.WatchHistoryEntity
 import com.yenaly.yenaly_libs.utils.applicationContext
 
-/**
- * @project Hanime1
- * @author Yenaly Liew
- * @time 2022/06/22 022 22:46
- */
 @Database(
     entities = [SearchHistoryEntity::class,
         WatchHistoryEntity::class,
@@ -56,7 +51,7 @@ abstract class HistoryDatabase : RoomDatabase() {
                 val id = cursor.getInt(cursor.getColumnIndexOrThrow("id"))
                 val url = cursor.getString(cursor.getColumnIndexOrThrow("redirectLink"))
                 val videoCode =
-                    url.substringAfter("v=") // 不用 String.toVideoCode() 的原因是，防止該拓展函數因不可抗力改變導致 migrate 失敗
+                    url.substringAfter("v=")
                 val values = contentValuesOf("redirectLink" to videoCode)
                 db.update(
                     "WatchHistoryEntity",
@@ -73,7 +68,7 @@ abstract class HistoryDatabase : RoomDatabase() {
     }
     object Migration2To3 : Migration(2, 3) {
         override fun migrate(db: SupportSQLiteDatabase) {
-            // 增加播放进度列，默认值为 0
+
             db.execSQL(
                 """ALTER TABLE WatchHistoryEntity
                    ADD COLUMN progress INTEGER NOT NULL DEFAULT 0"""
@@ -102,7 +97,7 @@ abstract class HistoryDatabase : RoomDatabase() {
     }
     object Migration4To5 : Migration(4, 5) {
         override fun migrate(db: SupportSQLiteDatabase) {
-            // 增加「已看完」列，旧数据默认视为已看完以保留原有标记
+
             db.execSQL(
                 """ALTER TABLE WatchHistoryEntity
                    ADD COLUMN watched INTEGER NOT NULL DEFAULT 1"""
@@ -110,6 +105,3 @@ abstract class HistoryDatabase : RoomDatabase() {
         }
     }
 }
-
-
-

@@ -35,7 +35,7 @@ fun UnifiedMainNavHost(
         }
 
         when (siteType) {
-            // Javchu and Hanime BOTH use MainNavHost
+
             SiteType.HANIME, SiteType.JAVCHU -> {
                 MainNavHost(
                     activity = activity,

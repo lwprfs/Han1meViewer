@@ -103,10 +103,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
-// ─────────────────────────────────────────────
-// 搜索主屏幕
-// ─────────────────────────────────────────────
-
 @OptIn(
     ExperimentalMaterial3Api::class,
     ExperimentalMaterial3ExpressiveApi::class,
@@ -147,7 +143,6 @@ fun SearchScreen(
     val showPlayedIndicator = Preferences.showPlayedIndicator
     val searchPagination = Preferences.searchPagination
 
-    // 搜索执行
     fun executeSearch() {
         viewModel.getHanimeSearchResult(
             viewModel.page,
@@ -207,7 +202,6 @@ fun SearchScreen(
         )
     }
 
-    // 初始 query 自动搜索
     LaunchedEffect(initialQuery) {
         val query = initialQuery?.trim().orEmpty()
         if (query.isNotBlank() && !hasSearched) {
@@ -220,7 +214,7 @@ fun SearchScreen(
             doSearch()
         }
     }
-    // 高级搜索参数（genre/sort 等）自动搜索
+
     LaunchedEffect(Unit) {
         if (!hasSearched && hasAdvancedFilters()) {
             hasSearched = true
@@ -229,7 +223,7 @@ fun SearchScreen(
             doSearch()
         }
     }
-    // refreshTriggerFlow
+
     LaunchedEffect(Unit) {
         viewModel.refreshTriggerFlow.collect {
             hasSearched = true
@@ -247,7 +241,6 @@ fun SearchScreen(
         }
     }
 
-    // 历史建议防抖
     @OptIn(FlowPreview::class)
     LaunchedEffect(searchQuery) {
         if (searchQuery.isNotBlank()) {
@@ -326,7 +319,6 @@ fun SearchScreen(
         onBack()
     }
 
-    // 返回键：有焦点时先关键盘
     BackHandler(enabled = isSearchFocused) { focusMgr.clearFocus(); kb?.hide() }
 
     Column(
@@ -395,7 +387,7 @@ fun SearchScreen(
             },
         ) {
             if (hasSearched) {
-                // 已触发搜索，显示结果
+
                 val showResults = searchResults.ifEmpty {
                     (searchState as? PageLoadingState.Success)?.info?.list ?: emptyList()
                 }
@@ -424,7 +416,7 @@ fun SearchScreen(
                     }
                 }
             } else if (searchQuery.isBlank() && histories.isNotEmpty()) {
-                // 未搜索 + 搜索框为空 → 显示历史
+
                 Column(Modifier.fillMaxSize()) {
                     Text(
                         stringResource(R.string.recent_searches),
@@ -449,11 +441,6 @@ fun SearchScreen(
         }
     }
 }
-
-
-// ─────────────────────────────────────────────
-// 搜索 App Bar
-// ─────────────────────────────────────────────
 
 @Composable
 fun SearchAppBar(
@@ -532,10 +519,6 @@ fun SearchAppBar(
     }
 }
 
-// ─────────────────────────────────────────────
-// 搜索历史列表
-// ─────────────────────────────────────────────
-
 @Composable
 fun SearchHistoryList(
     histories: List<SearchHistoryEntity>,
@@ -592,10 +575,6 @@ fun SearchHistoryList(
         }
     }
 }
-
-// ─────────────────────────────────────────────
-// 搜索结果网格
-// ─────────────────────────────────────────────
 
 data class SearchPagination(
     val currentPage: Int,
@@ -678,10 +657,6 @@ fun SearchResultsGrid(
         }
     }
 }
-
-// ─────────────────────────────────────────────
-// 搜索状态 / 筛选标签
-// ─────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -848,10 +823,6 @@ private fun ActiveSearchCriteria(
     }
 }
 
-// ─────────────────────────────────────────────
-// 辅助
-// ─────────────────────────────────────────────
-
 private fun tagFlatten(map: SparseArray<Set<SearchOption>>): Set<String> {
     val r = mutableSetOf<String>(); for (i in 0 until map.size()) {
         map.valueAt(i).mapNotNullTo(r) { it.searchKey }
@@ -863,10 +834,6 @@ private fun brandFlatten(map: SparseArray<Set<SearchOption>>): Set<String> {
         map.valueAt(i).mapNotNullTo(r) { it.searchKey }
     }; return r
 }
-
-// ─────────────────────────────────────────────
-// Preview
-// ─────────────────────────────────────────────
 
 @Preview(showBackground = true, name = "搜索页顶栏")
 @Composable

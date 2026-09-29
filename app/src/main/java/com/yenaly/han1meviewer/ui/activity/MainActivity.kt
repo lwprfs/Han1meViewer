@@ -99,9 +99,6 @@ import java.util.Locale
 import com.yenaly.han1meviewer.MissAV.common.MissAvConstants
 import com.yenaly.han1meviewer.MissAV.data.remote.MissAvNetwork
 
-// MissAV imports
-
-// HentaiMama imports
 import com.yenaly.han1meviewer.HentaiMama.HentaiMamaConstants
 import com.yenaly.han1meviewer.HentaiMama.HentaiMamaNetwork
 
@@ -114,20 +111,16 @@ class MainActivity : FrameActivity(), PermissionRequester {
     private val pendingNavigationRequests = MutableSharedFlow<Intent>(extraBufferCapacity = 1)
     private var currentVideoHost: VideoPageHost? = null
 
-    // Site switching state
     var showSiteSwitchConfirm by mutableStateOf(false)
         private set
     var showLogoutConfirm by mutableStateOf(false)
         private set
     private var logoutCloseCurrentPage = false
 
-    // Site selection dialog state
     private var showSiteSelectDialog by mutableStateOf(false)
 
-    // Force recomposition on site change
     private val _siteChanged = mutableStateOf(0L)
 
-    // Site switch state for controlled navigation
     private val _siteSwitchState = MutableStateFlow<SiteType?>(null)
     private val siteSwitchState = _siteSwitchState.asStateFlow()
 
@@ -136,7 +129,6 @@ class MainActivity : FrameActivity(), PermissionRequester {
         const val ACTION_TOGGLE_PLAY = "com.yenaly.han1meviewer.ACTION_TOGGLE_PLAY"
     }
 
-    // Login data launcher
     private val loginDataLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == RESULT_OK) {
@@ -160,21 +152,18 @@ class MainActivity : FrameActivity(), PermissionRequester {
 
     private fun initData() {
         setContent {
-            // Handle site switch navigation after recomposition
+
             LaunchedEffect(siteSwitchState, _siteChanged) {
                 siteSwitchState.collect { siteType ->
                     siteType?.let {
-                        // Longer delay to ensure NavHost recomposition completes
+
                         kotlinx.coroutines.delay(400)
                         Log.d("MainActivity", "LaunchedEffect: navigating to $it")
 
-                        // First, clear everything
                         NavigationManager.clearBackStack()
 
-                        // Then navigate to the appropriate home
                         NavigationManager.switchSite(it)
 
-                        // Clear the state so we don't repeat
                         _siteSwitchState.value = null
                     }
                 }
@@ -197,7 +186,6 @@ class MainActivity : FrameActivity(), PermissionRequester {
                 siteChangeKey = _siteChanged.value,
             )
 
-            // Show site selection dialog if triggered
             if (showSiteSelectDialog) {
                 SiteSelectionDialog(
                     onDismiss = { showSiteSelectDialog = false },
@@ -259,7 +247,6 @@ class MainActivity : FrameActivity(), PermissionRequester {
         pendingNavigationRequests.tryEmit(intent)
     }
 
-    // Site Switch Methods
     fun requestSiteSwitch() {
         showSiteSwitchConfirm = true
     }
@@ -273,7 +260,6 @@ class MainActivity : FrameActivity(), PermissionRequester {
         showSiteSelectDialog = true
     }
 
-    // Logout Methods
     fun requestLogout(closeCurrentPageOnConfirm: Boolean) {
         logoutCloseCurrentPage = closeCurrentPageOnConfirm
         showLogoutConfirm = true
@@ -298,18 +284,15 @@ class MainActivity : FrameActivity(), PermissionRequester {
         NavigationManager.navigateToHome()
     }
 
-    // Site Switch Logic - COMPLETE FIX
     private fun switchToSite(siteType: SiteType) {
         Log.d("MainActivity", "switchToSite called: $siteType")
         Log.d("MainActivity", "Current baseUrl before: ${Preferences.baseUrl}")
 
-        // Save preference FIRST
         Preferences.siteType = siteType
 
-        // Update base URL and network based on site type
         when (siteType) {
             SiteType.HANIME -> {
-                // Hanime: Restore custom mirror site settings if they exist
+
                 val savedCustomMirror = Preferences.preferenceSp.getString(
                     SettingsPreferenceKeys.CUSTOM_MIRROR_SITE, ""
                 ) ?: ""
@@ -317,16 +300,14 @@ class MainActivity : FrameActivity(), PermissionRequester {
                     SettingsPreferenceKeys.USE_CUSTOM_MIRROR_SITE, false
                 )
 
-                // If the saved custom mirror is not empty and it's a Hanime mirror,
-                // restore it. Otherwise, use default Hanime.
                 if (savedCustomMirror.isNotBlank() &&
                     (savedCustomMirror.contains("hanime1.me") ||
                      savedCustomMirror.contains("hanime1.com") ||
                      savedUseCustomMirror)) {
                     Log.d("MainActivity", "Restoring custom mirror: $savedCustomMirror")
-                    // Keep the custom mirror settings
+
                 } else {
-                    // Reset to default Hanime
+
                     Preferences.preferenceSp.edit(true) {
                         putString(SettingsPreferenceKeys.DOMAIN_NAME, HanimeConstants.HANIME_URL[0])
                         putString(SettingsPreferenceKeys.SELECTED_BASE_URL, HanimeConstants.HANIME_URL[0])
@@ -338,7 +319,7 @@ class MainActivity : FrameActivity(), PermissionRequester {
                 HanimeNetwork.rebuildNetwork()
             }
             SiteType.JAVCHU -> {
-                // Javchu: ALWAYS fixed URL, no custom mirror
+
                 Preferences.preferenceSp.edit(true) {
                     putString(SettingsPreferenceKeys.DOMAIN_NAME, "https://javchu.com")
                     putString(SettingsPreferenceKeys.SELECTED_BASE_URL, "https://javchu.com")
@@ -367,13 +348,10 @@ class MainActivity : FrameActivity(), PermissionRequester {
         Log.d("MainActivity", "New baseUrl after: ${Preferences.baseUrl}")
         Log.d("MainActivity", "New displayUrl: ${Preferences.displayUrl}")
 
-        // Force recomposition of NavHost with a new key
         _siteChanged.value = System.currentTimeMillis()
 
-        // Trigger navigation after recomposition via StateFlow
         _siteSwitchState.value = siteType
 
-        // Show confirmation with the actual URL being used
         Handler(Looper.getMainLooper()).postDelayed({
             val urlDisplay = if (siteType == SiteType.JAVCHU) {
                 "Javchu (Fixed: https://javchu.com)"
@@ -400,7 +378,6 @@ class MainActivity : FrameActivity(), PermissionRequester {
         currentVideoHost = host
     }
 
-    // Permission Handling
     private var onGranted: (() -> Unit)? = null
     private var onDenied: (() -> Unit)? = null
     private var onPermanentlyDenied: (() -> Unit)? = null
@@ -429,7 +406,7 @@ class MainActivity : FrameActivity(), PermissionRequester {
                 )
             }
         } else {
-            onGranted() // Android 10+ doesn't need permission
+            onGranted()
         }
     }
 
@@ -490,7 +467,6 @@ class MainActivity : FrameActivity(), PermissionRequester {
         currentVideoHost?.togglePlayPause()
     }
 
-    // Helper Methods
     private fun isDeviceSecureCompat(context: Context): Boolean {
         val km = context.getSystemService(KEYGUARD_SERVICE) as KeyguardManager
         return km.isDeviceSecure
@@ -591,10 +567,6 @@ class MainActivity : FrameActivity(), PermissionRequester {
             }
         }
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Modernized Site Selection Dialog
-    // ─────────────────────────────────────────────────────────────────────────
 
     private data class SiteInfo(
         val name: String,
@@ -715,7 +687,7 @@ class MainActivity : FrameActivity(), PermissionRequester {
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
-                                // Logo container
+
                                 Box(
                                     modifier = Modifier
                                         .size(56.dp)
@@ -739,7 +711,6 @@ class MainActivity : FrameActivity(), PermissionRequester {
                                     )
                                 }
 
-                                // Text info
                                 Column(
                                     modifier = Modifier.weight(1f),
                                     verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -763,7 +734,6 @@ class MainActivity : FrameActivity(), PermissionRequester {
                                     )
                                 }
 
-                                // Selection indicator
                                 Box(
                                     modifier = Modifier
                                         .size(24.dp)

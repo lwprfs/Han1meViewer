@@ -63,11 +63,6 @@ import java.util.concurrent.CancellationException
 import java.util.concurrent.TimeUnit
 import kotlin.random.Random
 
-/**
- * @project Han1meViewer
- * @author Yenaly Liew
- * @time 2022/08/06 006 11:42
- */
 class HanimeDownloadWorker(
     private val context: Context,
     workerParams: WorkerParameters,
@@ -80,9 +75,7 @@ class HanimeDownloadWorker(
         val hanimeName: String,
         val videoCode: String,
         val coverUrl: String,
-        /**
-         * 目标下载分组，为 null 时使用默认分组（未分组）。
-         */
+
         val groupId: Int? = null,
     ) {
         companion object {
@@ -122,17 +115,11 @@ class HanimeDownloadWorker(
         const val NO_GROUP_ID = -1
         const val REDOWNLOAD = "redownload"
         const val IN_WAITING_QUEUE = "in_waiting_queue"
-        // const val RELEASE_DATE = "release_date"
-        // const val COVER_DOWNLOAD = "cover_download"
 
         const val PROGRESS = "progress"
-        // const val FAILED_REASON = "failed_reason"
 
         private val CONTENT_RANGE_LENGTH_REGEX = Regex("/([0-9]+)$")
 
-        /**
-         * 方便统一管理下载 Worker 的创建
-         */
         inline fun build(
             constraintsRequired: Boolean = true,
             action: OneTimeWorkRequest.Builder.() -> Unit = {}
@@ -196,7 +183,7 @@ class HanimeDownloadWorker(
         return withContext(Dispatchers.IO) {
             var raf: RandomAccessFile? = null
             try {
-                // SAF 优先
+
                 val safUri = SafFileManager.getDownloadVideoFileUri(context, videoCode, createVideoName(hanimeName, quality, videoType))
                 Log.i(TAG,safUri.toString())
                 if (safUri != null) {
@@ -208,7 +195,7 @@ class HanimeDownloadWorker(
 
                 val len = fetchContentLength() ?: return@withContext null
                 if (len > 0) {
-                    // 创建数据库记录
+
                     val entity = HanimeDownloadEntity(
                         groupId = groupId.takeIf { it > 0 } ?: DownloadGroupEntity.DEFAULT_GROUP_ID,
                         coverUrl = coverUrl,
@@ -224,7 +211,7 @@ class HanimeDownloadWorker(
                         state = DownloadState.Queued
                     )
                     DatabaseRepo.HanimeDownload.insert(entity)
-                    // 预写入长度（只有 File 支持）
+
                     raf?.setLength(len)
                     return@withContext entity
                 }
@@ -288,7 +275,7 @@ class HanimeDownloadWorker(
                 context = context, title = hanimeName, quality = quality, suffix = videoType, videoCode = videoCode
             )
             val safUri = SafFileManager.getDownloadVideoFileUri(context, videoCode, createVideoName(hanimeName, quality, videoType))
-            // 检查是否需要重下载
+
             if (shouldRedownload || shouldDelete) {
                 HFileManager.getDownloadVideoFolder(context, videoCode).deleteRecursively()
                 DatabaseRepo.HanimeDownload.delete(videoCode)
@@ -323,7 +310,6 @@ class HanimeDownloadWorker(
                 throw e
             }
 
-            // 自动分组：影片已存在于下载库时，同样把分组更新为目标分组
             val targetGroupId = groupId.takeIf { it > 0 }
             if (targetGroupId != null && entity.groupId != targetGroupId) {
                 entity = entity.copy(groupId = targetGroupId)
@@ -602,7 +588,7 @@ class HanimeDownloadWorker(
         val notification = createDownloadNotification(progress)
         return ForegroundInfo(
             downloadId, notification,
-            // #issue-34: 這裡的參數是為了讓 Android 14 以上的系統可以正常顯示前景通知
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
             } else 0

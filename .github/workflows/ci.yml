@@ -55,3 +55,21 @@ jobs:
         with:
           name: app-release-${{ github.sha }}
           path: app/build/outputs/apk/release/Han1meViewer-v*.apk
+
+      - name: Extract version from APK
+        id: version
+        if: contains(github.event.head_commit.message, '[release]')
+        run: |
+          APK_FILE=$(ls app/build/outputs/apk/release/Han1meViewer-v*.apk | head -n 1)
+          VERSION=$(basename "$APK_FILE" | sed -E 's/Han1meViewer-(v[0-9.]+)\.apk/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        if: contains(github.event.head_commit.message, '[release]')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: ${{ steps.version.outputs.version }}
+          body: ""
+          files: app/build/outputs/apk/release/Han1meViewer-v*.apk
+          token: ${{ secrets.APP_TOKEN }}

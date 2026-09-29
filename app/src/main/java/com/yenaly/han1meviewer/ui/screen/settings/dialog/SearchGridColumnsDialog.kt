@@ -109,7 +109,7 @@ fun SearchGridColumnsDialog(
             currentConfig.columnsForWidthDp(landscapeWidthDp)
         ),
         options = options,
-        isDecimal = false, // 只允许整数
+        isDecimal = false,
         canConfirm = compactCols != null && mediumCols != null && expandedCols != null && largeCols != null,
         onDismiss = onDismiss,
         onReset = {
@@ -136,7 +136,6 @@ private fun searchGridColumnsBucketLabel(widthDp: Int): String {
         else -> stringResource(R.string.search_grid_columns_range_large)
     }
 }
-
 
 @Preview(showBackground = true, showSystemUi = true)
 @Composable

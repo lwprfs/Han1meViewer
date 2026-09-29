@@ -116,7 +116,6 @@ fun UpdateDialog(
     )
 }
 
-
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 private fun UpdateDialogPreview(){

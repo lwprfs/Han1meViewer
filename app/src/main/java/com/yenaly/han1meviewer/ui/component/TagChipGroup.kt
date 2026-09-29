@@ -32,11 +32,6 @@ import com.yenaly.han1meviewer.ui.preview.ComponentPreview
 import com.yenaly.han1meviewer.ui.preview.fakeTagList2
 import kotlin.random.Random
 
-/**
- * 标签组组件。
- *
- * 支持流式排列、点击回调，以及可选的“超过两行折叠/展开”模式。
- */
 @Composable
 fun TagChipGroup(
     tags: List<String>,
@@ -55,8 +50,7 @@ fun TagChipGroup(
         collapsible,
         collapsedMaxLines
     ) { mutableIntStateOf(0) }
-//    val collapseText = stringResource(R.string.collapse)
-//    val expandText = stringResource(R.string.expand)
+
     val arrowRotation by animateFloatAsState(
         targetValue = if (expanded) 180f else 0f,
         animationSpec = tween(durationMillis = 240),
@@ -162,8 +156,7 @@ fun TagChipGroup(
                             rotationZ = arrowRotation
                         },
                     )
-//                    Spacer(modifier = Modifier.width(4.dp))
-//                    Text(text = if (expanded) collapseText else expandText)
+
                 }
             }.single().measure(contentConstraints)
         } else {

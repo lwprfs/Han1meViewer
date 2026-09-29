@@ -35,19 +35,6 @@ import com.yenaly.han1meviewer.ui.screen.home.subscription.SubscriptionEvent
 import com.yenaly.han1meviewer.ui.screen.home.subscription.SubscriptionUiState
 import com.yenaly.han1meviewer.ui.viewmodel.MySubscriptionsViewModel
 
-/**
- * 订阅页面 Screen 层。
- *
- * 持有 [MySubscriptionsViewModel]，管理缓存、下拉刷新、加载更多等状态编排。
- * 渲染委托给 [SubscriptionContent]。
- *
- * @param navigateBack 返回回调
- * @param viewModel 订阅 ViewModel
- * @param onClickArtist 点击作者 → 跳转搜索
- * @param onLongClickArtist 长按作者 → 复制分享文本
- * @param onClickVideosItem 点击视频 → 跳转详情
- * @param onLongClickVideosItem 长按视频 → 复制分享文本
- */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SubscriptionScreen(

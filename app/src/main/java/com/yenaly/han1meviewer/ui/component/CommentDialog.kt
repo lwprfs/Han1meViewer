@@ -37,20 +37,6 @@ import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.model.ReportReason
 
-
-/**
- * 评论输入对话框。
- *
- * 用于输入评论内容的弹窗，包含输入框和确认/取消按钮。
- *
- * @param text 输入框当前文本状态
- * @param onTextChange 文本变化回调
- * @param onSend 发送回调
- * @param placeholder 输入框 hint
- * @param modifier 修饰器
- *
- */
-
 @Composable
 internal fun CommentReplyBar(
     text: TextFieldValue,

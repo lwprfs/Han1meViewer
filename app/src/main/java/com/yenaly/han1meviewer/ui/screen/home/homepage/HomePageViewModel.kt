@@ -55,7 +55,7 @@ class HomePageViewModel: ViewModel() {
 
     init {
         viewModelScope.launch {
-            // 初始化默认已下载分组，防止[FOREIGN KEY constraint failed]
+
             DatabaseRepo.HanimeDownload.insertDefaultGroup()
         }
     }
@@ -136,7 +136,7 @@ class HomePageViewModel: ViewModel() {
                 }.addOnFailureListener { e ->
                     Log.e("Announcement", "读取失败: ${e.message}")
                     if (continuation.isActive) {
-                        continuation.resume(emptyList()) // 失败也容错返回空列表
+                        continuation.resume(emptyList())
                     }
                 }
         }

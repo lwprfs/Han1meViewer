@@ -5,11 +5,6 @@ import com.yenaly.han1meviewer.logic.entity.HanimeAdvancedSearchHistoryEntity
 import com.yenaly.han1meviewer.logic.entity.SearchHistoryEntity
 import kotlinx.coroutines.flow.Flow
 
-/**
- * @project Hanime1
- * @author Yenaly Liew
- * @time 2022/06/22 022 17:53
- */
 @Dao
 abstract class SearchHistoryDao {
 

@@ -39,18 +39,6 @@ import com.yenaly.han1meviewer.ui.preview.fakeHeroItems
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
 import com.yenaly.han1meviewer.ui.screen.home.homepage.HomeHeroItem
 
-/**
- * 显示首页 Banner 轮播图。
- *
- * 轮播项由官网运营位与下方分类行中的视频混排而成，见 `buildHomeHeroItems`。多于一项时会在
- * 无用户交互的情况下自动翻页，见 [AutoScrollEffect]。
- *
- * @param items 轮播数据，为空时不渲染内容。
- * @param onItemClick 点击某一项时调用，参数为视频编号，可能为空。
- * @param modifier 应用于轮播图根布局的修饰符。
- * @param size 指定的渲染尺寸。为空时占满可用宽度并按 16:9 计算高度；大屏下由调用方传入受限尺寸。
- * @param pagerState 由调用方持有以支持外部切换（如右侧待播队列），默认内部自持。
- */
 @Composable
 fun BannerCarousel(
     items: List<HomeHeroItem>,

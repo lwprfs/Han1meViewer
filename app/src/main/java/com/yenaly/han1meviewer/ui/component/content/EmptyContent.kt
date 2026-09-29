@@ -20,15 +20,6 @@ import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.preview.ComponentPreview
 
-/**
- * 空状态视图组件。
- *
- * 展示占位图片和提示文本，用于列表或内容为空时的视觉反馈。
- *
- * @param hint 主提示文本
- * @param subHint 副提示文本，默认为空
- * @param picRes 占位图片资源 ID，默认为 h_chan_speechless
- */
 @Composable
 fun EmptyContent(
     hint: String,

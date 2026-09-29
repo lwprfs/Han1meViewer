@@ -8,7 +8,7 @@ import com.yenaly.han1meviewer.ui.component.GlobalToasts
 import java.security.MessageDigest
 
 fun isLegalBuild(context: Context, sha: String): Boolean {
-  //  if (BuildConfig.DEBUG) return true
+
     return try {
         val pm = context.packageManager
         val packageName = context.packageName
@@ -51,9 +51,7 @@ fun checkBadGuy(context: Context, res: Int): IntArray {
     try {
         val sha = getSha(context, res)
         return if (!isLegalBuild(context, sha)){
-    //            Preferences.preferenceSp.edit {
-    //                putString(NetworkSettingsFragment.DOMAIN_NAME,"http://hanime.c0m")
-    //            }
+
             intArrayOf(R.string.app_tampered, R.string.app_tampered)
         } else {
             intArrayOf(R.string.introduction, R.string.comment)

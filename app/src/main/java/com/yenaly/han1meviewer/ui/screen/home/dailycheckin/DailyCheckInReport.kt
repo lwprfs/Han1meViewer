@@ -54,22 +54,6 @@ import com.yenaly.han1meviewer.ui.viewmodel.MonthlyStats
 import java.time.LocalDate
 import java.time.YearMonth
 
-/**
- * 贡献报表弹窗。以日历热力图形式展示年/月打卡分布。
- *
- * @param selectedYear 当前选择的年份
- * @param viewMode 视图模式 "year" 或 "month"
- * @param selectedMonth 当前选择的月份
- * @param yearRecords 年度打卡记录
- * @param yearStats 年度统计数据
- * @param onYearChange 年份变更回调
- * @param onViewModeChange 视图模式变更回调
- * @param onMonthChange 月份变更回调
- * @param onDismiss 关闭弹窗回调
- * @param isFullscreen 是否全屏显示
- * @param onToggleFullscreen 全屏切换回调
- * @param onLoadYearRecords 加载指定年份记录的回调
- */
 @Composable
 fun ContributionReportDialog(
     selectedYear: Int,
@@ -255,14 +239,6 @@ fun ContributionReportDialog(
     }
 }
 
-/**
- * GitHub 风格年度热力图。
- *
- * @param year 目标年份
- * @param records 各日期打卡记录数
- * @param today 今天的日期
- * @param onYearChange 年份切换回调
- */
 @Composable
 fun YearContributionView(
     year: Int,
@@ -375,16 +351,6 @@ fun YearContributionView(
     }
 }
 
-/**
- * 月度打卡网格视图。
- *
- * @param year 目标年份
- * @param month 目标月份
- * @param records 各日期打卡记录数
- * @param today 今天的日期
- * @param onYearChange 年份切换回调
- * @param onMonthChange 月份切换回调
- */
 @Composable
 fun MonthContributionView(
     year: Int,
@@ -523,9 +489,6 @@ fun MonthContributionView(
     }
 }
 
-/**
- * 热力图图例，展示颜色与打卡次数的对应关系。
- */
 @Composable
 fun ContributionLegend() {
     Row(

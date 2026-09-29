@@ -29,12 +29,6 @@ import androidx.compose.foundation.lazy.LazyColumn as FoundationLazyColumn
 import androidx.compose.foundation.lazy.LazyRow as FoundationLazyRow
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid as FoundationLazyVerticalGrid
 
-/**
- * 带通用 item 动画的 LazyColumn 封装。
- *
- * 目标是尽量兼容原生 `LazyColumn` / `LazyRow` / `LazyVerticalGrid` 的常用调用方式，
- * 并通过统一的轻量入场动画让列表在大多数页面里获得更自然的观感。
- */
 @Composable
 fun LazyColumn(
     modifier: Modifier = Modifier,

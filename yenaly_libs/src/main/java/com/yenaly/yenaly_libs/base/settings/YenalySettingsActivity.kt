@@ -6,12 +6,6 @@ import com.yenaly.yenaly_libs.R
 import com.yenaly.yenaly_libs.base.frame.FrameActivity
 import com.yenaly.yenaly_libs.databinding.YenalySettingsDataBinding
 
-/**
- * @ProjectName : YenalyModule
- * @Author : Yenaly Liew
- * @Time : 2022/04/17 017 17:13
- * @Description : Description...
- */
 abstract class YenalySettingsActivity : FrameActivity() {
 
     lateinit var binding: YenalySettingsDataBinding
@@ -41,8 +35,5 @@ abstract class YenalySettingsActivity : FrameActivity() {
         }
     }
 
-    /**
-     * 初始化设置的Fragment
-     */
     abstract fun initFragmentContainer(): YenalySettingsFragment
 }

@@ -8,12 +8,6 @@ import androidx.databinding.ViewDataBinding
 import com.google.android.material.transition.MaterialSharedAxis
 import com.yenaly.yenaly_libs.base.frame.FrameFragment
 
-/**
- * @ProjectName : YenalyModule
- * @Author : Yenaly Liew
- * @Time : 2022/04/16 016 20:25
- * @Description : Description...
- */
 abstract class YenalyFragment<DB : ViewDataBinding> : FrameFragment(), IViewBinding<DB> {
 
     private var _binding: DB? = null
@@ -55,13 +49,7 @@ abstract class YenalyFragment<DB : ViewDataBinding> : FrameFragment(), IViewBind
         binding.lifecycleOwner = viewLifecycleOwner
     }
 
-    /**
-     * 用于绑定数据观察器 (optional)
-     */
     open fun bindDataObservers() = Unit
 
-    /**
-     * 初始化数据
-     */
     abstract fun initData(savedInstanceState: Bundle?)
 }

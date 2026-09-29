@@ -12,10 +12,6 @@ import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.navigation.NavigationBarView
 import com.yenaly.yenaly_libs.utils.activity
 
-/**
- * @author Yenaly Liew
- * @time 2022/08/03 003 21:04
- */
 class BottomNavViewMediator(
     private val bottomNavigationView: BottomNavigationView,
     private val viewPager2: ViewPager2,
@@ -80,10 +76,6 @@ class BottomNavViewMediator(
         bottomNavigationView.selectedItemId = fragmentItemId
     }
 
-    /**
-     * Set on a callback interface that is optionally
-     * implemented to listen the latest selected fragment.
-     */
     fun setOnFragmentChangedListener(listener: OnFragmentChangedListener) {
         this.onFragmentChangedListener = listener
     }

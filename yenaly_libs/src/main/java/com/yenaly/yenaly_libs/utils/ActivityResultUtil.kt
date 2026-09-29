@@ -18,12 +18,6 @@ import kotlin.coroutines.Continuation
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
-// Thanks to https://github.com/FooIbar/EhViewer/
-
-// 为了让权限申请更轻松，主要是为了能全局控制，
-// 不得不使用了 ActivitiesManager.currentActivity 这个全局变量代替原有 Context
-// 所以使用的时候务必注意！
-
 private val atomicInteger = AtomicInteger()
 
 suspend fun <I, O> Context.awaitActivityResult(
@@ -49,7 +43,7 @@ suspend fun <I, O> Context.awaitActivityResult(
         suspendCoroutine(object : Function1<Continuation<O>, Unit> {
             private var resumed = false
             override fun invoke(cont: Continuation<O>) {
-                // #issue-crashlytics-7b7eaa428e2541056ce949dff5fe4c55
+
                 launcher = activity.activityResultRegistry.register(key, contract) {
                     if (!resumed) {
                         resumed = true

@@ -50,7 +50,6 @@ class MyPlayListViewModelV2 : ViewModel() {
     val currentListInfo = _currentListInfo.asStateFlow()
     private val _playlistSheetScrollStates = MutableStateFlow<Map<String, PlaylistSheetScrollState>>(emptyMap())
 
-
     private val _refreshCompleted = MutableSharedFlow<Unit>()
     val refreshCompleted: SharedFlow<Unit> = _refreshCompleted
 
@@ -75,7 +74,6 @@ class MyPlayListViewModelV2 : ViewModel() {
     private val _playlistsTotalPages = MutableStateFlow(1)
     val playlistsTotalPages = _playlistsTotalPages.asStateFlow()
 
-    /** 对外暴露的唯一主页面 UI 状态流。 */
     val mainUiState: StateFlow<PlaylistUiState> = combine(
         _cachedMyPlayList,
         _showSheet,
@@ -123,7 +121,6 @@ class MyPlayListViewModelV2 : ViewModel() {
         return _playlistSheetScrollStates.value[listCode] ?: PlaylistSheetScrollState()
     }
 
-    // 加载所有playlist
     fun loadMyPlayList(page: Int = 1, forceReload: Boolean = false) {
         Log.i("current_page",page.toString())
         if (page > 1 && (_isLoadingMorePlaylists.value || _noMorePlaylists.value)) return
@@ -169,7 +166,6 @@ class MyPlayListViewModelV2 : ViewModel() {
         }
     }
 
-    // 获取单个playlist内容
     fun getPlaylistItems(page: Int = 1, listCode: String, refresh: Boolean = false) {
         Log.i("getPlaylistItems","isLoadingMore:$isLoadingMore,listCode:$listCode,")
         if (isLoadingMore) return
@@ -177,7 +173,7 @@ class MyPlayListViewModelV2 : ViewModel() {
         viewModelScope.launch {
             if (listCode.isBlank()) return@launch
             Log.i("getPlaylistItems","page:$page,refresh:$refresh")
-            // 如果是第一页或刷新，重置状态
+
             if (page == 1 || refresh) {
                 _playlistFlow.value = emptyList()
                 _playlistDesc.value = null
@@ -237,7 +233,7 @@ class MyPlayListViewModelV2 : ViewModel() {
 
     private val _deleteFromPlaylistFlow = MutableSharedFlow<WebsiteState<Int>>()
     val deleteFromPlaylistFlow = _deleteFromPlaylistFlow.asSharedFlow()
-    // 从详情页删除某视频
+
     fun deleteFromPlaylist(itemId: String, position: Int) {
         viewModelScope.launch {
             NetworkRepo.deleteMyListItems(itemId, position, csrfToken).collect {
@@ -253,7 +249,7 @@ class MyPlayListViewModelV2 : ViewModel() {
 
     private val _modifyPlaylistFlow = MutableSharedFlow<WebsiteState<ModifiedPlaylistArgs>>()
     val modifyPlaylistFlow = _modifyPlaylistFlow.asSharedFlow()
-    // 编辑Playlist
+
     fun modifyPlaylist(listCode: String, title: String, desc: String, delete: Boolean) {
         Log.i("modify_playlist","${listCode},${title},${desc}")
         viewModelScope.launch {
@@ -273,7 +269,7 @@ class MyPlayListViewModelV2 : ViewModel() {
     }
     private val _createPlaylistFlow = MutableSharedFlow<WebsiteState<Unit>>()
     val createPlaylistFlow = _createPlaylistFlow.asSharedFlow()
-    //创建Playlist
+
     fun createPlaylist(title: String, description: String) {
         viewModelScope.launch {
             NetworkRepo.createPlaylist(EMPTY_STRING, title, description, csrfToken).collect {

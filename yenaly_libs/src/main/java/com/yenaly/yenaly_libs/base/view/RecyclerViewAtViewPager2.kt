@@ -6,9 +6,6 @@ import android.view.MotionEvent
 import androidx.recyclerview.widget.RecyclerView
 import kotlin.math.abs
 
-/**
- * 重写RecyclerView，解决横向RecyclerView和ViewPager2的滑动冲突。
- */
 class RecyclerViewAtViewPager2 : RecyclerView {
 
     constructor(context: Context) : super(context)
@@ -39,7 +36,7 @@ class RecyclerViewAtViewPager2 : RecyclerView {
                 val disX = abs(endX - startX)
                 val disY = abs(endY - startY)
                 if (disX > disY) {
-                    //为了解决RecyclerView嵌套RecyclerView时横向滑动的问题
+
                     if (disallowIntercept) {
                         parent.requestDisallowInterceptTouchEvent(disallowIntercept)
                     } else {

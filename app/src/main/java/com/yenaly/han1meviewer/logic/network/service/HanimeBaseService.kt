@@ -5,11 +5,6 @@ import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.*
 
-/**
- * @project Hanime1
- * @author Yenaly Liew
- * @time 2022/06/08 008 22:10
- */
 interface HanimeBaseService {
 
     @GET
@@ -22,8 +17,7 @@ interface HanimeBaseService {
         @Query("genre") genre: String? = null,
         @Query("sort") sort: String? = null,
         @Query("broad") broad: String? = null,
-//        @Query("year") year: Int? = null,
-//        @Query("month") month: Int? = null,
+
         @Query("date") date: String? = null,
         @Query("duration") duration: String? = null,
         @Query("tags[]") tags: Set<String> = emptySet(),
@@ -37,7 +31,7 @@ interface HanimeBaseService {
 
     @GET("previews/{date}")
     suspend fun getHanimePreview(
-        @Path("date") date: String, // 类似 202206. 202012
+        @Path("date") date: String,
     ): Response<ResponseBody>
 
     @FormUrlEncoded

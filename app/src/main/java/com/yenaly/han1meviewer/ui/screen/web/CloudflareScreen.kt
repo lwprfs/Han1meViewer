@@ -23,7 +23,6 @@ import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.appbar.HanimeScaffold
 import com.yenaly.han1meviewer.ui.preview.ComponentPreview
 
-
 @Composable
 fun CloudflareScreen(
     progress: Int,
@@ -89,4 +88,3 @@ fun LoginScreenPreview() {
         )
     }
 }
-

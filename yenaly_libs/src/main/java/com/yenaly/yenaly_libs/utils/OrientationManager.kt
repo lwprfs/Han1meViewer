@@ -12,11 +12,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 
-/**
- * @project Han1meViewer
- * @author Yenaly Liew
- * @time 2024/04/10 010 20:49
- */
 class OrientationManager(
     private val context: Context,
     private var orientationChangeListener: OrientationChangeListener? = null
@@ -32,9 +27,6 @@ class OrientationManager(
 
     private var lastLockedOrientation: Int? = null
 
-    /**
-     * 自动判断是否需要切换方向，只有在不同方向时才设置
-     */
     fun lockOrientation(activity: Activity, orientation: ScreenOrientation, delayMillis: Long = 0L) {
         val requestedOrientation = when (orientation) {
             ScreenOrientation.LANDSCAPE -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
@@ -43,7 +35,6 @@ class OrientationManager(
             ScreenOrientation.REVERSED_PORTRAIT -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT
         }
 
-        // 防止重复设置导致 recreate
         if (activity.requestedOrientation == requestedOrientation) return
 
         val setOrientation = {

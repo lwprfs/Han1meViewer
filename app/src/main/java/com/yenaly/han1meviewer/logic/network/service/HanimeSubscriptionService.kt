@@ -15,7 +15,7 @@ interface HanimeSubscriptionService {
         @Field("_token") csrfToken: String?,
         @Field("subscribe-user-id") userId: String,
         @Field("subscribe-artist-id") artistId: String,
-        // 如果当前未订阅会发送空字符串，否则发1
+
         @Field("subscribe-status") status: String,
         @Header("X-CSRF-TOKEN") csrfToken_1: String? = csrfToken,
     ): Response<ResponseBody>

@@ -34,9 +34,6 @@ import com.yenaly.han1meviewer.logic.model.CreatorSort
 import com.yenaly.han1meviewer.logic.model.CreatorUploadingItem
 import com.yenaly.han1meviewer.ui.preview.ComponentPreview
 
-/**
- * 排序筛选行：最新/热门/最旧。
- */
 @Composable
 internal fun CreatorSortRow(
     sort: CreatorSort,
@@ -74,9 +71,6 @@ private fun CreatorSortChip(text: String, selected: Boolean, onClick: () -> Unit
     )
 }
 
-/**
- * 审核中视频卡片。
- */
 @Composable
 internal fun CreatorUploadingCard(
     item: CreatorUploadingItem,

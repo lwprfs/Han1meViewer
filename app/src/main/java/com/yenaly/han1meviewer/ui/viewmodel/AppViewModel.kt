@@ -24,16 +24,8 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/**
- * @project Han1meViewer
- * @author Yenaly Liew
- * @time 2024/03/29 029 18:00
- */
 object AppViewModel : YenalyViewModel(application), IHCsrfToken {
 
-    /**
-     * csrfToken 全局唯一，只需要在首页拉起或点击视频页时更新一下就可以了
-     */
     override var csrfToken: String? = null
 
     private val _versionFlow = MutableStateFlow<WebsiteState<Latest?>>(WebsiteState.Loading)
@@ -45,11 +37,11 @@ object AppViewModel : YenalyViewModel(application), IHCsrfToken {
     val runningWorkInfoCountFlow = MutableStateFlow(0)
 
     init {
-        // 取消，防止每次启动都有残留的更新任务
+
         WorkManager.getInstance(application).pruneWork()
 
         viewModelScope.launch(Dispatchers.IO) {
-            // HanimeDownloadManager.init()
+
             HanimeDownloadManagerV2.init()
         }
 

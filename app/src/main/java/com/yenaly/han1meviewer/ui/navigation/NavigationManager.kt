@@ -1,4 +1,3 @@
-// app/src/main/java/com/yenaly/han1meviewer/ui/navigation/NavigationManager.kt
 package com.yenaly.han1meviewer.ui.navigation
 
 import android.os.Handler
@@ -18,22 +17,22 @@ import com.yenaly.han1meviewer.MissAV.ui.navigation.MissAvSearchRoute
 import com.yenaly.han1meviewer.MissAV.ui.navigation.MissAvVideoRoute
 
 object NavigationManager {
-    
+
     private const val TAG = "NavigationManager"
-    
+
     private var currentNavController: NavHostController? = null
     private var currentSiteType: SiteType? = null
-    
+
     fun initialize(navController: NavHostController, siteType: SiteType) {
         currentNavController = navController
         currentSiteType = siteType
         Log.d(TAG, "Initialized with site: $siteType")
     }
-    
+
     fun getCurrentSiteType(): SiteType = currentSiteType ?: Preferences.siteType
-    
+
     fun getNavController(): NavHostController? = currentNavController
-    
+
     fun navigateToVideo(videoCode: String, path: String? = null) {
         currentNavController?.let { navController ->
             try {
@@ -53,7 +52,7 @@ object NavigationManager {
             }
         }
     }
-    
+
     fun navigateToSearch(query: String? = null) {
         currentNavController?.let { navController ->
             try {
@@ -73,14 +72,14 @@ object NavigationManager {
             }
         }
     }
-    
+
     fun navigateToHome() {
         currentNavController?.let { navController ->
             try {
                 Log.d(TAG, "navigateToHome called for site: ${getCurrentSiteType()}")
                 when (getCurrentSiteType()) {
                     SiteType.HANIME, SiteType.JAVCHU -> {
-                        // Clear everything and navigate to HomeRoute
+
                         navController.popBackStack(0, false)
                         navController.navigate(HomeRoute)
                     }
@@ -95,29 +94,27 @@ object NavigationManager {
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "navigateToHome failed: ${e.message}")
-                // Fallback: try to pop back to start
+
                 navController.popBackStack(0, false)
             }
         }
     }
-    
+
     fun navigateBack() {
         currentNavController?.popBackStack()
     }
-    
+
     fun clearBackStack() {
         currentNavController?.popBackStack(0, false)
     }
-    
+
     fun switchSite(newSiteType: SiteType) {
         Log.d(TAG, "switchSite called: $newSiteType")
         currentSiteType = newSiteType
         Preferences.siteType = newSiteType
-        
-        // Clear back stack when switching sites
+
         currentNavController?.popBackStack(0, false)
-        
-        // Navigate to home with a delay to ensure the graph is ready
+
         Handler(Looper.getMainLooper()).postDelayed({
             navigateToHome()
         }, 300)

@@ -6,10 +6,6 @@ import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.Lifecycle
 import androidx.viewpager2.adapter.FragmentStateAdapter
 
-/**
- * @author Yenaly Liew
- * @time 2022/11/09 009 14:05
- */
 class SimpleFragmentStateAdapter : FragmentStateAdapter {
 
     private val newFragmentList = mutableListOf<NewFragment>()

@@ -11,11 +11,6 @@ object HFileManager {
     const val DEF_VIDEO_COVER_TYPE = "png"
     val illegalCharsRegex = Regex("""["*/:<>?\\|\x00-\x1F\x7F]""")
 
-
-    /**
-     * 获取 App 的下载主目录，如写入失败则切换为私有目录，
-     * 使用 [com.yenaly.han1meviewer.util.SafFileManager] 可自定义目录
-     */
     fun getAppDownloadFolder(context: Context): File {
         return if (Preferences.isUsePrivateStorage) {
             File(
@@ -29,18 +24,11 @@ object HFileManager {
         }
     }
 
-
-    /**
-     * 获取某视频的下载目录
-     */
     fun getDownloadVideoFolder(context: Context, videoCode: String): File {
         val folder = File(getAppDownloadFolder(context), "$HANIME_DOWNLOAD_FOLDER/$videoCode")
         return folder
     }
 
-    /**
-     * 获取视频文件
-     */
     fun getDownloadVideoFile(
         context: Context,
         videoCode: String,
@@ -54,9 +42,6 @@ object HFileManager {
         )
     }
 
-    /**
-     * 获取视频封面文件
-     */
     fun getDownloadVideoCoverFile(
         context: Context,
         videoCode: String,
@@ -69,9 +54,6 @@ object HFileManager {
         )
     }
 
-    /**
-     * 替换非法文件名字符
-     */
     private fun String.replaceAllIllegalChars(): String =
         illegalCharsRegex.replace(this, "_")
 
@@ -81,9 +63,6 @@ object HFileManager {
     fun createVideoCoverName(title: String, suffix: String): String =
         "${title.replaceAllIllegalChars()}.$suffix"
 
-    /**
-     * 创建目录并在其中写入 .nomedia 文件，防止被媒体扫描器扫描到让你尴尬
-     */
     @Deprecated("下载工具已经创建了nomedia，没必要重复创建")
     private fun File.makeFolderNoMedia() {
         if (!exists() && !mkdirs()) {

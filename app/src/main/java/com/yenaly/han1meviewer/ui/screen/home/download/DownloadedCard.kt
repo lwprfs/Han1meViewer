@@ -54,13 +54,6 @@ import kotlinx.datetime.toLocalDateTime
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
-/**
- * 已下载视频分组头部卡片。
- *
- * @param header 分组节点
- * @param onToggle 展开/折叠回调
- * @param onRename 重命名回调
- */
 @Composable
 fun DownloadGroupHeader(
     header: DownloadHeaderNode,
@@ -114,19 +107,6 @@ fun DownloadGroupHeader(
     }
 }
 
-/**
- * 已下载视频卡片。
- *
- * @param item 视频及分组信息
- * @param onOpenVideo 打开视频详情
- * @param onLocalPlayback 本地播放
- * @param onExternalPlayback 外部播放器
- * @param onDeleteVideo 删除视频
- * @param onMoveGroup 移动到其他分组
- * @param isMultiSelect 是否多选模式
- * @param isSelected 是否已选中
- * @param onToggleSelect 切换选中状态
- */
 @OptIn(ExperimentalFoundationApi::class, ExperimentalTime::class)
 @Composable
 fun DownloadedVideoCard(

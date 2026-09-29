@@ -16,20 +16,12 @@ fun AppBarLayout.offsetChanges(): Flow<Int> {
     }
 }
 
-/**
- * 用于监听AppBarLayout是否展开或折叠
- *
- * 从[AppBarLayout.addOnOffsetChangedListener]中调用该类
- *
- * @author Yenaly Liew
- * @time 2022/06/01 001 16:38
- */
 abstract class AppBarLayoutStateChangeListener : AppBarLayout.OnOffsetChangedListener {
 
     enum class State {
-        EXPANDED, // 展开
-        COLLAPSED, // 折叠
-        INTERMEDIATE; // 中间态
+        EXPANDED,
+        COLLAPSED,
+        INTERMEDIATE;
     }
 
     private var mCurrentState: State = State.INTERMEDIATE

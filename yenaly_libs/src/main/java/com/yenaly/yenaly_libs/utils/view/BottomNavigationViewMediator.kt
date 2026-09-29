@@ -12,23 +12,6 @@ import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.navigation.NavigationBarView
 import com.yenaly.yenaly_libs.utils.activity
 
-/**
- * A mediator to link a BottomNavigationView with a ViewPager2. For FragmentActivity only!
- *
- * Instantiating a BottomNavigationViewMediator will only create the mediator object,
- * you must call [attach] on it first to link the BottomNavigationView and the ViewPager2 together.
- *
- * @param fragmentActivity (optional)
- * @param bottomNavigationView
- * @param viewPager2
- * @param itemIdWithFragmentList fragment item id with fragment list
- * @param slide if ViewPager2 needs to slide
- * @param smoothScroll if ViewPager2 scrolls smoothly when BottomNavView is selected
- *
- * @author Yenaly Liew
- * @Time : 2022/06/03 003 11:21
- * @Description : Description...
- */
 @Suppress("unused")
 class BottomNavigationViewMediator @JvmOverloads constructor(
     private val fragmentActivity: FragmentActivity,
@@ -46,7 +29,6 @@ class BottomNavigationViewMediator @JvmOverloads constructor(
 
     private val fragmentList = itemIdWithFragmentList.map { it.second }
 
-    // 将list存到SparseArray里，方便后续直接通过itemId拿Fragment
     private val itemIdWithIndexMap = SparseIntArray().also { map ->
         itemIdWithFragmentList.forEachIndexed { index, pair ->
             map[pair.first] = index
@@ -99,7 +81,7 @@ class BottomNavigationViewMediator @JvmOverloads constructor(
             val currentItem = itemIdWithIndexMap[item.itemId]
             viewPager2.setCurrentItem(currentItem, smoothScroll)
             currentFragment = itemIdWithFragmentList[currentItem].second
-            // listener?.onFragmentSelected(itemIdWithFragmentList[currentItem].second)
+
             true
         }
         onPageChangeCallback = object : ViewPager2.OnPageChangeCallback() {
@@ -120,11 +102,6 @@ class BottomNavigationViewMediator @JvmOverloads constructor(
         return this
     }
 
-    /**
-     * call this to jump to specific fragment
-     *
-     * @return fragment
-     */
     @JvmOverloads
     fun jumpToFragment(@IdRes fragmentItemId: Int, smoothScroll: Boolean = false): Fragment {
         if (onItemSelectedListener == null || onPageChangeCallback == null) {
@@ -139,17 +116,10 @@ class BottomNavigationViewMediator @JvmOverloads constructor(
         return fragment
     }
 
-    /**
-     * Set on a callback interface that is optionally
-     * implemented to listen the latest selected fragment.
-     */
     fun setOnFragmentChangedListener(listener: OnFragmentChangedListener) {
         this.listener = listener
     }
 
-    /**
-     * A callback interface that is optionally implemented to listen the latest selected fragment.
-     */
     fun interface OnFragmentChangedListener {
         fun onFragmentChanged(currentFragment: Fragment)
     }

@@ -63,21 +63,6 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
-/**
- * 打卡弹窗。展示历史记录、添加新记录的表单。
- *
- *
- * @param date 打卡日期
- * @param onLoadRecords 加载该日期已有记录的回调
- * @param onLoadWatchHistory 加载最近观看历史的回调
- * @param onLoadSideDishCoverMap 加载配菜视频封面映射的回调
- * @param onGetCountByDate 查询该日期打卡次数的回调
- * @param onAddRecord 新增打卡记录的回调
- * @param onDeleteRecord 删除单条记录的回调
- * @param onNavigateToVideo 跳转到视频详情的回调
- * @param onEasterEgg 触发彩蛋文字的回调
- * @param onDismiss 关闭弹窗的回调
- */
 @Composable
 fun CheckInDialog(
     date: LocalDate,
@@ -217,14 +202,6 @@ fun CheckInDialog(
     }
 }
 
-/**
- * 新增打卡表单。
- *
- * @param watchHistory 最近观看记录
- * @param onNavigateToVideo 跳转到视频详情的回调
- * @param onAddRecord 提交打卡记录的回调 (time, type, sideDishes, feeling)
- * @param onDismiss 取消/关闭回调
- */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AddCheckInForm(
@@ -390,15 +367,6 @@ fun AddCheckInForm(
     }
 }
 
-/**
- * 已有打卡记录项。展示单条打卡的类型、时间、配菜视频、感想等。
- *
- * @param index 序号
- * @param record 打卡记录实体
- * @param coverUrlMap 视频 code -> 封面 URL 的映射
- * @param onNavigateToVideo 跳转到视频详情的回调
- * @param onDelete 删除此记录的回调
- */
 @Composable
 fun ExistingRecordItem(
     index: Int,
@@ -580,13 +548,6 @@ fun ExistingRecordItem(
     }
 }
 
-/**
- * 播放历史条目，在打卡弹窗中用作"配菜"快速选择。
- *
- * @param watch 播放历史实体
- * @param onNavigateToVideo 跳转到视频详情的回调
- * @param onClick 点击添加到配菜的回调
- */
 @Composable
 fun WatchHistoryItem(
     watch: WatchHistoryEntity,

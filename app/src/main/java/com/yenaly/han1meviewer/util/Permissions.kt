@@ -17,19 +17,12 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import androidx.core.net.toUri
 
-
-/**
- * 请求选择图片或视频
- */
 suspend fun Context.pickVisualMedia(type: ActivityResultContracts.PickVisualMedia.VisualMediaType): Uri? =
     awaitActivityResult(
         ActivityResultContracts.PickVisualMedia(),
         PickVisualMediaRequest.Builder().setMediaType(type).build()
     )
 
-/**
- * 獲得發送通知權限
- */
 suspend fun Context.requestPostNotificationPermission(): Boolean {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         val granted = requestPermission(Manifest.permission.POST_NOTIFICATIONS)
@@ -45,9 +38,6 @@ suspend fun Context.requestPostNotificationPermission(): Boolean {
     return true
 }
 
-/**
- * 顯示發送通知權限對話框
- */
 private suspend fun Context.showPostNotificationPermissionDialog(): Boolean =
     suspendCancellableCoroutine { cont ->
         val id = GlobalDialogs.show(
@@ -64,9 +54,6 @@ private suspend fun Context.showPostNotificationPermissionDialog(): Boolean =
         cont.invokeOnCancellation { GlobalDialogs.dismiss(id) }
     }
 
-/**
- * 请求安装权限
- */
 suspend fun Context.requestInstallPermission(): Boolean {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         if (packageManager.canRequestPackageInstalls()) return true
@@ -88,9 +75,6 @@ suspend fun Context.requestInstallPermission(): Boolean {
     return true
 }
 
-/**
- * 显示安装权限对话框
- */
 private suspend fun Context.showInstallPermissionDialog(): Boolean =
     suspendCancellableCoroutine { cont ->
         val id = GlobalDialogs.show(

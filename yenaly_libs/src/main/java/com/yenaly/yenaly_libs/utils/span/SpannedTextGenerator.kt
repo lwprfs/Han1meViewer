@@ -17,12 +17,6 @@ import androidx.annotation.Px
 import androidx.core.content.ContextCompat
 import com.yenaly.yenaly_libs.utils.applicationContext
 
-/**
- * @ProjectName : YenalyModule
- * @Author : Yenaly Liew
- * @Time : 2022/04/27 027 16:28
- * @Description : Description...
- */
 class SpannedTextGenerator private constructor() {
 
     class KotlinBuilder(private val flag: Int = Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) {

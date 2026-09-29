@@ -37,23 +37,6 @@ val File?.folderSize: Long
         return size
     }
 
-/**
- * 创建文件夹并在文件夹内创建.nomedia文件
- *
- * 为了防止媒体库扫描到文件夹内的文件
- */
-//fun File.makeFolderNoMedia() {
-//    if (!exists()) {
-//        mkdirs()
-//    } else if (!isDirectory) {
-//        return
-//    }
-//    val noMedia = File(this, ".nomedia")
-//    if (!noMedia.exists()) {
-//        noMedia.createNewFile()
-//    }
-//}
-
 fun File.makeFolderNoMedia() {
     if (!exists()) {
         if (!mkdirs()) {
@@ -74,7 +57,6 @@ fun File.makeFolderNoMedia() {
         }
     }
 }
-
 
 fun File.createFileIfNotExists(): Boolean {
     return if (!exists()) {

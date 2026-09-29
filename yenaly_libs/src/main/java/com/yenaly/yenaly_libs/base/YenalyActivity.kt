@@ -11,21 +11,12 @@ import androidx.preference.PreferenceManager
 import com.yenaly.yenaly_libs.base.frame.FrameActivity
 import java.util.Locale
 
-/**
- * @ProjectName : YenalyModule
- * @Author : Yenaly Liew
- * @Time : 2022/04/16 016 20:20
- * @Description : Description...
- */
 abstract class YenalyActivity<DB : ViewDataBinding> : FrameActivity(), IViewBinding<DB> {
 
     private var _binding: DB? = null
     override val binding get() = _binding!!
     val bindingOrNull get() = _binding
 
-    /**
-     * 取代之前的反射方式，太消耗性能了
-     */
     abstract fun getViewBinding(layoutInflater: LayoutInflater): DB
 
     final override fun getViewBinding(inflater: LayoutInflater, container: ViewGroup?): DB {
@@ -42,8 +33,7 @@ abstract class YenalyActivity<DB : ViewDataBinding> : FrameActivity(), IViewBind
     override fun onDestroy() {
         super.onDestroy()
         _binding?.unbind()
-        // 没啥必要
-        // _binding = null
+
     }
 
     private fun initView() {
@@ -52,14 +42,8 @@ abstract class YenalyActivity<DB : ViewDataBinding> : FrameActivity(), IViewBind
         binding.lifecycleOwner = this
     }
 
-    /**
-     * 用于绑定数据观察器 (optional)
-     */
     open fun bindDataObservers() = Unit
 
-    /**
-     * 初始化数据
-     */
     abstract fun initData(savedInstanceState: Bundle?)
 
     private fun applyAppLocale(context: Context): Context {

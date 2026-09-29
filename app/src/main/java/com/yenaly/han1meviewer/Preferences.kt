@@ -24,7 +24,6 @@ enum class SiteType {
     HANIME, MISSAV, HENTAIMAMA, JAVCHU
 }
 
-// These constants need to be defined or imported
 object MissAvConstants {
     val MISSAV_URL = arrayOf("https://missav.ws", "https://missav.live", "https://missav.ai")
 }
@@ -41,7 +40,6 @@ object Preferences {
             applicationContext
         )
 
-    // app 相關
     var isAlreadyLogin: Boolean
         get() = getSpValue(ALREADY_LOGIN, false)
         set(value) {
@@ -100,7 +98,6 @@ object Preferences {
             return now > lastCheckTime + interval.days
         }
 
-    // 設定 相關
     var siteType: SiteType
         get() = try {
             SiteType.valueOf(preferenceSp.getString("site_type", SiteType.HANIME.name) ?: SiteType.HANIME.name)
@@ -211,15 +208,13 @@ object Preferences {
             SettingsPreferenceKeys.FAKE_LAUNCHER_ICON,
             "com.yenaly.han1meviewer.LauncherAliasDefault") ?: "com.yenaly.han1meviewer.LauncherAliasDefault"
 
-    // ==================== FIXED: baseUrl Logic ====================
     val baseUrl: String
         get() {
-            // JAVCHU: Always use fixed URL, ignore custom mirror settings
+
             if (siteType == SiteType.JAVCHU) {
                 return "https://javchu.com/"
             }
-            
-            // HANIME: Allow custom mirror site if enabled
+
             if (siteType == SiteType.HANIME) {
                 if (useCustomMirrorSite && customMirrorSite.isNotBlank()) {
                     val url = if (appendCustomMirrorPath) customMirrorSite else customMirrorSite.toRootUrl()
@@ -228,22 +223,18 @@ object Preferences {
                 return preferenceSp.getString(SettingsPreferenceKeys.DOMAIN_NAME, HanimeConstants.HANIME_URL[0])
                     ?: HanimeConstants.HANIME_URL[0]
             }
-            
-            // MISSAV
+
             if (siteType == SiteType.MISSAV) {
                 return missAvBaseUrl
             }
-            
-            // HENTAIMAMA
+
             if (siteType == SiteType.HENTAIMAMA) {
                 return hentaiMamaBaseUrl
             }
-            
-            // Fallback
+
             return HanimeConstants.HANIME_URL[0]
         }
 
-    // ==================== FIXED: homeUrl Logic ====================
     val homeUrl: String
         get() = when (siteType) {
             SiteType.JAVCHU -> "https://javchu.com"
@@ -258,37 +249,33 @@ object Preferences {
             SiteType.HENTAIMAMA -> hentaiMamaBaseUrl
         }
 
-    // ==================== FIXED: useCustomMirrorSite ====================
     val useCustomMirrorSite: Boolean
         get() {
-            // JAVCHU: Always false, no custom mirror
+
             if (siteType == SiteType.JAVCHU) {
                 return false
             }
             return preferenceSp.getBoolean(SettingsPreferenceKeys.USE_CUSTOM_MIRROR_SITE, false)
         }
 
-    // ==================== FIXED: customMirrorSite ====================
     val customMirrorSite: String
         get() {
-            // JAVCHU: Always empty, no custom mirror
+
             if (siteType == SiteType.JAVCHU) {
                 return ""
             }
             return preferenceSp.getString(SettingsPreferenceKeys.CUSTOM_MIRROR_SITE, EMPTY_STRING).orEmpty()
         }
 
-    // ==================== FIXED: appendCustomMirrorPath ====================
     val appendCustomMirrorPath: Boolean
         get() {
-            // JAVCHU: Always true but never used since custom mirror is disabled
+
             if (siteType == SiteType.JAVCHU) {
                 return true
             }
             return preferenceSp.getBoolean(SettingsPreferenceKeys.APPEND_CUSTOM_MIRROR_PATH, true)
         }
 
-    // ==================== NEW: displayUrl for UI ====================
     val displayUrl: String
         get() = when (siteType) {
             SiteType.JAVCHU -> "https://javchu.com (Fixed)"
@@ -389,19 +376,12 @@ object Preferences {
     val collapseDownloadedGroup: Boolean
         get() = preferenceSp.getBoolean(SettingsPreferenceKeys.COLLAPSE_DOWNLOADED_GROUP,false)
 
-    /**
-     * 下載時是否預設按系列自動建立分組，同時作為下載確認對話框的預設勾選狀態。
-     */
     var downloadAutoGroup: Boolean
         get() = preferenceSp.getBoolean(SettingsPreferenceKeys.DOWNLOAD_AUTO_GROUP, true)
         set(value) = preferenceSp.edit {
             putBoolean(SettingsPreferenceKeys.DOWNLOAD_AUTO_GROUP, value)
         }
 
-    /**
-     * 自動分組時分組名是否取自系列名（關閉時取自影片標題）。
-     * 於下載確認對話框選擇，並記住作為下次的預設選項。
-     */
     var downloadGroupNameFromSeriesName: Boolean
         get() = preferenceSp.getBoolean(
             SettingsPreferenceKeys.DOWNLOAD_GROUP_NAME_FROM_SERIES_NAME,
@@ -411,10 +391,6 @@ object Preferences {
             putBoolean(SettingsPreferenceKeys.DOWNLOAD_GROUP_NAME_FROM_SERIES_NAME, value)
         }
 
-    /**
-     * 自動分組時是否將分組名快速轉換為繁體（關閉時轉為簡體）。
-     * 於下載確認對話框選擇，未曾選擇過時跟隨[視頻標題語言][videoLanguage]。
-     */
     var downloadGroupNameTraditional: Boolean
         get() = preferenceSp.getBoolean(
             SettingsPreferenceKeys.DOWNLOAD_GROUP_TRADITIONAL,
@@ -454,10 +430,7 @@ object Preferences {
     val showExitConfirm: Boolean
         get() = preferenceSp.getBoolean(SettingsPreferenceKeys.SHOW_EXIT_CONFIRM, true)
 
-    /**
-     * MPV播放器设置
-     */
-    val mpvProfile: String // 预设模式
+    val mpvProfile: String
         get() = preferenceSp.getString(SettingsPreferenceKeys.MPV_PROFILE, "fast") ?: "fast"
 
     val enableGPUNextRenderer: Boolean

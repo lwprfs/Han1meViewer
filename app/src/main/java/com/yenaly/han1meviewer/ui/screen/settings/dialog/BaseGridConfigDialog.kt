@@ -209,7 +209,7 @@ private fun GridConfigInputRow(option: GridRangeOption, isDecimal: Boolean) {
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp) // 控件之间的间距
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     FilledIconButton(
                         onClick = { convertAndStep(false) },

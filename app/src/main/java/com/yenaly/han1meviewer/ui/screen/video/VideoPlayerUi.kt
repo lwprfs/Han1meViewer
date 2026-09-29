@@ -115,9 +115,6 @@ fun VideoPlayerUi(
             .background(Color.Black)
     ) {
 
-        /**
-         * 视频渲染层
-         */
         if (playerView != null) {
             AndroidView(
                 factory = { playerView },
@@ -131,9 +128,6 @@ fun VideoPlayerUi(
             )
         }
 
-        /**
-         * 封面
-         */
         AsyncImage(
             model = null,
             contentDescription = null,
@@ -141,9 +135,6 @@ fun VideoPlayerUi(
             contentScale = ContentScale.Crop,
         )
 
-        /**
-         * 顶部渐变
-         */
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -158,9 +149,6 @@ fun VideoPlayerUi(
                 )
         )
 
-        /**
-         * 底部渐变
-         */
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -176,9 +164,6 @@ fun VideoPlayerUi(
                 )
         )
 
-        /**
-         * 顶部控制栏
-         */
         AnimatedVisibility(
             visible = effectiveShowControls,
             modifier = Modifier.align(Alignment.TopCenter)
@@ -194,9 +179,6 @@ fun VideoPlayerUi(
                     )
             ) {
 
-                /**
-                 * Background
-                 */
                 Box(
                     modifier = Modifier
                         .matchParentSize()
@@ -238,9 +220,6 @@ fun VideoPlayerUi(
                     )
                 }
 
-                /**
-                 * Content
-                 */
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -252,9 +231,6 @@ fun VideoPlayerUi(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
 
-                    /**
-                     * Back
-                     */
                     IconButton(
                         onClick = onBackClick,
                         modifier = Modifier.size(32.dp)
@@ -269,9 +245,6 @@ fun VideoPlayerUi(
 
                     Spacer(modifier = Modifier.width(2.dp))
 
-                    /**
-                     * Home
-                     */
                     IconButton(
                         onClick = onHomeClick,
                         modifier = Modifier.size(32.dp)
@@ -286,9 +259,6 @@ fun VideoPlayerUi(
 
                     Spacer(modifier = Modifier.width(10.dp))
 
-                    /**
-                     * Title
-                     */
                     Text(
                         text = title,
                         color = Color.White.copy(alpha = 0.95f),
@@ -300,9 +270,6 @@ fun VideoPlayerUi(
 
                     Spacer(modifier = Modifier.width(10.dp))
 
-                    /**
-                     * Small Status Chips
-                     */
                     CompactChip("H关键帧")
 
                     Spacer(modifier = Modifier.width(6.dp))
@@ -314,9 +281,6 @@ fun VideoPlayerUi(
 
                     Spacer(modifier = Modifier.width(10.dp))
 
-                    /**
-                     * Time
-                     */
                     Text(
                         text = "11:45",
                         color = Color.White.copy(alpha = 0.72f),
@@ -326,9 +290,6 @@ fun VideoPlayerUi(
             }
         }
 
-        /**
-         * 中间播放按钮
-         */
         if (!isPlaying || effectiveShowControls) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -351,7 +312,7 @@ fun VideoPlayerUi(
                         )
                     }
                 } else {
-                    // Playing: small pause button when controls are visible
+
                     IconButton(onClick = onPlayClick) {
                         Icon(
                             imageVector = Icons.Outlined.Pause,
@@ -364,9 +325,6 @@ fun VideoPlayerUi(
             }
         }
 
-        /**
-         * 锁定按钮
-         */
         AnimatedVisibility(
             visible = showControls,
             modifier = Modifier.align(Alignment.CenterEnd)
@@ -391,9 +349,6 @@ fun VideoPlayerUi(
             }
         }
 
-        /**
-         * 底部控制栏
-         */
         AnimatedVisibility(
             visible = showControls,
             modifier = Modifier.align(Alignment.BottomCenter)
@@ -409,9 +364,6 @@ fun VideoPlayerUi(
                     )
             ) {
 
-                /**
-                 * Background
-                 */
                 Box(
                     modifier = Modifier
                         .matchParentSize()
@@ -453,9 +405,6 @@ fun VideoPlayerUi(
                     )
                 }
 
-                /**
-                 * Content
-                 */
                 Column(
                     modifier = Modifier.padding(
                         horizontal = 12.dp,
@@ -463,9 +412,6 @@ fun VideoPlayerUi(
                     )
                 ) {
 
-                    /**
-                     * Ultra Thin Slider
-                     */
                     PlayerSlider(
                         value = progress,
                         buffered = bufferedProgress,
@@ -473,9 +419,6 @@ fun VideoPlayerUi(
                         modifier = Modifier.height(12.dp)
                     )
 
-                    /**
-                     * Bottom Controls
-                     */
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -483,9 +426,6 @@ fun VideoPlayerUi(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
 
-                        /**
-                         * Play
-                         */
                         IconButton(
                             onClick = {},
                             modifier = Modifier.size(26.dp)
@@ -500,9 +440,6 @@ fun VideoPlayerUi(
 
                         Spacer(modifier = Modifier.width(4.dp))
 
-                        /**
-                         * Time
-                         */
                         Text(
                             text = "$currentTime / $totalTime",
                             color = Color.White.copy(alpha = 0.88f),
@@ -511,9 +448,6 @@ fun VideoPlayerUi(
 
                         Spacer(modifier = Modifier.weight(1f))
 
-                        /**
-                         * Quality
-                         */
                         Text(
                             text = "1080P",
                             color = Color.White.copy(alpha = 0.72f),
@@ -522,9 +456,6 @@ fun VideoPlayerUi(
 
                         Spacer(modifier = Modifier.width(2.dp))
 
-                        /**
-                         * Fullscreen
-                         */
                         IconButton(
                             onClick = onFullscreenClick,
                             modifier = Modifier.size(26.dp)
@@ -541,9 +472,6 @@ fun VideoPlayerUi(
             }
         }
 
-        /**
-         * Resume 按钮
-         */
         AnimatedVisibility(
             visible = showResumeButton,
             modifier = Modifier
@@ -558,9 +486,6 @@ fun VideoPlayerUi(
             }
         }
 
-        /**
-         * Retry
-         */
         AnimatedVisibility(
             visible = showRetry,
             modifier = Modifier.align(Alignment.Center)
@@ -600,9 +525,6 @@ fun VideoPlayerUi(
             }
         }
 
-        /**
-         * Timer
-         */
         AnimatedVisibility(
             visible = showControls,
             modifier = Modifier
@@ -674,9 +596,6 @@ fun PlayerSlider(
         onValueChange = onValueChange,
         modifier = modifier,
 
-        /**
-         * Thumb
-         */
         thumb = {
             Box(
                 modifier = Modifier
@@ -684,9 +603,6 @@ fun PlayerSlider(
                 contentAlignment = Alignment.Center
             ) {
 
-                /**
-                 * Glow
-                 */
                 Box(
                     modifier = Modifier
                         .size(14.dp)
@@ -696,9 +612,6 @@ fun PlayerSlider(
                         )
                 )
 
-                /**
-                 * Real Thumb
-                 */
                 Box(
                     modifier = Modifier
                         .size(8.dp)
@@ -710,9 +623,6 @@ fun PlayerSlider(
             }
         },
 
-        /**
-         * Track
-         */
         track = {
 
             Box(
@@ -722,9 +632,6 @@ fun PlayerSlider(
                 contentAlignment = Alignment.CenterStart
             ) {
 
-                /**
-                 * Background Track
-                 */
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -735,9 +642,6 @@ fun PlayerSlider(
                         )
                 )
 
-                /**
-                 * Buffered Track
-                 */
                 Box(
                     modifier = Modifier
                         .fillMaxWidth(buffered.coerceIn(0f, 1f))
@@ -748,9 +652,6 @@ fun PlayerSlider(
                         )
                 )
 
-                /**
-                 * Active Track
-                 */
                 Box(
                     modifier = Modifier
                         .fillMaxWidth(value.coerceIn(0f, 1f))
@@ -802,9 +703,6 @@ fun GestureIndicatorOverlay(
             contentAlignment = Alignment.Center
         ) {
 
-            /**
-             * Glass Container
-             */
             Box(
                 modifier = Modifier
                     .size(
@@ -814,9 +712,6 @@ fun GestureIndicatorOverlay(
                     .clip(RoundedCornerShape(36.dp))
             ) {
 
-                /**
-                 * Blur Layer
-                 */
                 Box(
                     modifier = Modifier
                         .matchParentSize()
@@ -841,9 +736,6 @@ fun GestureIndicatorOverlay(
                         )
                 )
 
-                /**
-                 * Glass Gradient
-                 */
                 Box(
                     modifier = Modifier
                         .matchParentSize()
@@ -857,9 +749,6 @@ fun GestureIndicatorOverlay(
                         )
                 )
 
-                /**
-                 * Border
-                 */
                 Box(
                     modifier = Modifier
                         .matchParentSize()
@@ -870,9 +759,6 @@ fun GestureIndicatorOverlay(
                         )
                 )
 
-                /**
-                 * Content
-                 */
                 Column(
                     modifier = Modifier
                         .fillMaxSize()

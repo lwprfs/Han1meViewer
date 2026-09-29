@@ -15,11 +15,6 @@ import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.navigation.NavigationBarView
 import com.yenaly.yenaly_libs.utils.activity
 
-/**
- * @project Han1meViewer
- * @author Yenaly Liew
- * @time 2022/11/09 009 14:39
- */
 class SimpleBottomNavViewMediator constructor(
     private val bottomNavigationView: BottomNavigationView,
     private val viewPager2: ViewPager2,
@@ -83,11 +78,6 @@ class SimpleBottomNavViewMediator constructor(
         TODO("I am lazy!")
     }
 
-    /**
-     * For example:
-     *
-     * `R.id.xxx with { XXFragment() }`
-     */
     infix fun @receiver:IdRes Int.with(newFragment: NewFragment) {
         newFragmentMap[this] = newFragment
         indexMap[this] = index
@@ -95,10 +85,6 @@ class SimpleBottomNavViewMediator constructor(
         index++
     }
 
-    /**
-     * Set on a callback interface that is optionally
-     * implemented to listen the latest selected fragment.
-     */
     fun setOnFragmentChangedListener(listener: OnFragmentChangedListener) {
         this.onFragmentChangedListener = listener
     }

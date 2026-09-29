@@ -17,15 +17,6 @@ import retrofit2.http.Part
 import retrofit2.http.Path
 import retrofit2.http.Query
 
-/**
- * MyList 是指 喜欢的影片 + 稍后再看
- *
- * Playlist 是指 自定义的播放列表
- *
- * @project Han1meViewer
- * @author Yenaly Liew
- * @time 2023/08/26 026 16:30
- */
 interface HanimeMyListService {
     @GET("user/{userid}/{type}")
     suspend fun getMyListItems(
@@ -174,7 +165,7 @@ interface HanimeMyListService {
         @Path("list_code") listCode: String,
         @Field("playlist-title") title: String,
         @Field("playlist-description") description: String,
-        @Field("playlist-delete") delete: String?, // 删除 "on"，不删除 null
+        @Field("playlist-delete") delete: String?,
         @Field("_token") csrfToken: String?,
         @Field("_method") method: String? = "PUT",
         @Header("X-CSRF-TOKEN") csrfToken_1: String? = csrfToken,

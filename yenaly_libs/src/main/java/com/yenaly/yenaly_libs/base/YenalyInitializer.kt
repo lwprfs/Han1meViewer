@@ -7,12 +7,6 @@ import androidx.annotation.CallSuper
 import androidx.startup.Initializer
 import com.yenaly.yenaly_libs.utils.applicationContext
 
-/**
- * @ProjectName : YenalyModule
- * @Author : Yenaly Liew
- * @Time : 2022/04/21 021 14:04
- * @Description : Description...
- */
 open class YenalyInitializer : Initializer<Unit> {
 
     @CallSuper

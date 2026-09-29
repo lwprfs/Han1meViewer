@@ -140,7 +140,7 @@ internal fun GetchuPreviewDetailContent(
                                     text = it,
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.primary // 价格高亮
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                             }
                         }
@@ -253,7 +253,6 @@ internal fun GetchuPreviewDetailContent(
         }
     }
 }
-
 
 @Preview
 @Composable

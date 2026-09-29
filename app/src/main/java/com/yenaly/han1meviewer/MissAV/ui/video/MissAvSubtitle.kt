@@ -126,11 +126,13 @@ object MissAvSubtitleHelper {
 
                     val document = Jsoup.parse(html)
 
-                    for (row in document.select("div.sub-single")) {
+                    val rows = document.select("table.sub-table tbody tr")
+                    Log.d(TAG, "Search '$searchTerm': found ${rows.size} rows")
+
+                    for (row in rows) {
                         runCatching {
-                            val titleSpan = row.selectFirst("span:nth-of-type(2)")
-                            val titleElement = titleSpan?.selectFirst("a")
-                                ?: row.selectFirst("a[href]")
+
+                            val titleElement = row.selectFirst("td > a")
                                 ?: return@runCatching
 
                             val title = titleElement.text().trim()
@@ -140,7 +142,28 @@ object MissAvSubtitleHelper {
                             if (href.isBlank()) return@runCatching
 
                             val fullLink = buildFullUrl(href)
-                            val result = SubtitleResult(title = title, link = fullLink)
+
+                            val metricCells = row.select("td.sub-table__metric")
+
+                            val size = metricCells.getOrNull(0)
+                                ?.selectFirst(".sub-table__metric-value")
+                                ?.text()?.trim() ?: "N/A"
+
+                            val downloads = metricCells.getOrNull(1)
+                                ?.selectFirst(".sub-table__metric-value")
+                                ?.text()?.trim() ?: "N/A"
+
+                            val languages = metricCells.getOrNull(2)
+                                ?.selectFirst(".sub-table__metric-value")
+                                ?.text()?.trim() ?: "N/A"
+
+                            val result = SubtitleResult(
+                                title = title,
+                                link = fullLink,
+                                size = size,
+                                downloads = downloads,
+                                languages = languages,
+                            )
 
                             if (allResults.none { it.link == result.link }) {
                                 allResults.add(result)

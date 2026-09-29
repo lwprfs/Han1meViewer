@@ -34,13 +34,6 @@ import com.yenaly.han1meviewer.ui.component.lazy.LazyRow
 import com.yenaly.han1meviewer.ui.preview.ComponentPreview
 import com.yenaly.han1meviewer.ui.preview.fakeNewHanimeInfo
 
-/**
- * 预览详情卡片。
- *
- * @param previewInfo 预览信息
- * @param onOpenVideo 打开视频详情回调
- * @param onOpenImage 打开图片查看器回调 (index, imageUrls)
- */
 @Composable
 fun PreviewInfoCard(
     previewInfo: HanimePreview.PreviewInfo,

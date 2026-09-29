@@ -41,15 +41,6 @@ import com.yenaly.han1meviewer.ui.component.lazy.LazyVerticalGrid
 import com.yenaly.han1meviewer.ui.screen.getColumnCount
 import kotlinx.coroutines.launch
 
-/**
- * 播放列表页 Content 层。纯 UI，不持有 ViewModel。
- *
- * 接收 [PlaylistUiState] + [PlaylistEvent] 回调，负责网格展示和动画切换。
- *
- * @param uiState 页面 UI 状态
- * @param onEvent 用户事件回调
- * @param rawState 原始网络状态（用于 Error 的重试和空状态判断）
- */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun PlaylistContent(

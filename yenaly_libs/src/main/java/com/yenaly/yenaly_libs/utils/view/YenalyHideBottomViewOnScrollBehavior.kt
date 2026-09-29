@@ -16,15 +16,6 @@ import androidx.core.view.ViewCompat
 import androidx.interpolator.view.animation.FastOutLinearInInterpolator
 import androidx.interpolator.view.animation.LinearOutSlowInInterpolator
 
-/**
- * The [CoordinatorLayout.Behavior] for a View within a [CoordinatorLayout] to hide the view off the
- * bottom of the screen when scrolling down, and show it when scrolling up.
- *
- * SPECIFICALLY FOR [BottomNavigationView][com.google.android.material.bottomnavigation.BottomNavigationView].
- *
- * @author Yenaly Liew
- * @time 2022/07/19 019 12:18
- */
 open class YenalyHideBottomViewOnScrollBehavior<V : View> : CoordinatorLayout.Behavior<V> {
 
     private var height = 0
@@ -47,12 +38,6 @@ open class YenalyHideBottomViewOnScrollBehavior<V : View> : CoordinatorLayout.Be
         return super.onLayoutChild(parent, child, layoutDirection)
     }
 
-    /**
-     * Sets an additional offset for the y position used to hide the view.
-     *
-     * @param child the child view that is hidden by this behavior
-     * @param offset the additional offset in pixels that should be added when the view slides away
-     */
     fun setAdditionalHiddenOffsetY(child: V, @Dimension offset: Int) {
         additionalHiddenOffsetY = offset
         if (currentState == STATE_SCROLLED_DOWN) {
@@ -89,16 +74,11 @@ open class YenalyHideBottomViewOnScrollBehavior<V : View> : CoordinatorLayout.Be
         }
     }
 
-    /** Returns true if the current state is scrolled up.  */
     val isScrolledUp: Boolean
         get() = currentState == STATE_SCROLLED_UP
 
-    /**
-     * Performs an animation that will slide the child from it's current position to be totally on the
-     * screen.
-     */
     @JvmOverloads
-    fun slideUp(child: V, animate: Boolean =  /*animate=*/true) {
+    fun slideUp(child: V, animate: Boolean =  true) {
         if (isScrolledUp) {
             return
         }
@@ -120,16 +100,11 @@ open class YenalyHideBottomViewOnScrollBehavior<V : View> : CoordinatorLayout.Be
         }
     }
 
-    /** Returns true if the current state is scrolled down.  */
     val isScrolledDown: Boolean
         get() = currentState == STATE_SCROLLED_DOWN
 
-    /**
-     * Performs an animation that will slide the child from it's current position to be totally off
-     * the screen.
-     */
     @JvmOverloads
-    fun slideDown(child: V, animate: Boolean =  /*animate=*/true) {
+    fun slideDown(child: V, animate: Boolean =  true) {
         if (isScrolledDown) {
             return
         }

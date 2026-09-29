@@ -31,16 +31,6 @@ import com.yenaly.han1meviewer.ui.screen.rememberCardResponsiveWidth
 import com.yenaly.han1meviewer.ui.theme.SpacingLarge
 import com.yenaly.han1meviewer.ui.theme.SpacingNormal
 
-/**
- * 显示横向滚动的视频分类行。
- *
- * @param title 分类标题。
- * @param videos 当前分类下的视频列表。
- * @param onMoreClick 点击更多按钮时调用。
- * @param onVideoClick 点击视频卡片时调用，参数为视频编号。
- * @param onVideoLongClick 长按视频卡片时调用，参数为视频编号和标题。
- * @param modifier 应用于分类行根布局的修饰符。
- */
 @Composable
 fun CategoryRow(
     title: String,

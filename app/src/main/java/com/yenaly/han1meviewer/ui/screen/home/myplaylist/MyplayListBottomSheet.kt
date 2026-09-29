@@ -70,17 +70,6 @@ import com.yenaly.han1meviewer.ui.theme.SpacingNormal
 import com.yenaly.han1meviewer.ui.theme.VideoNormalCardMinWidth
 import com.yenaly.han1meviewer.ui.viewmodel.MyPlayListViewModelV2
 
-/**
- * 播放列表详情底部弹窗。
- *
- * @param listCode 播放列表代码
- * @param onDismiss 关闭回调
- * @param playListTitle 播放列表标题
- * @param onClickItem 点击视频项回调
- * @param onLongClickItem 长按视频项回调
- * @param vm 播放列表 ViewModel（弹窗内需要直接观察 ViewModel StateFlow）
- * @param context Android Context
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlaylistBottomSheet(

@@ -15,7 +15,6 @@ import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.preview.ComponentPreview
 import com.yenaly.han1meviewer.ui.screen.settings.model.GridRangeOption
 
-
 @Composable
 fun HorizontalCardCountDialog(
     initialConfig: HorizontalCardCountConfig,
@@ -127,7 +126,6 @@ private fun horizontalCardCountBucketLabel(widthDp: Int): String {
         else -> stringResource(R.string.horizontal_card_count_range_expanded)
     }
 }
-
 
 @Preview(showBackground = true, showSystemUi = true)
 @Composable

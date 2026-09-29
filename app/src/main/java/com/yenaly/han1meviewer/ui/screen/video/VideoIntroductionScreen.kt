@@ -125,20 +125,11 @@ import kotlinx.datetime.format
 
 private val previewSafeDateFormat = LocalDate.Formats.ISO
 
-/**
- * 分组名下拉搜索最多展示的结果数量与其高度上限。
- */
 private const val MAX_GROUP_SUGGESTIONS = 8
 private val GroupSuggestionMenuMaxHeight = 180.dp
 
-/**
- * 分组名输入框最多显示的行数，超出后输入框内可滚动。
- */
 private const val GROUP_NAME_MAX_LINES = 3
 
-/**
- * 下载确认对话框内容区的最大高度占屏幕高度的比例。
- */
 private const val DIALOG_CONTENT_HEIGHT_RATIO = 0.6f
 
 data class DownloadPromptState(
@@ -169,9 +160,7 @@ fun VideoIntroductionScreen(
     onQuickCheckIn: (CheckInRecordEntity) -> Unit,
     onPrepareDownload: (String) -> Unit,
     onDismissDownloadPrompt: () -> Unit,
-    /**
-     * @param autoGroupName 自动分组的目标分组名，null 表示不自动分组
-     */
+
     onConfirmDownloadPrompt: (autoGroupName: String?) -> Unit,
     onRequestOpenOfficialDownloadPage: () -> Unit,
     onRequestOpenDownloadPermissionSettings: () -> Unit,
@@ -185,9 +174,7 @@ fun VideoIntroductionScreen(
     onIntroductionScrollChange: (Int, Int) -> Unit,
     onIntroductionLinkClick: (String) -> Unit,
     downloadGroups: List<DownloadGroupEntity> = emptyList(),
-    /**
-     * 同系列已使用的分组 id，作为自动分组的推荐项
-     */
+
     recommendedGroupId: Int? = null,
 ) {
     val maxScreenWidth = LocalWindowInfo.current.containerSize.width.dp
@@ -533,21 +520,10 @@ private fun DownloadQualityDialog(
     )
 }
 
-/**
- * 按「快速繁简转换」的选择把文本转为繁体或简体。
- */
 private fun String.toChineseScript(traditional: Boolean): String {
     return if (traditional) toTraditional() else toSimplified()
 }
 
-/**
- * 自动分组的默认分组名。
- *
- * 影片标题与详情页主标题（[TitleSection]）一致，没有中文标题时退回原名；
- * 系列名称没有时同样退回影片标题。最后按 [traditional] 快速转换繁简。
- *
- * @param nameFromSeriesName 组名是否来自系列名称
- */
 private fun HanimeVideo.suggestedGroupName(
     nameFromSeriesName: Boolean,
     traditional: Boolean,
@@ -558,10 +534,6 @@ private fun HanimeVideo.suggestedGroupName(
     return baseName.toChineseScript(traditional)
 }
 
-/**
- * 分组名的模糊匹配：忽略大小写，并把繁简、日文汉字归一化后再比对；
- * 输入为空时列出全部分组，方便直接挑选。
- */
 private fun DownloadGroupEntity.matchesGroupQuery(query: String): Boolean {
     val trimmed = query.trim()
     if (trimmed.isEmpty()) return true
@@ -589,13 +561,13 @@ private fun DownloadConfirmDialog(
         mutableStateOf(video.suggestedGroupName(nameFromSeriesName, nameTraditional))
     }
     var groupNameExpanded by remember { mutableStateOf(false) }
-    // 用户手动改过名称后，切换下方的组名来源/繁简转换或推荐分组都不再覆盖它
+
     var groupNameEdited by remember { mutableStateOf(false) }
 
     val recommendedGroup = remember(groups, recommendedGroupId) {
         groups.firstOrNull { it.id == recommendedGroupId }
     }
-    // 同系列已有分组时推荐该分组，优先于按组名来源生成的名字
+
     LaunchedEffect(recommendedGroup) {
         if (recommendedGroup != null && !groupNameEdited) {
             groupName = recommendedGroup.name
@@ -679,7 +651,7 @@ private fun DownloadConfirmDialog(
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
-    
+
                                 existingGroup != null -> DownloadGroupTargetHint(
                                     icon = Icons.Outlined.FolderOpen,
                                     text = stringResource(
@@ -688,7 +660,7 @@ private fun DownloadConfirmDialog(
                                     ),
                                     color = MaterialTheme.colorScheme.primary,
                                 )
-    
+
                                 else -> DownloadGroupTargetHint(
                                     icon = Icons.Outlined.CreateNewFolder,
                                     text = stringResource(
@@ -725,7 +697,7 @@ private fun DownloadConfirmDialog(
                                     if (groupName.isNotEmpty()) {
                                         IconButton(
                                             onClick = {
-                                                // 清空即回到「按上方选项自动命名」的状态
+
                                                 groupName = ""
                                                 groupNameEdited = false
                                             },
@@ -815,9 +787,6 @@ private fun DownloadConfirmDialog(
     )
 }
 
-/**
- * 分组名最终去向的提示行，复用已有分组与新建分组用图标和颜色区分。
- */
 @Composable
 private fun DownloadGroupTargetHint(
     icon: ImageVector,
@@ -842,9 +811,6 @@ private fun DownloadGroupTargetHint(
     }
 }
 
-/**
- * 分组名的选择行，如「组名来自：影片标题 / 系列名称」。
- */
 @Composable
 private fun <T> DownloadGroupOptionRow(
     label: String,

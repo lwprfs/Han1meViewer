@@ -14,22 +14,11 @@ import javax.crypto.KeyGenerator
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
-/**
- * Created by luyao
- * on 2019/7/1 16:09
- */
-
 private const val KEY_ALGORITHM = "AES"
 private const val CIPHER_ALGORITHM_DEFAULT = "AES"
 const val AES_CFB_NOPADDING = "AES/CFB/NoPadding"
 const val AES_ECB_NOPADDING = "AES/ECB/NoPadding"
 
-/**
- * Aes encrypt byte array
- * @param key the encryption key
- * @param iv the IV (CFB,CBC,CTR need IV)
- * @param algorithm the algorithm parameters
- */
 fun ByteArray.aesEncrypt(
     key: ByteArray,
     iv: ByteArray = ByteArray(16),
@@ -39,12 +28,6 @@ fun ByteArray.aesEncrypt(
     return cipher.doFinal(this)
 }
 
-/**
- * Aes decrypt byte array
- * @param key the decryption key
- * @param iv the IV (CFB,CBC,CTR need IV)
- * @param algorithm the algorithm parameters
- */
 fun ByteArray.aesDecrypt(
     key: ByteArray,
     iv: ByteArray = ByteArray(16),
@@ -54,13 +37,6 @@ fun ByteArray.aesDecrypt(
     return cipher.doFinal(this)
 }
 
-/**
- * Aes encrypt file
- * @param key the encryption key
- * @param iv the IV (CFB,CBC,CTR need IV)
- * @param destFilePath dest encrypted file
- * @param algorithm the algorithm parameters
- */
 fun File.aesEncrypt(
     key: ByteArray,
     iv: ByteArray,
@@ -70,13 +46,6 @@ fun File.aesEncrypt(
     return handleFile(Cipher.ENCRYPT_MODE, key, iv, algorithm, path, destFilePath)
 }
 
-/**
- * Aes decrypt file
- * @param key the decryption key
- * @param iv the IV (CFB,CBC,CTR need IV)
- * @param destFilePath dest decrypted file
- * @param algorithm the algorithm parameters
- */
 fun File.aesDecrypt(
     key: ByteArray,
     iv: ByteArray,
@@ -86,9 +55,6 @@ fun File.aesDecrypt(
     return handleFile(Cipher.DECRYPT_MODE, key, iv, algorithm, path, destFilePath)
 }
 
-/**
- * Generate aes key byte array , default size is 128
- */
 fun initAESKey(size: Int = 128): ByteArray {
     val kg = KeyGenerator.getInstance(KEY_ALGORITHM)
     kg.init(size)
@@ -97,13 +63,6 @@ fun initAESKey(size: Int = 128): ByteArray {
 
 private fun toKey(key: ByteArray): Key = SecretKeySpec(key, KEY_ALGORITHM)
 
-/**
- * Init Cipher
- * @param mode the operation mode of this cipher
- * @param key the encrypt/decrypt key
- * @param iv the IV
- * @param algorithm the algorithm parameters
- */
 fun initCipher(
     mode: Int,
     key: ByteArray,

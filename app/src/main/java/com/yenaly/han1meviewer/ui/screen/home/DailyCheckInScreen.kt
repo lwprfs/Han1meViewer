@@ -44,18 +44,6 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import kotlin.time.Duration.Companion.milliseconds
 
-/**
- * 打卡日历页面 Screen 层。
- *
- * 作为 V-S-C 架构的胶水层：订阅 ViewModel 状态生成 [DailyCheckInUiState]，
- * 将 [DailyCheckInEvent] 映射到 ViewModel 操作和导航。
- *
- * @param activity 宿主 Activity，用于全屏/方向控制
- * @param onBack 返回回调
- * @param onAddWidget 添加桌面小组件回调
- * @param onNavigateToVideo 跳转到视频详情回调
- * @param viewModel 打卡日历 ViewModel
- */
 @Composable
 fun DailyCheckInScreen(
     activity: Activity,

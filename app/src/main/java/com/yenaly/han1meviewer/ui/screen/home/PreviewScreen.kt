@@ -40,20 +40,6 @@ import com.yenaly.han1meviewer.ui.screen.home.preview.shiftMonthCode
 import com.yenaly.han1meviewer.ui.screen.home.preview.toNormalDateLabel
 import kotlinx.coroutines.launch
 
-/**
- * 预览页面 Screen 层。
- *
- * 持有 [PreviewViewModel] 和 [CommentViewModel]，负责状态收集、图片预加载、
- * 评论预取器生命周期、月份翻页编排和图片查看器 UI 管理。
- * 渲染委托给 [com.yenaly.han1meviewer.ui.screen.home.preview.PreviewContent]。
- *
- * @param onBack 返回回调
- * @param onNavigateToGetchuPreview 打开 Getchu 新番预告页回调
- * @param onNavigateToPreviewComment 打开预览评论页回调
- * @param onNavigateToVideo 打开视频详情回调
- * @param previewViewModel 预览 ViewModel
- * @param commentViewModel 评论 ViewModel（需 Activity scope）
- */
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun PreviewScreen(

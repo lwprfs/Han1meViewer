@@ -1,10 +1,5 @@
 package com.yenaly.han1meviewer.logic.model
 
-/**
- * @project Hanime1
- * @author Yenaly Liew
- * @time 2022/06/24 024 15:05
- */
 data class HanimePreview(
     val headerPicUrl: String?,
     val hasPrevious: Boolean = false,

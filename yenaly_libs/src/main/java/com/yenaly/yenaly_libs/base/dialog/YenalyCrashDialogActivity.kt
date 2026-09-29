@@ -10,12 +10,6 @@ import com.yenaly.yenaly_libs.utils.copyToClipboard
 import com.yenaly.yenaly_libs.utils.intentExtra
 import com.yenaly.yenaly_libs.utils.sp
 
-/**
- * @ProjectName : YenalyModule
- * @Author : Yenaly Liew
- * @Time : 2022/04/21 021 22:23
- * @Description : Description...
- */
 class YenalyCrashDialogActivity : FrameActivity() {
 
     private val yenalyThrowable by intentExtra("yenaly_throwable", "null")

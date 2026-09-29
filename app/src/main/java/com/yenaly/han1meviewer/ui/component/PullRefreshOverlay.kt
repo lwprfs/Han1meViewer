@@ -39,7 +39,7 @@ fun BoxScope.PullRefreshOverlay(
             PullToRefreshDefaults.LoadingIndicator(
                 state = state,
                 isRefreshing = isRefreshing,
-//                containerColor = containerColor,
+
             )
         }
     }

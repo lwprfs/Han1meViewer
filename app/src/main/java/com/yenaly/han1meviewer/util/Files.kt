@@ -53,9 +53,6 @@ fun checkDownloadedHanimeFile(startsWith: String): Boolean {
     } == true
 }
 
-/**
- * Must be Activity Context!
- */
 fun Context.openDownloadedHanimeVideoLocally(
     uri: String, onFileNotFound: (() -> Unit)? = null,
 ) {
@@ -104,9 +101,6 @@ fun Context.openDownloadedHanimeVideoLocally(
     }
 }
 
-/**
- * copyTo with progress
- */
 suspend fun InputStream.copyTo(
     out: OutputStream,
     contentLength: Long,

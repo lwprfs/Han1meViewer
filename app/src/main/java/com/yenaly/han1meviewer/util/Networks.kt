@@ -21,7 +21,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 suspend fun <R> ListenableFuture<R>.await(): R {
-    // Fast path
+
     if (isDone) {
         try {
             return get()
@@ -53,9 +53,6 @@ suspend fun <R> ListenableFuture<R>.await(): R {
     }
 }
 
-/**
- * Suspend extension that allows to suspend [Call] inside coroutine.
- */
 suspend fun Call.await(): Response {
     return suspendCancellableCoroutine { continuation ->
         enqueue(object : Callback {
@@ -72,11 +69,6 @@ suspend fun Call.await(): Response {
     }
 }
 
-/**
- * Run suspend catching
- *
- * @param block suspend block
- */
 inline fun <R> runSuspendCatching(block: () -> R): Result<R> {
     return try {
         Result.success(block())
@@ -94,14 +86,6 @@ private data object DirectExecutor : Executor {
     }
 }
 
-/**
- * 将首页加载异常映射为对应的错误提示字符串资源。
- *
- * 优先根据异常类型判断常见网络问题，必要时回退到异常信息中的关键字匹配。
- *
- * @receiver 首页加载过程中抛出的异常
- * @return 错误提示的字符串资源 ID
- */
 fun Throwable.toNetworkErrorMessageRes(): Int {
     val rawMessage = message.orEmpty().lowercase()
     return when {

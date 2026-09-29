@@ -43,26 +43,6 @@ import com.yenaly.han1meviewer.ui.screen.home.videogrid.canLoadMore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 
-/**
- * 通用视频网格页面 Screen 层。
- *
- * 为"稍后观看"、"收藏视频"等列表页面提供统一的 Scaffold + 下拉刷新 + 删除确认逻辑，
- * 渲染委托给 [VideoGridContent]。
- *
- * @param items 视频列表
- * @param state 加载状态
- * @param deleteStateFlow 删除操作结果流
- * @param loadedPageCount 已加载页数
- * @param isLoadingMore 是否正在加载更多
- * @param titleRes 标题资源 ID
- * @param helpMessageRes 帮助信息资源 ID
- * @param deleteTitleRes 删除确认标题资源 ID
- * @param onBack 返回回调
- * @param onOpenVideo 打开视频详情回调
- * @param onDeleteItem 删除视频回调
- * @param onRefresh 下拉刷新回调
- * @param onLoadMore 加载更多回调
- */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun VideoGridScreen(

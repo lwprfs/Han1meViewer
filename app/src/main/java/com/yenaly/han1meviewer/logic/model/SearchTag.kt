@@ -1,10 +1,5 @@
 package com.yenaly.han1meviewer.logic.model
 
-/**
- * @project Hanime1
- * @author Yenaly Liew
- * @time 2022/06/09 009 21:27
- */
 data class SearchTag(
     val genres: List<String>,
     val tags: Map<String, List<String>>,

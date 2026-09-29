@@ -10,12 +10,6 @@ import com.google.android.material.color.MaterialColors
 import com.google.android.material.transition.MaterialSharedAxis
 import com.yenaly.yenaly_libs.utils.unsafeLazy
 
-/**
- * @ProjectName : YenalyModule
- * @Author : Yenaly Liew
- * @Time : 2022/04/17 017 19:26
- * @Description : Description...
- */
 abstract class YenalySettingsFragment(@param:XmlRes private val xmlRes: Int,
                                       private val sharedPrefsName: String? = null) :
     PreferenceFragmentCompat() {
@@ -44,29 +38,14 @@ abstract class YenalySettingsFragment(@param:XmlRes private val xmlRes: Int,
         view.setBackgroundColor(backgroundColor)
     }
 
-    /**
-     * 用于绑定数据观察器 (optional)
-     */
     open fun bindDataObservers() = Unit
 
-    /**
-     * 在此处使用[findPreference]初始化设置中的变量
-     */
     open fun initPreferencesVariable() = Unit
 
-    /**
-     * 界面与xml设置列表绑定后从此处进行view操作
-     */
     abstract fun onPreferencesCreated(savedInstanceState: Bundle?)
 
-    /**
-     * 快速獲得隸屬於某[key]的Preference，可以爲null
-     */
     fun <T : Preference> preference(key: String) = unsafeLazy { findPreference<T>(key) }
 
-    /**
-     * 快速獲得隸屬於某[key]的Preference，不可以爲null
-     */
     fun <T : Preference> safePreference(key: String) = unsafeLazy {
         checkNotNull(findPreference<T>(key)) {
             "The preference belonged to the key \"$key\" is null."

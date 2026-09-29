@@ -43,12 +43,6 @@ import com.yenaly.han1meviewer.ui.theme.SpacingNormal
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
-/**
- * 已上传视频 Tab 页面。
- *
- * @param uiState 页面 UI 状态
- * @param onEvent 用户事件回调
- */
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun CreatorUploadedPage(
@@ -188,12 +182,6 @@ fun CreatorUploadedPage(
     }
 }
 
-/**
- * 审核中/上传中视频 Tab 页面。
- *
- * @param uiState 页面 UI 状态
- * @param onEvent 用户事件回调
- */
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun CreatorUploadingPage(
