@@ -251,15 +251,6 @@ object HentaiMamaParser {
         }
     }
 
-    /**
-     * Parses the episode list from the series page and returns them in
-     * **ascending order by episode number** (Episode 1 first, Episode N last).
-     *
-     * The HentaiMama site renders episodes newest-first in the DOM, so we
-     * sort by the parsed episode number to guarantee a stable order regardless
-     * of DOM ordering quirks. Episodes whose number cannot be parsed fall back
-     * to their DOM position, and remain at the end of the list.
-     */
     private fun episodeListFromDocument(
         document: Document,
         baseUrl: String,
@@ -301,8 +292,7 @@ object HentaiMamaParser {
         return indexed
             .sortedWith(
                 compareBy<IndexedEpisode> {
-                    // Episodes with a valid number come first, sorted ascending.
-                    // Episodes without a number fall to the end, ordered by DOM position.
+
                     it.episode.episodeNumber ?: Float.MAX_VALUE
                 }.thenBy { it.index }
             )
