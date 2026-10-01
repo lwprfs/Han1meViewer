@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.HentaiMama.ui.home
 import com.yenaly.han1meviewer.HentaiMama.data.model.HentaiMamaHomePage
+import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetworkRepo
 import com.yenaly.han1meviewer.HentaiMama.data.model.HentaiMamaVideoInfo
 import android.app.Application
