@@ -1,5 +1,5 @@
-package com.yenaly.han1meviewer.HentaiMama
-
+package com.yenaly.han1meviewer.HentaiMama.data.remote
+import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaConstants
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.logic.network.interceptor.UrlLoggingInterceptor
 import com.yenaly.han1meviewer.logic.network.interceptor.UserAgentInterceptor

@@ -1,5 +1,6 @@
-package com.yenaly.han1meviewer.HentaiMama
-
+package com.yenaly.han1meviewer.HentaiMama.ui.components
+import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaOptions
+import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaOrder
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column

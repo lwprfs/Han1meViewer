@@ -1,5 +1,4 @@
-package com.yenaly.han1meviewer.HentaiMama
-
+package com.yenaly.han1meviewer.HentaiMama.ui.history
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope

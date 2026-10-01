@@ -1,5 +1,4 @@
-package com.yenaly.han1meviewer.HentaiMama
-
+package com.yenaly.han1meviewer.HentaiMama.ui.home
 import android.content.Context
 import android.util.Log
 import androidx.core.content.edit

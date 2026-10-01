@@ -1,5 +1,5 @@
-package com.yenaly.han1meviewer.HentaiMama
-
+package com.yenaly.han1meviewer.HentaiMama.ui.home
+import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box

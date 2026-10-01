@@ -14,7 +14,7 @@ import com.google.firebase.crashlytics.setCustomKeys
 import com.google.firebase.database.database
 import com.google.firebase.remoteconfig.remoteConfig
 import com.google.firebase.remoteconfig.remoteConfigSettings
-import com.yenaly.han1meviewer.HentaiMama.HentaiMamaNetwork
+import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
 import com.yenaly.han1meviewer.HentaiMama.data.local.HentaiMamaHistoryRepo
 import com.yenaly.han1meviewer.logic.network.HProxySelector
 import com.yenaly.han1meviewer.ui.viewmodel.AppViewModel

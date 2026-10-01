@@ -1,5 +1,10 @@
-package com.yenaly.han1meviewer.HentaiMama
-
+package com.yenaly.han1meviewer.HentaiMama.data.parser
+import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaConstants
+import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
+import com.yenaly.han1meviewer.HentaiMama.data.model.HentaiMamaSource
+import com.yenaly.han1meviewer.HentaiMama.data.model.HentaiMamaVideoLink
+import com.yenaly.han1meviewer.HentaiMama.data.model.HentaiMamaVideoInfo
+import com.yenaly.han1meviewer.HentaiMama.data.model.HentaiMamaEpisode
 import android.util.Log
 import com.yenaly.han1meviewer.EMPTY_STRING
 import com.yenaly.han1meviewer.logic.model.HanimeInfo

@@ -1,5 +1,11 @@
-package com.yenaly.han1meviewer.HentaiMama
-
+package com.yenaly.han1meviewer.HentaiMama.ui.navigation
+import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
+import com.yenaly.han1meviewer.HentaiMama.ui.home.HentaiMamaHomeScreen
+import com.yenaly.han1meviewer.HentaiMama.ui.search.HentaiMamaSearchScreen
+import com.yenaly.han1meviewer.HentaiMama.ui.video.HentaiMamaVideoScreen
+import com.yenaly.han1meviewer.HentaiMama.ui.history.HentaiMamaHistoryScreen
+import com.yenaly.han1meviewer.HentaiMama.ui.home.HentaiMamaSettingsHubScreen
+import com.yenaly.han1meviewer.HentaiMama.ui.home.HentaiMamaHomeSettingsScreen
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavHostController

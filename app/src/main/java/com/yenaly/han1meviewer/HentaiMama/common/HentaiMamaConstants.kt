@@ -1,5 +1,4 @@
-package com.yenaly.han1meviewer.HentaiMama
-
+package com.yenaly.han1meviewer.HentaiMama.common
 object HentaiMamaConstants {
     const val BASE_URL = "https://hentaimama.io"
     const val API_URL = "$BASE_URL/wp-admin/admin-ajax.php"

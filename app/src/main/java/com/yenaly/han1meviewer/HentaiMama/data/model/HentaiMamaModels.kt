@@ -1,5 +1,4 @@
-package com.yenaly.han1meviewer.HentaiMama
-
+package com.yenaly.han1meviewer.HentaiMama.data.model
 import com.yenaly.han1meviewer.logic.model.HanimeInfo
 import kotlinx.serialization.Serializable
 

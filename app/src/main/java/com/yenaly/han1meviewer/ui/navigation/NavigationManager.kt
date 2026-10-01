@@ -4,9 +4,9 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import androidx.navigation.NavHostController
-import com.yenaly.han1meviewer.HentaiMama.HentaiMamaHomeRoute
-import com.yenaly.han1meviewer.HentaiMama.HentaiMamaSearchRoute
-import com.yenaly.han1meviewer.HentaiMama.HentaiMamaVideoRoute
+import com.yenaly.han1meviewer.HentaiMama.ui.navigation.HentaiMamaHomeRoute
+import com.yenaly.han1meviewer.HentaiMama.ui.navigation.HentaiMamaSearchRoute
+import com.yenaly.han1meviewer.HentaiMama.ui.navigation.HentaiMamaVideoRoute
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.ui.navigation.main.HomeRoute

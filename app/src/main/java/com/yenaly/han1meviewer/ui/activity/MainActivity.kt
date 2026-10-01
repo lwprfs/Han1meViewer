@@ -98,9 +98,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import java.util.Locale
 import com.yenaly.han1meviewer.MissAV.common.MissAvConstants
 import com.yenaly.han1meviewer.MissAV.data.remote.MissAvNetwork
-import com.yenaly.han1meviewer.HentaiMama.HentaiMamaConstants
-import com.yenaly.han1meviewer.HentaiMama.HentaiMamaNetwork
-
+import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaConstants
+import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
 class MainActivity : FrameActivity(), PermissionRequester {
 
     val viewModel: HomePageViewModel by viewModels()

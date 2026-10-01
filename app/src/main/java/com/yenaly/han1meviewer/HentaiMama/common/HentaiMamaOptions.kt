@@ -1,5 +1,4 @@
-package com.yenaly.han1meviewer.HentaiMama
-
+package com.yenaly.han1meviewer.HentaiMama.common
 import com.yenaly.han1meviewer.util.loadAssetAs
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
