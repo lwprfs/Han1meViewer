@@ -56,6 +56,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -68,6 +69,8 @@ import com.yenaly.han1meviewer.ui.component.content.LoadingContent
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -75,8 +78,13 @@ fun HentaiMamaSearchScreen(
     initialQuery: String?,
     onBack: () -> Unit,
     onNavigateToVideo: (String) -> Unit,
+    initialCategoryKey: String? = null,
+    initialGenre: String? = null,
+    initialOrder: String? = null,
     viewModel: HentaiMamaViewModel = viewModel(),
 ) {
+    val context = LocalContext.current
+
     var searchQuery by rememberSaveable { mutableStateOf(initialQuery ?: "") }
     var currentPage by remember { mutableIntStateOf(1) }
     var allVideos by remember { mutableStateOf<List<HanimeInfo>>(emptyList()) }
@@ -120,10 +128,42 @@ fun HentaiMamaSearchScreen(
         }
     }
 
-    LaunchedEffect(initialQuery) {
-        if (!initialQuery.isNullOrEmpty() && !hasSearched) {
+    LaunchedEffect(initialQuery, initialCategoryKey, initialGenre, initialOrder) {
+        if (hasSearched) return@LaunchedEffect
+
+        if (!initialQuery.isNullOrEmpty()) {
             searchQuery = initialQuery
             doSearch()
+            return@LaunchedEffect
+        }
+
+        if (!initialCategoryKey.isNullOrBlank()) {
+            val category = withContext(Dispatchers.IO) {
+                HentaiMamaHomeCategoryRepo
+                    .load(context)
+                    .firstOrNull { it.key == initialCategoryKey }
+            }
+
+            if (category != null) {
+
+                val inferredGenre = extractGenreFromPath(category.genrePath)
+                val inferredOrder = category.sort
+
+                viewModel.setGenre(inferredGenre)
+                viewModel.setOrder(inferredOrder)
+                viewModel.setProducer(null)
+                viewModel.setYear(null)
+
+                doSearch()
+                return@LaunchedEffect
+            }
+        }
+
+        if (!initialGenre.isNullOrBlank() || !initialOrder.isNullOrBlank()) {
+            viewModel.setGenre(initialGenre)
+            viewModel.setOrder(initialOrder)
+            doSearch()
+            return@LaunchedEffect
         }
     }
 
@@ -377,6 +417,15 @@ fun HentaiMamaSearchScreen(
             }
         }
     }
+}
+
+private fun extractGenreFromPath(path: String): String? {
+    val match = Regex("""genres_filter\[\]=([^&]+)""").find(path) ?: return null
+    val raw = match.groupValues[1]
+
+    return runCatching {
+        java.net.URLDecoder.decode(raw.replace("+", " "), "UTF-8")
+    }.getOrElse { raw }
 }
 
 @Composable

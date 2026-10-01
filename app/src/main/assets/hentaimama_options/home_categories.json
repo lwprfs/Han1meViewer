@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "categories": [
+    {
+      "key": "recent",
+      "title": "Recent Update",
+      "genrePath": "hentai-series/?filter=recent",
+      "sort": null,
+      "hidden": false
+    },
+    {
+      "key": "popular_weekly",
+      "title": "Weekly Views",
+      "genrePath": "hentai-series/?filter=weekly",
+      "sort": null,
+      "hidden": false
+    },
+    {
+      "key": "popular_monthly",
+      "title": "Monthly Views",
+      "genrePath": "hentai-series/?filter=monthly",
+      "sort": null,
+      "hidden": false
+    },
+    {
+      "key": "popular_alltime",
+      "title": "Alltime Views",
+      "genrePath": "hentai-series/?filter=alltime",
+      "sort": null,
+      "hidden": false
+    },
+    {
+      "key": "genre_3d",
+      "title": "3D",
+      "genrePath": "advance-search/?genres_filter[]=3D&submit=Submit",
+      "sort": null,
+      "hidden": false
+    },
+    {
+      "key": "genre_uncensored",
+      "title": "Uncensored",
+      "genrePath": "advance-search/?genres_filter[]=Uncensored&submit=Submit",
+      "sort": null,
+      "hidden": false
+    },
+    {
+      "key": "genre_ntr",
+      "title": "NTR",
+      "genrePath": "advance-search/?genres_filter[]=NTR&submit=Submit",
+      "sort": null,
+      "hidden": false
+    },
+    {
+      "key": "genre_large_breasts",
+      "title": "Large Breasts",
+      "genrePath": "advance-search/?genres_filter[]=Large+Breasts&submit=Submit",
+      "sort": null,
+      "hidden": false
+    },
+    {
+      "key": "genre_vanilla",
+      "title": "Vanilla",
+      "genrePath": "advance-search/?genres_filter[]=Vanilla&submit=Submit",
+      "sort": null,
+      "hidden": false
+    },
+    {
+      "key": "genre_school_girls",
+      "title": "School Girls",
+      "genrePath": "advance-search/?genres_filter[]=School+Girls&submit=Submit",
+      "sort": null,
+      "hidden": true
+    },
+    {
+      "key": "genre_yuri",
+      "title": "Yuri",
+      "genrePath": "advance-search/?genres_filter[]=Yuri&submit=Submit",
+      "sort": null,
+      "hidden": true
+    },
+    {
+      "key": "genre_harem",
+      "title": "Harem",
+      "genrePath": "advance-search/?genres_filter[]=Harem&submit=Submit",
+      "sort": null,
+      "hidden": true
+    }
+  ]
+}

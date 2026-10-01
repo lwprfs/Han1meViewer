@@ -2,6 +2,7 @@ package com.yenaly.han1meviewer.HentaiMama
 
 import android.util.Log
 import com.yenaly.han1meviewer.EMPTY_STRING
+import com.yenaly.han1meviewer.logic.model.HanimeInfo
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
@@ -48,6 +49,42 @@ object HentaiMamaNetworkRepo {
             emit(WebsiteState.Error(e))
         }
     }.flowOn(Dispatchers.IO)
+
+    suspend fun getCategoryVideos(category: HentaiMamaHomeCategory): List<HanimeInfo> {
+        val baseUrl = HentaiMamaNetwork.baseUrl
+
+        val relative = category.genrePath.trimStart('/')
+        val fullUrl = if (relative.startsWith("http")) relative else "$baseUrl/$relative"
+
+        val finalUrl = if (!category.sort.isNullOrBlank() && !fullUrl.contains("filter=", ignoreCase = true)) {
+            val sep = if ('?' in fullUrl) "&" else "?"
+            "$fullUrl${sep}filter=${category.sort}"
+        } else {
+            fullUrl
+        }
+
+        Log.d(TAG, "getCategoryVideos: key=${category.key} url=$finalUrl")
+
+        return try {
+            val response = HentaiMamaNetwork.service.getVideoDetail(finalUrl)
+            if (!response.isSuccessful) {
+                Log.w(TAG, "getCategoryVideos HTTP ${response.code()} for ${category.key}")
+                return emptyList()
+            }
+
+            val body = response.body()?.string().orEmpty()
+            if (body.isBlank()) return emptyList()
+
+            val state = HentaiMamaParser.parseSearchResults(body, isFilterSearch = true)
+            when (state) {
+                is PageLoadingState.Success -> state.info
+                else -> emptyList()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "getCategoryVideos failed for '${category.key}'", e)
+            emptyList()
+        }
+    }
 
     fun getLatestVideos(page: Int) = flow {
         emit(PageLoadingState.Loading)

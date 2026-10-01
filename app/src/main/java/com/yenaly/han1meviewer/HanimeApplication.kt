@@ -15,6 +15,7 @@ import com.google.firebase.database.database
 import com.google.firebase.remoteconfig.remoteConfig
 import com.google.firebase.remoteconfig.remoteConfigSettings
 import com.yenaly.han1meviewer.HentaiMama.HentaiMamaNetwork
+import com.yenaly.han1meviewer.HentaiMama.data.local.HentaiMamaHistoryRepo
 import com.yenaly.han1meviewer.logic.network.HProxySelector
 import com.yenaly.han1meviewer.ui.viewmodel.AppViewModel
 import com.yenaly.han1meviewer.ui.activity.MainActivity
@@ -110,6 +111,13 @@ class HanimeApplication : YenalyApplication() {
             Log.d(TAG, "HentaiMamaNetwork initialized successfully")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize HentaiMamaNetwork", e)
+        }
+
+        try {
+            HentaiMamaHistoryRepo.init(applicationContext)
+            Log.d(TAG, "HentaiMamaHistoryRepo initialized successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to initialize HentaiMamaHistoryRepo", e)
         }
     }
 
