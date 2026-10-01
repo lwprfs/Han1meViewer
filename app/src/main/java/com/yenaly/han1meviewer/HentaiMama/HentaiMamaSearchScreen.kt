@@ -1,7 +1,18 @@
 package com.yenaly.han1meviewer.HentaiMama
 
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -14,8 +25,31 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.InputChip
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -28,7 +62,8 @@ import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.ui.component.VideoCardItem
 import com.yenaly.han1meviewer.ui.component.content.ErrorContent
 import com.yenaly.han1meviewer.ui.component.content.LoadingContent
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -51,7 +86,13 @@ fun HentaiMamaSearchScreen(
     val searchState by viewModel.searchState.collectAsStateWithLifecycle()
     val selectedGenre by viewModel.selectedGenre.collectAsStateWithLifecycle()
     val selectedProducer by viewModel.selectedProducer.collectAsStateWithLifecycle()
+    val selectedYear by viewModel.selectedYear.collectAsStateWithLifecycle()
     val selectedOrder by viewModel.selectedOrder.collectAsStateWithLifecycle()
+
+    val genres = remember { HentaiMamaOptions.genres }
+    val producers = remember { HentaiMamaOptions.producers }
+    val years = remember { HentaiMamaOptions.years }
+    val orders = remember { HentaiMamaOptions.orders }
 
     val gridState = rememberLazyGridState()
     val coroutineScope = rememberCoroutineScope()
@@ -86,7 +127,7 @@ fun HentaiMamaSearchScreen(
     }
 
     LaunchedEffect(initialQuery) {
-        if (initialQuery != null && initialQuery.isNotEmpty() && !hasSearched) {
+        if (!initialQuery.isNullOrEmpty() && !hasSearched) {
             searchQuery = initialQuery
             doSearch()
         }
@@ -97,19 +138,11 @@ fun HentaiMamaSearchScreen(
         when (val state = searchState) {
             is PageLoadingState.Success -> {
                 val newVideos = state.info
-                if (currentPage == 1) {
-                    allVideos = newVideos
-                } else {
-                    allVideos = allVideos + newVideos
-                }
+                allVideos = if (currentPage == 1) newVideos else allVideos + newVideos
                 isLoadingMore = false
-                if (newVideos.isEmpty()) {
-                    hasMorePages = false
-                }
+                if (newVideos.isEmpty()) hasMorePages = false
             }
-            is PageLoadingState.Error -> {
-                isLoadingMore = false
-            }
+            is PageLoadingState.Error -> isLoadingMore = false
             is PageLoadingState.NoMoreData -> {
                 isLoadingMore = false
                 hasMorePages = false
@@ -119,17 +152,16 @@ fun HentaiMamaSearchScreen(
     }
 
     LaunchedEffect(gridState) {
-        coroutineScope.launch {
-            while (true) {
-                delay(200)
-                if (isLoadingMore || !hasMorePages || !hasSearched || allVideos.isEmpty()) continue
-
-                val layoutInfo = gridState.layoutInfo
-                val totalItems = layoutInfo.totalItemsCount
-                if (totalItems == 0) continue
-
-                val lastVisible = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: continue
-                if (lastVisible >= totalItems - 4 && totalItems > 4) {
+        snapshotFlow {
+            val layoutInfo = gridState.layoutInfo
+            val total = layoutInfo.totalItemsCount
+            val lastVisible = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
+            total to lastVisible
+        }
+            .distinctUntilChanged()
+            .filter { (total, _) -> total > 4 && hasMorePages && hasSearched && !isLoadingMore }
+            .collect { (total, lastVisible) ->
+                if (lastVisible >= total - 4) {
                     isLoadingMore = true
                     currentPage++
                     if (searchQuery.isNotBlank()) {
@@ -139,7 +171,6 @@ fun HentaiMamaSearchScreen(
                     }
                 }
             }
-        }
     }
 
     Scaffold(
@@ -152,17 +183,15 @@ fun HentaiMamaSearchScreen(
                     }
                 },
                 actions = {
-
-                    IconButton(
-                        onClick = { showFilters = !showFilters }
-                    ) {
+                    IconButton(onClick = { showFilters = !showFilters }) {
                         Icon(
                             Icons.Default.FilterList,
                             contentDescription = "Filters",
-                            tint = if (showFilters || selectedGenre != null || selectedProducer != null || selectedOrder != null)
-                                MaterialTheme.colorScheme.primary
-                            else
-                                MaterialTheme.colorScheme.onSurface
+                            tint = if (showFilters || selectedGenre != null ||
+                                selectedProducer != null || selectedOrder != null ||
+                                selectedYear != null
+                            ) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
@@ -170,7 +199,6 @@ fun HentaiMamaSearchScreen(
         }
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues)) {
-
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -181,15 +209,11 @@ fun HentaiMamaSearchScreen(
                 label = { Text("Search videos...") },
                 trailingIcon = {
                     Row {
-
                         if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = {
-                                searchQuery = ""
-                            }) {
+                            IconButton(onClick = { searchQuery = "" }) {
                                 Icon(Icons.Default.Clear, contentDescription = "Clear")
                             }
                         }
-
                         IconButton(onClick = { doSearch() }) {
                             Icon(Icons.Default.Search, contentDescription = "Search")
                         }
@@ -214,98 +238,91 @@ fun HentaiMamaSearchScreen(
                             .padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-
-                        Column {
-                            Text("Order By", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .horizontalScroll(rememberScrollState()),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
+                        FilterSection(title = "Order By") {
+                            FilterChip(
+                                selected = selectedOrder == null,
+                                onClick = { viewModel.setOrder(null); applyFilters() },
+                                label = { Text("Default") }
+                            )
+                            orders.forEach { order ->
                                 FilterChip(
-                                    selected = selectedOrder == null,
+                                    selected = selectedOrder == order.value,
                                     onClick = {
-                                        viewModel.setOrder(null)
+                                        viewModel.setOrder(
+                                            if (selectedOrder == order.value) null else order.value
+                                        )
                                         applyFilters()
                                     },
-                                    label = { Text("Default") }
+                                    label = { Text(order.name) }
                                 )
-                                getOrders().forEach { order ->
-                                    FilterChip(
-                                        selected = selectedOrder == order.id,
-                                        onClick = {
-                                            viewModel.setOrder(if (selectedOrder == order.id) null else order.id)
-                                            applyFilters()
-                                        },
-                                        label = { Text(order.name) }
-                                    )
-                                }
                             }
                         }
 
                         HorizontalDivider()
 
-                        Column {
-                            Text("Genre", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            FlowRow(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
+                        FilterSection(title = "Genre") {
+                            FilterChip(
+                                selected = selectedGenre == null,
+                                onClick = { viewModel.setGenre(null); applyFilters() },
+                                label = { Text("All") }
+                            )
+                            genres.forEach { genre ->
                                 FilterChip(
-                                    selected = selectedGenre == null,
+                                    selected = selectedGenre == genre,
                                     onClick = {
-                                        viewModel.setGenre(null)
+                                        viewModel.setGenre(if (selectedGenre == genre) null else genre)
                                         applyFilters()
                                     },
-                                    label = { Text("All") }
+                                    label = { Text(genre) }
                                 )
-                                getGenres().forEach { genre ->
-                                    FilterChip(
-                                        selected = selectedGenre == genre,
-                                        onClick = {
-                                            viewModel.setGenre(if (selectedGenre == genre) null else genre)
-                                            applyFilters()
-                                        },
-                                        label = { Text(genre) }
-                                    )
-                                }
                             }
                         }
 
                         HorizontalDivider()
 
-                        Column {
-                            Text("Producer", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            FlowRow(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
+                        FilterSection(title = "Year") {
+                            FilterChip(
+                                selected = selectedYear == null,
+                                onClick = { viewModel.setYear(null); applyFilters() },
+                                label = { Text("All") }
+                            )
+                            years.forEach { year ->
                                 FilterChip(
-                                    selected = selectedProducer == null,
+                                    selected = selectedYear == year,
                                     onClick = {
-                                        viewModel.setProducer(null)
+                                        viewModel.setYear(if (selectedYear == year) null else year)
                                         applyFilters()
                                     },
-                                    label = { Text("All") }
+                                    label = { Text(year) }
                                 )
-                                getProducers().forEach { producer ->
-                                    FilterChip(
-                                        selected = selectedProducer == producer,
-                                        onClick = {
-                                            viewModel.setProducer(if (selectedProducer == producer) null else producer)
-                                            applyFilters()
-                                        },
-                                        label = { Text(producer.take(15)) }
-                                    )
-                                }
                             }
                         }
 
-                        if (selectedGenre != null || selectedProducer != null || selectedOrder != null) {
+                        HorizontalDivider()
+
+                        FilterSection(title = "Producer") {
+                            FilterChip(
+                                selected = selectedProducer == null,
+                                onClick = { viewModel.setProducer(null); applyFilters() },
+                                label = { Text("All") }
+                            )
+                            producers.forEach { producer ->
+                                FilterChip(
+                                    selected = selectedProducer == producer,
+                                    onClick = {
+                                        viewModel.setProducer(
+                                            if (selectedProducer == producer) null else producer
+                                        )
+                                        applyFilters()
+                                    },
+                                    label = { Text(producer.take(20)) }
+                                )
+                            }
+                        }
+
+                        if (selectedGenre != null || selectedProducer != null ||
+                            selectedOrder != null || selectedYear != null
+                        ) {
                             TextButton(
                                 onClick = {
                                     viewModel.clearFilters()
@@ -318,8 +335,9 @@ fun HentaiMamaSearchScreen(
                         }
                     }
                 }
-            } else if (selectedGenre != null || selectedProducer != null || selectedOrder != null) {
-
+            } else if (selectedGenre != null || selectedProducer != null ||
+                selectedOrder != null || selectedYear != null
+            ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -327,45 +345,26 @@ fun HentaiMamaSearchScreen(
                         .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    if (selectedOrder != null) {
-                        val orderName = getOrders().find { it.id == selectedOrder }?.name ?: selectedOrder
-                        InputChip(
-                            selected = true,
-                            onClick = {
-                                viewModel.setOrder(null)
-                                applyFilters()
-                            },
-                            label = { Text("Order: $orderName") },
-                            trailingIcon = {
-                                Icon(Icons.Default.Clear, contentDescription = "Remove", modifier = Modifier.size(16.dp))
-                            }
-                        )
+                    selectedOrder?.let { key ->
+                        val label = orders.find { it.value == key }?.name ?: key
+                        ActiveFilterChip(label = "Order: $label") {
+                            viewModel.setOrder(null); applyFilters()
+                        }
                     }
-                    if (selectedGenre != null) {
-                        InputChip(
-                            selected = true,
-                            onClick = {
-                                viewModel.setGenre(null)
-                                applyFilters()
-                            },
-                            label = { Text("Genre: $selectedGenre") },
-                            trailingIcon = {
-                                Icon(Icons.Default.Clear, contentDescription = "Remove", modifier = Modifier.size(16.dp))
-                            }
-                        )
+                    selectedGenre?.let { key ->
+                        ActiveFilterChip(label = "Genre: $key") {
+                            viewModel.setGenre(null); applyFilters()
+                        }
                     }
-                    if (selectedProducer != null) {
-                        InputChip(
-                            selected = true,
-                            onClick = {
-                                viewModel.setProducer(null)
-                                applyFilters()
-                            },
-                            label = { Text("Producer: ${selectedProducer?.take(15)}") },
-                            trailingIcon = {
-                                Icon(Icons.Default.Clear, contentDescription = "Remove", modifier = Modifier.size(16.dp))
-                            }
-                        )
+                    selectedYear?.let { key ->
+                        ActiveFilterChip(label = "Year: $key") {
+                            viewModel.setYear(null); applyFilters()
+                        }
+                    }
+                    selectedProducer?.let { key ->
+                        ActiveFilterChip(label = "Producer: ${key.take(15)}") {
+                            viewModel.setProducer(null); applyFilters()
+                        }
                     }
                 }
             }
@@ -379,7 +378,7 @@ fun HentaiMamaSearchScreen(
                 }
                 is PageLoadingState.Success, is PageLoadingState.NoMoreData -> {
                     if (allVideos.isEmpty() && hasSearched) {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Text("No results found", style = MaterialTheme.typography.bodyLarge)
                         }
                     } else {
@@ -406,6 +405,43 @@ fun HentaiMamaSearchScreen(
             }
         }
     }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun FilterSection(
+    title: String,
+    content: @Composable androidx.compose.foundation.layout.FlowRowScope.() -> Unit
+) {
+    Column {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            content = content
+        )
+    }
+}
+
+@Composable
+private fun ActiveFilterChip(label: String, onRemove: () -> Unit) {
+    InputChip(
+        selected = true,
+        onClick = onRemove,
+        label = { Text(label) },
+        trailingIcon = {
+            Icon(
+                Icons.Default.Clear,
+                contentDescription = "Remove",
+                modifier = Modifier.size(16.dp)
+            )
+        }
+    )
 }
 
 @Composable
@@ -437,69 +473,12 @@ private fun DisplayResults(
                         .padding(16.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp
+                    )
                 }
             }
         }
     }
 }
-
-private fun getGenres() = listOf(
-    "3D", "Action", "Adventure", "Ahegao", "Anal", "Animal Ears", "Beastiality",
-    "Blackmail", "Blowjob", "Bondage", "Brainwashed", "Bukakke", "Cat Girl",
-    "Comedy", "Cosplay", "Creampie", "Cross-dressing", "Dark Skin", "DeepThroat",
-    "Demons", "Doctor", "Double Penatration", "Drama", "Dubbed", "Ecchi",
-    "Elf", "Eroge", "Facesitting", "Facial", "Fantasy", "Female Doctor",
-    "Female Teacher", "Femdom", "Footjob", "Futanari", "Gangbang", "Gore",
-    "Gyaru", "Harem", "Historical", "Horny Slut", "Housewife", "Humiliation",
-    "Incest", "Inflation", "Internal Cumshot", "Lactation", "Large Breasts",
-    "Lolicon", "Magical Girls", "Maid", "Martial Arts", "Megane", "MILF",
-    "Mind Break", "Molestation", "Non-Japanese", "NTR", "Nuns", "Nurses",
-    "Office Ladies", "Police", "POV", "Pregnant", "Princess", "Public Sex",
-    "Rape", "Rim job", "Romance", "Scat", "School Girls", "Sci-Fi",
-    "Shimapan", "Short", "Shoutacon", "Slaves", "Sports", "Squirting",
-    "Stocking", "Strap-on", "Strapped On", "Succubus", "Super Power",
-    "Supernatural", "Swimsuit", "Tentacles", "Three some", "Tits Fuck",
-    "Torture", "Toys", "Train Molestation", "Tsundere", "Uncensored",
-    "Urination", "Vampire", "Vanilla", "Virgins", "Widow", "X-Ray", "Yuri"
-)
-
-private fun getProducers() = listOf(
-    "8bit", "Actas", "Active", "AIC", "AIC A.S.T.A.", "Alice Soft",
-    "An DerCen", "Angelfish", "Animac", "AniMan", "Animax", "Antechinus",
-    "APPP", "Armor", "Arms", "Asahi Production", "AT-2", "Blue Eyes",
-    "BOMB! CUTE! BOMB!", "BOOTLEG", "Bunnywalker", "Central Park Media",
-    "CherryLips", "ChiChinoya", "Chippai", "ChuChu", "Circle Tribute",
-    "CLOCKUP", "Collaboration Works", "Comic Media", "Cosmic Ray", "Cosmo",
-    "Cotton Doll", "Cranberry", "D3", "Daiei", "Digital Works", "Discovery",
-    "Dream Force", "Dubbed", "Easy Film", "Echo", "EDGE",
-    "Filmlink International", "Five Ways", "Front Line", "Frontier Works",
-    "Godoy", "Gold Bear", "Green Bunny", "Himajin Planning", "Hokiboshi",
-    "Hoods Entertainment", "Horipro", "Hot Bear", "HydraFXX",
-    "Innocent Grey", "Jam", "JapanAnime", "King Bee", "Kitty Films",
-    "Kitty Media", "Knack Productions", "KSS", "Lemon Heart",
-    "Lune Pictures", "Majin", "Marvelous Entertainment", "Mary Jane",
-    "Media", "Media Blasters", "Milkshake", "Mitsu", "Moonstone Cherry",
-    "Mousou Senka", "MS Pictures", "Nihikime no Dozeu", "Nur",
-    "NuTech Digital", "Obtain Future", "Office Take Off", "OLE-M",
-    "Oriental Light and Magic", "Oz", "Pashmina", "Pink Pineapple",
-    "Pixy", "PoRO", "Production I.G", "Queen Bee",
-    "Sakura Purin Animation", "Schoolzone", "Selfish", "Seven", "Shelf",
-    "Shinkuukan", "Shinyusha", "Shouten", "Silky's", "Soft Garage",
-    "SoftCel Pictures", "SPEED", "Studio 9 Maiami", "Studio Eromatick",
-    "Studio Fantasia", "Studio Jack", "Studio Kyuuma", "Studio Matrix",
-    "Studio Sign", "Studio Tulip", "Studio Unicorn", "Suzuki Mirano",
-    "T-Rex", "The Right Stuf International", "Toho Company",
-    "Top-Marschal", "Toranoana", "Toshiba Entertainment",
-    "Triangle Bitter", "Triple X", "Union Cho", "Valkyria", "White Bear",
-    "Y.O.U.C", "ZIZ Entertainment", "Zyc"
-)
-
-private data class Order(val name: String, val id: String)
-private fun getOrders() = listOf(
-    Order("Weekly Views", "weekly"),
-    Order("Monthly Views", "monthly"),
-    Order("Alltime Views", "alltime"),
-    Order("A-Z", "alphabet"),
-    Order("Rating", "rating"),
-)

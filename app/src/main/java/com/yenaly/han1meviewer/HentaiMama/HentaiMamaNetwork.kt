@@ -12,15 +12,29 @@ object HentaiMamaNetwork {
     private var _service: HentaiMamaService? = null
     private var _baseUrl: String? = null
 
+    val baseUrl: String
+        get() = Preferences.hentaiMamaBaseUrl.ifBlank { HentaiMamaConstants.BASE_URL }
+
+    val apiUrl: String
+        get() = "$baseUrl/wp-admin/admin-ajax.php"
+
     val service: HentaiMamaService
         get() {
-            val currentBaseUrl = Preferences.hentaiMamaBaseUrl
+            val currentBaseUrl = baseUrl
             if (_service == null || _baseUrl != currentBaseUrl) {
                 _baseUrl = currentBaseUrl
                 _service = createService(currentBaseUrl)
             }
             return _service!!
         }
+
+    fun normalizeUrl(path: String): String {
+        return when {
+            path.startsWith("http") -> path
+            path.startsWith("/") -> baseUrl + path
+            else -> "$baseUrl/$path"
+        }
+    }
 
     private fun createService(baseUrl: String): HentaiMamaService {
         val client = OkHttpClient.Builder()

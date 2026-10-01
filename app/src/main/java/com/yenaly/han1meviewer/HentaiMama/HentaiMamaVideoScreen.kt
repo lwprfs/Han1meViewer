@@ -3,8 +3,6 @@ package com.yenaly.han1meviewer.HentaiMama
 import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.util.Log
-import android.view.View
-import android.view.WindowManager
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -24,7 +22,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -36,9 +33,10 @@ import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.hls.HlsMediaSource
+import androidx.media3.exoplayer.source.MediaSource
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import coil3.compose.AsyncImage
 import com.yenaly.han1meviewer.MissAV.ui.video.MissAvVideoPlayer
-import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
 import com.yenaly.han1meviewer.ui.component.VideoCardItem
 import com.yenaly.han1meviewer.ui.component.content.ErrorContent
@@ -47,6 +45,7 @@ import com.yenaly.han1meviewer.ui.screen.rememberCardResponsiveWidth
 import com.yenaly.han1meviewer.ui.theme.SpacingLarge
 import com.yenaly.han1meviewer.ui.theme.SpacingNormal
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -56,7 +55,7 @@ fun HentaiMamaVideoScreen(
     videoCode: String,
     path: String,
     onBack: () -> Unit,
-    onNavigateToVideo: (String) -> Unit,
+    onNavigateToVideo: (String, String) -> Unit,
     onNavigateToSearch: (String?) -> Unit,
     viewModel: HentaiMamaViewModel = viewModel(),
 ) {
@@ -65,13 +64,12 @@ fun HentaiMamaVideoScreen(
     val activity = context as? Activity
     val coroutineScope = rememberCoroutineScope()
 
-    var playerStarted by remember { mutableStateOf(false) }
     var currentUrl by remember { mutableStateOf("") }
+    var playerStarted by remember { mutableStateOf(false) }
     var isExtractingUrl by remember { mutableStateOf(false) }
     var extractionFailed by remember { mutableStateOf(false) }
-    var capturedUrl by remember { mutableStateOf("") }
     var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
-    var isPlaying by remember { mutableStateOf(true) }
+    var isPlaying by remember { mutableStateOf(false) }
     var currentPosition by remember { mutableStateOf(0L) }
     var duration by remember { mutableStateOf(0L) }
     var showControls by remember { mutableStateOf(true) }
@@ -84,42 +82,72 @@ fun HentaiMamaVideoScreen(
     var selectedQuality by remember { mutableStateOf("") }
     var qualityMap by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var isFullscreenMode by remember { mutableStateOf(false) }
+
     var videoLinks by remember { mutableStateOf<List<HentaiMamaVideoLink>>(emptyList()) }
-    var showPlayButton by remember { mutableStateOf(true) }
-    var isFetchingLinks by remember { mutableStateOf(false) }
+    var detailBody by remember { mutableStateOf("") }
+    var hosterTabs by remember { mutableStateOf<List<Pair<String, Int>>>(emptyList()) }
+    var selectedHosterIndex by remember { mutableIntStateOf(0) }
 
-    var currentEpisodeCode by remember { mutableStateOf(videoCode) }
-    var currentEpisodePath by remember { mutableStateOf(path) }
+    var currentUrlPath by remember(path) { mutableStateOf(path) }
 
-    val availableSpeeds = remember { listOf(0.25f, 0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f) }
+    val availableSpeeds = remember { listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f) }
 
     val playerListener = remember {
         object : Player.Listener {
-            override fun onPlaybackStateChanged(playbackState: Int) = Unit
+            override fun onIsPlayingChanged(playing: Boolean) {
+                isPlaying = playing
+            }
+
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                exoPlayer?.let { player ->
+                    if (playbackState == Player.STATE_READY) {
+                        duration = player.duration.coerceAtLeast(0L)
+                        currentPosition = player.currentPosition
+                    }
+                }
+            }
+
             override fun onPositionDiscontinuity(
                 oldPosition: Player.PositionInfo,
                 newPosition: Player.PositionInfo,
                 reason: Int,
-            ) = Unit
-            override fun onIsPlayingChanged(playing: Boolean) = Unit
+            ) {
+                exoPlayer?.let {
+                    currentPosition = it.currentPosition
+                    duration = it.duration.coerceAtLeast(0L)
+                }
+            }
         }
     }
 
-    LaunchedEffect(currentEpisodePath) {
-        Log.d("HentaiMamaVideo", "Loading episode: code=$currentEpisodeCode, path=$currentEpisodePath")
+    LaunchedEffect(exoPlayer) {
+        while (exoPlayer != null) {
+            exoPlayer?.let {
+                currentPosition = it.currentPosition
+                val d = it.duration
+                if (d > 0) duration = d
+            }
+            delay(500)
+        }
+    }
+
+    LaunchedEffect(currentUrlPath) {
+        Log.d("HentaiMamaVideo", "Loading path=$currentUrlPath")
 
         playerStarted = false
         currentUrl = ""
         isExtractingUrl = false
         extractionFailed = false
-        showPlayButton = true
         videoLinks = emptyList()
         qualityMap = emptyMap()
+        detailBody = ""
+        hosterTabs = emptyList()
+        selectedHosterIndex = 0
 
         exoPlayer?.release()
         exoPlayer = null
 
-        viewModel.getVideoDetail(currentEpisodePath)
+        viewModel.getVideoDetail(currentUrlPath)
     }
 
     DisposableEffect(Unit) {
@@ -129,105 +157,145 @@ fun HentaiMamaVideoScreen(
         }
     }
 
-    fun extractAndPlay() {
-        coroutineScope.launch {
-            isFetchingLinks = true
-            extractionFailed = false
+    fun buildMediaSource(url: String): MediaSource {
+        val referer = HentaiMamaNetwork.baseUrl
+        val factory = DefaultDataSource.Factory(
+            context,
+            DefaultHttpDataSource.Factory().setDefaultRequestProperties(
+                hashMapOf("Referer" to referer)
+            )
+        )
+        return if (url.contains(".m3u8")) {
+            HlsMediaSource.Factory(factory).createMediaSource(MediaItem.fromUri(url))
+        } else {
+            ProgressiveMediaSource.Factory(factory).createMediaSource(MediaItem.fromUri(url))
+        }
+    }
 
+    fun loadLink(link: HentaiMamaVideoLink, player: ExoPlayer?) {
+        currentUrl = link.url
+        selectedQuality = link.quality
+        playerStarted = true
+        if (player != null) {
+            val pos = player.currentPosition
             try {
-                val detailBody = withContext(Dispatchers.IO) {
-                    val response = HentaiMamaNetwork.service.getVideoDetail(currentEpisodePath)
-                    if (response.isSuccessful) response.body()?.string() ?: ""
-                    else ""
-                }
+                player.setMediaSource(buildMediaSource(link.url))
+                player.seekTo(pos)
+                player.prepare()
+                player.playWhenReady = true
+            } catch (e: Exception) {
+                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
-                if (detailBody.isEmpty()) {
+    fun extractLinksForHoster(optionNumber: Int) {
+        coroutineScope.launch {
+            isExtractingUrl = true
+            extractionFailed = false
+            try {
+                val body = detailBody.ifBlank {
+                    viewModel.fetchDetailBody(currentUrlPath).also { detailBody = it }
+                }
+                if (body.isBlank()) {
                     extractionFailed = true
-                    isFetchingLinks = false
                     return@launch
                 }
-
                 val links = withContext(Dispatchers.IO) {
-                    HentaiMamaParser.videoListParse(
-                        detailBody,
-                        HentaiMamaConstants.BASE_URL,
-                        HentaiMamaConstants.API_URL
-                    )
+                    HentaiMamaNetworkRepo.extractVideoLinks(body, optionNumber)
                 }
-
                 if (links.isNotEmpty()) {
                     videoLinks = links
                     qualityMap = links.associate { it.quality to it.url }
-                    val bestQuality = links.first()
-                    currentUrl = bestQuality.url
-                    selectedQuality = bestQuality.quality
-                    playerStarted = true
-                    showPlayButton = false
-
-                    Toast.makeText(context, "Available: ${links.joinToString(", ") { it.quality }}", Toast.LENGTH_SHORT).show()
+                    loadLink(links.first(), exoPlayer)
+                    isPlaying = true
                 } else {
                     extractionFailed = true
-                    Toast.makeText(context, "No video sources found", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "No sources for this mirror", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 extractionFailed = true
                 Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
             } finally {
-                isFetchingLinks = false
+                isExtractingUrl = false
             }
         }
     }
 
-    val onPositionUpdate: (Long, Long) -> Unit = { pos, dur ->
-        currentPosition = pos
-        duration = dur
+    fun performSkip(deltaMillis: Long) {
+        exoPlayer?.let { player ->
+            val pos = player.currentPosition
+            val dur = player.duration
+            val target = if (dur > 0 && dur != androidx.media3.common.C.TIME_UNSET) {
+                (pos + deltaMillis).coerceIn(0L, dur)
+            } else {
+                (pos + deltaMillis).coerceAtLeast(0L)
+            }
+            player.seekTo(target)
+            currentPosition = target
+        }
+    }
+
+    val successInfo = (videoState as? VideoLoadingState.Success)?.info
+    LaunchedEffect(successInfo?.url) {
+        val info = successInfo ?: return@LaunchedEffect
+        val body = viewModel.fetchDetailBody(info.url)
+        detailBody = body
+        hosterTabs = viewModel.fetchHosterTabs(info.url)
+        if (hosterTabs.isNotEmpty()) {
+            selectedHosterIndex = 0
+            extractLinksForHoster(hosterTabs[0].second)
+        }
     }
 
     val toggleFullscreen = {
         isFullscreenMode = !isFullscreenMode
         if (isFullscreenMode) {
-            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
             activity?.window?.let { window ->
                 WindowCompat.setDecorFitsSystemWindows(window, false)
                 WindowInsetsControllerCompat(window, window.decorView).apply {
                     hide(WindowInsetsCompat.Type.systemBars())
-                    systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                    systemBarsBehavior =
+                        WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
                 }
             }
         } else {
-            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
             activity?.window?.let { window ->
                 WindowCompat.setDecorFitsSystemWindows(window, true)
-                WindowInsetsControllerCompat(window, window.decorView).show(WindowInsetsCompat.Type.systemBars())
+                WindowInsetsControllerCompat(window, window.decorView)
+                    .show(WindowInsetsCompat.Type.systemBars())
             }
         }
+        isFullscreen = isFullscreenMode
     }
 
     BackHandler(enabled = true) {
-        if (isFullscreenMode) {
-            toggleFullscreen()
-        } else {
-            onBack()
-        }
+        if (isFullscreenMode) toggleFullscreen() else onBack()
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    val info = (videoState as? VideoLoadingState.Success)?.info
+                    val info = successInfo
                     Text(text = info?.title ?: "Video", maxLines = 1)
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
                     }
                 }
             )
         }
     ) { paddingValues ->
         when (val state = videoState) {
-            is VideoLoadingState.Loading -> LoadingContent(modifier = Modifier.padding(paddingValues))
+            is VideoLoadingState.Loading ->
+                LoadingContent(modifier = Modifier.padding(paddingValues))
 
             is VideoLoadingState.Success -> {
                 val info = state.info
@@ -239,7 +307,6 @@ fun HentaiMamaVideoScreen(
                         .fillMaxSize(),
                     contentPadding = PaddingValues(bottom = 16.dp)
                 ) {
-
                     item {
                         Box(
                             modifier = Modifier
@@ -247,197 +314,193 @@ fun HentaiMamaVideoScreen(
                                 .aspectRatio(16f / 9f),
                             contentAlignment = Alignment.Center
                         ) {
-                            if (playerStarted && currentUrl.isNotEmpty()) {
-                                MissAvVideoPlayer(
-                                    playerStarted = true,
-                                    currentUrl = currentUrl,
-                                    isExtractingUrl = false,
-                                    extractionFailed = false,
-                                    capturedUrl = currentUrl,
-                                    videoPageUrl = "",
-                                    coverUrl = info.coverUrl,
-                                    isPlaying = isPlaying,
-                                    currentPosition = currentPosition,
-                                    duration = duration,
-                                    showControls = showControls,
-                                    isFullscreen = isFullscreen,
-                                    hasSubtitle = hasSubtitle,
-                                    qualityMap = qualityMap,
-                                    selectedQuality = selectedQuality,
-                                    availableSpeeds = availableSpeeds,
-                                    currentSpeed = currentSpeed,
-                                    showSpeedMenu = showSpeedMenu,
-                                    showQualityMenu = showQualityMenu,
-                                    exoPlayer = exoPlayer,
-                                    subtitleTextView = subtitleTextView,
-
-                                    playerListener = playerListener,
-                                    onPlayerCreated = { player ->
-                                        exoPlayer = player
-                                        if (currentUrl.isNotEmpty()) {
-                                            try {
-                                                val dataSourceFactory = DefaultDataSource.Factory(
-                                                    context,
-                                                    DefaultHttpDataSource.Factory()
-                                                        .setDefaultRequestProperties(
-                                                            hashMapOf("Referer" to Preferences.hentaiMamaBaseUrl)
-                                                        )
-                                                )
-                                                val mediaSource = if (currentUrl.contains(".m3u8")) {
-                                                    HlsMediaSource.Factory(dataSourceFactory)
-                                                        .createMediaSource(MediaItem.fromUri(currentUrl))
-                                                } else {
-                                                    androidx.media3.exoplayer.source.ProgressiveMediaSource.Factory(dataSourceFactory)
-                                                        .createMediaSource(MediaItem.fromUri(currentUrl))
+                            when {
+                                playerStarted && currentUrl.isNotEmpty() -> {
+                                    MissAvVideoPlayer(
+                                        playerStarted = true,
+                                        currentUrl = currentUrl,
+                                        isExtractingUrl = false,
+                                        extractionFailed = false,
+                                        capturedUrl = currentUrl,
+                                        videoPageUrl = "",
+                                        coverUrl = info.coverUrl,
+                                        isPlaying = isPlaying,
+                                        currentPosition = currentPosition,
+                                        duration = duration,
+                                        showControls = showControls,
+                                        isFullscreen = isFullscreen,
+                                        hasSubtitle = hasSubtitle,
+                                        qualityMap = qualityMap,
+                                        selectedQuality = selectedQuality,
+                                        availableSpeeds = availableSpeeds,
+                                        currentSpeed = currentSpeed,
+                                        showSpeedMenu = showSpeedMenu,
+                                        showQualityMenu = showQualityMenu,
+                                        exoPlayer = exoPlayer,
+                                        subtitleTextView = subtitleTextView,
+                                        showResumeButton = false,
+                                        savedPosition = 0L,
+                                        playerListener = playerListener,
+                                        onPlayerCreated = { player ->
+                                            exoPlayer = player
+                                            if (currentUrl.isNotEmpty()) {
+                                                try {
+                                                    player.setMediaSource(buildMediaSource(currentUrl))
+                                                    player.prepare()
+                                                    player.setPlaybackSpeed(currentSpeed)
+                                                    player.playWhenReady = true
+                                                    isPlaying = true
+                                                } catch (e: Exception) {
+                                                    Toast.makeText(
+                                                        context,
+                                                        "Error: ${e.message}",
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
                                                 }
-                                                player.setMediaSource(mediaSource)
-                                                player.prepare()
-                                                player.playWhenReady = true
-                                            } catch (e: Exception) {
-                                                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
                                             }
-                                        }
-                                    },
-
-                                    onSubtitleTextViewCreated = { subtitleTextView = it },
-                                    onPlayPause = {
-                                        exoPlayer?.let { player ->
-                                            if (player.isPlaying) {
-                                                player.pause()
-                                                isPlaying = false
-                                            } else {
-                                                player.play()
-                                                isPlaying = true
-                                            }
-                                        }
-                                    },
-                                    onSeek = { position ->
-                                        exoPlayer?.seekTo(position)
-                                        currentPosition = position
-                                    },
-                                    onToggleControls = { showControls = !showControls },
-                                    onSpeedChange = { speed ->
-                                        currentSpeed = speed
-                                        exoPlayer?.setPlaybackSpeed(speed)
-                                        showSpeedMenu = false
-                                    },
-                                    onQualityChange = { quality ->
-                                        selectedQuality = quality
-                                        val url = qualityMap[quality]
-                                        if (url != null && exoPlayer != null) {
-                                            currentUrl = url
-                                            try {
-                                                val dataSourceFactory = DefaultDataSource.Factory(
-                                                    context,
-                                                    DefaultHttpDataSource.Factory()
-                                                        .setDefaultRequestProperties(
-                                                            hashMapOf("Referer" to Preferences.hentaiMamaBaseUrl)
-                                                        )
-                                                )
-                                                val mediaSource = if (url.contains(".m3u8")) {
-                                                    HlsMediaSource.Factory(dataSourceFactory)
-                                                        .createMediaSource(MediaItem.fromUri(url))
+                                        },
+                                        onSubtitleTextViewCreated = { subtitleTextView = it },
+                                        onSurfaceReleased = { },
+                                        onPlayPause = {
+                                            exoPlayer?.let { player ->
+                                                if (player.playWhenReady) {
+                                                    player.playWhenReady = false
+                                                    isPlaying = false
                                                 } else {
-                                                    androidx.media3.exoplayer.source.ProgressiveMediaSource.Factory(dataSourceFactory)
-                                                        .createMediaSource(MediaItem.fromUri(url))
+                                                    player.playWhenReady = true
+                                                    isPlaying = true
+                                                    showControls = true
                                                 }
-                                                val currentPos = exoPlayer?.currentPosition ?: 0
-                                                exoPlayer?.setMediaSource(mediaSource)
-                                                exoPlayer?.seekTo(currentPos)
-                                                exoPlayer?.prepare()
-                                                exoPlayer?.playWhenReady = true
-                                            } catch (e: Exception) {
-                                                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
                                             }
-                                        }
-                                        showQualityMenu = false
-                                    },
-                                    onToggleFullscreen = { toggleFullscreen() },
-                                    onExitFullscreen = { toggleFullscreen() },
-                                    onToggleSpeedMenu = { showSpeedMenu = !showSpeedMenu },
-                                    onToggleQualityMenu = { showQualityMenu = !showQualityMenu },
-                                    onDismissSpeedMenu = { showSpeedMenu = false },
-                                    onDismissQualityMenu = { showQualityMenu = false },
-                                    onSubtitleToggle = { hasSubtitle = !hasSubtitle },
-                                    onPlayClick = { extractAndPlay() },
-                                    onRetryExtraction = { extractAndPlay() },
-                                    onPositionUpdate = onPositionUpdate,
-                                    webViewRef = null,
-                                    onWebViewRefChange = {},
-                                    onUrlCaptured = {}
-                                )
-                            } else if (isFetchingLinks) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center
-                                ) {
-                                    CircularProgressIndicator()
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        "Extracting video links...",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurface
+                                        },
+                                        onSeek = { position ->
+                                            exoPlayer?.seekTo(position)
+                                            currentPosition = position
+                                        },
+                                        onSkip = { deltaMillis -> performSkip(deltaMillis) },
+                                        onToggleControls = { showControls = !showControls },
+                                        onSpeedChange = { speed ->
+                                            currentSpeed = speed
+                                            exoPlayer?.setPlaybackSpeed(speed)
+                                            showSpeedMenu = false
+                                            showControls = true
+                                        },
+                                        onQualityChange = { quality ->
+                                            val url = qualityMap[quality]
+                                            if (url != null) {
+                                                loadLink(
+                                                    HentaiMamaVideoLink(
+                                                        quality = quality,
+                                                        url = url
+                                                    ),
+                                                    exoPlayer
+                                                )
+                                            }
+                                            showQualityMenu = false
+                                            showControls = true
+                                        },
+                                        onToggleFullscreen = { toggleFullscreen() },
+                                        onExitFullscreen = { toggleFullscreen() },
+                                        onToggleSpeedMenu = { showSpeedMenu = !showSpeedMenu },
+                                        onToggleQualityMenu = { showQualityMenu = !showQualityMenu },
+                                        onDismissSpeedMenu = { showSpeedMenu = false },
+                                        onDismissQualityMenu = { showQualityMenu = false },
+                                        onSubtitleToggle = { hasSubtitle = !hasSubtitle },
+                                        onPlayClick = {
+                                            if (hosterTabs.isNotEmpty()) {
+                                                extractLinksForHoster(hosterTabs[selectedHosterIndex].second)
+                                            }
+                                        },
+                                        onRetryExtraction = {
+                                            if (hosterTabs.isNotEmpty()) {
+                                                extractLinksForHoster(hosterTabs[selectedHosterIndex].second)
+                                            }
+                                        },
+                                        onPositionUpdate = { pos, dur ->
+                                            currentPosition = pos
+                                            if (dur > 0) duration = dur
+                                        },
+                                        webViewRef = null,
+                                        onWebViewRefChange = {},
+                                        onUrlCaptured = {}
                                     )
                                 }
-                            } else if (extractionFailed) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center
-                                ) {
+                                isExtractingUrl -> {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        CircularProgressIndicator()
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            "Extracting video links...",
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                }
+                                extractionFailed -> {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        if (info.coverUrl.isNotEmpty()) {
+                                            AsyncImage(
+                                                model = info.coverUrl,
+                                                contentDescription = null,
+                                                modifier = Modifier.fillMaxSize()
+                                            )
+                                        }
+                                        Surface(
+                                            color = MaterialTheme.colorScheme.errorContainer,
+                                            shape = RoundedCornerShape(8.dp),
+                                            modifier = Modifier.padding(16.dp)
+                                        ) {
+                                            Column(
+                                                modifier = Modifier.padding(16.dp),
+                                                horizontalAlignment = Alignment.CenterHorizontally
+                                            ) {
+                                                Text("Failed to load video")
+                                                Spacer(modifier = Modifier.height(8.dp))
+                                                Button(onClick = {
+                                                    if (hosterTabs.isNotEmpty()) {
+                                                        extractLinksForHoster(hosterTabs[selectedHosterIndex].second)
+                                                    }
+                                                }) { Text("Retry") }
+                                            }
+                                        }
+                                    }
+                                }
+                                else -> {
                                     if (info.coverUrl.isNotEmpty()) {
                                         AsyncImage(
                                             model = info.coverUrl,
-                                            contentDescription = "Video cover",
+                                            contentDescription = null,
                                             modifier = Modifier.fillMaxSize()
                                         )
+                                    } else {
+                                        Surface(
+                                            modifier = Modifier.fillMaxSize(),
+                                            color = MaterialTheme.colorScheme.surfaceVariant
+                                        ) {}
                                     }
                                     Surface(
-                                        color = MaterialTheme.colorScheme.errorContainer,
-                                        shape = RoundedCornerShape(8.dp),
-                                        modifier = Modifier.padding(16.dp)
-                                    ) {
-                                        Column(
-                                            modifier = Modifier.padding(16.dp),
-                                            horizontalAlignment = Alignment.CenterHorizontally
-                                        ) {
-                                            Text(
-                                                "Failed to load video",
-                                                color = MaterialTheme.colorScheme.onErrorContainer
-                                            )
-                                            Spacer(modifier = Modifier.height(8.dp))
-                                            Button(onClick = { extractAndPlay() }) {
-                                                Text("Retry")
+                                        modifier = Modifier.size(72.dp),
+                                        shape = RoundedCornerShape(36.dp),
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+                                        onClick = {
+                                            if (hosterTabs.isNotEmpty()) {
+                                                extractLinksForHoster(hosterTabs[selectedHosterIndex].second)
                                             }
                                         }
-                                    }
-                                }
-                            } else {
-                                if (info.coverUrl.isNotEmpty()) {
-                                    AsyncImage(
-                                        model = info.coverUrl,
-                                        contentDescription = "Video cover",
-                                        modifier = Modifier.fillMaxSize()
-                                    )
-                                } else {
-                                    Surface(
-                                        modifier = Modifier.fillMaxSize(),
-                                        color = MaterialTheme.colorScheme.surfaceVariant
-                                    ) {}
-                                }
-
-                                Surface(
-                                    modifier = Modifier.size(72.dp),
-                                    shape = RoundedCornerShape(36.dp),
-                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
-                                    onClick = { extractAndPlay() }
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(
-                                            Icons.Filled.PlayArrow,
-                                            contentDescription = "Play",
-                                            tint = MaterialTheme.colorScheme.onPrimary,
-                                            modifier = Modifier.size(40.dp)
-                                        )
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                Icons.Filled.PlayArrow,
+                                                contentDescription = "Play",
+                                                tint = MaterialTheme.colorScheme.onPrimary,
+                                                modifier = Modifier.size(40.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -474,30 +537,85 @@ fun HentaiMamaVideoScreen(
 
                     item {
                         Column(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             if (!info.genre.isNullOrBlank()) {
                                 Row {
-                                    Text("Genres: ", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
-                                    Text(info.genre, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                                    Text(
+                                        "Genres: ",
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                    Text(
+                                        info.genre,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
                                 }
                             }
                             if (!info.author.isNullOrBlank()) {
                                 Row {
-                                    Text("Author: ", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                                    Text(
+                                        "Author: ",
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
                                     Text(info.author, style = MaterialTheme.typography.bodyMedium)
                                 }
                             }
                             if (!info.status.isNullOrBlank()) {
                                 Row {
-                                    Text("Status: ", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                                    Text(
+                                        "Status: ",
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
                                     Surface(
                                         shape = RoundedCornerShape(4.dp),
-                                        color = if (info.status == "Ongoing") MaterialTheme.colorScheme.tertiaryContainer
+                                        color = if (info.status == "Ongoing")
+                                            MaterialTheme.colorScheme.tertiaryContainer
                                         else MaterialTheme.colorScheme.primaryContainer
                                     ) {
-                                        Text(info.status, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp), style = MaterialTheme.typography.bodySmall)
+                                        Text(
+                                            info.status,
+                                            modifier = Modifier.padding(
+                                                horizontal = 8.dp,
+                                                vertical = 2.dp
+                                            ),
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (hosterTabs.size > 1) {
+                        item {
+                            Column(
+                                modifier = Modifier.fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    "Mirrors",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    items(hosterTabs) { (name, index) ->
+                                        FilterChip(
+                                            selected = index ==
+                                                hosterTabs.getOrNull(selectedHosterIndex)?.second,
+                                            onClick = {
+                                                selectedHosterIndex =
+                                                    hosterTabs.indexOfFirst { it.second == index }
+                                                extractLinksForHoster(index)
+                                            },
+                                            label = { Text(name) }
+                                        )
                                     }
                                 }
                             }
@@ -507,39 +625,20 @@ fun HentaiMamaVideoScreen(
                     if (videoLinks.size > 1) {
                         item {
                             Column(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
                                 verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                Text("Available Qualities", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    videoLinks.forEach { link ->
+                                Text(
+                                    "Qualities",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    items(videoLinks) { link ->
                                         FilterChip(
                                             selected = link.quality == selectedQuality,
-                                            onClick = {
-                                                selectedQuality = link.quality
-                                                currentUrl = link.url
-                                                exoPlayer?.let { player ->
-                                                    try {
-                                                        val dataSourceFactory = DefaultDataSource.Factory(
-                                                            context,
-                                                            DefaultHttpDataSource.Factory()
-                                                                .setDefaultRequestProperties(
-                                                                    hashMapOf("Referer" to Preferences.hentaiMamaBaseUrl)
-                                                                )
-                                                        )
-                                                        val mediaSource = if (link.url.contains(".m3u8")) {
-                                                            HlsMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(link.url))
-                                                        } else {
-                                                            androidx.media3.exoplayer.source.ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(link.url))
-                                                        }
-                                                        val pos = player.currentPosition
-                                                        player.setMediaSource(mediaSource)
-                                                        player.seekTo(pos)
-                                                        player.prepare()
-                                                        player.playWhenReady = true
-                                                    } catch (e: Exception) {}
-                                                }
-                                            },
+                                            onClick = { loadLink(link, exoPlayer) },
                                             label = { Text(link.quality) }
                                         )
                                     }
@@ -562,32 +661,23 @@ fun HentaiMamaVideoScreen(
                             )
                         }
 
-                        items(info.episodes) { episode ->
-
+                        items(info.episodes, key = { it.url }) { episode ->
                             val episodeCode = episode.url.trimEnd('/').substringAfterLast("/")
-
-                            val isCurrentEpisode = episodeCode == currentEpisodeCode ||
-                                    episode.url.contains("/$currentEpisodeCode") ||
-                                    (episode.episodeNumber != null &&
-                                            episode.episodeNumber == info.episodes.find {
-                                        it.url.contains("/$currentEpisodeCode")
-                                    }?.episodeNumber)
+                            val isCurrentEpisode = episodeCode == info.videoCode
 
                             Surface(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp, vertical = 4.dp)
                                     .clickable {
+                                        if (isCurrentEpisode) return@clickable
+                                        val newPath = if (episode.url.startsWith("http")) {
+                                            episode.url
+                                        } else {
+                                            HentaiMamaNetwork.normalizeUrl(episode.url)
+                                        }
 
-                                        val episodePath = episode.url.removePrefix(HentaiMamaConstants.BASE_URL)
-                                        val newCode = episodeCode
-
-                                        Log.d("HentaiMamaVideo", "Episode clicked: code=$newCode, path=$episodePath")
-
-                                        currentEpisodeCode = newCode
-                                        currentEpisodePath = episodePath
-
-                                        onNavigateToVideo(newCode)
+                                        currentUrlPath = newPath
                                     },
                                 shape = RoundedCornerShape(8.dp),
                                 color = if (isCurrentEpisode)
@@ -602,20 +692,17 @@ fun HentaiMamaVideoScreen(
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = episode.title.ifEmpty { "Episode ${episode.episodeNumber ?: ""}" },
+                                            text = episode.title.ifEmpty { "Episode" },
                                             style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = if (isCurrentEpisode) FontWeight.Bold else FontWeight.Medium,
+                                            fontWeight = if (isCurrentEpisode)
+                                                FontWeight.Bold else FontWeight.Medium,
                                             maxLines = 1,
                                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                         )
-                                        if (episode.episodeNumber != null) {
+                                        episode.episodeNumber?.let {
                                             Text(
-                                                "Episode ${String.format("%.0f", episode.episodeNumber)}",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = if (isCurrentEpisode)
-                                                    MaterialTheme.colorScheme.onPrimaryContainer
-                                                else
-                                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                                "Episode ${String.format("%.0f", it)}",
+                                                style = MaterialTheme.typography.bodySmall
                                             )
                                         }
                                     }
@@ -623,34 +710,29 @@ fun HentaiMamaVideoScreen(
                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        if (!episode.date.isNullOrBlank()) {
-                                            Text(
-                                                episode.date,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = if (isCurrentEpisode)
-                                                    MaterialTheme.colorScheme.onPrimaryContainer
-                                                else
-                                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
+                                        episode.date?.takeIf { it.isNotBlank() }?.let {
+                                            Text(it, style = MaterialTheme.typography.bodySmall)
                                         }
                                         if (isCurrentEpisode) {
                                             Surface(
                                                 shape = RoundedCornerShape(12.dp),
-                                                color = MaterialTheme.colorScheme.primary,
-                                                modifier = Modifier.padding(horizontal = 4.dp)
+                                                color = MaterialTheme.colorScheme.primary
                                             ) {
                                                 Text(
                                                     "▶ Playing",
                                                     style = MaterialTheme.typography.labelSmall,
                                                     fontWeight = FontWeight.Bold,
                                                     color = MaterialTheme.colorScheme.onPrimary,
-                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                                    modifier = Modifier.padding(
+                                                        horizontal = 8.dp,
+                                                        vertical = 4.dp
+                                                    )
                                                 )
                                             }
                                         } else {
                                             Icon(
                                                 Icons.Filled.PlayArrow,
-                                                contentDescription = "Play episode",
+                                                contentDescription = "Play",
                                                 tint = MaterialTheme.colorScheme.primary,
                                                 modifier = Modifier.size(20.dp)
                                             )
@@ -665,7 +747,7 @@ fun HentaiMamaVideoScreen(
                         item {
                             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
                             Text(
-                                "Related Videos",
+                                "Related",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
@@ -681,7 +763,12 @@ fun HentaiMamaVideoScreen(
                                         modifier = Modifier.width(cardWidth),
                                         videoItem = video,
                                         isHorizontalCard = true,
-                                        onClickVideosItem = { onNavigateToVideo(video.videoCode) },
+                                        onClickVideosItem = {
+                                            val newPath =
+                                                HentaiMamaNetwork.normalizeUrl("/${video.videoCode}")
+
+                                            onNavigateToVideo(video.videoCode, newPath)
+                                        },
                                         onLongClickVideosItem = { _, _ -> },
                                     )
                                 }
@@ -694,20 +781,16 @@ fun HentaiMamaVideoScreen(
             }
 
             is VideoLoadingState.Error -> {
-                Log.e("HentaiMamaVideo", "Error loading video: ${state.throwable.message}")
                 ErrorContent(
                     message = state.throwable.message ?: "Failed to load video",
-                    onRetry = {
-                        Log.d("HentaiMamaVideo", "Retrying: path=$currentEpisodePath")
-                        viewModel.getVideoDetail(currentEpisodePath)
-                    },
+                    onRetry = { viewModel.getVideoDetail(currentUrlPath) },
                     modifier = Modifier.padding(paddingValues)
                 )
             }
 
             is VideoLoadingState.NoContent -> ErrorContent(
                 message = "No content found",
-                onRetry = { viewModel.getVideoDetail(currentEpisodePath) },
+                onRetry = { viewModel.getVideoDetail(currentUrlPath) },
                 modifier = Modifier.padding(paddingValues)
             )
         }

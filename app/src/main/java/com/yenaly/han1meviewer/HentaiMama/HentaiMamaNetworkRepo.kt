@@ -8,26 +8,41 @@ import com.yenaly.han1meviewer.logic.state.WebsiteState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
-import okhttp3.OkHttpClient
-import okhttp3.Request
 
 object HentaiMamaNetworkRepo {
 
     private const val TAG = "HentaiMamaRepo"
 
-    private val client = OkHttpClient.Builder()
-        .followRedirects(true)
-        .build()
-
     fun getHomePage() = flow {
         emit(WebsiteState.Loading)
         try {
-            val response = HentaiMamaNetwork.service.getPopularVideos(page = 1)
-            if (response.isSuccessful) {
-                val body = response.body()?.string() ?: EMPTY_STRING
-                emit(HentaiMamaParser.homePage(body))
+            val popularResp = HentaiMamaNetwork.service.getPopularVideos()
+            val popularBody = if (popularResp.isSuccessful) {
+                popularResp.body()?.string().orEmpty()
+            } else ""
+
+            val latestResp = HentaiMamaNetwork.service.getLatestVideos()
+            val latestBody = if (latestResp.isSuccessful) {
+                latestResp.body()?.string().orEmpty()
+            } else ""
+
+            val popularState = HentaiMamaParser.parseVideoList(popularBody)
+            val latestState = HentaiMamaParser.parseVideoList(latestBody)
+
+            val popular = (popularState as? PageLoadingState.Success)?.info ?: emptyList()
+            val latest = (latestState as? PageLoadingState.Success)?.info ?: popular
+
+            if (popular.isEmpty() && latest.isEmpty()) {
+                emit(WebsiteState.Error(IllegalStateException("No videos found")))
             } else {
-                emit(WebsiteState.Error(IllegalStateException("Failed: ${response.code()}")))
+                emit(
+                    WebsiteState.Success(
+                        HentaiMamaHomePage(
+                            popularVideos = popular,
+                            latestVideos = latest,
+                        )
+                    )
+                )
             }
         } catch (e: Exception) {
             emit(WebsiteState.Error(e))
@@ -37,7 +52,11 @@ object HentaiMamaNetworkRepo {
     fun getLatestVideos(page: Int) = flow {
         emit(PageLoadingState.Loading)
         try {
-            val response = HentaiMamaNetwork.service.getLatestVideos(page)
+            val response = if (page <= 1) {
+                HentaiMamaNetwork.service.getLatestVideos()
+            } else {
+                HentaiMamaNetwork.service.getLatestVideosPaged(page)
+            }
             if (response.isSuccessful) {
                 val body = response.body()?.string() ?: EMPTY_STRING
                 emit(HentaiMamaParser.parseVideoList(body))
@@ -52,24 +71,10 @@ object HentaiMamaNetworkRepo {
     fun searchVideos(page: Int, query: String) = flow {
         emit(PageLoadingState.Loading)
         try {
-
-            val response = if (query.isBlank()) {
-                HentaiMamaNetwork.service.getFilteredVideos(
-                    page = page,
-                    submit = "Submit",
-                    filter = null,
-                    genres = null,
-                    years = null,
-                    studios = null
-                )
-            } else {
-                HentaiMamaNetwork.service.searchVideos(page, query)
-            }
-
+            val response = HentaiMamaNetwork.service.searchVideos(page, query)
             if (response.isSuccessful) {
                 val body = response.body()?.string() ?: EMPTY_STRING
-
-                emit(HentaiMamaParser.parseSearchResults(body, isFilterSearch = query.isBlank()))
+                emit(HentaiMamaParser.parseSearchResults(body, isFilterSearch = false))
             } else {
                 emit(PageLoadingState.Error(IllegalStateException("Search failed: ${response.code()}")))
             }
@@ -78,45 +83,63 @@ object HentaiMamaNetworkRepo {
         }
     }.flowOn(Dispatchers.IO)
 
-    fun filterVideos(page: Int, genre: String?, producer: String?, order: String?) = flow {
+    fun filterVideos(
+        page: Int,
+        genre: String?,
+        producer: String?,
+        year: String? = null,
+        order: String? = null,
+    ) = flow {
         emit(PageLoadingState.Loading)
         try {
+            val genres = genre?.takeIf { it.isNotBlank() }?.let { listOf(it) }
+            val studios = producer?.takeIf { it.isNotBlank() }?.let { listOf(it) }
+            val years = year?.takeIf { it.isNotBlank() }?.let { listOf(it) }
+            val filterOrder = order?.takeIf { it.isNotBlank() }
 
-            var parameters = "submit=Submit"
-            if (!order.isNullOrEmpty()) parameters += "&filter=$order"
-            if (!genre.isNullOrEmpty()) parameters += "&genres_filter%5B%5D=$genre"
-            if (!producer.isNullOrEmpty()) parameters += "&studios_filter%5B%5D=$producer"
+            Log.d(
+                TAG,
+                "filterVideos: page=$page genre=$genre producer=$producer year=$year order=$order"
+            )
 
-            val url = "${HentaiMamaConstants.BASE_URL}/advance-search/page/$page/?$parameters"
-            Log.d(TAG, "filterVideos URL: $url")
+            val response = if (page <= 1) {
+                HentaiMamaNetwork.service.getFilteredVideos(
+                    filter = filterOrder,
+                    genres = genres,
+                    years = years,
+                    studios = studios,
+                )
+            } else {
+                HentaiMamaNetwork.service.getFilteredVideosPaged(
+                    page = page,
+                    filter = filterOrder,
+                    genres = genres,
+                    years = years,
+                    studios = studios,
+                )
+            }
 
-            val request = Request.Builder()
-                .url(url)
-                .addHeader("Referer", HentaiMamaConstants.BASE_URL)
-                .build()
-
-            val response = client.newCall(request).execute()
             if (response.isSuccessful) {
-                val body = response.body.string()
+                val body = response.body()?.string() ?: EMPTY_STRING
                 emit(HentaiMamaParser.parseSearchResults(body, isFilterSearch = true))
             } else {
-                emit(PageLoadingState.Error(IllegalStateException("Filter failed: ${response.code}")))
+                emit(PageLoadingState.Error(IllegalStateException("Filter failed: ${response.code()}")))
             }
         } catch (e: Exception) {
+            Log.e(TAG, "filterVideos error", e)
             emit(PageLoadingState.Error(e))
         }
     }.flowOn(Dispatchers.IO)
 
-    fun getVideoDetail(path: String) = flow {
+    fun getVideoDetail(url: String) = flow {
         emit(VideoLoadingState.Loading)
         try {
-            val response = HentaiMamaNetwork.service.getVideoDetail(path)
+            val full = if (url.startsWith("http")) url else HentaiMamaNetwork.normalizeUrl(url)
+            val response = HentaiMamaNetwork.service.getVideoDetail(full)
             if (response.isSuccessful) {
                 val body = response.body()?.string() ?: EMPTY_STRING
-                Log.d(TAG, "getVideoDetail: response length=${body.length}")
-
-                val detailState = HentaiMamaParser.parseVideoDetail(body)
-                emit(detailState)
+                Log.d(TAG, "getVideoDetail: len=${body.length} url=$full")
+                emit(HentaiMamaParser.parseVideoDetail(body, full))
             } else {
                 emit(VideoLoadingState.Error(IllegalStateException("Failed: ${response.code()}")))
             }
@@ -125,28 +148,19 @@ object HentaiMamaNetworkRepo {
         }
     }.flowOn(Dispatchers.IO)
 
-    suspend fun extractVideoLinks(path: String): List<HentaiMamaVideoLink> {
-        try {
-            val response = HentaiMamaNetwork.service.getVideoDetail(path)
-            if (response.isSuccessful) {
-                val body = response.body()?.string() ?: ""
-                Log.d(TAG, "extractVideoLinks: detail page length=${body.length}")
+    suspend fun extractVideoLinks(
+        detailPageBody: String,
+        optionNumber: Int,
+    ): List<HentaiMamaVideoLink> {
+        return HentaiMamaParser.videoListParse(
+            detailPageBody = detailPageBody,
+            baseUrl = HentaiMamaNetwork.baseUrl,
+            apiUrl = HentaiMamaNetwork.apiUrl,
+            optionNumber = optionNumber,
+        )
+    }
 
-                val videoLinks = HentaiMamaParser.videoListParse(
-                    body,
-                    HentaiMamaConstants.BASE_URL,
-                    HentaiMamaConstants.API_URL
-                )
-
-                Log.d(TAG, "extractVideoLinks: Found ${videoLinks.size} video links")
-                return videoLinks
-            } else {
-                Log.e(TAG, "extractVideoLinks: Failed with code ${response.code()}")
-                return emptyList()
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "extractVideoLinks error: ${e.message}", e)
-            return emptyList()
-        }
+    suspend fun extractHosterTabs(detailPageBody: String): List<Pair<String, Int>> {
+        return HentaiMamaParser.hosterTabs(detailPageBody)
     }
 }

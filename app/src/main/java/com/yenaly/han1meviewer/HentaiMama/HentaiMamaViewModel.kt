@@ -8,21 +8,26 @@ import com.yenaly.han1meviewer.logic.model.HanimeInfo
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class HentaiMamaViewModel(application: Application) : AndroidViewModel(application) {
 
     private val TAG = "HentaiMamaVM"
 
-    private val _homeState = MutableStateFlow<WebsiteState<HentaiMamaHomePage>>(WebsiteState.Loading)
+    private val _homeState =
+        MutableStateFlow<WebsiteState<HentaiMamaHomePage>>(WebsiteState.Loading)
     val homeState = _homeState.asStateFlow()
 
-    private val _searchState = MutableStateFlow<PageLoadingState<List<HanimeInfo>>>(PageLoadingState.Loading)
+    private val _searchState =
+        MutableStateFlow<PageLoadingState<List<HanimeInfo>>>(PageLoadingState.Loading)
     val searchState = _searchState.asStateFlow()
 
-    private val _videoState = MutableStateFlow<VideoLoadingState<HentaiMamaVideoInfo>>(VideoLoadingState.Loading)
+    private val _videoState =
+        MutableStateFlow<VideoLoadingState<HentaiMamaVideoInfo>>(VideoLoadingState.Loading)
     val videoState = _videoState.asStateFlow()
 
     private val _selectedGenre = MutableStateFlow<String?>(null)
@@ -31,107 +36,73 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
     private val _selectedProducer = MutableStateFlow<String?>(null)
     val selectedProducer = _selectedProducer.asStateFlow()
 
+    private val _selectedYear = MutableStateFlow<String?>(null)
+    val selectedYear = _selectedYear.asStateFlow()
+
     private val _selectedOrder = MutableStateFlow<String?>(null)
     val selectedOrder = _selectedOrder.asStateFlow()
 
     fun getHomePage() {
         viewModelScope.launch {
-            Log.d(TAG, "getHomePage called")
-
-            var popularVideos = emptyList<HanimeInfo>()
-
-            HentaiMamaNetworkRepo.getHomePage().collect { state ->
-                when (state) {
-                    is WebsiteState.Success -> {
-                        Log.d(TAG, "Got popular videos: ${state.info.popularVideos.size}")
-                        popularVideos = state.info.popularVideos
-
-                        HentaiMamaNetworkRepo.getLatestVideos(1).collect { latestState ->
-                            when (latestState) {
-                                is PageLoadingState.Success -> {
-                                    Log.d(TAG, "Got latest videos: ${latestState.info.size}")
-                                    _homeState.value = WebsiteState.Success(
-                                        HentaiMamaHomePage(
-                                            popularVideos = popularVideos,
-                                            latestVideos = latestState.info
-                                        )
-                                    )
-                                }
-                                is PageLoadingState.Error -> {
-                                    Log.e(TAG, "Error getting latest videos, using popular for both")
-
-                                    _homeState.value = WebsiteState.Success(
-                                        HentaiMamaHomePage(
-                                            popularVideos = popularVideos,
-                                            latestVideos = popularVideos
-                                        )
-                                    )
-                                }
-                                else -> {
-
-                                }
-                            }
-                        }
-                    }
-                    else -> {
-                        _homeState.value = state
-                    }
-                }
-            }
+            HentaiMamaNetworkRepo.getHomePage().collect { _homeState.value = it }
         }
     }
 
     fun searchVideos(page: Int, query: String) {
         viewModelScope.launch {
-            Log.d(TAG, "searchVideos page=$page, query='$query'")
-            HentaiMamaNetworkRepo.searchVideos(page, query).collect { state ->
-                _searchState.value = state
-            }
+            HentaiMamaNetworkRepo.searchVideos(page, query).collect { _searchState.value = it }
         }
     }
 
     fun filterVideos(page: Int) {
         viewModelScope.launch {
-            Log.d(TAG, "filterVideos page=$page")
             HentaiMamaNetworkRepo.filterVideos(
                 page = page,
                 genre = _selectedGenre.value,
                 producer = _selectedProducer.value,
-                order = _selectedOrder.value
-            ).collect { state ->
-                _searchState.value = state
-            }
+                year = _selectedYear.value,
+                order = _selectedOrder.value,
+            ).collect { _searchState.value = it }
         }
     }
 
-    fun setGenre(genre: String?) {
-        Log.d(TAG, "setGenre: $genre")
-        _selectedGenre.value = genre
-    }
-
-    fun setProducer(producer: String?) {
-        Log.d(TAG, "setProducer: $producer")
-        _selectedProducer.value = producer
-    }
-
-    fun setOrder(order: String?) {
-        Log.d(TAG, "setOrder: $order")
-        _selectedOrder.value = order
-    }
+    fun setGenre(genre: String?) { _selectedGenre.value = genre }
+    fun setProducer(producer: String?) { _selectedProducer.value = producer }
+    fun setYear(year: String?) { _selectedYear.value = year }
+    fun setOrder(order: String?) { _selectedOrder.value = order }
 
     fun clearFilters() {
-        Log.d(TAG, "clearFilters")
         _selectedGenre.value = null
         _selectedProducer.value = null
+        _selectedYear.value = null
         _selectedOrder.value = null
     }
 
-    fun getVideoDetail(path: String) {
+    fun getVideoDetail(url: String) {
         viewModelScope.launch {
-            Log.d(TAG, "getVideoDetail: $path")
-            HentaiMamaNetworkRepo.getVideoDetail(path).collect { state ->
-                _videoState.value = state
-            }
+            HentaiMamaNetworkRepo.getVideoDetail(url).collect { _videoState.value = it }
+        }
+    }
+
+    suspend fun fetchDetailBody(url: String): String = withContext(Dispatchers.IO) {
+        try {
+            val full = if (url.startsWith("http")) url else HentaiMamaNetwork.normalizeUrl(url)
+            val response = HentaiMamaNetwork.service.getVideoDetail(full)
+            if (response.isSuccessful) response.body()?.string().orEmpty() else ""
+        } catch (e: Exception) {
+            Log.e(TAG, "fetchDetailBody error: ${e.message}")
+            ""
+        }
+    }
+
+    suspend fun fetchHosterTabs(url: String): List<Pair<String, Int>> = withContext(Dispatchers.IO) {
+        try {
+            val body = fetchDetailBody(url)
+            if (body.isBlank()) emptyList()
+            else HentaiMamaNetworkRepo.extractHosterTabs(body)
+        } catch (e: Exception) {
+            Log.e(TAG, "fetchHosterTabs error: ${e.message}")
+            emptyList()
         }
     }
 }

@@ -1,0 +1,22 @@
+[
+  {
+    "name": "Weekly Views",
+    "value": "weekly"
+  },
+  {
+    "name": "Monthly Views",
+    "value": "monthly"
+  },
+  {
+    "name": "Alltime Views",
+    "value": "alltime"
+  },
+  {
+    "name": "A-Z",
+    "value": "alphabet"
+  },
+  {
+    "name": "Rating",
+    "value": "rating"
+  }
+]

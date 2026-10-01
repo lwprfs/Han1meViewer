@@ -5,9 +5,13 @@ import com.yenaly.han1meviewer.EMPTY_STRING
 import com.yenaly.han1meviewer.logic.model.HanimeInfo
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
-import com.yenaly.han1meviewer.logic.state.WebsiteState
+import kotlinx.serialization.json.Json
 import okhttp3.FormBody
+import okhttp3.Headers
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -16,48 +20,105 @@ object HentaiMamaParser {
 
     private const val TAG = "HentaiMamaParser"
 
-    fun homePage(body: String): WebsiteState<HentaiMamaHomePage> {
-        try {
-            val doc = Jsoup.parse(body)
-            val elements = doc.select("article.tvshows")
-            Log.d(TAG, "homePage: Found ${elements.size} elements with 'article.tvshows'")
+    private val json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+        explicitNulls = false
+        coerceInputValues = true
+    }
 
-            if (elements.isEmpty()) {
-                return WebsiteState.Error(IllegalStateException("No videos found"))
-            }
+    private val EPISODE_NUMBER_REGEX = Regex("Episode (\\d+\\.?\\d*)")
+    private val EPISODE_DATE_FORMAT = SimpleDateFormat("MMM dd, yyyy", Locale.US)
 
-            val videos = elements.mapNotNull { popularAnimeFromElement(it) }
-                .filter { it.videoCode.isNotEmpty() && it.videoCode != "unknown" }
+    private val SOURCES_ARRAY_REGEX =
+        Regex("sources:\\s*(\\[.+?\\])", RegexOption.DOT_MATCHES_ALL)
 
-            return if (videos.isNotEmpty()) {
-                WebsiteState.Success(
-                    HentaiMamaHomePage(popularVideos = videos, latestVideos = videos)
-                )
-            } else {
-                WebsiteState.Error(IllegalStateException("Parsed 0 valid videos"))
-            }
+    private val SOURCES_QUOTED_REGEX =
+        Regex("\"sources\"\\s*:\\s*(\\[.+?\\])", RegexOption.DOT_MATCHES_ALL)
+
+    private val httpClient by lazy {
+        OkHttpClient.Builder()
+            .followRedirects(true)
+            .followSslRedirects(true)
+            .build()
+    }
+
+    fun parseVideoList(body: String): PageLoadingState<List<HanimeInfo>> {
+        return try {
+            val videos = animeListFromDocument(Jsoup.parse(body))
+            if (videos.isEmpty()) PageLoadingState.NoMoreData
+            else PageLoadingState.Success(videos)
         } catch (e: Exception) {
-            Log.e(TAG, "Error parsing homepage", e)
-            return WebsiteState.Error(e)
+            PageLoadingState.Error(e)
         }
     }
 
-    private fun popularAnimeFromElement(element: Element): HanimeInfo? {
+    fun parseSearchResults(
+        body: String,
+        isFilterSearch: Boolean,
+    ): PageLoadingState<List<HanimeInfo>> {
         return try {
-            val url = element.select("a").attr("href")
-            val videoCode = url.trimEnd('/').substringAfterLast("/")
-            if (videoCode.isBlank()) return null
+            val doc = Jsoup.parse(body)
+            val videos = if (isFilterSearch) {
+                filterAnimeListFromDocument(doc)
+            } else {
+                animeListFromDocument(doc)
+            }
+            if (videos.isEmpty()) PageLoadingState.NoMoreData
+            else PageLoadingState.Success(videos)
+        } catch (e: Exception) {
+            PageLoadingState.Error(e)
+        }
+    }
 
-            val title = element.select("div.data h3 a").text()
+    private fun animeListFromDocument(document: Document): List<HanimeInfo> =
+        document.select("article.series-card").mapNotNull { element ->
+            try {
+                val href = element.select("a.sc-poster").attr("href")
+                val code = href.trimEnd('/').substringAfterLast("/")
+                if (code.isBlank()) return@mapNotNull null
+                val title = element.select("h3.sc-title a").text()
+                if (title.isBlank()) return@mapNotNull null
+                val thumb = element.select("a.sc-poster img").attr("src")
+                    .ifEmpty { element.select("a.sc-poster img").attr("data-src") }
+                HanimeInfo(
+                    title = title,
+                    coverUrl = thumb,
+                    videoCode = code,
+                    itemType = HanimeInfo.NORMAL,
+                )
+            } catch (e: Exception) {
+                null
+            }
+        }
+
+    private fun filterAnimeListFromDocument(document: Document): List<HanimeInfo> {
+        val primary = animeListFromDocument(document)
+        if (primary.isNotEmpty()) return primary
+        return document.select("article").mapNotNull { searchAnimeFromElement(it) }
+    }
+
+    private fun searchAnimeFromElement(element: Element): HanimeInfo? {
+        return try {
+            val link = element.selectFirst("a.sc-poster")
+                ?: element.selectFirst("div.details > div.title a")
+                ?: element.selectFirst("a")
+                ?: return null
+            val href = link.attr("href")
+            val code = href.trimEnd('/').substringAfterLast("/")
+            if (code.isBlank()) return null
+            val title = element.selectFirst("h3.sc-title a")?.text()
+                ?: element.selectFirst("div.details > div.title a")?.text()
+                ?: element.selectFirst("h3")?.text()
+                ?: return null
             if (title.isBlank()) return null
-
-            val thumbnailUrl = element.select("div.poster img").attr("data-src")
-                .ifEmpty { element.select("div.poster img").attr("src") }
-
+            val thumb = element.selectFirst("a.sc-poster img")?.attr("src")
+                ?: element.selectFirst("div.image div a img")?.attr("src")
+                ?: ""
             HanimeInfo(
                 title = title,
-                coverUrl = thumbnailUrl,
-                videoCode = videoCode,
+                coverUrl = thumb,
+                videoCode = code,
                 itemType = HanimeInfo.NORMAL,
             )
         } catch (e: Exception) {
@@ -65,297 +126,216 @@ object HentaiMamaParser {
         }
     }
 
-    fun parseVideoList(body: String): PageLoadingState<List<HanimeInfo>> {
-        try {
-            val doc = Jsoup.parse(body)
-            val elements = doc.select("article.tvshows")
-            val videos = elements.mapNotNull { popularAnimeFromElement(it) }
-                .filter { it.videoCode.isNotEmpty() }
-            return if (videos.isEmpty()) PageLoadingState.NoMoreData
-            else PageLoadingState.Success(videos)
-        } catch (e: Exception) {
-            return PageLoadingState.Error(e)
-        }
-    }
-
-    private var filterSearch = false
-
-    fun parseSearchResults(
-        body: String,
-        isFilterSearch: Boolean = false,
-    ): PageLoadingState<List<HanimeInfo>> {
-        try {
-            filterSearch = isFilterSearch
-            val doc = Jsoup.parse(body)
-            val elements = doc.select("article")
-            val videos = elements.mapNotNull { searchAnimeFromElement(it) }
-                .filter { it.videoCode.isNotEmpty() }
-            return if (videos.isEmpty()) PageLoadingState.NoMoreData
-            else PageLoadingState.Success(videos)
-        } catch (e: Exception) {
-            return PageLoadingState.Error(e)
-        }
-    }
-
-    private fun searchAnimeFromElement(element: Element): HanimeInfo? {
+    fun parseVideoDetail(body: String, url: String): VideoLoadingState<HentaiMamaVideoInfo> {
         return try {
-            if (filterSearch) {
-                val url = element.select("a").attr("href")
-                val videoCode = url.trimEnd('/').substringAfterLast("/")
-                if (videoCode.isBlank()) return null
-                val title = element.select("div.data h3 a").text()
-                if (title.isBlank()) return null
-                val thumbnailUrl = element.select("div.poster img").attr("data-src")
-                    .ifEmpty { element.select("div.poster img").attr("src") }
-                HanimeInfo(
-                    title = title,
-                    coverUrl = thumbnailUrl,
-                    videoCode = videoCode,
-                    itemType = HanimeInfo.NORMAL,
-                )
-            } else {
-                val linkElement = element.select("div.details > div.title a").first()
-                val url = linkElement?.attr("href") ?: return null
-                val videoCode = url.trimEnd('/').substringAfterLast("/")
-                if (videoCode.isBlank()) return null
-                val title = linkElement.text()
-                val thumbnailUrl = element.select("div.image div a img").attr("src")
-                HanimeInfo(
-                    title = title,
-                    coverUrl = thumbnailUrl,
-                    videoCode = videoCode,
-                    itemType = HanimeInfo.NORMAL,
-                )
-            }
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    fun parseVideoDetail(body: String): VideoLoadingState<HentaiMamaVideoInfo> {
-        try {
             val doc = Jsoup.parse(body)
-            val thumbnailUrl =
-                doc.selectFirst("div.sheader div.poster img")?.attr("data-src") ?: EMPTY_STRING
-            val title = doc.select("#info1 div:nth-child(2) span").text()
-            if (title.isBlank()) {
-                return VideoLoadingState.Error(IllegalStateException("Title not found"))
+            val title = doc.selectFirst("h1.dsc-title")?.text()
+                ?: doc.selectFirst("h1")?.text()
+                ?: return VideoLoadingState.Error(IllegalStateException("Title not found"))
+
+            val thumbnailUrl = doc.selectFirst("div.dsc-poster img")?.attr("src")
+                ?: doc.selectFirst("div.dsc-poster img")?.attr("data-src")
+                ?: EMPTY_STRING
+
+            val genre = doc.select("div.dsc-genres a").joinToString(", ") { it.text() }
+            val description = doc.select("div.dsc-desc p").text()
+
+            val author = doc.select("div.dsc-stats div.dsc-stat")
+                .firstOrNull { it.select("span").text().equals("Studio", ignoreCase = true) }
+                ?.select("b")?.text()
+                ?.takeUnless { it.isBlank() || it == "\u2014" }
+
+            val status = if (doc.select("span.dsc-chip.is-airing").isNotEmpty()) "Ongoing"
+            else "Completed"
+
+            val episodes = episodeListFromDocument(doc)
+            val code = url.trimEnd('/').substringAfterLast("/")
+
+            val related = doc.select("article.series-card").mapNotNull { el ->
+                animeListFromDocument(Jsoup.parseBodyFragment(el.outerHtml()))
+                    .firstOrNull()
             }
+                .filter { it.videoCode.isNotBlank() && it.videoCode != code }
+                .distinctBy { it.videoCode }
 
-            val videoCode = doc.location().substringAfterLast("/")
-            val genre =
-                doc.select("div.sheader div.data div.sgeneros a").joinToString(", ") { it.text() }
-            val description = doc.select("#info1 div.wp-content p").text()
-            val author = doc.select("#info1 div:nth-child(3) span div div a")
-                .joinToString(", ") { it.text() }
-            val statusText = doc.select("#info1 div:nth-child(6) span").text()
-            val status = when (statusText) {
-                "Ongoing" -> "Ongoing"
-                else -> "Completed"
-            }
-
-            val episodeElements = doc.select("div.series div.items article")
-            Log.d(TAG, "parseVideoDetail: Found ${episodeElements.size} episode elements")
-
-            val episodes = episodeElements.mapNotNull {
-                try {
-                    episodeFromElement(it)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error parsing episode: ${e.message}")
-                    null
-                }
-            }
-
-            val relatedVideos = mutableListOf<HanimeInfo>()
-
-            val relatedElements = doc.select(
-                "div.related-videos div.tvshows, " +
-                        "div.series-related div.tvshows, " +
-                        "section.related-videos div.tvshows"
-            )
-            if (relatedElements.isNotEmpty()) {
-                relatedVideos.addAll(relatedElements.mapNotNull { popularAnimeFromElement(it) })
-            } else {
-                relatedVideos.addAll(episodeElements.mapNotNull { popularAnimeFromElement(it) })
-            }
-
-            return VideoLoadingState.Success(
+            VideoLoadingState.Success(
                 HentaiMamaVideoInfo(
                     title = title,
                     coverUrl = thumbnailUrl,
-                    videoCode = videoCode,
+                    videoCode = code,
+                    url = url,
                     description = description,
                     genre = genre,
                     author = author,
                     status = status,
                     videoUrls = emptyList(),
                     episodes = episodes,
-                    relatedVideos = relatedVideos.distinctBy { it.videoCode },
+                    relatedVideos = related,
                 )
             )
         } catch (e: Exception) {
-            return VideoLoadingState.Error(e)
+            Log.e(TAG, "parseVideoDetail error", e)
+            VideoLoadingState.Error(e)
         }
     }
 
-    private fun episodeFromElement(element: Element): HentaiMamaEpisode {
-        val url = element.select("div.season_m a").attr("href")
-        val title = element.select("div.data h3").text().ifEmpty {
-            element.select("div.season_m a span.c").text()
-        }
-        val dateText = element.select("div.data > span").text()
+    private fun episodeListFromDocument(document: Document): List<HentaiMamaEpisode> =
+        document.select("div.dt-se-list a.dt-se-item").mapNotNull { element ->
+            try {
+                val href = element.attr("href")
+                if (href.isBlank()) return@mapNotNull null
+                val titleText = element.select(".dt-se-title").text()
+                val dateText = element.select("span.dt-se-date").text()
+                val epNum = EPISODE_NUMBER_REGEX.find(titleText)
+                    ?.groups?.get(1)?.value?.toFloatOrNull() ?: -1f
+                val dateTimestamp = runCatching {
+                    EPISODE_DATE_FORMAT.parse(dateText)?.time
+                }.getOrNull() ?: 0L
 
-        val epNumPattern = Regex("Episode (\\d+\\.?\\d*)")
-        val epNumMatch = epNumPattern.find(element.select("div.season_m a span.c").text())
-        val episodeNumber = runCatching {
-            epNumMatch?.groups?.get(1)?.value?.toFloat()
-        }.getOrNull() ?: 1F
-
-        val dateTimestamp = runCatching {
-            SimpleDateFormat("MMM. dd, yyyy", Locale.US).parse(dateText)?.time
-        }.getOrNull() ?: 0L
-
-        return HentaiMamaEpisode(
-            title = title,
-            url = url,
-            date = dateText.takeIf { it.isNotBlank() },
-            episodeNumber = episodeNumber,
-            dateTimestamp = dateTimestamp,
-        )
-    }
+                HentaiMamaEpisode(
+                    title = titleText,
+                    url = href,
+                    date = dateText.takeIf { it.isNotBlank() },
+                    episodeNumber = epNum.takeIf { it > 0f },
+                    dateTimestamp = dateTimestamp,
+                )
+            } catch (e: Exception) {
+                null
+            }
+        }.reversed()
 
     fun videoListParse(
         detailPageBody: String,
         baseUrl: String,
         apiUrl: String,
+        optionNumber: Int,
     ): List<HentaiMamaVideoLink> {
         try {
+
             val document = Jsoup.parse(detailPageBody)
-
-            val postReport = document.selectFirst("#post_report")
-            if (postReport == null) {
-                Log.e(TAG, "videoListParse: #post_report not found")
+            val postId = document.select("#post_report input[name=idpost]").attr("value")
+            if (postId.isBlank()) {
+                Log.e(TAG, "videoListParse: idpost not found in detail page")
                 return emptyList()
             }
-
-            val aParam = postReport.select("input").getOrNull(4)?.attr("value")
-                ?: postReport.select("input")
-                    .firstOrNull { it.attr("value").isNotEmpty() }
-                    ?.attr("value")
-
-            if (aParam.isNullOrEmpty()) {
-                Log.e(TAG, "videoListParse: Failed to find 'a' parameter")
-                return emptyList()
-            }
-
-            Log.d(TAG, "videoListParse: Found aParam='${aParam.take(50)}'")
 
             val body = FormBody.Builder()
-                .add("action", "get_player_contents")
-                .add("a", aParam)
+                .add("action", HentaiMamaConstants.ACTION_PLAYER)
+                .add("a", postId)
+                .add("i", optionNumber.toString())
                 .build()
 
-            val newHeaders = okhttp3.Headers.headersOf("referer", "$baseUrl/")
+            val headers = Headers.headersOf("referer", "$baseUrl/")
 
-            val postRequest = okhttp3.Request.Builder()
+            val request = Request.Builder()
                 .url(apiUrl)
                 .post(body)
-                .headers(newHeaders)
+                .headers(headers)
                 .build()
 
-            val client = okhttp3.OkHttpClient.Builder().followRedirects(true).build()
+            val response = httpClient.newCall(request).execute()
+            val responseString = response.body?.string().orEmpty()
+            response.close()
 
-            Log.d(TAG, "videoListParse: POSTing to $apiUrl")
-            val postResponse = client.newCall(postRequest).execute()
-            val responseString = postResponse.body.string()
-            postResponse.close()
+            if (responseString.isBlank()) {
+                Log.e(TAG, "videoListParse: empty AJAX response (option=$optionNumber)")
+                return emptyList()
+            }
 
             Log.d(TAG, "videoListParse: AJAX response length=${responseString.length}")
 
-            val iframeHtml = Jsoup.parse(responseString).body().select("iframe").toString()
-
-            val regex = Regex("https?[\\S][^\"]+")
-            val allLinks = regex.findAll(iframeHtml).map { it.value }.toList()
-
-            Log.d(TAG, "videoListParse: Found ${allLinks.size} iframe URLs")
-
-            if (allLinks.isEmpty()) {
-                return extractDirectVideoLinks(responseString)
+            val fragments: List<String> = try {
+                json.decodeFromString(responseString)
+            } catch (e: Exception) {
+                Log.w(
+                    TAG,
+                    "videoListParse: response was not a JSON array, using as single fragment: ${e.message}"
+                )
+                listOf(responseString)
             }
 
-            val videoRegex = Regex("(https:[^\"]+\\.mp4*)")
-            val videoList = mutableListOf<HentaiMamaVideoLink>()
-
-            for (url in allLinks) {
-                try {
-                    Log.d(TAG, "videoListParse: Fetching iframe: $url")
-                    val iframeReq = okhttp3.Request.Builder()
-                        .url(url)
-                        .addHeader("Referer", baseUrl)
-                        .build()
-                    val iframeResp = client.newCall(iframeReq).execute()
-                    val pageHtml = iframeResp.body.string()
-                    iframeResp.close()
-
-                    val videoLink = videoRegex.find(pageHtml)
-                    val videoRes = when {
-                        url.contains("newr2") -> "Beta"
-                        url.contains("new1") -> "Mirror 1"
-                        url.contains("new2") -> "Mirror 2"
-                        url.contains("new3") -> "Mirror 3"
-                        else -> "Unknown"
-                    }
-
-                    if (videoLink != null) {
-                        Log.d(TAG, "videoListParse: Found video: $videoRes")
-                        videoList.add(HentaiMamaVideoLink(videoRes, videoLink.value))
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "videoListParse: Error processing iframe $url: ${e.message}")
+            val index = (optionNumber - 1).coerceAtLeast(0)
+            val fragment = fragments.getOrNull(index)?.takeUnless { it.isBlank() }
+                ?: fragments.firstOrNull { it.isNotBlank() }
+                ?: run {
+                    Log.e(
+                        TAG,
+                        "videoListParse: no fragment for option=$optionNumber (size=${fragments.size})"
+                    )
+                    return emptyList()
                 }
+
+            val parsedFragment = Jsoup.parseBodyFragment(fragment, baseUrl)
+            val iframeSrc = parsedFragment.selectFirst("iframe")?.attr("abs:src")
+                ?: parsedFragment.selectFirst("iframe")?.attr("src")
+                ?: run {
+                    Log.e(TAG, "videoListParse: no <iframe> in fragment")
+                    return emptyList()
+                }
+
+            Log.d(TAG, "videoListParse: iframeSrc=$iframeSrc")
+
+            val playerRequest = Request.Builder()
+                .url(iframeSrc)
+                .addHeader("Referer", baseUrl)
+                .build()
+            val playerResponse = httpClient.newCall(playerRequest).execute()
+            val playerBody = playerResponse.body?.string().orEmpty()
+            playerResponse.close()
+
+            if (playerBody.isBlank()) {
+                Log.e(TAG, "videoListParse: empty player body from $iframeSrc")
+                return emptyList()
             }
 
-            if (videoList.isEmpty()) {
-                return extractDirectVideoLinks(responseString)
+            val sourcesJson = SOURCES_ARRAY_REGEX.find(playerBody)
+                ?.groupValues?.get(1)
+                ?: SOURCES_QUOTED_REGEX.find(playerBody)
+                    ?.groupValues?.get(1)
+                ?: run {
+                    Log.e(TAG, "videoListParse: `sources: [...]` not found in player body")
+                    Log.d(TAG, "videoListParse: player body snippet = ${playerBody.take(800)}")
+                    return emptyList()
+                }
+
+            Log.d(TAG, "videoListParse: raw sources JSON = $sourcesJson")
+
+            val sources: List<HentaiMamaSource> = try {
+                json.decodeFromString(sourcesJson)
+            } catch (e: Exception) {
+                Log.e(TAG, "videoListParse: sources decode failed", e)
+                return emptyList()
             }
 
-            Log.d(TAG, "videoListParse: Total videos found: ${videoList.size}")
-            return videoList
+            val links = sources.mapNotNull { source ->
+                val file = source.file.replace("\\/", "/")
+                if (file.isBlank()) return@mapNotNull null
+                val isHls = source.type == "hls" || file.contains(".m3u8")
+                val label = source.label ?: if (isHls) "HLS" else "Video"
+                HentaiMamaVideoLink(
+                    quality = label,
+                    url = file,
+                    type = source.type ?: if (isHls) "hls" else "mp4",
+                )
+            }
 
+            Log.d(TAG, "videoListParse: extracted ${links.size} link(s) for option=$optionNumber")
+            return links
         } catch (e: Exception) {
-            Log.e(TAG, "videoListParse error: ${e.message}", e)
+            Log.e(TAG, "videoListParse error for option=$optionNumber", e)
             return emptyList()
         }
     }
 
-    private fun extractDirectVideoLinks(responseString: String): List<HentaiMamaVideoLink> {
-        val directLinks = mutableListOf<HentaiMamaVideoLink>()
-
-        Regex("""https?://[^\s"']+\.mp4[^\s"']*""").findAll(responseString).forEach {
-            directLinks.add(HentaiMamaVideoLink("Direct MP4", it.value))
+    fun hosterTabs(detailPageBody: String): List<Pair<String, Int>> {
+        val doc = Jsoup.parse(detailPageBody)
+        val tabs = doc.select(".dt-mi-tabs a").mapNotNull { tab ->
+            val optionNumber = tab.attr("href").removePrefix("#option-")
+            val serverId = tab.text()
+            if (optionNumber.isBlank() || serverId.isBlank()) null
+            else serverId to (optionNumber.toIntOrNull() ?: return@mapNotNull null)
         }
-
-        Regex("""https?://[^\s"']+\.m3u8[^\s"']*""").findAll(responseString).forEach {
-            directLinks.add(HentaiMamaVideoLink("HLS", it.value))
-        }
-
-        if (directLinks.isNotEmpty()) {
-            Log.d(TAG, "extractDirectVideoLinks: Found ${directLinks.size} direct links")
-            return directLinks
-        }
-
-        if (responseString.contains("http") &&
-            (responseString.contains(".mp4") || responseString.contains(".m3u8"))
-        ) {
-            Regex("""(https?://[^\s"',}]+\.(mp4|m3u8)[^\s"',}]*)""").findAll(responseString).forEach {
-                directLinks.add(HentaiMamaVideoLink("Video", it.value))
-            }
-            if (directLinks.isNotEmpty()) {
-                Log.d(TAG, "extractDirectVideoLinks: Found ${directLinks.size} links in response")
-                return directLinks
-            }
-        }
-
-        return emptyList()
+        Log.d(TAG, "hosterTabs: found ${tabs.size} tab(s): ${tabs.joinToString()}")
+        return tabs
     }
 }

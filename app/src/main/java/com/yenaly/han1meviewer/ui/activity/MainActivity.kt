@@ -98,7 +98,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import java.util.Locale
 import com.yenaly.han1meviewer.MissAV.common.MissAvConstants
 import com.yenaly.han1meviewer.MissAV.data.remote.MissAvNetwork
-
 import com.yenaly.han1meviewer.HentaiMama.HentaiMamaConstants
 import com.yenaly.han1meviewer.HentaiMama.HentaiMamaNetwork
 
@@ -127,6 +126,12 @@ class MainActivity : FrameActivity(), PermissionRequester {
     companion object {
         private const val REQUEST_WRITE_EXTERNAL_STORAGE = 1234
         const val ACTION_TOGGLE_PLAY = "com.yenaly.han1meviewer.ACTION_TOGGLE_PLAY"
+
+        private const val TAG = "MainActivity"
+
+        private const val SITE_SWITCH_SETTLE_DELAY_MS = 450L
+        private const val SITE_SWITCH_NAVIGATION_DELAY_MS = 50L
+        private const val SITE_SWITCH_TOAST_DELAY_MS = 650L
     }
 
     private val loginDataLauncher =
@@ -156,12 +161,10 @@ class MainActivity : FrameActivity(), PermissionRequester {
             LaunchedEffect(siteSwitchState, _siteChanged) {
                 siteSwitchState.collect { siteType ->
                     siteType?.let {
-
-                        kotlinx.coroutines.delay(400)
-                        Log.d("MainActivity", "LaunchedEffect: navigating to $it")
+                        kotlinx.coroutines.delay(SITE_SWITCH_SETTLE_DELAY_MS)
+                        Log.d(TAG, "LaunchedEffect: navigating to $it")
 
                         NavigationManager.clearBackStack()
-
                         NavigationManager.switchSite(it)
 
                         _siteSwitchState.value = null
@@ -181,7 +184,7 @@ class MainActivity : FrameActivity(), PermissionRequester {
                 onNavigateControllerReady = { controller ->
                     navController = controller
                     NavigationManager.initialize(controller, Preferences.siteType)
-                    Log.d("MainActivity", "NavController initialized with site: ${Preferences.siteType}")
+                    Log.d(TAG, "NavController initialized with site: ${Preferences.siteType}")
                 },
                 siteChangeKey = _siteChanged.value,
             )
@@ -224,7 +227,10 @@ class MainActivity : FrameActivity(), PermissionRequester {
                     }
                 )
             } else {
-                GlobalToasts.show(getString(R.string.not_compact_lock_screen), level = GlobalToasts.ToastLevel.WARNING)
+                GlobalToasts.show(
+                    getString(R.string.not_compact_lock_screen),
+                    level = GlobalToasts.ToastLevel.WARNING
+                )
                 hasAuthenticated = true
                 showAuthGuard = false
                 initData()
@@ -285,14 +291,13 @@ class MainActivity : FrameActivity(), PermissionRequester {
     }
 
     private fun switchToSite(siteType: SiteType) {
-        Log.d("MainActivity", "switchToSite called: $siteType")
-        Log.d("MainActivity", "Current baseUrl before: ${Preferences.baseUrl}")
+        Log.d(TAG, "switchToSite called: $siteType")
+        Log.d(TAG, "Current baseUrl before: ${Preferences.baseUrl}")
 
         Preferences.siteType = siteType
 
         when (siteType) {
             SiteType.HANIME -> {
-
                 val savedCustomMirror = Preferences.preferenceSp.getString(
                     SettingsPreferenceKeys.CUSTOM_MIRROR_SITE, ""
                 ) ?: ""
@@ -303,11 +308,10 @@ class MainActivity : FrameActivity(), PermissionRequester {
                 if (savedCustomMirror.isNotBlank() &&
                     (savedCustomMirror.contains("hanime1.me") ||
                      savedCustomMirror.contains("hanime1.com") ||
-                     savedUseCustomMirror)) {
-                    Log.d("MainActivity", "Restoring custom mirror: $savedCustomMirror")
-
+                     savedUseCustomMirror)
+                ) {
+                    Log.d(TAG, "Restoring custom mirror: $savedCustomMirror")
                 } else {
-
                     Preferences.preferenceSp.edit(true) {
                         putString(SettingsPreferenceKeys.DOMAIN_NAME, HanimeConstants.HANIME_URL[0])
                         putString(SettingsPreferenceKeys.SELECTED_BASE_URL, HanimeConstants.HANIME_URL[0])
@@ -318,8 +322,8 @@ class MainActivity : FrameActivity(), PermissionRequester {
                 }
                 HanimeNetwork.rebuildNetwork()
             }
-            SiteType.JAVCHU -> {
 
+            SiteType.JAVCHU -> {
                 Preferences.preferenceSp.edit(true) {
                     putString(SettingsPreferenceKeys.DOMAIN_NAME, "https://javchu.com")
                     putString(SettingsPreferenceKeys.SELECTED_BASE_URL, "https://javchu.com")
@@ -329,6 +333,7 @@ class MainActivity : FrameActivity(), PermissionRequester {
                 }
                 HanimeNetwork.rebuildNetwork()
             }
+
             SiteType.MISSAV -> {
                 Preferences.preferenceSp.edit(true) {
                     putString("missav_base_url", MissAvConstants.MISSAV_URL[0])
@@ -336,6 +341,7 @@ class MainActivity : FrameActivity(), PermissionRequester {
                 }
                 MissAvNetwork.rebuildNetwork()
             }
+
             SiteType.HENTAIMAMA -> {
                 Preferences.preferenceSp.edit(true) {
                     putString("hentaimama_base_url", HentaiMamaConstants.BASE_URL)
@@ -345,12 +351,19 @@ class MainActivity : FrameActivity(), PermissionRequester {
             }
         }
 
-        Log.d("MainActivity", "New baseUrl after: ${Preferences.baseUrl}")
-        Log.d("MainActivity", "New displayUrl: ${Preferences.displayUrl}")
+        Log.d(TAG, "New baseUrl after: ${Preferences.baseUrl}")
+        Log.d(TAG, "New displayUrl: ${Preferences.displayUrl}")
 
         _siteChanged.value = System.currentTimeMillis()
 
-        _siteSwitchState.value = siteType
+        Handler(Looper.getMainLooper()).postDelayed({
+            if (Preferences.siteType == siteType) {
+                Log.d(TAG, "Emitting siteSwitchState=$siteType after settle delay")
+                _siteSwitchState.value = siteType
+            } else {
+                Log.d(TAG, "Skipping stale site switch to $siteType")
+            }
+        }, SITE_SWITCH_NAVIGATION_DELAY_MS)
 
         Handler(Looper.getMainLooper()).postDelayed({
             val urlDisplay = if (siteType == SiteType.JAVCHU) {
@@ -362,7 +375,7 @@ class MainActivity : FrameActivity(), PermissionRequester {
                 getString(R.string.switched_to_site, urlDisplay),
                 level = GlobalToasts.ToastLevel.SUCCESS
             )
-        }, 600)
+        }, SITE_SWITCH_TOAST_DELAY_MS)
     }
 
     fun gotoLoginActivity() {
@@ -485,7 +498,9 @@ class MainActivity : FrameActivity(), PermissionRequester {
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                     onSuccess()
                 }
+
                 override fun onAuthenticationFailed() {}
+
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                     onFailed()
                 }
@@ -687,7 +702,6 @@ class MainActivity : FrameActivity(), PermissionRequester {
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
-
                                 Box(
                                     modifier = Modifier
                                         .size(56.dp)
