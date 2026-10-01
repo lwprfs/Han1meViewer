@@ -1,9 +1,16 @@
 {
-  "version": 1,
+  "version": 2,
   "categories": [
     {
+      "key": "new",
+      "title": "Recent Update",
+      "genrePath": "en/new",
+      "sort": null,
+      "hidden": false
+    },
+    {
       "key": "release",
-      "title": "Release Date",
+      "title": "New Releases",
       "genrePath": "en/release",
       "sort": null,
       "hidden": false
@@ -23,13 +30,6 @@
       "hidden": false
     },
     {
-      "key": "total",
-      "title": "Total Views",
-      "genrePath": "en/total-hot",
-      "sort": null,
-      "hidden": false
-    },
-    {
       "key": "uncensored",
       "title": "Uncensored Leak",
       "genrePath": "en/uncensored-leak",
@@ -44,13 +44,6 @@
       "hidden": false
     },
     {
-      "key": "breast_milk",
-      "title": "Breast Milk",
-      "genrePath": "en/genres/Breast%20Milk",
-      "sort": null,
-      "hidden": false
-    },
-    {
       "key": "premature",
       "title": "Premature Ejaculation",
       "genrePath": "en/genres/Premature%20Ejaculation",
@@ -58,18 +51,25 @@
       "hidden": false
     },
     {
+      "key": "breast_milk",
+      "title": "Breast Milk",
+      "genrePath": "en/genres/Breast%20Milk",
+      "sort": null,
+      "hidden": true
+    },
+    {
       "key": "virgin",
       "title": "Virgin",
       "genrePath": "en/genres/Virgin",
       "sort": "today_views",
-      "hidden": false
+      "hidden": true
     },
     {
       "key": "sister",
       "title": "Sister",
       "genrePath": "en/genres/Sister",
       "sort": "published_at",
-      "hidden": false
+      "hidden": true
     },
     {
       "key": "milf",
