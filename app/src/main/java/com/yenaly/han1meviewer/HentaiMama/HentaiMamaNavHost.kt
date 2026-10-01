@@ -58,8 +58,7 @@ fun HentaiMamaNavHost(
                     activity.requestSiteSwitch()
                 },
                 onNavigateToSettings = {
-                    // HentaiMama has no dedicated settings yet.
-                    // Wire this to the shared app settings once available.
+
                 },
             )
         }
