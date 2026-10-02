@@ -9,6 +9,10 @@ import kotlinx.coroutines.withContext
 
 object HentaiMamaHistoryRepo {
 
+    private const val MAX_SANE_DELTA_MS = 10_000L
+    private const val COMPLETE_GRACE_MS = 3_000L
+    private const val MIN_RESUME_THRESHOLD_MS = 5_000L
+
     @Volatile private var isInitialized = false
     @Volatile private lateinit var appContext: Context
 
@@ -40,7 +44,9 @@ object HentaiMamaHistoryRepo {
     suspend fun getTotalCount(): Int = withContext(Dispatchers.IO) { dao.getTotalCount() }
 
     suspend fun getByVideoCode(videoCode: String): HentaiMamaHistoryEntity? =
-        withContext(Dispatchers.IO) { runCatching { dao.getByVideoCode(videoCode) }.getOrNull() }
+        withContext(Dispatchers.IO) {
+            runCatching { dao.getByVideoCode(videoCode) }.getOrNull()
+        }
 
     suspend fun deleteByVideoCode(videoCode: String) = withContext(Dispatchers.IO) {
         dao.deleteByVideoCode(videoCode)
@@ -65,18 +71,36 @@ object HentaiMamaHistoryRepo {
             val now = System.currentTimeMillis()
 
             val entity = if (existing != null) {
-                val delta = (position - existing.lastPosition).coerceAtLeast(0L)
+
+                val rawDelta = position - existing.lastPosition
+                val creditedDelta =
+                    if (isPlaying && rawDelta in 0L..MAX_SANE_DELTA_MS) rawDelta else 0L
+
+                val episodeChanged =
+                    episodeUrl.isNotBlank() &&
+                            existing.lastEpisodeUrl.isNotBlank() &&
+                            existing.lastEpisodeUrl != episodeUrl
+
+                val completedFlag =
+                    completed || (duration > 0 && position >= duration - COMPLETE_GRACE_MS)
+
+                val watchCountBump =
+                    episodeChanged ||
+                            (existing.completed.not() && completedFlag)
+
                 existing.copy(
                     title = title.ifBlank { existing.title },
                     coverUrl = coverUrl.ifBlank { existing.coverUrl },
-                    lastEpisodeUrl = episodeUrl,
-                    lastEpisodeNumber = episodeNumber,
-                    lastEpisodeTitle = episodeTitle,
-                    lastPosition = position,
+                    lastEpisodeUrl = episodeUrl.ifBlank { existing.lastEpisodeUrl },
+                    lastEpisodeNumber = if (episodeNumber > 0f) episodeNumber
+                    else existing.lastEpisodeNumber,
+                    lastEpisodeTitle = episodeTitle.ifBlank { existing.lastEpisodeTitle },
+                    lastPosition = if (episodeChanged) position else position,
                     totalDuration = if (duration > 0) duration else existing.totalDuration,
                     watchDate = now,
-                    watchDuration = existing.watchDuration + if (isPlaying) delta else 0L,
-                    completed = completed,
+                    watchDuration = existing.watchDuration + creditedDelta,
+                    watchCount = existing.watchCount + if (watchCountBump) 1 else 0,
+                    completed = completedFlag,
                 )
             } else {
                 HentaiMamaHistoryEntity(
@@ -96,5 +120,23 @@ object HentaiMamaHistoryRepo {
             }
             dao.insertOrUpdate(entity)
         }
+    }
+
+    suspend fun markStartedOver(videoCode: String) = withContext(Dispatchers.IO) {
+        writeMutex.withLock {
+            val existing = dao.getByVideoCode(videoCode) ?: return@withLock
+            dao.insertOrUpdate(
+                existing.copy(
+                    lastPosition = 0L,
+                    completed = false,
+                    watchDate = System.currentTimeMillis(),
+                )
+            )
+        }
+    }
+
+    suspend fun shouldOfferResume(videoCode: String): Boolean = withContext(Dispatchers.IO) {
+        val existing = dao.getByVideoCode(videoCode) ?: return@withContext false
+        !existing.completed && existing.lastPosition > MIN_RESUME_THRESHOLD_MS
     }
 }

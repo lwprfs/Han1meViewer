@@ -1,8 +1,10 @@
 package com.yenaly.han1meviewer.HentaiMama.ui.home
-import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
+
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -34,6 +36,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,9 +49,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
+import com.yenaly.han1meviewer.HentaiMama.settings.HentaiMamaCardSettings
+import com.yenaly.han1meviewer.HentaiMama.ui.components.HentaiMamaVideoCard
+import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
-import com.yenaly.han1meviewer.ui.component.VideoCardItem
-import com.yenaly.han1meviewer.ui.screen.rememberCardResponsiveWidth
+import com.yenaly.han1meviewer.logic.model.HanimeInfo
 import com.yenaly.han1meviewer.ui.theme.SpacingLarge
 import com.yenaly.han1meviewer.ui.theme.SpacingNormal
 
@@ -62,10 +70,28 @@ fun HentaiMamaHomeScreen(
     modifier: Modifier = Modifier,
     viewModel: HentaiMamaViewModel = viewModel(),
 ) {
-    val categoryRows by viewModel.categoryRows.collectAsStateWithLifecycle()
+    var settingsReady by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
+        HentaiMamaCardSettings.load()
+        settingsReady = true
+    }
 
+    if (!settingsReady) {
+        Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(
+                text = "Loading…",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        return
+    }
+
+    val categoryRows by viewModel.categoryRows.collectAsStateWithLifecycle()
+    val horizontalCardCountConfig = remember { Preferences.horizontalCardCountConfig }
+
+    LaunchedEffect(Unit) {
         if (categoryRows.isEmpty()) {
             viewModel.refreshAllCategories()
         }
@@ -112,7 +138,6 @@ fun HentaiMamaHomeScreen(
             if (categoryRows.isEmpty()) {
                 HomeLoadingState(onRetry = { viewModel.refreshAllCategories() })
             } else {
-                val (cardWidth, _) = rememberCardResponsiveWidth()
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(bottom = 16.dp),
@@ -129,38 +154,88 @@ fun HentaiMamaHomeScreen(
 
                         item(key = "body_$key") {
                             when {
-                                row.videos.isNotEmpty() -> {
-                                    LazyRow(
-                                        horizontalArrangement = Arrangement.spacedBy(SpacingNormal),
-                                        contentPadding = PaddingValues(horizontal = SpacingLarge),
-                                    ) {
-                                        items(row.videos, key = { it.videoCode }) { video ->
-                                            VideoCardItem(
-                                                modifier = Modifier.width(cardWidth),
-                                                videoItem = video,
-                                                isHorizontalCard = true,
-                                                onClickVideosItem = {
-                                                    val path = HentaiMamaNetwork.normalizeUrl(
-                                                        "/${video.videoCode}"
-                                                    )
-                                                    onNavigateToVideo(video.videoCode, path)
-                                                },
-                                                onLongClickVideosItem = { _, _ -> },
-                                            )
-                                        }
-                                    }
-                                }
+                                row.videos.isNotEmpty() -> CategoryRowContent(
+                                    videos = row.videos,
+                                    horizontalCardCountConfig = horizontalCardCountConfig,
+                                    onNavigateToVideo = onNavigateToVideo,
+                                )
 
                                 row.error != null -> CategoryErrorRow(
                                     message = row.error,
                                     onRetry = { viewModel.retryCategory(row.category) },
                                 )
 
-                                else -> CategorySkeletonRow(cardWidth = cardWidth)
+                                else -> CategorySkeletonRowContent(
+                                    horizontalCardCountConfig = horizontalCardCountConfig,
+                                )
                             }
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun rememberCategoryCardWidth(
+    horizontalCardCountConfig: com.yenaly.han1meviewer.HorizontalCardCountConfig,
+    availableWidthDp: Dp,
+): Dp {
+    val baseCount = horizontalCardCountConfig.countForWidthDp(availableWidthDp.value.toInt())
+    val effectiveCount = HentaiMamaCardSettings.effectiveCardCount(baseCount)
+    val widthMultiplier by HentaiMamaCardSettings.widthMultiplierState
+    return ((availableWidthDp - SpacingLarge * 2 - SpacingNormal * (effectiveCount - 1))
+            / effectiveCount) * widthMultiplier
+}
+
+@Composable
+private fun CategoryRowContent(
+    videos: List<HanimeInfo>,
+    horizontalCardCountConfig: com.yenaly.han1meviewer.HorizontalCardCountConfig,
+    onNavigateToVideo: (String, String) -> Unit,
+) {
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val cardWidth = rememberCategoryCardWidth(horizontalCardCountConfig, maxWidth)
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(SpacingNormal),
+            contentPadding = PaddingValues(horizontal = SpacingLarge),
+        ) {
+            items(videos, key = { it.videoCode }) { video ->
+                HentaiMamaVideoCard(
+                    modifier = Modifier.width(cardWidth),
+                    videoItem = video,
+                    onClick = {
+                        val path = HentaiMamaNetwork.normalizeUrl("/${video.videoCode}")
+                        onNavigateToVideo(video.videoCode, path)
+                    },
+                    onLongClick = { _, _ -> },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CategorySkeletonRowContent(
+    horizontalCardCountConfig: com.yenaly.han1meviewer.HorizontalCardCountConfig,
+) {
+    val aspectRatio by HentaiMamaCardSettings.effectiveAspectRatioState
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val cardWidth = rememberCategoryCardWidth(horizontalCardCountConfig, maxWidth)
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(SpacingNormal),
+            contentPadding = PaddingValues(horizontal = SpacingLarge),
+            userScrollEnabled = false,
+        ) {
+            items(4) {
+                Box(
+                    modifier = Modifier
+                        .width(cardWidth)
+                        .height(cardWidth / aspectRatio)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                )
             }
         }
     }
@@ -207,29 +282,6 @@ private fun SectionHeader(
         )
         TextButton(onClick = onMore) {
             Text(stringResource(R.string.more))
-        }
-    }
-}
-
-@Composable
-private fun CategorySkeletonRow(cardWidth: Dp) {
-    LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(SpacingNormal),
-        contentPadding = PaddingValues(horizontal = SpacingLarge),
-        userScrollEnabled = false,
-    ) {
-        items(4) {
-            Box(
-                modifier = Modifier
-                    .width(cardWidth)
-                    .height(140.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .then(
-                        Modifier
-                            .fillMaxSize()
-                            .clip(RoundedCornerShape(12.dp))
-                    )
-            )
         }
     }
 }

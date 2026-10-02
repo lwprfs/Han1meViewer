@@ -9,7 +9,6 @@ object HentaiMamaVideoSettings {
     private const val PREF_QUALITY_KEY = "hentaimama_preferred_quality"
 
     const val SERVER_AUTO = "__auto__"
-
     const val QUALITY_AUTO = "__auto__"
 
     var preferredServer: String

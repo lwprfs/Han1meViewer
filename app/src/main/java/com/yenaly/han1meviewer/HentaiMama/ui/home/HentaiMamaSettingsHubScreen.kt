@@ -1,4 +1,5 @@
 package com.yenaly.han1meviewer.HentaiMama.ui.home
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -14,9 +15,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.PlayCircleOutline
+import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -48,6 +51,8 @@ fun HentaiMamaSettingsHubScreen(
     onNavigateToVideoSettings: () -> Unit,
     onNavigateToHomeCategories: () -> Unit,
     onNavigateToHistory: () -> Unit,
+    onNavigateToUpcoming: () -> Unit,
+    onNavigateToRecentEpisodes: () -> Unit,
 ) {
     val entries = listOf(
         HubEntry(
@@ -70,6 +75,20 @@ fun HentaiMamaSettingsHubScreen(
             subtitle = "Series you've watched, resume from where you left off",
             icon = Icons.Default.History,
             onClick = onNavigateToHistory,
+        ),
+        HubEntry(
+            key = "recent_episodes",
+            title = "Recent Episodes",
+            subtitle = "Newest episode releases across all series",
+            icon = Icons.Default.VideoLibrary,
+            onClick = onNavigateToRecentEpisodes,
+        ),
+        HubEntry(
+            key = "upcoming",
+            title = "Upcoming",
+            subtitle = "Browse upcoming episodes by month",
+            icon = Icons.Default.CalendarMonth,
+            onClick = onNavigateToUpcoming,
         ),
     )
 

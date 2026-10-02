@@ -55,6 +55,7 @@ Thumbs.db
 **/test-output/
 **/reports/
 **/profiles/
+/documentation/
 
 # 特定项目忽略
 /yenaly_libs/local/

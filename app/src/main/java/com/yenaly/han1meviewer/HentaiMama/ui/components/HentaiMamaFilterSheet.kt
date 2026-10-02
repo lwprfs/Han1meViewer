@@ -1,6 +1,5 @@
 package com.yenaly.han1meviewer.HentaiMama.ui.components
-import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaOptions
-import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaOrder
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,6 +46,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaOptions
+import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaOrder
 
 private enum class FilterTab(val title: String) {
     ORDER("Order"),
@@ -71,7 +72,7 @@ fun HentaiMamaFilterSheet(
         enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
     )
 
-    var selectedTab by remember {
+    var selectedTab by remember(initialOrder, initialGenre, initialYear, initialProducer) {
         mutableIntStateOf(
             when {
                 initialOrder != null -> FilterTab.ORDER.ordinal
@@ -83,10 +84,10 @@ fun HentaiMamaFilterSheet(
         )
     }
 
-    var order by remember { mutableStateOf(initialOrder) }
-    var genre by remember { mutableStateOf(initialGenre) }
-    var year by remember { mutableStateOf(initialYear) }
-    var producer by remember { mutableStateOf(initialProducer) }
+    var order by remember(initialOrder) { mutableStateOf(initialOrder) }
+    var genre by remember(initialGenre) { mutableStateOf(initialGenre) }
+    var year by remember(initialYear) { mutableStateOf(initialYear) }
+    var producer by remember(initialProducer) { mutableStateOf(initialProducer) }
 
     var genreQuery by remember { mutableStateOf("") }
     var producerQuery by remember { mutableStateOf("") }

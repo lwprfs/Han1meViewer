@@ -16,6 +16,7 @@ import com.google.firebase.remoteconfig.remoteConfig
 import com.google.firebase.remoteconfig.remoteConfigSettings
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
 import com.yenaly.han1meviewer.HentaiMama.data.local.HentaiMamaHistoryRepo
+import com.yenaly.han1meviewer.HentaiMama.settings.HentaiMamaCardSettings
 import com.yenaly.han1meviewer.logic.network.HProxySelector
 import com.yenaly.han1meviewer.ui.viewmodel.AppViewModel
 import com.yenaly.han1meviewer.ui.activity.MainActivity
@@ -118,6 +119,13 @@ class HanimeApplication : YenalyApplication() {
             Log.d(TAG, "HentaiMamaHistoryRepo initialized successfully")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize HentaiMamaHistoryRepo", e)
+        }
+
+        try {
+            HentaiMamaCardSettings.load()
+            Log.d(TAG, "HentaiMamaCardSettings loaded successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to load HentaiMamaCardSettings", e)
         }
     }
 

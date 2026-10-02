@@ -1,19 +1,28 @@
 package com.yenaly.han1meviewer.HentaiMama.ui.navigation
-import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
-import com.yenaly.han1meviewer.HentaiMama.ui.home.HentaiMamaHomeScreen
-import com.yenaly.han1meviewer.HentaiMama.ui.search.HentaiMamaSearchScreen
-import com.yenaly.han1meviewer.HentaiMama.ui.video.HentaiMamaVideoScreen
-import com.yenaly.han1meviewer.HentaiMama.ui.history.HentaiMamaHistoryScreen
-import com.yenaly.han1meviewer.HentaiMama.ui.home.HentaiMamaSettingsHubScreen
-import com.yenaly.han1meviewer.HentaiMama.ui.home.HentaiMamaHomeSettingsScreen
+
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
-import com.yenaly.han1meviewer.SiteType
+import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
+import com.yenaly.han1meviewer.HentaiMama.settings.HentaiMamaCardSettingsTarget
 import com.yenaly.han1meviewer.HentaiMama.settings.HentaiMamaVideoSettingsScreen
+import com.yenaly.han1meviewer.HentaiMama.ui.history.HentaiMamaHistoryScreen
+import com.yenaly.han1meviewer.HentaiMama.ui.home.HentaiMamaHomeScreen
+import com.yenaly.han1meviewer.HentaiMama.ui.home.HentaiMamaHomeSettingsScreen
+import com.yenaly.han1meviewer.HentaiMama.ui.home.HentaiMamaSettingsHubScreen
+import com.yenaly.han1meviewer.HentaiMama.ui.home.HentaiMamaViewModel
+import com.yenaly.han1meviewer.HentaiMama.ui.recent.HentaiMamaRecentEpisodesScreen
+import com.yenaly.han1meviewer.HentaiMama.ui.search.HentaiMamaSearchScreen
+import com.yenaly.han1meviewer.HentaiMama.ui.series.HentaiMamaSeriesScreen
+import com.yenaly.han1meviewer.HentaiMama.ui.upcoming.HentaiMamaUpcomingScreen
+import com.yenaly.han1meviewer.HentaiMama.ui.video.HentaiMamaVideoScreen
+import com.yenaly.han1meviewer.HentaiMama.ui.video.HentaiMamaVideoViewModel
+import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.ui.activity.MainActivity
 import com.yenaly.han1meviewer.ui.navigation.NavigationManager
 import com.yenaly.han1meviewer.ui.navigation.canNavigateSafely
@@ -41,13 +50,26 @@ data class HentaiMamaVideoRoute(
 )
 
 @Serializable
+data class HentaiMamaSeriesRoute(
+    val slug: String,
+)
+
+@Serializable
 object HentaiMamaHistoryRoute
+
+@Serializable
+object HentaiMamaUpcomingRoute
+
+@Serializable
+object HentaiMamaRecentEpisodesRoute
 
 @Serializable
 object HentaiMamaSettingsHubRoute
 
 @Serializable
-object HentaiMamaVideoSettingsRoute
+data class HentaiMamaVideoSettingsRoute(
+    val target: String = "all",
+)
 
 @Serializable
 object HentaiMamaHomeSettingsRoute
@@ -63,6 +85,13 @@ fun HentaiMamaNavHost(
     LaunchedEffect(Unit) {
         delay(50)
         NavigationManager.initialize(navController, SiteType.HENTAIMAMA)
+    }
+
+    DisposableEffect(navController) {
+        onDispose {
+            val vm: HentaiMamaViewModel? = null
+            vm?.resetAll()
+        }
     }
 
     NavHost(
@@ -126,6 +155,9 @@ fun HentaiMamaNavHost(
 
         composable<HentaiMamaVideoRoute> { backStackEntry ->
             val route = backStackEntry.toRoute<HentaiMamaVideoRoute>()
+            val videoViewModel: HentaiMamaVideoViewModel = viewModel(
+                key = route.videoCode,
+            )
             HentaiMamaVideoScreen(
                 videoCode = route.videoCode,
                 path = route.path,
@@ -141,6 +173,39 @@ fun HentaiMamaNavHost(
                 onNavigateToSearch = { query ->
                     if (navController.canNavigateSafely()) {
                         navController.navigateSafely(HentaiMamaSearchRoute(query = query))
+                    }
+                },
+                onNavigateToSeries = { slug ->
+                    if (navController.canNavigateSafely()) {
+                        navController.navigateSafely(HentaiMamaSeriesRoute(slug = slug))
+                    }
+                },
+                viewModel = videoViewModel,
+            )
+        }
+
+        composable<HentaiMamaSeriesRoute> { backStackEntry ->
+            val route = backStackEntry.toRoute<HentaiMamaSeriesRoute>()
+            HentaiMamaSeriesScreen(
+                slug = route.slug,
+                onBack = { navController.popBackStack() },
+                onOpenEpisode = { code, url ->
+                    if (navController.canNavigateSafely()) {
+                        navController.navigateSafely(
+                            HentaiMamaVideoRoute(videoCode = code, path = url)
+                        )
+                    }
+                },
+                onOpenRelatedSeries = { relatedSlug ->
+                    if (relatedSlug != route.slug && navController.canNavigateSafely()) {
+                        navController.navigateSafely(
+                            HentaiMamaSeriesRoute(slug = relatedSlug)
+                        )
+                    }
+                },
+                onGenreClick = { genre ->
+                    if (navController.canNavigateSafely()) {
+                        navController.navigateSafely(HentaiMamaSearchRoute(query = genre))
                     }
                 },
             )
@@ -160,6 +225,63 @@ fun HentaiMamaNavHost(
                         )
                     }
                 },
+                onBrowseHome = {
+                    navController.popBackStack(HentaiMamaHomeRoute, inclusive = false)
+                },
+            )
+        }
+
+        composable<HentaiMamaUpcomingRoute> {
+            HentaiMamaUpcomingScreen(
+                onBack = { navController.popBackStack() },
+                onOpenEpisode = { slug, url ->
+                    if (navController.canNavigateSafely()) {
+                        navController.navigateSafely(
+                            HentaiMamaVideoRoute(videoCode = slug, path = url)
+                        )
+                    }
+                },
+                onOpenSeries = { slug ->
+                    if (navController.canNavigateSafely()) {
+                        navController.navigateSafely(
+                            HentaiMamaSeriesRoute(slug = slug)
+                        )
+                    }
+                },
+                onOpenStudio = { studioSlug ->
+                    if (navController.canNavigateSafely()) {
+                        navController.navigateSafely(
+                            HentaiMamaSearchRoute(query = studioSlug)
+                        )
+                    }
+                },
+                onNavigateToCardSettings = {
+                    if (navController.canNavigateSafely()) {
+                        navController.navigateSafely(
+                            HentaiMamaVideoSettingsRoute(target = "upcoming")
+                        )
+                    }
+                },
+            )
+        }
+
+        composable<HentaiMamaRecentEpisodesRoute> {
+            HentaiMamaRecentEpisodesScreen(
+                onBack = { navController.popBackStack() },
+                onOpenEpisode = { slug, url ->
+                    if (navController.canNavigateSafely()) {
+                        navController.navigateSafely(
+                            HentaiMamaVideoRoute(videoCode = slug, path = url)
+                        )
+                    }
+                },
+                onNavigateToCardSettings = {
+                    if (navController.canNavigateSafely()) {
+                        navController.navigateSafely(
+                            HentaiMamaVideoSettingsRoute(target = "recent")
+                        )
+                    }
+                },
             )
         }
 
@@ -168,7 +290,9 @@ fun HentaiMamaNavHost(
                 onBack = { navController.popBackStack() },
                 onNavigateToVideoSettings = {
                     if (navController.canNavigateSafely()) {
-                        navController.navigateSafely(HentaiMamaVideoSettingsRoute)
+                        navController.navigateSafely(
+                            HentaiMamaVideoSettingsRoute(target = "all")
+                        )
                     }
                 },
                 onNavigateToHomeCategories = {
@@ -181,12 +305,34 @@ fun HentaiMamaNavHost(
                         navController.navigateSafely(HentaiMamaHistoryRoute)
                     }
                 },
+                onNavigateToUpcoming = {
+                    if (navController.canNavigateSafely()) {
+                        navController.navigateSafely(HentaiMamaUpcomingRoute)
+                    }
+                },
+                onNavigateToRecentEpisodes = {
+                    if (navController.canNavigateSafely()) {
+                        navController.navigateSafely(HentaiMamaRecentEpisodesRoute)
+                    }
+                },
             )
         }
 
-        composable<HentaiMamaVideoSettingsRoute> {
+        composable<HentaiMamaVideoSettingsRoute> { backStackEntry ->
+            val route = backStackEntry.toRoute<HentaiMamaVideoSettingsRoute>()
+            val targets: Set<HentaiMamaCardSettingsTarget> = when (route.target) {
+                "recent" -> setOf(HentaiMamaCardSettingsTarget.Recent)
+                "upcoming" -> setOf(HentaiMamaCardSettingsTarget.Upcoming)
+                "home" -> setOf(HentaiMamaCardSettingsTarget.Home)
+                else -> setOf(
+                    HentaiMamaCardSettingsTarget.Home,
+                    HentaiMamaCardSettingsTarget.Recent,
+                    HentaiMamaCardSettingsTarget.Upcoming,
+                )
+            }
             HentaiMamaVideoSettingsScreen(
                 onBack = { navController.popBackStack() },
+                targets = targets,
             )
         }
 

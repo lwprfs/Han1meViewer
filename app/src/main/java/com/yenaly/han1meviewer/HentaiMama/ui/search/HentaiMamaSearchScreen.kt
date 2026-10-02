@@ -1,8 +1,6 @@
 package com.yenaly.han1meviewer.HentaiMama.ui.search
-import com.yenaly.han1meviewer.HentaiMama.ui.components.HentaiMamaFilterSheet
-import com.yenaly.han1meviewer.HentaiMama.ui.home.HentaiMamaHomeCategoryRepo
-import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaOptions
-import com.yenaly.han1meviewer.HentaiMama.ui.home.HentaiMamaViewModel
+
+import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -10,6 +8,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -50,7 +49,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -64,16 +62,23 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.yenaly.han1meviewer.logic.model.HanimeInfo
+import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaOptions
+import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
+import com.yenaly.han1meviewer.HentaiMama.settings.HentaiMamaCardSettings
+import com.yenaly.han1meviewer.HentaiMama.ui.components.HentaiMamaFilterSheet
+import com.yenaly.han1meviewer.HentaiMama.ui.components.HentaiMamaVideoCard
+import com.yenaly.han1meviewer.HentaiMama.ui.home.HentaiMamaHomeCategoryRepo
+import com.yenaly.han1meviewer.HentaiMama.ui.home.HentaiMamaViewModel
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
-import com.yenaly.han1meviewer.ui.component.VideoCardItem
 import com.yenaly.han1meviewer.ui.component.content.ErrorContent
 import com.yenaly.han1meviewer.ui.component.content.LoadingContent
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+private const val BASE_GRID_MIN_SIZE_DP = 150
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -86,21 +91,39 @@ fun HentaiMamaSearchScreen(
     initialOrder: String? = null,
     viewModel: HentaiMamaViewModel = viewModel(),
 ) {
+    var settingsReady by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        HentaiMamaCardSettings.load()
+        settingsReady = true
+    }
+
+    if (!settingsReady) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(
+                text = "Loading…",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        return
+    }
+
     val context = LocalContext.current
 
     var searchQuery by rememberSaveable { mutableStateOf(initialQuery ?: "") }
-    var currentPage by remember { mutableIntStateOf(1) }
-    var allVideos by remember { mutableStateOf<List<HanimeInfo>>(emptyList()) }
-    var isLoadingMore by remember { mutableStateOf(false) }
     var hasSearched by rememberSaveable { mutableStateOf(false) }
-    var hasMorePages by remember { mutableStateOf(true) }
     var showFilterSheet by rememberSaveable { mutableStateOf(false) }
 
     val searchState by viewModel.searchState.collectAsStateWithLifecycle()
+    val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
     val selectedGenre by viewModel.selectedGenre.collectAsStateWithLifecycle()
     val selectedProducer by viewModel.selectedProducer.collectAsStateWithLifecycle()
     val selectedYear by viewModel.selectedYear.collectAsStateWithLifecycle()
     val selectedOrder by viewModel.selectedOrder.collectAsStateWithLifecycle()
+    val isFilterMode by viewModel.searchIsFilterMode.collectAsStateWithLifecycle()
+    val isLoadingMore by viewModel.searchIsLoadingMore.collectAsStateWithLifecycle()
+    val hasMore by viewModel.searchHasMore.collectAsStateWithLifecycle()
 
     val orders = remember { HentaiMamaOptions.orders }
     val activeFilterCount = listOfNotNull(
@@ -114,20 +137,15 @@ fun HentaiMamaSearchScreen(
         derivedStateOf { gridState.firstVisibleItemIndex > 6 }
     }
 
-    fun doSearch(resetPage: Boolean = true) {
-        if (resetPage) {
-            currentPage = 1
-            allVideos = emptyList()
-            hasMorePages = true
+    fun runSearch(reset: Boolean = true) {
+        if (reset) {
             coroutineScope.launch { gridState.scrollToItem(0) }
         }
         hasSearched = true
-        isLoadingMore = true
-
         if (searchQuery.isNotBlank()) {
-            viewModel.searchVideos(currentPage, searchQuery)
+            viewModel.searchVideos(1, searchQuery)
         } else {
-            viewModel.filterVideos(currentPage)
+            viewModel.filterVideos(1)
         }
     }
 
@@ -136,28 +154,22 @@ fun HentaiMamaSearchScreen(
 
         if (!initialQuery.isNullOrEmpty()) {
             searchQuery = initialQuery
-            doSearch()
+            runSearch()
             return@LaunchedEffect
         }
 
         if (!initialCategoryKey.isNullOrBlank()) {
             val category = withContext(Dispatchers.IO) {
-                HentaiMamaHomeCategoryRepo
-                    .load(context)
+                HentaiMamaHomeCategoryRepo.load(context)
                     .firstOrNull { it.key == initialCategoryKey }
             }
-
             if (category != null) {
-
                 val inferredGenre = extractGenreFromPath(category.genrePath)
-                val inferredOrder = category.sort
-
                 viewModel.setGenre(inferredGenre)
-                viewModel.setOrder(inferredOrder)
+                viewModel.setOrder(category.sort)
                 viewModel.setProducer(null)
                 viewModel.setYear(null)
-
-                doSearch()
+                runSearch()
                 return@LaunchedEffect
             }
         }
@@ -165,29 +177,11 @@ fun HentaiMamaSearchScreen(
         if (!initialGenre.isNullOrBlank() || !initialOrder.isNullOrBlank()) {
             viewModel.setGenre(initialGenre)
             viewModel.setOrder(initialOrder)
-            doSearch()
-            return@LaunchedEffect
+            runSearch()
         }
     }
 
-    LaunchedEffect(searchState) {
-        when (val state = searchState) {
-            is PageLoadingState.Success -> {
-                val incoming = state.info
-                allVideos = if (currentPage == 1) incoming else allVideos + incoming
-                isLoadingMore = false
-                if (incoming.isEmpty()) hasMorePages = false
-            }
-            is PageLoadingState.NoMoreData -> {
-                isLoadingMore = false
-                hasMorePages = false
-            }
-            is PageLoadingState.Error -> isLoadingMore = false
-            is PageLoadingState.Loading -> Unit
-        }
-    }
-
-    LaunchedEffect(gridState) {
+    LaunchedEffect(gridState, hasMore, isLoadingMore, hasSearched) {
         snapshotFlow {
             val info = gridState.layoutInfo
             val total = info.totalItemsCount
@@ -195,24 +189,12 @@ fun HentaiMamaSearchScreen(
             total to last
         }
             .distinctUntilChanged()
-            .filter { (total, _) -> total > 4 && hasMorePages && hasSearched && !isLoadingMore }
+            .filter { (total, _) -> total > 4 && hasMore && hasSearched && !isLoadingMore }
             .collect { (total, last) ->
                 if (last >= total - 4) {
-                    isLoadingMore = true
-                    currentPage += 1
-                    if (searchQuery.isNotBlank()) {
-                        viewModel.searchVideos(currentPage, searchQuery)
-                    } else {
-                        viewModel.filterVideos(currentPage)
-                    }
+                    viewModel.loadNextSearchPage()
                 }
             }
-    }
-
-    fun applyFilterAndSearch() {
-        if (searchQuery.isBlank()) {
-            doSearch(resetPage = true)
-        }
     }
 
     if (showFilterSheet) {
@@ -229,12 +211,10 @@ fun HentaiMamaSearchScreen(
                 viewModel.setProducer(producer)
                 showFilterSheet = false
                 if (searchQuery.isBlank()) {
-                    doSearch(resetPage = true)
+                    runSearch()
                 }
             },
-            onReset = {
-                viewModel.clearFilters()
-            },
+            onReset = { viewModel.clearFilters() },
         )
     }
 
@@ -259,7 +239,7 @@ fun HentaiMamaSearchScreen(
                             Icon(Icons.Default.FilterList, contentDescription = "Filters")
                         }
                     }
-                }
+                },
             )
         },
         floatingActionButton = {
@@ -280,7 +260,13 @@ fun HentaiMamaSearchScreen(
 
             OutlinedTextField(
                 value = searchQuery,
-                onValueChange = { searchQuery = it },
+                onValueChange = { newValue ->
+                    searchQuery = newValue
+                    if (newValue.isBlank() && !isFilterMode) {
+                        viewModel.clearSearch()
+                        hasSearched = false
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -292,7 +278,7 @@ fun HentaiMamaSearchScreen(
                             IconButton(
                                 onClick = {
                                     searchQuery = ""
-                                    allVideos = emptyList()
+                                    viewModel.clearSearch()
                                     hasSearched = false
                                 },
                                 modifier = Modifier.size(40.dp),
@@ -301,7 +287,7 @@ fun HentaiMamaSearchScreen(
                             }
                         }
                         IconButton(
-                            onClick = { doSearch(resetPage = true) },
+                            onClick = { runSearch() },
                             modifier = Modifier.size(40.dp),
                         ) {
                             Icon(Icons.Default.Search, contentDescription = "Search")
@@ -309,23 +295,33 @@ fun HentaiMamaSearchScreen(
                     }
                 },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { doSearch(resetPage = true) }),
+                keyboardActions = KeyboardActions(onSearch = { runSearch() }),
             )
 
             val activeChips = buildList {
                 selectedOrder?.let { key ->
                     val label = orders.find { it.value == key }?.name ?: key
-                    add("Order: $label" to { viewModel.setOrder(null); applyFilterAndSearch() })
+                    add("Order: $label" to {
+                        viewModel.setOrder(null)
+                        runSearch()
+                    })
                 }
                 selectedGenre?.let { key ->
-                    add("Genre: $key" to { viewModel.setGenre(null); applyFilterAndSearch() })
+                    add("Genre: $key" to {
+                        viewModel.setGenre(null)
+                        runSearch()
+                    })
                 }
                 selectedYear?.let { key ->
-                    add("Year: $key" to { viewModel.setYear(null); applyFilterAndSearch() })
+                    add("Year: $key" to {
+                        viewModel.setYear(null)
+                        runSearch()
+                    })
                 }
                 selectedProducer?.let { key ->
                     add("Producer: ${key.take(20)}" to {
-                        viewModel.setProducer(null); applyFilterAndSearch()
+                        viewModel.setProducer(null)
+                        runSearch()
                     })
                 }
             }
@@ -346,9 +342,7 @@ fun HentaiMamaSearchScreen(
                         InputChip(
                             selected = true,
                             onClick = onRemove,
-                            label = {
-                                Text(label, style = MaterialTheme.typography.labelSmall)
-                            },
+                            label = { Text(label, style = MaterialTheme.typography.labelSmall) },
                             trailingIcon = {
                                 Icon(
                                     Icons.Default.Clear,
@@ -362,7 +356,7 @@ fun HentaiMamaSearchScreen(
                         AssistChip(
                             onClick = {
                                 viewModel.clearFilters()
-                                applyFilterAndSearch()
+                                runSearch()
                             },
                             label = { Text("Clear all") },
                         )
@@ -374,40 +368,49 @@ fun HentaiMamaSearchScreen(
 
             when (val state = searchState) {
                 is PageLoadingState.Loading -> {
-                    if (allVideos.isEmpty() && hasSearched) {
+                    if (searchResults.isEmpty() && hasSearched) {
                         LoadingContent()
-                    } else if (allVideos.isEmpty() && !hasSearched) {
+                    } else if (searchResults.isEmpty() && !hasSearched) {
                         SearchPlaceholder()
                     } else {
                         DisplayResults(
-                            allVideos, isLoadingMore, gridState, onNavigateToVideo
+                            searchResults,
+                            isLoadingMore,
+                            gridState,
+                            onNavigateToVideo,
                         )
                     }
                 }
 
                 is PageLoadingState.Success,
                 is PageLoadingState.NoMoreData -> {
-                    if (allVideos.isEmpty() && hasSearched) {
+                    if (searchResults.isEmpty() && hasSearched) {
                         EmptyResults()
-                    } else if (allVideos.isEmpty()) {
+                    } else if (searchResults.isEmpty()) {
                         SearchPlaceholder()
                     } else {
                         DisplayResults(
-                            allVideos, isLoadingMore, gridState, onNavigateToVideo
+                            searchResults,
+                            isLoadingMore,
+                            gridState,
+                            onNavigateToVideo,
                         )
                     }
                 }
 
                 is PageLoadingState.Error -> {
-                    if (allVideos.isEmpty()) {
+                    if (searchResults.isEmpty()) {
                         ErrorContent(
                             message = state.throwable.message ?: "Failed to load results",
-                            onRetry = { doSearch(resetPage = true) },
+                            onRetry = { runSearch() },
                         )
                     } else {
                         Column {
                             DisplayResults(
-                                allVideos, isLoadingMore, gridState, onNavigateToVideo
+                                searchResults,
+                                isLoadingMore,
+                                gridState,
+                                onNavigateToVideo,
                             )
                             Text(
                                 text = "Failed to load more: ${state.throwable.message}",
@@ -423,12 +426,12 @@ fun HentaiMamaSearchScreen(
 }
 
 private fun extractGenreFromPath(path: String): String? {
-    val match = Regex("""genres_filter\[\]=([^&]+)""").find(path) ?: return null
-    val raw = match.groupValues[1]
-
+    if (path.isBlank()) return null
+    val fullUrl = if (path.startsWith("http")) path
+    else "https://placeholder.local/$path"
     return runCatching {
-        java.net.URLDecoder.decode(raw.replace("+", " "), "UTF-8")
-    }.getOrElse { raw }
+        Uri.parse(fullUrl).getQueryParameter("genres_filter[]")
+    }.getOrNull()?.takeIf { it.isNotBlank() }
 }
 
 @Composable
@@ -456,43 +459,56 @@ private fun EmptyResults() {
 
 @Composable
 private fun DisplayResults(
-    allVideos: List<HanimeInfo>,
+    allVideos: List<com.yenaly.han1meviewer.logic.model.HanimeInfo>,
     isLoadingMore: Boolean,
     gridState: androidx.compose.foundation.lazy.grid.LazyGridState,
     onNavigateToVideo: (String) -> Unit,
 ) {
     val uniqueVideos = remember(allVideos) { allVideos.distinctBy { it.videoCode } }
 
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 150.dp),
-        state = gridState,
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .padding(8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(bottom = 16.dp),
     ) {
-        items(count = uniqueVideos.size, key = { i -> uniqueVideos[i].videoCode }) { index ->
-            val video = uniqueVideos[index]
-            VideoCardItem(
-                videoItem = video,
-                onClickVideosItem = { onNavigateToVideo(video.videoCode) },
-                onLongClickVideosItem = { _, _ -> },
-            )
-        }
-        if (isLoadingMore) {
-            item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        strokeWidth = 2.dp,
-                    )
+        val gridWidth = maxWidth
+        val columns = HentaiMamaCardSettings
+            .effectiveCardCount(gridWidth.value / BASE_GRID_MIN_SIZE_DP)
+            .toInt()
+            .coerceAtLeast(2)
+
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(columns),
+            state = gridState,
+            modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(bottom = 16.dp),
+        ) {
+            items(
+                count = uniqueVideos.size,
+                key = { i -> uniqueVideos[i].videoCode },
+            ) { index ->
+                val video = uniqueVideos[index]
+                HentaiMamaVideoCard(
+                    videoItem = video,
+                    onClick = { onNavigateToVideo(video.videoCode) },
+                    onLongClick = { _, _ -> },
+                )
+            }
+            if (isLoadingMore) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp,
+                        )
+                    }
                 }
             }
         }

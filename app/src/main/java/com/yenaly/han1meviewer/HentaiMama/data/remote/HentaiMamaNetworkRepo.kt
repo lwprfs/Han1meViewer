@@ -1,12 +1,13 @@
 package com.yenaly.han1meviewer.HentaiMama.data.remote
-import com.yenaly.han1meviewer.HentaiMama.ui.home.HentaiMamaHomeCategory
-import com.yenaly.han1meviewer.HentaiMama.data.parser.HentaiMamaParser
-import com.yenaly.han1meviewer.HentaiMama.data.model.HentaiMamaHomePage
-import com.yenaly.han1meviewer.HentaiMama.data.model.HentaiMamaVideoInfo
-import com.yenaly.han1meviewer.HentaiMama.data.model.HentaiMamaVideoLink
-import com.yenaly.han1meviewer.HentaiMama.data.model.HentaiMamaEpisode
+
 import android.util.Log
 import com.yenaly.han1meviewer.EMPTY_STRING
+import com.yenaly.han1meviewer.HentaiMama.data.model.EpisodeDetailPage
+import com.yenaly.han1meviewer.HentaiMama.data.model.HentaiMamaHomePage
+import com.yenaly.han1meviewer.HentaiMama.data.model.HentaiMamaVideoLink
+import com.yenaly.han1meviewer.HentaiMama.data.model.SeriesDetailPage
+import com.yenaly.han1meviewer.HentaiMama.data.parser.HentaiMamaParser
+import com.yenaly.han1meviewer.HentaiMama.ui.home.HentaiMamaHomeCategory
 import com.yenaly.han1meviewer.logic.model.HanimeInfo
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
@@ -57,18 +58,16 @@ object HentaiMamaNetworkRepo {
 
     suspend fun getCategoryVideos(category: HentaiMamaHomeCategory): List<HanimeInfo> {
         val baseUrl = HentaiMamaNetwork.baseUrl
-
         val relative = category.genrePath.trimStart('/')
         val fullUrl = if (relative.startsWith("http")) relative else "$baseUrl/$relative"
-
-        val finalUrl = if (!category.sort.isNullOrBlank() && !fullUrl.contains("filter=", ignoreCase = true)) {
+        val finalUrl = if (!category.sort.isNullOrBlank() &&
+            !fullUrl.contains("filter=", ignoreCase = true)
+        ) {
             val sep = if ('?' in fullUrl) "&" else "?"
             "$fullUrl${sep}filter=${category.sort}"
         } else {
             fullUrl
         }
-
-        Log.d(TAG, "getCategoryVideos: key=${category.key} url=$finalUrl")
 
         return try {
             val response = HentaiMamaNetwork.service.getVideoDetail(finalUrl)
@@ -76,12 +75,9 @@ object HentaiMamaNetworkRepo {
                 Log.w(TAG, "getCategoryVideos HTTP ${response.code()} for ${category.key}")
                 return emptyList()
             }
-
             val body = response.body()?.string().orEmpty()
             if (body.isBlank()) return emptyList()
-
-            val state = HentaiMamaParser.parseSearchResults(body, isFilterSearch = true)
-            when (state) {
+            when (val state = HentaiMamaParser.parseSearchResults(body, isFilterSearch = true)) {
                 is PageLoadingState.Success -> state.info
                 else -> emptyList()
             }
@@ -139,11 +135,6 @@ object HentaiMamaNetworkRepo {
             val years = year?.takeIf { it.isNotBlank() }?.let { listOf(it) }
             val filterOrder = order?.takeIf { it.isNotBlank() }
 
-            Log.d(
-                TAG,
-                "filterVideos: page=$page genre=$genre producer=$producer year=$year order=$order"
-            )
-
             val response = if (page <= 1) {
                 HentaiMamaNetwork.service.getFilteredVideos(
                     filter = filterOrder,
@@ -183,7 +174,38 @@ object HentaiMamaNetworkRepo {
                 Log.d(TAG, "getVideoDetail: len=${body.length} url=$full")
                 emit(HentaiMamaParser.parseVideoDetail(body, full))
             } else {
-                emit(VideoLoadingState.Error(IllegalStateException("Failed: ${response.code()}")))
+                when (response.code()) {
+                    404 -> emit(VideoLoadingState.NoContent)
+                    else -> emit(
+                        VideoLoadingState.Error(
+                            IllegalStateException("Failed: ${response.code()}")
+                        )
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            emit(VideoLoadingState.Error(e))
+        }
+    }.flowOn(Dispatchers.IO)
+
+    fun getSeriesDetail(url: String) = flow {
+        emit(VideoLoadingState.Loading)
+        try {
+            val full = if (url.startsWith("http")) url else HentaiMamaNetwork.normalizeUrl(url)
+            val response = HentaiMamaNetwork.service.getVideoDetail(full)
+            if (response.isSuccessful) {
+                val body = response.body()?.string() ?: EMPTY_STRING
+                Log.d(TAG, "getSeriesDetail: len=${body.length} url=$full")
+                emit(HentaiMamaParser.parseSeriesDetail(body, full))
+            } else {
+                when (response.code()) {
+                    404 -> emit(VideoLoadingState.NoContent)
+                    else -> emit(
+                        VideoLoadingState.Error(
+                            IllegalStateException("Failed: ${response.code()}")
+                        )
+                    )
+                }
             }
         } catch (e: Exception) {
             emit(VideoLoadingState.Error(e))
@@ -193,16 +215,19 @@ object HentaiMamaNetworkRepo {
     suspend fun extractVideoLinks(
         detailPageBody: String,
         optionNumber: Int,
-    ): List<HentaiMamaVideoLink> {
-        return HentaiMamaParser.videoListParse(
-            detailPageBody = detailPageBody,
-            baseUrl = HentaiMamaNetwork.baseUrl,
-            apiUrl = HentaiMamaNetwork.apiUrl,
-            optionNumber = optionNumber,
-        )
-    }
+    ): List<HentaiMamaVideoLink> = HentaiMamaParser.videoListParse(
+        detailPageBody = detailPageBody,
+        baseUrl = HentaiMamaNetwork.baseUrl,
+        apiUrl = HentaiMamaNetwork.apiUrl,
+        optionNumber = optionNumber,
+    )
 
-    suspend fun extractHosterTabs(detailPageBody: String): List<Pair<String, Int>> {
-        return HentaiMamaParser.hosterTabs(detailPageBody)
-    }
+    suspend fun extractHosterTabs(detailPageBody: String): List<Pair<String, Int>> =
+        HentaiMamaParser.hosterTabs(detailPageBody)
+
+    fun parseFullEpisodePage(body: String, url: String): VideoLoadingState<EpisodeDetailPage> =
+        HentaiMamaParser.parseEpisodeDetail(body, url)
+
+    fun parseFullSeriesPage(body: String, url: String): VideoLoadingState<SeriesDetailPage> =
+        HentaiMamaParser.parseSeriesDetail(body, url)
 }
