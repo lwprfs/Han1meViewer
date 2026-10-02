@@ -1,14 +1,12 @@
 package com.yenaly.han1meviewer.MissAV.ui.video
-
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color as AndroidColor
-import android.graphics.SurfaceTexture
 import android.net.Uri
 import android.view.GestureDetector
 import android.view.Gravity
 import android.view.MotionEvent
-import android.view.TextureView
+import android.view.SurfaceView
 import android.view.ViewGroup
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
@@ -59,12 +57,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -81,7 +74,6 @@ import java.io.InputStream
 import java.nio.charset.StandardCharsets
 
 import com.yenaly.han1meviewer.MissAV.data.remote.MissAvVideoUtils
-
 data class SubtitleCue(
     val startTime: Long,
     val endTime: Long,
@@ -239,50 +231,12 @@ fun MissAvVideoPlayer(
 ) {
     val context = LocalContext.current
 
-    var playbackState by remember { mutableIntStateOf(Player.STATE_IDLE) }
-    var hasRenderedFirstFrame by remember { mutableStateOf(false) }
-    var surfaceReady by remember { mutableStateOf(false) }
-
     val surfaceModifier = if (isFullscreen) {
         modifier.fillMaxSize()
     } else {
         modifier
             .fillMaxWidth()
             .aspectRatio(16f / 9f)
-    }
-
-    val isExoReady = playbackState == Player.STATE_READY
-    val effectiveIsPlaying = isPlaying && isExoReady && hasRenderedFirstFrame
-
-    val isBuffering = playerStarted &&
-            currentUrl.isNotEmpty() &&
-            surfaceReady &&
-            (
-                    !hasRenderedFirstFrame && (playbackState == Player.STATE_BUFFERING ||
-                            playbackState == Player.STATE_IDLE)
-                            || playbackState == Player.STATE_BUFFERING
-                    )
-
-    LaunchedEffect(exoPlayer) {
-        val exo = exoPlayer ?: return@LaunchedEffect
-        val listener = object : Player.Listener {
-            override fun onPlaybackStateChanged(newState: Int) {
-                playbackState = newState
-                if (newState == Player.STATE_READY) {
-                    onPositionUpdate(exo.currentPosition, exo.duration)
-                }
-            }
-
-            override fun onRenderedFirstFrame() {
-                hasRenderedFirstFrame = true
-            }
-        }
-        exo.addListener(listener)
-        playbackState = exo.playbackState
-    }
-
-    LaunchedEffect(currentUrl) {
-        hasRenderedFirstFrame = false
     }
 
     Box(
@@ -298,41 +252,13 @@ fun MissAvVideoPlayer(
                             ViewGroup.LayoutParams.MATCH_PARENT,
                         )
 
-                        val textureView = TextureView(ctx).apply {
+                        val surface = SurfaceView(ctx).apply {
                             layoutParams = ViewGroup.LayoutParams(
                                 ViewGroup.LayoutParams.MATCH_PARENT,
                                 ViewGroup.LayoutParams.MATCH_PARENT,
                             )
-                            surfaceTextureListener = object : TextureView.SurfaceTextureListener {
-                                override fun onSurfaceTextureAvailable(
-                                    surface: SurfaceTexture,
-                                    width: Int,
-                                    height: Int,
-                                ) {
-                                    surfaceReady = true
-                                    (exoPlayer ?: return).setVideoTextureView(this@apply)
-                                }
-
-                                override fun onSurfaceTextureSizeChanged(
-                                    surface: SurfaceTexture,
-                                    width: Int,
-                                    height: Int,
-                                ) = Unit
-
-                                override fun onSurfaceTextureDestroyed(
-                                    surface: SurfaceTexture,
-                                ): Boolean {
-                                    surfaceReady = false
-                                    exoPlayer?.setVideoTextureView(null)
-                                    return true
-                                }
-
-                                override fun onSurfaceTextureUpdated(
-                                    surface: SurfaceTexture,
-                                ) = Unit
-                            }
                         }
-                        addView(textureView)
+                        addView(surface)
 
                         val subtitleText = TextView(ctx).apply {
                             onSubtitleTextViewCreated(this)
@@ -360,6 +286,7 @@ fun MissAvVideoPlayer(
                         val player = exoPlayer ?: ExoPlayer.Builder(ctx).build().also {
                             onPlayerCreated(it)
                         }
+                        player.setVideoSurfaceView(surface)
 
                         val gestureDetector = GestureDetector(
                             ctx,
@@ -388,28 +315,13 @@ fun MissAvVideoPlayer(
                 },
                 modifier = Modifier.fillMaxSize(),
                 onRelease = { view ->
-                    exoPlayer?.setVideoTextureView(null)
-                    surfaceReady = false
+                    exoPlayer?.setVideoSurfaceView(null)
                     onSurfaceReleased()
                     (view as? ViewGroup)?.removeAllViews()
                 },
             )
 
-            if (isBuffering) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.35f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator(
-                        color = Color.White,
-                        modifier = Modifier.size(56.dp),
-                    )
-                }
-            }
-
-            if (showResumeButton && !isPlaying && !isBuffering) {
+            if (showResumeButton && !isPlaying) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -461,7 +373,7 @@ fun MissAvVideoPlayer(
                 }
             }
 
-            if (showControls && !isBuffering) {
+            if (showControls) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -630,8 +542,8 @@ fun MissAvVideoPlayer(
                         .background(Color.Black.copy(alpha = 0.55f), CircleShape),
                 ) {
                     Icon(
-                        if (effectiveIsPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                        contentDescription = if (effectiveIsPlaying) "Pause" else "Play",
+                        if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                        contentDescription = if (isPlaying) "Pause" else "Play",
                         tint = Color.White,
                         modifier = Modifier.size(if (isFullscreen) 48.dp else 40.dp),
                     )
