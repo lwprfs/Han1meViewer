@@ -45,6 +45,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -94,12 +95,14 @@ fun HentaiMamaVideoPlayer(
     var subtitleView by remember { mutableStateOf<TextView?>(null) }
     var lastPosition by remember { mutableLongStateOf(0L) }
     var surfaceReady by remember { mutableStateOf(false) }
+    var playbackState by remember { mutableIntStateOf(Player.STATE_IDLE) }
+    var hasRenderedFirstFrame by remember { mutableStateOf(false) }
 
     Log.d(
         PLAYER_TAG,
         "compose: isReady=${state.isReady}, urlLen=${state.url.length}, " +
                 "urlHead=${state.url.take(80)}, isFullscreen=$isFullscreen, " +
-                "isVisible=$isVisible"
+                "isVisible=$isVisible, playbackState=$playbackState"
     )
 
     val surfaceModifier: Modifier = if (isFullscreen) {
@@ -110,11 +113,21 @@ fun HentaiMamaVideoPlayer(
             .aspectRatio(16f / 9f)
     }
 
-    val readyToPlay = state.isReady && state.url.isNotBlank() && surfaceReady
-    val effectiveIsPlaying = state.isPlaying && readyToPlay
-    val isPreparing = !readyToPlay || (state.isPlaying && !surfaceReady)
+    val sourceReady = state.isReady && state.url.isNotBlank()
+    val isExoReady = playbackState == Player.STATE_READY
 
-    LaunchedEffect(isVisible, readyToPlay) {
+    val isBuffering = when {
+        !sourceReady -> false
+        !surfaceReady -> false
+        !hasRenderedFirstFrame && (playbackState == Player.STATE_BUFFERING ||
+                playbackState == Player.STATE_IDLE) -> true
+        playbackState == Player.STATE_BUFFERING -> true
+        else -> false
+    }
+
+    val effectiveIsPlaying = state.isPlaying && isExoReady
+
+    LaunchedEffect(isVisible, isExoReady) {
         val exo = player ?: return@LaunchedEffect
         if (!isVisible && exo.playWhenReady) {
             exo.playWhenReady = false
@@ -137,7 +150,7 @@ fun HentaiMamaVideoPlayer(
             },
         contentAlignment = Alignment.Center,
     ) {
-        if (readyToPlay && isVisible) {
+        if (sourceReady && isVisible) {
             AndroidView(
                 factory = { ctx ->
                     Log.d(PLAYER_TAG, "AndroidView factory: building ExoPlayer")
@@ -244,6 +257,7 @@ fun HentaiMamaVideoPlayer(
             LaunchedEffect(state.url) {
                 val exo: ExoPlayer = player ?: return@LaunchedEffect
                 Log.d(PLAYER_TAG, "url changed, swapping media source: ${state.url.take(80)}")
+                hasRenderedFirstFrame = false
                 val base: String = HentaiMamaNetwork.baseUrl
                 val dsFactory = DefaultDataSource.Factory(
                     context,
@@ -272,9 +286,9 @@ fun HentaiMamaVideoPlayer(
                 player?.setPlaybackSpeed(state.speed)
             }
 
-            LaunchedEffect(effectiveIsPlaying, isVisible) {
+            LaunchedEffect(state.isPlaying, isExoReady, isVisible, surfaceReady) {
                 val exo: ExoPlayer = player ?: return@LaunchedEffect
-                val shouldPlay = effectiveIsPlaying && isVisible
+                val shouldPlay = state.isPlaying && isVisible && surfaceReady
                 if (exo.playWhenReady != shouldPlay) {
                     exo.playWhenReady = shouldPlay
                 }
@@ -287,19 +301,25 @@ fun HentaiMamaVideoPlayer(
                         showControls = true
                     }
 
-                    override fun onPlaybackStateChanged(playbackState: Int) {
+                    override fun onPlaybackStateChanged(newState: Int) {
+                        playbackState = newState
                         val p: ExoPlayer = player ?: return
-                        if (playbackState == Player.STATE_READY) {
+                        if (newState == Player.STATE_READY) {
                             onPositionUpdate(p.currentPosition, p.duration)
                         }
-                        Log.d(PLAYER_TAG, "playbackState=$playbackState")
+                        Log.d(PLAYER_TAG, "playbackState=$newState")
+                    }
+
+                    override fun onRenderedFirstFrame() {
+                        hasRenderedFirstFrame = true
+                        Log.d(PLAYER_TAG, "onRenderedFirstFrame")
                     }
                 }
                 exo?.addListener(listener)
                 onDispose { exo?.removeListener(listener) }
             }
 
-            LaunchedEffect(player, effectiveIsPlaying) {
+            LaunchedEffect(player, state.isPlaying) {
                 val exo: ExoPlayer = player ?: return@LaunchedEffect
                 while (true) {
                     delay(500)
@@ -336,8 +356,22 @@ fun HentaiMamaVideoPlayer(
                     },
             )
 
+            if (isBuffering) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.35f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(
+                        color = Color.White,
+                        modifier = Modifier.size(56.dp),
+                    )
+                }
+            }
+
             AnimatedVisibility(
-                visible = showControls,
+                visible = showControls && !isBuffering,
                 enter = fadeIn(),
                 exit = fadeOut(),
                 modifier = Modifier.fillMaxSize(),
@@ -362,7 +396,7 @@ fun HentaiMamaVideoPlayer(
                 )
             }
 
-            if (isPreparing && isVisible) {
+            if (isVisible && sourceReady && !surfaceReady) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -372,7 +406,22 @@ fun HentaiMamaVideoPlayer(
                         modifier = Modifier.size(48.dp),
                     )
                     Text(
-                        text = "Preparing video…",
+                        text = "Preparing player…",
+                        color = Color.White,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            } else if (isVisible && !sourceReady) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    CircularProgressIndicator(
+                        color = Color.White,
+                        modifier = Modifier.size(48.dp),
+                    )
+                    Text(
+                        text = "Fetching video link…",
                         color = Color.White,
                         style = MaterialTheme.typography.bodyMedium,
                     )
