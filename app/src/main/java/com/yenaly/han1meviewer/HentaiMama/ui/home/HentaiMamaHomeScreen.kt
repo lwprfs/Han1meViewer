@@ -69,6 +69,7 @@ fun HentaiMamaHomeScreen(
     onNavigateToGenre: (genreSlug: String) -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
     onNavigateToHistory: () -> Unit = {},
+    onNavigateToHome: () -> Unit = {},
     onSwitchSite: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: HentaiMamaViewModel = viewModel(),
@@ -106,7 +107,7 @@ fun HentaiMamaHomeScreen(
                 title = {
                     Text(
                         text = "HentaiMama",
-                        modifier = Modifier.clickable { onNavigateToSearch(null) },
+                        modifier = Modifier.clickable { onNavigateToHome() },
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                 },

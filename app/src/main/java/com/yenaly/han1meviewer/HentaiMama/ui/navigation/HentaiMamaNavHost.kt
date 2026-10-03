@@ -138,6 +138,9 @@ fun HentaiMamaNavHost(
                         navController.navigateSafely(HentaiMamaHistoryRoute)
                     }
                 },
+                onNavigateToHome = {
+                    navController.popBackStack(HentaiMamaHomeRoute, inclusive = false)
+                },
                 onSwitchSite = { activity.requestSiteSwitch() },
             )
         }
