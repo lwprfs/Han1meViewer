@@ -81,8 +81,7 @@ object HentaiMamaParser {
     fun parseVideoList(body: String): PageLoadingState<List<HanimeInfo>> {
         return try {
             val base: String = HentaiMamaNetwork.baseUrl
-            val doc: Document = Jsoup.parse(body, base)
-            val videos: List<HanimeInfo> = animeListFromDocument(doc, base)
+            val videos: List<HanimeInfo> = parseCardList(body, base)
             if (videos.isEmpty()) PageLoadingState.NoMoreData
             else PageLoadingState.Success(videos)
         } catch (e: Exception) {
@@ -96,12 +95,7 @@ object HentaiMamaParser {
     ): PageLoadingState<List<HanimeInfo>> {
         return try {
             val base: String = HentaiMamaNetwork.baseUrl
-            val doc: Document = Jsoup.parse(body, base)
-            val videos: List<HanimeInfo> = if (isFilterSearch) {
-                filterAnimeListFromDocument(doc, base)
-            } else {
-                animeListFromDocument(doc, base)
-            }
+            val videos: List<HanimeInfo> = parseCardList(body, base)
             if (videos.isEmpty()) PageLoadingState.NoMoreData
             else PageLoadingState.Success(videos)
         } catch (e: Exception) {
@@ -109,86 +103,154 @@ object HentaiMamaParser {
         }
     }
 
-    private fun animeListFromDocument(
-        document: Document,
-        baseUrl: String,
-    ): List<HanimeInfo> {
-        val result: MutableList<HanimeInfo> = mutableListOf()
-        val elements = document.select("article.series-card")
-        for (element in elements) {
-            val item: HanimeInfo? = runCatching {
-                val poster: Element = element.selectFirst("a.sc-poster")
-                    ?: return@runCatching null
-                val href: String = poster.attr("href")
-                val code: String = slugFromUrl(href)
-                if (code.isBlank()) return@runCatching null
-                val title: String = element.selectFirst("h3.sc-title a")?.text()
-                    ?: element.selectFirst("h3")?.text()
-                    ?: return@runCatching null
-                if (title.isBlank()) return@runCatching null
-                val img: Element? = poster.selectFirst("img")
-                val thumb: String = img?.absUrl("src").orEmpty()
-                    .ifBlank { img?.absUrl("data-src").orEmpty() }
-                    .ifBlank { img?.absUrl("data-savepage-src").orEmpty() }
-                    .ifBlank { resolveUrl(img?.attr("src"), baseUrl) }
-                    .ifBlank { resolveUrl(img?.attr("data-savepage-src"), baseUrl) }
-                HanimeInfo(
-                    title = title,
-                    coverUrl = thumb,
-                    videoCode = code,
-                    itemType = HanimeInfo.NORMAL,
-                )
-            }.getOrNull()
-            if (item != null) result.add(item)
+    fun parseCardList(body: String, baseUrl: String): List<HanimeInfo> {
+        return try {
+            val doc: Document = Jsoup.parse(body, baseUrl)
+            val cards = doc.select("article.series-card")
+            if (cards.isNotEmpty()) {
+                return cards.mapNotNull { parseSeriesCard(it, baseUrl) }
+            }
+            val altCards = doc.select(".dt-series-cards article")
+            if (altCards.isNotEmpty()) {
+                return altCards.mapNotNull { parseSeriesCard(it, baseUrl) }
+            }
+            doc.select("a.sc-poster").mapNotNull { a ->
+                runCatching {
+                    val href = a.absUrl("href").takeIf { it.isNotBlank() }
+                        ?: return@runCatching null
+                    val slug = href.trimEnd('/').substringAfterLast('/')
+                    if (slug.isBlank()) return@runCatching null
+                    val title = a.selectFirst("h3.sc-title a")?.text()
+                        ?: a.selectFirst("h3")?.text()
+                        ?: a.attr("title").takeIf { it.isNotBlank() }
+                        ?: return@runCatching null
+                    val img = a.selectFirst("img")
+                    val cover = img?.attr("data-savepage-src")?.takeIf { it.isNotBlank() }
+                        ?: img?.absUrl("src").orEmpty()
+                    HanimeInfo(
+                        title = title,
+                        coverUrl = cover,
+                        videoCode = slug,
+                        itemType = HanimeInfo.NORMAL,
+                    )
+                }.getOrNull()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "parseCardList failed for $baseUrl", e)
+            emptyList()
         }
-        return result
     }
 
-    private fun filterAnimeListFromDocument(
-        document: Document,
-        baseUrl: String,
-    ): List<HanimeInfo> {
-        val primary: List<HanimeInfo> = animeListFromDocument(document, baseUrl)
-        if (primary.isNotEmpty()) return primary
-        val result: MutableList<HanimeInfo> = mutableListOf()
-        val elements = document.select("article")
-        for (element in elements) {
-            val item: HanimeInfo? = searchAnimeFromElement(element, baseUrl)
-            if (item != null) result.add(item)
+    private fun parseSeriesCard(el: Element, baseUrl: String): HanimeInfo? {
+        return try {
+            val poster = el.selectFirst("a.sc-poster")
+                ?: el.selectFirst("a.sc-title")
+                ?: el.selectFirst("h3.sc-title a")
+                ?: return null
+
+            val rawHref = poster.attr("href")
+            val url = if (rawHref.startsWith("http")) rawHref
+            else baseUrl.trimEnd('/') + "/" + rawHref.trimStart('/')
+            val slug = url.trimEnd('/').substringAfterLast('/')
+            if (slug.isBlank()) return null
+
+            val titleLink = el.selectFirst("a.sc-title") ?: el.selectFirst("h3.sc-title a")
+            val title = titleLink?.text()?.trim().orEmpty()
+                .ifBlank { el.selectFirst(".sc-alt")?.text()?.trim().orEmpty() }
+            if (title.isBlank()) return null
+
+            val img = poster.selectFirst("img") ?: el.selectFirst(".sc-poster img")
+            val srcsetRaw = img?.attr("data-savepage-srcset").orEmpty()
+                .ifBlank { img?.attr("srcset").orEmpty() }
+            val variants = parseSrcsetMap(srcsetRaw)
+            val posterSmall = variants[175] ?: variants[300]
+            val posterFull = img?.attr("data-savepage-src")?.takeIf { it.isNotBlank() }
+                ?: img?.attr("data-lazy-src")?.takeIf { it.isNotBlank() }
+                ?: img?.absUrl("src").orEmpty()
+                ?: posterSmall.orEmpty()
+
+            val rating: Double? = el.selectFirst(".sc-btn-rating")
+                ?.ownText()?.trim()?.toDoubleOrNull()
+
+            val favAnchor = el.selectFirst(".sc-btn-fav")
+            val favorites: Int? = favAnchor?.selectFirst(".sc-fav-n")
+                ?.text()?.replace(",", "")?.trim()?.toIntOrNull()
+
+            val studioAnchors = el.select(".sc-meta-studios a.sc-tag-studio")
+            val studios: List<String> = studioAnchors.map { it.text().trim() }
+                .filter { it.isNotBlank() }
+
+            val metaSpans: List<String> = el.select(".sc-meta:not(.sc-meta-studios) .sc-tag")
+                .map { it.text().trim() }
+                .filter { it.isNotBlank() }
+
+            val year: Int? = metaSpans.getOrNull(0)
+                ?.takeIf { it.length in 4..5 && it.all(Char::isDigit) }
+                ?.toIntOrNull()
+
+            val viewsRaw: String = metaSpans.getOrNull(1).orEmpty()
+            val views: Long? = parseViews(viewsRaw)
+
+            val episodeCount: Int? = metaSpans.getOrNull(2)
+                ?.substringBefore(' ')
+                ?.filter(Char::isDigit)
+                ?.toIntOrNull()
+
+            val synopsis: String? = el.selectFirst(".sc-desc")
+                ?.text()?.trim()?.takeIf { it.isNotBlank() }
+
+            val genreAnchors = el.select(".sc-genres a[rel=tag]")
+            val genres: List<String> = genreAnchors.map { it.text().trim() }
+                .filter { it.isNotBlank() }
+
+            HanimeInfo(
+                title = title,
+                coverUrl = posterFull,
+                videoCode = slug,
+                duration = episodeCount?.let { "$it eps" },
+                views = viewsRaw.takeIf { it.isNotBlank() },
+                uploadTime = year?.toString(),
+                genre = genres.firstOrNull(),
+                reviews = rating?.let { "%.1f".format(it) },
+                currentArtist = studios.firstOrNull(),
+                itemType = HanimeInfo.NORMAL,
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "parseSeriesCard failed", e)
+            null
         }
-        return result
     }
 
-    private fun searchAnimeFromElement(
-        element: Element,
-        baseUrl: String,
-    ): HanimeInfo? = runCatching {
-        val link: Element = element.selectFirst("a.sc-poster")
-            ?: element.selectFirst("div.details > div.title a")
-            ?: element.selectFirst("a")
-            ?: return@runCatching null
-        val href: String = link.attr("href")
-        val code: String = slugFromUrl(href)
-        if (code.isBlank()) return@runCatching null
-        val title: String = element.selectFirst("h3.sc-title a")?.text()
-            ?: element.selectFirst("div.details > div.title a")?.text()
-            ?: element.selectFirst("h3")?.text()
-            ?: return@runCatching null
-        if (title.isBlank()) return@runCatching null
-        val img: Element? = element.selectFirst("a.sc-poster img")
-            ?: element.selectFirst("div.image div a img")
-        val thumb: String = img?.absUrl("src").orEmpty()
-            .ifBlank { img?.absUrl("data-src").orEmpty() }
-            .ifBlank { img?.absUrl("data-savepage-src").orEmpty() }
-            .ifBlank { resolveUrl(img?.attr("src"), baseUrl) }
-            .ifBlank { resolveUrl(img?.attr("data-savepage-src"), baseUrl) }
-        HanimeInfo(
-            title = title,
-            coverUrl = thumb,
-            videoCode = code,
-            itemType = HanimeInfo.NORMAL,
-        )
-    }.getOrNull()
+    private fun parseViews(raw: String): Long? {
+        val t = raw.trim().replace(",", "")
+        if (t.isEmpty()) return null
+        return when {
+            t.endsWith("K", ignoreCase = true) ->
+                t.dropLast(1).toDoubleOrNull()?.let { (it * 1_000).toLong() }
+            t.endsWith("M", ignoreCase = true) ->
+                t.dropLast(1).toDoubleOrNull()?.let { (it * 1_000_000).toLong() }
+            t.endsWith("B", ignoreCase = true) ->
+                t.dropLast(1).toDoubleOrNull()?.let { (it * 1_000_000_000).toLong() }
+            else -> t.toLongOrNull()
+        }
+    }
+
+    private fun parseSrcsetMap(raw: String): Map<Int, String> {
+        if (raw.isBlank()) return emptyMap()
+        val out = LinkedHashMap<Int, String>()
+        raw.split(',').forEach { part ->
+            val trimmed = part.trim()
+            if (trimmed.isEmpty()) return@forEach
+            val pieces = trimmed.split(' ').filter { it.isNotBlank() }
+            if (pieces.size < 2) return@forEach
+            val url = pieces[0]
+            val token = pieces[1].trim()
+            if (!token.endsWith("w", ignoreCase = true)) return@forEach
+            val width = token.dropLast(1).toIntOrNull() ?: return@forEach
+            if (url.isNotBlank() && width > 0) out[width] = url
+        }
+        return out
+    }
 
     fun parseSeriesDetail(body: String, url: String): VideoLoadingState<SeriesDetailPage> {
         return try {

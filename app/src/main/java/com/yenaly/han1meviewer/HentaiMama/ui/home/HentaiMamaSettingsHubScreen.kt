@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.PlayCircleOutline
+import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -53,6 +54,7 @@ fun HentaiMamaSettingsHubScreen(
     onNavigateToHistory: () -> Unit,
     onNavigateToUpcoming: () -> Unit,
     onNavigateToRecentEpisodes: () -> Unit,
+    onNavigateToPlaylists: () -> Unit,
 ) {
     val entries = listOf(
         HubEntry(
@@ -75,6 +77,13 @@ fun HentaiMamaSettingsHubScreen(
             subtitle = "Series you've watched, resume from where you left off",
             icon = Icons.Default.History,
             onClick = onNavigateToHistory,
+        ),
+        HubEntry(
+            key = "playlists",
+            title = "Playlists",
+            subtitle = "Browse public playlists curated by the community",
+            icon = Icons.Default.QueueMusic,
+            onClick = onNavigateToPlaylists,
         ),
         HubEntry(
             key = "recent_episodes",

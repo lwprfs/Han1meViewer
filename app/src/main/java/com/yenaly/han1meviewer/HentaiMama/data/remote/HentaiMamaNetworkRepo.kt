@@ -141,16 +141,34 @@ object HentaiMamaNetworkRepo {
     fun searchVideos(page: Int, query: String, sort: String? = null) = flow {
         emit(PageLoadingState.Loading)
         try {
-            val response = HentaiMamaNetwork.service.searchVideos(page, query)
-            if (response.isSuccessful) {
-                val body = response.body()?.string() ?: EMPTY_STRING
-                val state = HentaiMamaParser.parseSearchResults(body, isFilterSearch = false)
-                val enriched = enrichWithPagination(state, body)
-                emit(enriched)
+            val base = HentaiMamaNetwork.baseUrl.trimEnd('/')
+            val encoded = java.net.URLEncoder.encode(query, "UTF-8")
+            val url = if (page <= 1) {
+                "$base/?s=$encoded"
             } else {
-                emit(PageLoadingState.Error(IllegalStateException("Search failed: ${response.code()}")))
+                "$base/page/$page/?s=$encoded"
             }
+
+            val response = HentaiMamaNetwork.service.getVideoDetail(url)
+            if (!response.isSuccessful) {
+                emit(PageLoadingState.Error(IllegalStateException("Search failed: ${response.code()}")))
+                return@flow
+            }
+
+            val body = response.body()?.string().orEmpty()
+            if (body.isBlank()) {
+                emit(PageLoadingState.NoMoreData)
+                return@flow
+            }
+
+            val videos = HentaiMamaParser.parseCardList(body, base)
+            if (videos.isEmpty()) {
+                emit(PageLoadingState.NoMoreData)
+                return@flow
+            }
+            emit(PageLoadingState.Success(videos))
         } catch (e: Exception) {
+            Log.e(TAG, "searchVideos failed", e)
             emit(PageLoadingState.Error(e))
         }
     }.flowOn(Dispatchers.IO)
@@ -174,15 +192,7 @@ object HentaiMamaNetworkRepo {
                 emit(PageLoadingState.NoMoreData)
                 return@flow
             }
-            val series = HentaiMamaGenreParser.parseSeriesCards(body, fullUrl)
-            val videos = series.map { s ->
-                HanimeInfo(
-                    title = s.title.ifBlank { s.altTitle.orEmpty() },
-                    coverUrl = s.posterFull.ifBlank { s.posterMid.orEmpty() },
-                    videoCode = s.slug,
-                    itemType = HanimeInfo.NORMAL,
-                )
-            }
+            val videos = HentaiMamaParser.parseCardList(body, fullUrl)
             if (videos.isEmpty()) {
                 emit(PageLoadingState.NoMoreData)
             } else {
@@ -430,13 +440,13 @@ object HentaiMamaNetworkRepo {
             val next = doc.selectFirst("a.dt-pg-next")
                 ?.absUrl("href")
                 ?.takeIf { it.isNotBlank() }
-            val dataPage: Int = doc.selectFirst(".pagination.dt-pg")
-                ?.attr("data-page")
-                ?.toIntOrNull() ?: 1
-            val dataPages: Int = doc.selectFirst(".pagination.dt-pg")
-                ?.attr("data-pages")
-                ?.toIntOrNull() ?: 1
-            next != null || dataPage < dataPages
+            val relNext = doc.selectFirst("a[rel=next]")
+                ?.absUrl("href")
+                ?.takeIf { it.isNotBlank() }
+            val pg = doc.selectFirst(".pagination.dt-pg")
+            val cur = pg?.attr("data-page")?.toIntOrNull() ?: 1
+            val total = pg?.attr("data-pages")?.toIntOrNull() ?: 1
+            next != null || relNext != null || cur < total
         } catch (_: Exception) {
             false
         }

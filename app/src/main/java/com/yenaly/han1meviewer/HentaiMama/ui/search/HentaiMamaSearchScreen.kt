@@ -282,6 +282,13 @@ fun HentaiMamaSearchScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
                             )
+                        } else if (!isGenreMode && totalPages > 1) {
+                            Text(
+                                text = "Page $currentPage / $totalPages",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                            )
                         }
                     }
                 },

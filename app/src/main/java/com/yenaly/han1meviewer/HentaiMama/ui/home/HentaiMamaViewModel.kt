@@ -226,6 +226,11 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
                                     title = s.title.ifBlank { s.altTitle.orEmpty() },
                                     coverUrl = s.posterFull.ifBlank { s.posterMid.orEmpty() },
                                     videoCode = s.slug,
+                                    duration = s.episodeCount?.let { count -> "$count eps" },
+                                    views = s.viewsRaw.takeIf { raw -> raw.isNotBlank() },
+                                    uploadTime = s.year?.toString(),
+                                    reviews = s.rating?.let { r -> "%.1f".format(r) },
+                                    currentArtist = s.studios.firstOrNull(),
                                     itemType = HanimeInfo.NORMAL,
                                 )
                             },
@@ -418,8 +423,6 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
             return
         }
 
-        _searchHasMore.value = true
-
         if (page <= 1) {
             _searchPage.value = 1
             _searchResults.value = emptyList()
@@ -427,6 +430,7 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
             _searchState.value = PageLoadingState.Loading
             _searchIsLoadingMore.value = false
             _searchNextUrl.value = null
+            _searchHasMore.value = true
         } else {
             _searchIsLoadingMore.value = true
         }
@@ -441,7 +445,6 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     private fun searchGenreVideos(slug: String, query: String, page: Int) {
-        _searchHasMore.value = true
         if (page <= 1) {
             _searchPage.value = 1
             _searchResults.value = emptyList()
@@ -449,6 +452,7 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
             _searchState.value = PageLoadingState.Loading
             _searchIsLoadingMore.value = false
             _searchNextUrl.value = null
+            _searchHasMore.value = true
         } else {
             _searchIsLoadingMore.value = true
         }
@@ -558,6 +562,11 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
                     title = s.title.ifBlank { s.altTitle.orEmpty() },
                     coverUrl = s.posterFull.ifBlank { s.posterMid.orEmpty() },
                     videoCode = s.slug,
+                    duration = s.episodeCount?.let { count -> "$count eps" },
+                    views = s.viewsRaw.takeIf { raw -> raw.isNotBlank() },
+                    uploadTime = s.year?.toString(),
+                    reviews = s.rating?.let { r -> "%.1f".format(r) },
+                    currentArtist = s.studios.firstOrNull(),
                     itemType = HanimeInfo.NORMAL,
                 )
             }
