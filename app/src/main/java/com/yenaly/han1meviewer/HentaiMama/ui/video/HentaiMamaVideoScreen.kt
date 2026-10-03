@@ -59,10 +59,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.exoplayer.ExoPlayer
 import com.yenaly.han1meviewer.HentaiMama.data.local.HentaiMamaHistoryRepo
-import com.yenaly.han1meviewer.HentaiMama.data.model.EpisodeDetailPage
 import com.yenaly.han1meviewer.HentaiMama.data.model.HentaiMamaEpisode
-import com.yenaly.han1meviewer.HentaiMama.data.model.HentaiMamaVideoInfo
-import com.yenaly.han1meviewer.HentaiMama.data.model.HentaiMamaVideoLink
 import com.yenaly.han1meviewer.HentaiMama.data.model.SimilarCard
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
@@ -111,7 +108,10 @@ fun HentaiMamaVideoScreen(
         else HentaiMamaNetwork.normalizeUrl(path)
     }
 
+    // Holds the ExoPlayer created by the inline (portrait) player.
+    // The fullscreen dialog reuses this instance via playerOverride.
     var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
+
     var pendingResume by remember { mutableLongStateOf(0L) }
     var resumeApplied by remember { mutableStateOf(false) }
     var showResumeDialog by remember { mutableStateOf(false) }
@@ -139,29 +139,27 @@ fun HentaiMamaVideoScreen(
         if (pendingResume > 0L) showResumeDialog = true
     }
 
-    LaunchedEffect(playerState.duration, pendingResume) {
+    LaunchedEffect(playerState.duration, pendingResume, exoPlayer) {
         if (!resumeApplied && pendingResume > 0L && playerState.duration > 0L) {
-            val maxSeek: Long =
-                (playerState.duration - RESUME_CLAMP_BACKOFF_MS).coerceAtLeast(0L)
-            val seek: Long = pendingResume.coerceAtMost(maxSeek)
+            val maxSeek = (playerState.duration - RESUME_CLAMP_BACKOFF_MS).coerceAtLeast(0L)
+            val seek = pendingResume.coerceAtMost(maxSeek)
             exoPlayer?.seekTo(seek)
             resumeApplied = true
         }
     }
 
     LaunchedEffect(playerState.isPlaying, pageState) {
-        val videoInfo: HentaiMamaVideoInfo =
-            (pageState as? VideoLoadingState.Success)?.info ?: return@LaunchedEffect
-        val page: EpisodeDetailPage = videoInfo.page ?: return@LaunchedEffect
+        val videoInfo = (pageState as? VideoLoadingState.Success)?.info ?: return@LaunchedEffect
+        val page = videoInfo.page ?: return@LaunchedEffect
         if (!playerState.isPlaying) return@LaunchedEffect
-        var lastSavedPosition: Long = playerState.position
+        var lastSavedPosition = playerState.position
         while (isActive) {
             delay(SAVE_INTERVAL_MS)
-            val pos: Long = playerState.position
-            val delta: Long = pos - lastSavedPosition
-            val validDelta: Long = if (delta in 0L..DELTA_GUARD_MS) delta else 0L
+            val pos = playerState.position
+            val delta = pos - lastSavedPosition
+            val validDelta = if (delta in 0L..DELTA_GUARD_MS) delta else 0L
             lastSavedPosition = pos
-            val total: Long = playerState.duration
+            val total = playerState.duration
             if (total > 0L && pos > 0L) {
                 withContext(Dispatchers.IO) {
                     runCatching {
@@ -172,8 +170,7 @@ fun HentaiMamaVideoScreen(
                             episodeUrl = page.info.slug,
                             episodeNumber = page.seriesSidebar
                                 .firstOrNull { it.slug == page.info.slug }
-                                ?.episodeNumber
-                                ?: 1f,
+                                ?.episodeNumber ?: 1f,
                             episodeTitle = page.info.title,
                             position = pos,
                             duration = total,
@@ -215,21 +212,19 @@ fun HentaiMamaVideoScreen(
     }
 
     fun openEpisode(episode: HentaiMamaEpisode) {
-        if (episode.slug == videoCode) {
-            return
-        }
-        val target: String = if (episode.url.startsWith("http")) episode.url
+        if (episode.slug == videoCode) return
+        val target = if (episode.url.startsWith("http")) episode.url
         else HentaiMamaNetwork.normalizeUrl(episode.url)
         onNavigateToVideo(episode.slug, target)
     }
 
     fun deriveSeriesSlug(episodeUrl: String, seriesUrlFromPage: String?): String? {
-        seriesUrlFromPage?.let { url: String ->
-            val slug: String = url.trimEnd('/').substringAfterLast('/')
+        seriesUrlFromPage?.let { url ->
+            val slug = url.trimEnd('/').substringAfterLast('/')
             if (slug.isNotBlank()) return slug
         }
         if (!EPISODE_SUFFIX_REGEX.containsMatchIn(episodeUrl)) return null
-        val slug: String = episodeUrl.trimEnd('/')
+        val slug = episodeUrl.trimEnd('/')
             .substringAfterLast('/')
             .substringBeforeLast("-episode-")
         return slug.takeIf { it.isNotBlank() }
@@ -243,9 +238,8 @@ fun HentaiMamaVideoScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    val videoInfo: HentaiMamaVideoInfo? =
-                        (pageState as? VideoLoadingState.Success)?.info
-                    val title: String = videoInfo?.page?.info?.title
+                    val videoInfo = (pageState as? VideoLoadingState.Success)?.info
+                    val title = videoInfo?.page?.info?.title
                         ?: videoInfo?.title
                         ?: "Video"
                     Text(
@@ -281,8 +275,8 @@ fun HentaiMamaVideoScreen(
             )
 
             is VideoLoadingState.Success -> {
-                val videoInfo: HentaiMamaVideoInfo = state.info
-                val page: EpisodeDetailPage? = videoInfo.page
+                val videoInfo = state.info
+                val page = videoInfo.page
 
                 if (page == null) {
                     ErrorContent(
@@ -298,34 +292,40 @@ fun HentaiMamaVideoScreen(
                             .fillMaxSize()
                             .padding(paddingValues),
                     ) {
-                        if (!playerState.isFullscreen) {
-                            HentaiMamaVideoPlayer(
-                                state = playerState,
-                                coverUrl = info.seriesPoster,
-                                isFullscreen = false,
-                                isVisible = true,
-                                playerOverride = null,
-                                onPlayerReady = { exoPlayer = it },
-                                onPlayPause = { viewModel.setPlaying(!playerState.isPlaying) },
-                                onSeek = { pos: Long -> exoPlayer?.seekTo(pos) },
-                                onSkip = { delta: Long ->
-                                    val current: Long = exoPlayer?.currentPosition ?: 0L
-                                    val target: Long = (current + delta).coerceAtLeast(0L)
-                                    exoPlayer?.seekTo(target)
-                                },
-                                onToggleFullscreen = { enterFullscreen() },
-                                onPositionUpdate = { pos: Long, dur: Long ->
-                                    viewModel.setPosition(pos, dur)
-                                },
-                            )
-                        } else {
-                            Box(
-                                modifier = Modifier
+                        // Inline (portrait) player. Always mounted while this screen
+                        // is alive so the ExoPlayer is never released by fullscreen
+                        // toggling. When fullscreen is active, we collapse it to
+                        // 0 height AND set isVisible=false so its AndroidView is
+                        // not built and does not steal the surface from the
+                        // fullscreen player.
+                        HentaiMamaVideoPlayer(
+                            state = playerState,
+                            coverUrl = info.seriesPoster,
+                            isFullscreen = false,
+                            isVisible = !playerState.isFullscreen,
+                            playerOverride = null,
+                            onPlayerReady = { exoPlayer = it },
+                            onPlayPause = {
+                                viewModel.setPlaying(!playerState.isPlaying)
+                            },
+                            onSeek = { pos -> exoPlayer?.seekTo(pos) },
+                            onSkip = { delta ->
+                                val current = exoPlayer?.currentPosition ?: 0L
+                                val target = (current + delta).coerceAtLeast(0L)
+                                exoPlayer?.seekTo(target)
+                            },
+                            onToggleFullscreen = { enterFullscreen() },
+                            onPositionUpdate = { pos, dur ->
+                                viewModel.setPosition(pos, dur)
+                            },
+                            modifier = if (playerState.isFullscreen) {
+                                Modifier
                                     .fillMaxWidth()
-                                    .height(1.dp)
-                                    .background(Color.Black),
-                            )
-                        }
+                                    .height(0.dp)
+                            } else {
+                                Modifier.fillMaxWidth()
+                            },
+                        )
 
                         LazyColumn(
                             state = listState,
@@ -338,21 +338,18 @@ fun HentaiMamaVideoScreen(
                                 HentaiMamaEpisodeNav(
                                     nav = page.nav,
                                     onPrev = {
-                                        page.nav.prevUrl?.let { url: String ->
-                                            val slug: String = url.trimEnd('/').substringAfterLast('/')
+                                        page.nav.prevUrl?.let { url ->
+                                            val slug = url.trimEnd('/').substringAfterLast('/')
                                             onNavigateToVideo(slug, url)
                                         }
                                     },
                                     onSeries = {
-                                        val slug: String? = deriveSeriesSlug(
-                                            info.slug,
-                                            page.nav.seriesUrl,
-                                        )
+                                        val slug = deriveSeriesSlug(info.slug, page.nav.seriesUrl)
                                         slug?.let(onNavigateToSeries)
                                     },
                                     onNext = {
-                                        page.nav.nextUrl?.let { url: String ->
-                                            val slug: String = url.trimEnd('/').substringAfterLast('/')
+                                        page.nav.nextUrl?.let { url ->
+                                            val slug = url.trimEnd('/').substringAfterLast('/')
                                             onNavigateToVideo(slug, url)
                                         }
                                     },
@@ -398,7 +395,7 @@ fun HentaiMamaVideoScreen(
 
                             if (extractionState is HentaiMamaExtractionState.Failed) {
                                 item(key = "extraction_error") {
-                                    val reason: String =
+                                    val reason =
                                         (extractionState as HentaiMamaExtractionState.Failed).reason
                                     Surface(
                                         color = MaterialTheme.colorScheme.errorContainer,
@@ -418,9 +415,7 @@ fun HentaiMamaVideoScreen(
                                                 color = MaterialTheme.colorScheme.onErrorContainer,
                                                 style = MaterialTheme.typography.bodySmall,
                                             )
-                                            TextButton(
-                                                onClick = { viewModel.retryExtraction() },
-                                            ) {
+                                            TextButton(onClick = { viewModel.retryExtraction() }) {
                                                 Text("Retry")
                                             }
                                         }
@@ -442,9 +437,9 @@ fun HentaiMamaVideoScreen(
                                 }
                                 itemsIndexed(
                                     items = mirrorLinks,
-                                    key = { _, link: HentaiMamaVideoLink -> link.url },
-                                ) { _, link: HentaiMamaVideoLink ->
-                                    val selected: Boolean = link.quality == playerState.quality
+                                    key = { _, link -> link.url },
+                                ) { _, link ->
+                                    val selected = link.quality == playerState.quality
                                     Surface(
                                         color = if (selected)
                                             MaterialTheme.colorScheme.primaryContainer
@@ -472,10 +467,8 @@ fun HentaiMamaVideoScreen(
                                             Text(
                                                 text = link.quality,
                                                 style = MaterialTheme.typography.bodyMedium,
-                                                fontWeight = if (selected)
-                                                    FontWeight.Bold
-                                                else
-                                                    FontWeight.Normal,
+                                                fontWeight = if (selected) FontWeight.Bold
+                                                else FontWeight.Normal,
                                             )
                                         }
                                     }
@@ -490,13 +483,10 @@ fun HentaiMamaVideoScreen(
                                 HentaiMamaEpisodeHeader(
                                     info = info,
                                     onSeriesClick = {
-                                        val slug: String? = deriveSeriesSlug(
-                                            info.slug,
-                                            page.nav.seriesUrl,
-                                        )
+                                        val slug = deriveSeriesSlug(info.slug, page.nav.seriesUrl)
                                         slug?.let(onNavigateToSeries)
                                     },
-                                    onGenreClick = { genre: String -> onNavigateToSearch(genre) },
+                                    onGenreClick = { genre -> onNavigateToSearch(genre) },
                                 )
                             }
 
@@ -521,8 +511,8 @@ fun HentaiMamaVideoScreen(
                                 }
                                 itemsIndexed(
                                     items = page.seriesSidebar,
-                                    key = { _, episode: HentaiMamaEpisode -> episode.slug },
-                                ) { _, episode: HentaiMamaEpisode ->
+                                    key = { _, episode -> episode.slug },
+                                ) { _, episode ->
                                     EpisodeSidebarRow(
                                         episode = episode,
                                         onClick = { openEpisode(episode) },
@@ -544,8 +534,8 @@ fun HentaiMamaVideoScreen(
                                 }
                                 itemsIndexed(
                                     items = page.similar,
-                                    key = { _, sim: SimilarCard -> sim.slug },
-                                ) { _, sim: SimilarCard ->
+                                    key = { _, sim -> sim.slug },
+                                ) { _, sim ->
                                     SimilarRow(
                                         title = sim.name,
                                         poster = sim.poster,
@@ -577,30 +567,24 @@ fun HentaiMamaVideoScreen(
                     .fillMaxSize()
                     .background(Color.Black),
             ) {
-                val cover: String = (pageState as? VideoLoadingState.Success)
-                    ?.info
-                    ?.page
-                    ?.info
-                    ?.seriesPoster
-                    .orEmpty()
+                val cover = (pageState as? VideoLoadingState.Success)
+                    ?.info?.page?.info?.seriesPoster.orEmpty()
                 HentaiMamaVideoPlayer(
                     state = playerState,
                     coverUrl = cover,
                     isFullscreen = true,
                     isVisible = true,
                     playerOverride = currentPlayer,
-                    onPlayerReady = { /* reuse existing player, don't replace */ },
+                    onPlayerReady = { /* reuse the inline player, do not replace */ },
                     onPlayPause = { viewModel.setPlaying(!playerState.isPlaying) },
-                    onSeek = { pos: Long -> exoPlayer?.seekTo(pos) },
-                    onSkip = { delta: Long ->
-                        val current: Long = exoPlayer?.currentPosition ?: 0L
-                        val target: Long = (current + delta).coerceAtLeast(0L)
+                    onSeek = { pos -> exoPlayer?.seekTo(pos) },
+                    onSkip = { delta ->
+                        val current = exoPlayer?.currentPosition ?: 0L
+                        val target = (current + delta).coerceAtLeast(0L)
                         exoPlayer?.seekTo(target)
                     },
                     onToggleFullscreen = { exitFullscreen() },
-                    onPositionUpdate = { pos: Long, dur: Long ->
-                        viewModel.setPosition(pos, dur)
-                    },
+                    onPositionUpdate = { pos, dur -> viewModel.setPosition(pos, dur) },
                 )
             }
         }
@@ -624,9 +608,7 @@ fun HentaiMamaVideoScreen(
                     showResumeDialog = false
                     coroutineScope.launch {
                         withContext(Dispatchers.IO) {
-                            runCatching {
-                                HentaiMamaHistoryRepo.markStartedOver(videoCode)
-                            }
+                            runCatching { HentaiMamaHistoryRepo.markStartedOver(videoCode) }
                         }
                     }
                 }) { Text("Start over") }
@@ -658,7 +640,7 @@ private fun EpisodeSidebarRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = episode.episodeNumber?.let { n: Float -> "EP ${n.toInt()}" } ?: "EP",
+                text = episode.episodeNumber?.let { "EP ${it.toInt()}" } ?: "EP",
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
@@ -671,7 +653,7 @@ private fun EpisodeSidebarRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                episode.date?.let { d: String ->
+                episode.date?.let { d ->
                     Text(
                         text = d,
                         style = MaterialTheme.typography.labelSmall,
@@ -736,25 +718,25 @@ private fun SimilarRow(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Row {
-                    rating?.let { r: Double ->
+                    rating?.let {
                         Text(
-                            text = "★ %.1f".format(r),
+                            text = "★ %.1f".format(it),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary,
                         )
                         Spacer(Modifier.width(8.dp))
                     }
-                    year?.let { y: Int ->
+                    year?.let {
                         Text(
-                            text = y.toString(),
+                            text = it.toString(),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Spacer(Modifier.width(8.dp))
                     }
-                    episodeCount?.let { c: Int ->
+                    episodeCount?.let {
                         Text(
-                            text = "$c eps",
+                            text = "$it eps",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
