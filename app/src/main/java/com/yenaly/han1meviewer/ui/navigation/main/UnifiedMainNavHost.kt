@@ -43,7 +43,6 @@ fun UnifiedMainNavHost(
                     isDrawerOpen = isDrawerOpen,
                     onOpenDrawer = onOpenDrawer,
                     onDestinationChanged = onDestinationChanged,
-                    railVisible = railVisible,
                 )
             }
             SiteType.MISSAV -> {

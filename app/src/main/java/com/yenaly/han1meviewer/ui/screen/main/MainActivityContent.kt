@@ -1,4 +1,3 @@
-// app/src/main/java/com/yenaly/han1meviewer/ui/screen/main/MainActivityContent.kt
 package com.yenaly.han1meviewer.ui.screen.main
 
 import android.content.Intent
@@ -73,17 +72,14 @@ fun MainActivityContent(
         LaunchedEffect(windowBackground) {
             activity.window.setBackgroundDrawable(windowBackground.toArgb().toDrawable())
         }
-        
-        // FIXED: Call rememberNavController() directly in composable context
-        // This is a @Composable function, so it must be called at the top level of a composable
+
         val composeNavController = rememberNavController()
-        
-        // Use LaunchedEffect to initialize NavigationManager when site changes
+
         LaunchedEffect(siteChangeKey) {
             onNavigateControllerReady(composeNavController)
             NavigationManager.initialize(composeNavController, Preferences.siteType)
         }
-        
+
         val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
         val scope = rememberCoroutineScope()
         var currentMainDestination by remember { mutableStateOf(MainDestinationSpec.Home) }
@@ -114,14 +110,14 @@ fun MainActivityContent(
                 composeNavController.handleMainIntent(intent)
             }
         }
-        
+
         LaunchedEffect(Unit) {
             AppViewModel.pendingUpdateDialog.collect { latest ->
                 Preferences.lastUpdatePopupTime = kotlin.time.Clock.System.now().epochSeconds
                 pendingUpdate = latest
             }
         }
-        
+
         LaunchedEffect(viewModel) {
             viewModel.sessionExpiredMessage.collect { event ->
                 if (event.message != null) {
@@ -131,7 +127,7 @@ fun MainActivityContent(
                 }
             }
         }
-        
+
         LaunchedEffect(homeState) {
             if (homeState is PageState.Error) {
                 val throwable = (homeState as PageState.Error).throwable
@@ -140,7 +136,7 @@ fun MainActivityContent(
                 }
             }
         }
-        
+
         MainActivityScaffold(
             drawerState = drawerState,
             drawerEnabled = currentMainDestination.drawerEnabled,
@@ -189,7 +185,7 @@ fun MainActivityContent(
                     },
                     siteChangeKey = siteChangeKey,
                 )
-                
+
                 if (showAuthGuard) {
                     Box(
                         modifier = Modifier
@@ -218,7 +214,7 @@ fun MainActivityContent(
                         },
                     )
                 }
-                
+
                 UsageNoticeDialog(
                     visible = showUsageNotice,
                     onAccepted = {
