@@ -1,4 +1,5 @@
 package com.yenaly.han1meviewer.HentaiMama.ui.home
+
 import android.content.Context
 import android.util.Log
 import androidx.core.content.edit
@@ -17,7 +18,39 @@ data class HentaiMamaHomeCategory(
     @SerialName("genrePath") val genrePath: String,
     @SerialName("sort") val sort: String? = null,
     @SerialName("hidden") val hidden: Boolean = false,
-)
+) {
+    val isGenre: Boolean
+        get() {
+            val path = genrePath.trim().trimStart('/')
+            if (path.startsWith("genre/", ignoreCase = true)) return true
+            if (path.startsWith("genre?", ignoreCase = true)) return false
+            return !path.contains("?") &&
+                    !path.contains("&") &&
+                    !path.startsWith("http") &&
+                    path.isNotBlank() &&
+                    !path.contains("/page/") &&
+                    !path.contains("advance-search") &&
+                    !path.contains("hentai-series")
+        }
+
+    val genreSlug: String
+        get() {
+            val path = genrePath.trim().trimStart('/')
+            val afterGenre = when {
+                path.startsWith("genre/", ignoreCase = true) ->
+                    path.removePrefix("genre/").removePrefix("Genre/")
+                path.contains("/genre/", ignoreCase = true) ->
+                    path.substringAfter("/genre/", "")
+                else -> path
+            }
+            return afterGenre
+                .trimStart('/')
+                .substringBefore('/')
+                .substringBefore('?')
+                .substringBefore('&')
+                .trim()
+        }
+}
 
 @Serializable
 private data class HentaiMamaHomeCategoriesFile(

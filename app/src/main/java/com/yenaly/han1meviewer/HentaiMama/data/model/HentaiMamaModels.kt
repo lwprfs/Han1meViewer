@@ -183,3 +183,23 @@ data class HentaiMamaVideoInfo(
     val relatedVideos: List<HanimeInfo>,
     val page: EpisodeDetailPage? = null,
 )
+
+data class GenreSearchResult(
+    val query: String?,
+    val genreSlug: String?,
+    val header: GenreHeader?,
+    val series: List<GenreSeries>,
+    val paginator: GenrePaginator?,
+    val sort: String?,
+    val layout: GenreLayout,
+    val isFilterMode: Boolean,
+) {
+    val hasMore: Boolean
+        get() = paginator?.nextUrl?.isNotBlank() == true ||
+                (paginator != null && paginator.current < paginator.total)
+
+    val currentPage: Int get() = paginator?.current ?: 1
+    val totalPages: Int get() = paginator?.total ?: 1
+}
+
+fun List<GenreSeries>.toHanimeInfoList(): List<HanimeInfo> = map { it.toHanimeInfo() }

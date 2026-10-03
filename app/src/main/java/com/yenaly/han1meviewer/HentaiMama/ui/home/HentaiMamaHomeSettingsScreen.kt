@@ -1,4 +1,5 @@
 package com.yenaly.han1meviewer.HentaiMama.ui.home
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -52,6 +53,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetworkRepo
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -122,7 +124,9 @@ fun HentaiMamaHomeSettingsScreen(
         ) {
             Text(
                 text = "Tap a row to toggle visibility. Use the edit icon to change title, path or sort. " +
-                        "Reorder with the up/down arrows.",
+                        "Reorder with the up/down arrows.\n\n" +
+                        "Genre pages: use a path like `genre/uncensored/` or just `uncensored` to " +
+                        "load a rich genre view with sort bar and pagination.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -258,6 +262,9 @@ private fun CategoryEditorRow(
     onMoveDown: () -> Unit,
 ) {
     val visible = !category.hidden
+    val isGenre = remember(category.genrePath) {
+        HentaiMamaNetworkRepo.isGenrePath(category.genrePath)
+    }
 
     Surface(
         modifier = Modifier
@@ -282,8 +289,11 @@ private fun CategoryEditorRow(
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    text = category.genrePath +
-                            (category.sort?.let { " • sort=$it" } ?: ""),
+                    text = buildString {
+                        append(category.genrePath)
+                        category.sort?.let { append(" • sort=$it") }
+                        if (isGenre) append(" • genre")
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -371,14 +381,16 @@ private fun CategoryEditDialog(
                     label = "Genre path",
                     value = genrePath,
                     onValueChange = { genrePath = it },
-                    supportingText = "e.g. hentai-series/?filter=weekly or " +
-                            "advance-search/?genres_filter[]=NTR&submit=Submit",
+                    supportingText = "Genre page: `genre/uncensored/` or just `uncensored`. " +
+                            "Also supports: `hentai-series/?filter=weekly` or " +
+                            "`advance-search/?genres_filter[]=NTR&submit=Submit`",
                 )
                 EditField(
                     label = "Sort (optional)",
                     value = sortValue,
                     onValueChange = { sortValue = it },
-                    supportingText = "e.g. weekly, monthly, alltime, alphabet, rating",
+                    supportingText = "Recent, Rating, A-Z, Week, Month, All Time. " +
+                            "Leave blank to use site default.",
                 )
             }
         },

@@ -50,7 +50,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
+import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetworkRepo
 import com.yenaly.han1meviewer.HentaiMama.settings.HentaiMamaCardSettings
+import com.yenaly.han1meviewer.HentaiMama.ui.components.HentaiMamaGenreSeriesCard
 import com.yenaly.han1meviewer.HentaiMama.ui.components.HentaiMamaVideoCard
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
@@ -64,6 +66,7 @@ fun HentaiMamaHomeScreen(
     onNavigateToVideo: (code: String, path: String) -> Unit,
     onNavigateToSearch: (query: String?) -> Unit,
     onNavigateToCategorySearch: (categoryKey: String) -> Unit = {},
+    onNavigateToGenre: (genreSlug: String) -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
     onNavigateToHistory: () -> Unit = {},
     onSwitchSite: () -> Unit = {},
@@ -148,12 +151,31 @@ fun HentaiMamaHomeScreen(
                         item(key = "header_$key") {
                             SectionHeader(
                                 title = row.category.title,
-                                onMore = { onNavigateToCategorySearch(key) },
+                                onMore = {
+                                    if (row.isGenre) {
+                                        val slug = HentaiMamaNetworkRepo.extractGenreSlug(
+                                            row.category.genrePath
+                                        )
+                                        if (slug.isNotBlank()) {
+                                            onNavigateToGenre(slug)
+                                        } else {
+                                            onNavigateToCategorySearch(key)
+                                        }
+                                    } else {
+                                        onNavigateToCategorySearch(key)
+                                    }
+                                },
                             )
                         }
 
                         item(key = "body_$key") {
                             when {
+                                row.series.isNotEmpty() -> GenreRowContent(
+                                    series = row.series,
+                                    horizontalCardCountConfig = horizontalCardCountConfig,
+                                    onNavigateToVideo = onNavigateToVideo,
+                                )
+
                                 row.videos.isNotEmpty() -> CategoryRowContent(
                                     videos = row.videos,
                                     horizontalCardCountConfig = horizontalCardCountConfig,
@@ -210,6 +232,32 @@ private fun CategoryRowContent(
                         onNavigateToVideo(video.videoCode, path)
                     },
                     onLongClick = { _, _ -> },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun GenreRowContent(
+    series: List<com.yenaly.han1meviewer.HentaiMama.data.model.GenreSeries>,
+    horizontalCardCountConfig: com.yenaly.han1meviewer.HorizontalCardCountConfig,
+    onNavigateToVideo: (String, String) -> Unit,
+) {
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val cardWidth = rememberCategoryCardWidth(horizontalCardCountConfig, maxWidth)
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(SpacingNormal),
+            contentPadding = PaddingValues(horizontal = SpacingLarge),
+        ) {
+            items(series, key = { it.slug }) { item ->
+                HentaiMamaGenreSeriesCard(
+                    modifier = Modifier.width(cardWidth),
+                    series = item,
+                    onClick = { slug ->
+                        val path = HentaiMamaNetwork.normalizeUrl("/tvshows/$slug/")
+                        onNavigateToVideo(slug, path)
+                    },
                 )
             }
         }

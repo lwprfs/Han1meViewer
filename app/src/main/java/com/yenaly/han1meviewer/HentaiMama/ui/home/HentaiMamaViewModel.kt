@@ -4,7 +4,14 @@ import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.yenaly.han1meviewer.HentaiMama.data.model.GenreHeader
+import com.yenaly.han1meviewer.HentaiMama.data.model.GenreLayout
+import com.yenaly.han1meviewer.HentaiMama.data.model.GenrePage
+import com.yenaly.han1meviewer.HentaiMama.data.model.GenrePaginator
+import com.yenaly.han1meviewer.HentaiMama.data.model.GenreSeries
 import com.yenaly.han1meviewer.HentaiMama.data.model.SeriesDetailPage
+import com.yenaly.han1meviewer.HentaiMama.data.parser.HentaiMamaGenreParser
+import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetworkRepo
 import com.yenaly.han1meviewer.logic.model.HanimeInfo
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
@@ -24,8 +31,11 @@ import java.util.concurrent.ConcurrentHashMap
 data class HentaiMamaCategoryRowState(
     val category: HentaiMamaHomeCategory,
     val videos: List<HanimeInfo> = emptyList(),
+    val series: List<GenreSeries> = emptyList(),
+    val genreHeader: GenreHeader? = null,
     val isLoading: Boolean = false,
     val error: String? = null,
+    val isGenre: Boolean = false,
 )
 
 class HentaiMamaViewModel(application: Application) : AndroidViewModel(application) {
@@ -61,6 +71,9 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
     private val _searchResults = MutableStateFlow<List<HanimeInfo>>(emptyList())
     val searchResults = _searchResults.asStateFlow()
 
+    private val _searchSeriesResults = MutableStateFlow<List<GenreSeries>>(emptyList())
+    val searchSeriesResults = _searchSeriesResults.asStateFlow()
+
     private val _searchQuery = MutableStateFlow("")
     val searchQuery = _searchQuery.asStateFlow()
 
@@ -94,12 +107,41 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
     private val _selectedOrder = MutableStateFlow<String?>(null)
     val selectedOrder = _selectedOrder.asStateFlow()
 
+    private val _genreSlug = MutableStateFlow<String?>(null)
+    val genreSlug = _genreSlug.asStateFlow()
+
+    private val _genreHeader = MutableStateFlow<GenreHeader?>(null)
+    val genreHeader = _genreHeader.asStateFlow()
+
+    private val _genreSort = MutableStateFlow<String?>(null)
+    val genreSort = _genreSort.asStateFlow()
+
+    private val _genreLayout = MutableStateFlow(GenreLayout.DETAILS)
+    val genreLayout = _genreLayout.asStateFlow()
+
+    private val _genrePaginator = MutableStateFlow<GenrePaginator?>(null)
+    val genrePaginator = _genrePaginator.asStateFlow()
+
+    private val _searchNextUrl = MutableStateFlow<String?>(null)
+    val searchNextUrl = _searchNextUrl.asStateFlow()
+
+    private val _searchTotalPages = MutableStateFlow(1)
+    val searchTotalPages = _searchTotalPages.asStateFlow()
+
+    private val _searchCurrentPage = MutableStateFlow(1)
+    val searchCurrentPage = _searchCurrentPage.asStateFlow()
+
     private val _seriesState =
         MutableStateFlow<VideoLoadingState<SeriesDetailPage>>(VideoLoadingState.Loading)
     val seriesState = _seriesState.asStateFlow()
 
+    private val _genrePageState =
+        MutableStateFlow<VideoLoadingState<GenrePage>>(VideoLoadingState.Loading)
+    val genrePageState = _genrePageState.asStateFlow()
+
     private var searchJob: Job? = null
     private var seriesJob: Job? = null
+    private var genreJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -118,8 +160,9 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
         val existing = _categoryRows.value.associateBy { it.category.key }
 
         val rebuilt = visible.map { cat ->
-            existing[cat.key]?.copy(category = cat)
-                ?: HentaiMamaCategoryRowState(category = cat)
+            val isGenre = HentaiMamaNetworkRepo.isGenrePath(cat.genrePath)
+            existing[cat.key]?.copy(category = cat, isGenre = isGenre)
+                ?: HentaiMamaCategoryRowState(category = cat, isGenre = isGenre)
         }
         _categoryRows.value = rebuilt
 
@@ -150,14 +193,62 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
 
         if (force) existing?.cancel()
 
+        val isGenre = HentaiMamaNetworkRepo.isGenrePath(category.genrePath)
+
         categoryJobs[key] = viewModelScope.launch {
-            updateRow(key) { it.copy(isLoading = true, error = null) }
+            updateRow(key) { it.copy(isLoading = true, error = null, isGenre = isGenre) }
             try {
-                val videos: List<HanimeInfo> = withContext(Dispatchers.IO) {
-                    HentaiMamaNetworkRepo.getCategoryVideos(category)
-                }
-                updateRow(key) {
-                    it.copy(videos = videos, isLoading = false, error = null)
+                if (isGenre) {
+                    val slug = HentaiMamaNetworkRepo.extractGenreSlug(category.genrePath)
+                    val page: GenrePage? = withContext(Dispatchers.IO) {
+                        HentaiMamaNetworkRepo.fetchGenrePage(
+                            slug = slug,
+                            sort = category.sort?.takeIf { it.isNotBlank() },
+                            page = 1,
+                            layout = GenreLayout.DETAILS,
+                        )
+                    }
+                    if (page == null) {
+                        updateRow(key) {
+                            it.copy(
+                                isLoading = false,
+                                error = "Failed to load genre",
+                                isGenre = true,
+                            )
+                        }
+                        return@launch
+                    }
+                    updateRow(key) {
+                        it.copy(
+                            series = page.series,
+                            videos = page.series.map { s ->
+                                HanimeInfo(
+                                    title = s.title.ifBlank { s.altTitle.orEmpty() },
+                                    coverUrl = s.posterFull.ifBlank { s.posterMid.orEmpty() },
+                                    videoCode = s.slug,
+                                    itemType = HanimeInfo.NORMAL,
+                                )
+                            },
+                            genreHeader = page.header,
+                            isLoading = false,
+                            error = null,
+                            isGenre = true,
+                        )
+                    }
+                } else {
+                    val videos: List<HanimeInfo> = withContext(Dispatchers.IO) {
+                        HentaiMamaNetworkRepo.getCategoryVideos(category)
+                    }
+                    updateRow(key) {
+                        it.copy(
+                            videos = videos,
+                            series = emptyList(),
+                            genreHeader = null,
+                            isLoading = false,
+                            error = null,
+                            isGenre = false,
+                        )
+                    }
                 }
                 categoryFetchedAt[key] = System.currentTimeMillis()
             } catch (e: CancellationException) {
@@ -284,14 +375,30 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
         _searchIsLoadingMore.value = false
         _searchIsFilterMode.value = false
         _searchResults.value = emptyList()
+        _searchSeriesResults.value = emptyList()
         _searchState.value = PageLoadingState.Loading
+        _searchNextUrl.value = null
+        _searchTotalPages.value = 1
+        _searchCurrentPage.value = 1
+    }
+
+    fun clearGenreMode() {
+        _genreSlug.value = null
+        _genreHeader.value = null
+        _genreSort.value = null
+        _genreLayout.value = GenreLayout.DETAILS
+        _genrePaginator.value = null
+        _searchSeriesResults.value = emptyList()
     }
 
     fun resetAll() {
         clearSearch()
         clearFilters()
+        clearGenreMode()
         seriesJob?.cancel()
         _seriesState.value = VideoLoadingState.Loading
+        genreJob?.cancel()
+        _genrePageState.value = VideoLoadingState.Loading
         categoryJobs.values.forEach { it.cancel() }
         categoryJobs.clear()
         categoryFetchedAt.clear()
@@ -304,42 +411,83 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
         searchJob?.cancel()
         _searchHasSearched.value = true
         _searchIsFilterMode.value = false
+
+        val genre = _genreSlug.value
+        if (!genre.isNullOrBlank()) {
+            searchGenreVideos(genre, query, page)
+            return
+        }
+
         _searchHasMore.value = true
 
         if (page <= 1) {
             _searchPage.value = 1
             _searchResults.value = emptyList()
+            _searchSeriesResults.value = emptyList()
             _searchState.value = PageLoadingState.Loading
             _searchIsLoadingMore.value = false
+            _searchNextUrl.value = null
         } else {
             _searchIsLoadingMore.value = true
         }
 
         searchJob = viewModelScope.launch {
-            HentaiMamaNetworkRepo.searchVideos(page, query).collect { state ->
-                if (!isActive) return@collect
-                _searchState.value = state
-                when (state) {
-                    is PageLoadingState.Success -> {
-                        val incoming = state.info
-                        _searchResults.update { prev ->
-                            if (page <= 1) incoming
-                            else (prev + incoming).distinctBy(HanimeInfo::videoCode)
-                        }
-                        if (incoming.isEmpty()) _searchHasMore.value = false
-                        _searchPage.value = page
-                        _searchIsLoadingMore.value = false
-                    }
-                    is PageLoadingState.NoMoreData -> {
-                        _searchHasMore.value = false
-                        _searchIsLoadingMore.value = false
-                    }
-                    is PageLoadingState.Error -> {
-                        _searchIsLoadingMore.value = false
-                    }
-                    is PageLoadingState.Loading -> Unit
+            HentaiMamaNetworkRepo.searchVideos(page, query, _selectedOrder.value)
+                .collect { state ->
+                    if (!isActive) return@collect
+                    handleSearchState(state, page)
                 }
+        }
+    }
+
+    private fun searchGenreVideos(slug: String, query: String, page: Int) {
+        _searchHasMore.value = true
+        if (page <= 1) {
+            _searchPage.value = 1
+            _searchResults.value = emptyList()
+            _searchSeriesResults.value = emptyList()
+            _searchState.value = PageLoadingState.Loading
+            _searchIsLoadingMore.value = false
+            _searchNextUrl.value = null
+        } else {
+            _searchIsLoadingMore.value = true
+        }
+
+        searchJob = viewModelScope.launch {
+            HentaiMamaNetworkRepo.searchGenreVideos(
+                slug = slug,
+                query = query,
+                page = page,
+                sort = _genreSort.value,
+            ).collect { state ->
+                if (!isActive) return@collect
+                handleSearchState(state, page)
             }
+        }
+    }
+
+    private fun handleSearchState(state: PageLoadingState<List<HanimeInfo>>, page: Int) {
+        _searchState.value = state
+        when (state) {
+            is PageLoadingState.Success -> {
+                val incoming = state.info
+                _searchResults.update { prev ->
+                    if (page <= 1) incoming
+                    else (prev + incoming).distinctBy(HanimeInfo::videoCode)
+                }
+                if (incoming.isEmpty()) _searchHasMore.value = false
+                _searchPage.value = page
+                _searchCurrentPage.value = page
+                _searchIsLoadingMore.value = false
+            }
+            is PageLoadingState.NoMoreData -> {
+                _searchHasMore.value = false
+                _searchIsLoadingMore.value = false
+            }
+            is PageLoadingState.Error -> {
+                _searchIsLoadingMore.value = false
+            }
+            is PageLoadingState.Loading -> Unit
         }
     }
 
@@ -349,13 +497,24 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
         _searchIsFilterMode.value = true
         _searchHasMore.value = true
 
+        val genre = _genreSlug.value
+
         if (page <= 1) {
             _searchPage.value = 1
             _searchResults.value = emptyList()
+            _searchSeriesResults.value = emptyList()
             _searchState.value = PageLoadingState.Loading
             _searchIsLoadingMore.value = false
+            _searchNextUrl.value = null
         } else {
             _searchIsLoadingMore.value = true
+        }
+
+        if (!genre.isNullOrBlank()) {
+            searchJob = viewModelScope.launch {
+                loadGenrePage(genre, page)
+            }
+            return
         }
 
         searchJob = viewModelScope.launch {
@@ -367,34 +526,118 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
                 order = _selectedOrder.value,
             ).collect { state ->
                 if (!isActive) return@collect
-                _searchState.value = state
-                when (state) {
-                    is PageLoadingState.Success -> {
-                        val incoming = state.info
-                        _searchResults.update { prev ->
-                            if (page <= 1) incoming
-                            else (prev + incoming).distinctBy(HanimeInfo::videoCode)
-                        }
-                        if (incoming.isEmpty()) _searchHasMore.value = false
-                        _searchPage.value = page
-                        _searchIsLoadingMore.value = false
-                    }
-                    is PageLoadingState.NoMoreData -> {
-                        _searchHasMore.value = false
-                        _searchIsLoadingMore.value = false
-                    }
-                    is PageLoadingState.Error -> {
-                        _searchIsLoadingMore.value = false
-                    }
-                    is PageLoadingState.Loading -> Unit
-                }
+                handleSearchState(state, page)
             }
+        }
+    }
+
+    private suspend fun loadGenrePage(slug: String, page: Int) {
+        try {
+            val genrePage: GenrePage? = withContext(Dispatchers.IO) {
+                HentaiMamaNetworkRepo.fetchGenrePage(
+                    slug = slug,
+                    sort = _genreSort.value,
+                    page = page,
+                    layout = _genreLayout.value,
+                )
+            }
+            if (genrePage == null) {
+                _searchState.value = PageLoadingState.Error(
+                    IllegalStateException("Failed to load genre page")
+                )
+                _searchIsLoadingMore.value = false
+                return
+            }
+            _genreHeader.value = genrePage.header
+            _genrePaginator.value = genrePage.paginator
+            _searchTotalPages.value = genrePage.paginator?.total ?: 1
+            _searchCurrentPage.value = genrePage.paginator?.current ?: page
+
+            val videos = genrePage.series.map { s ->
+                HanimeInfo(
+                    title = s.title.ifBlank { s.altTitle.orEmpty() },
+                    coverUrl = s.posterFull.ifBlank { s.posterMid.orEmpty() },
+                    videoCode = s.slug,
+                    itemType = HanimeInfo.NORMAL,
+                )
+            }
+
+            _searchSeriesResults.update { prev ->
+                if (page <= 1) genrePage.series
+                else (prev + genrePage.series).distinctBy { it.slug }
+            }
+            _searchResults.update { prev ->
+                if (page <= 1) videos
+                else (prev + videos).distinctBy(HanimeInfo::videoCode)
+            }
+
+            val hasMore = genrePage.paginator?.let {
+                it.current < it.total || it.nextUrl?.isNotBlank() == true
+            } ?: false
+
+            _searchNextUrl.value = genrePage.paginator?.nextUrl
+            _searchHasMore.value = hasMore
+            _searchIsLoadingMore.value = false
+            _searchState.value = if (videos.isEmpty()) {
+                PageLoadingState.NoMoreData
+            } else {
+                PageLoadingState.Success(videos)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "loadGenrePage failed", e)
+            _searchState.value = PageLoadingState.Error(e)
+            _searchIsLoadingMore.value = false
+        }
+    }
+
+    fun setGenreSlug(slug: String?) {
+        _genreSlug.value = slug?.takeIf { it.isNotBlank() }
+    }
+
+    fun setGenreSort(sort: String?) {
+        _genreSort.value = sort?.takeIf { it.isNotBlank() }
+        val slug = _genreSlug.value ?: return
+        _searchPage.value = 1
+        _searchResults.value = emptyList()
+        _searchSeriesResults.value = emptyList()
+        _searchNextUrl.value = null
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
+            _searchState.value = PageLoadingState.Loading
+            _searchIsLoadingMore.value = false
+            loadGenrePage(slug, 1)
+        }
+    }
+
+    fun setGenreLayout(layout: GenreLayout) {
+        _genreLayout.value = layout
+        val slug = _genreSlug.value ?: return
+        _searchPage.value = 1
+        _searchResults.value = emptyList()
+        _searchSeriesResults.value = emptyList()
+        _searchNextUrl.value = null
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
+            _searchState.value = PageLoadingState.Loading
+            _searchIsLoadingMore.value = false
+            loadGenrePage(slug, 1)
         }
     }
 
     fun loadNextSearchPage() {
         if (_searchIsLoadingMore.value || !_searchHasMore.value) return
         val next = _searchPage.value + 1
+
+        val genre = _genreSlug.value
+        if (!genre.isNullOrBlank()) {
+            searchJob?.cancel()
+            _searchIsLoadingMore.value = true
+            searchJob = viewModelScope.launch {
+                loadGenrePage(genre, next)
+            }
+            return
+        }
+
         if (_searchIsFilterMode.value) filterVideos(next)
         else searchVideos(next, _searchQuery.value)
     }
@@ -428,10 +671,33 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
+    fun getGenrePage(slug: String, sort: String? = null) {
+        genreJob?.cancel()
+        _genreSlug.value = slug
+        _genreSort.value = sort
+        genreJob = viewModelScope.launch {
+            _genrePageState.value = VideoLoadingState.Loading
+            HentaiMamaNetworkRepo.getGenrePageFlow(
+                slug = slug,
+                sort = sort,
+                page = 1,
+                layout = _genreLayout.value,
+            ).collect { state ->
+                if (!isActive) return@collect
+                _genrePageState.value = state
+                if (state is VideoLoadingState.Success) {
+                    _genreHeader.value = state.info.header
+                    _genrePaginator.value = state.info.paginator
+                }
+            }
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
         categoryJobs.values.forEach { it.cancel() }
         searchJob?.cancel()
         seriesJob?.cancel()
+        genreJob?.cancel()
     }
 }

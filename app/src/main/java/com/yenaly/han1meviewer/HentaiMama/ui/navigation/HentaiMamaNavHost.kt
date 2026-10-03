@@ -40,6 +40,7 @@ data class HentaiMamaSearchRoute(
     val categoryKey: String? = null,
     val genre: String? = null,
     val order: String? = null,
+    val genreSlug: String? = null,
 )
 
 @Serializable
@@ -120,6 +121,13 @@ fun HentaiMamaNavHost(
                         )
                     }
                 },
+                onNavigateToGenre = { slug ->
+                    if (navController.canNavigateSafely()) {
+                        navController.navigateSafely(
+                            HentaiMamaSearchRoute(genreSlug = slug)
+                        )
+                    }
+                },
                 onNavigateToSettings = {
                     if (navController.canNavigateSafely()) {
                         navController.navigateSafely(HentaiMamaSettingsHubRoute)
@@ -141,6 +149,7 @@ fun HentaiMamaNavHost(
                 initialCategoryKey = route.categoryKey,
                 initialGenre = route.genre,
                 initialOrder = route.order,
+                initialGenreSlug = route.genreSlug,
                 onBack = { navController.popBackStack() },
                 onNavigateToVideo = { code ->
                     if (navController.canNavigateSafely()) {

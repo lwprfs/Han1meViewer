@@ -54,6 +54,7 @@ private enum class FilterTab(val title: String) {
     GENRE("Genre"),
     YEAR("Year"),
     PRODUCER("Producer"),
+    SLUG("Slug"),
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -63,8 +64,15 @@ fun HentaiMamaFilterSheet(
     initialGenre: String?,
     initialYear: String?,
     initialProducer: String?,
+    initialGenreSlug: String? = null,
     onDismiss: () -> Unit,
-    onApply: (order: String?, genre: String?, year: String?, producer: String?) -> Unit,
+    onApply: (
+        order: String?,
+        genre: String?,
+        year: String?,
+        producer: String?,
+        genreSlug: String?,
+    ) -> Unit,
     onReset: () -> Unit,
 ) {
     val sheetState = rememberBottomSheetState(
@@ -72,13 +80,20 @@ fun HentaiMamaFilterSheet(
         enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
     )
 
-    var selectedTab by remember(initialOrder, initialGenre, initialYear, initialProducer) {
+    var selectedTab by remember(
+        initialOrder,
+        initialGenre,
+        initialYear,
+        initialProducer,
+        initialGenreSlug,
+    ) {
         mutableIntStateOf(
             when {
                 initialOrder != null -> FilterTab.ORDER.ordinal
                 initialGenre != null -> FilterTab.GENRE.ordinal
                 initialYear != null -> FilterTab.YEAR.ordinal
                 initialProducer != null -> FilterTab.PRODUCER.ordinal
+                initialGenreSlug != null -> FilterTab.SLUG.ordinal
                 else -> FilterTab.ORDER.ordinal
             }
         )
@@ -88,14 +103,24 @@ fun HentaiMamaFilterSheet(
     var genre by remember(initialGenre) { mutableStateOf(initialGenre) }
     var year by remember(initialYear) { mutableStateOf(initialYear) }
     var producer by remember(initialProducer) { mutableStateOf(initialProducer) }
+    var genreSlug by remember(initialGenreSlug) { mutableStateOf(initialGenreSlug) }
 
     var genreQuery by remember { mutableStateOf("") }
     var producerQuery by remember { mutableStateOf("") }
+    var slugQuery by remember { mutableStateOf(initialGenreSlug.orEmpty()) }
 
     val allOrders = remember { HentaiMamaOptions.orders }
     val allGenres = remember { HentaiMamaOptions.genres }
     val allYears = remember { HentaiMamaOptions.years }
     val allProducers = remember { HentaiMamaOptions.producers }
+
+    val genreSlugs: List<String> = remember(allGenres) {
+        allGenres.map { g ->
+            g.lowercase()
+                .replace(Regex("[^a-z0-9]+"), "-")
+                .trim('-')
+        }.distinct()
+    }
 
     val filteredGenres = remember(genreQuery, allGenres) {
         if (genreQuery.isBlank()) allGenres
@@ -104,6 +129,10 @@ fun HentaiMamaFilterSheet(
     val filteredProducers = remember(producerQuery, allProducers) {
         if (producerQuery.isBlank()) allProducers
         else allProducers.filter { it.contains(producerQuery, ignoreCase = true) }
+    }
+    val filteredSlugs = remember(slugQuery, genreSlugs) {
+        if (slugQuery.isBlank()) genreSlugs
+        else genreSlugs.filter { it.contains(slugQuery, ignoreCase = true) }
     }
 
     ModalBottomSheet(
@@ -132,8 +161,10 @@ fun HentaiMamaFilterSheet(
                     genre = null
                     year = null
                     producer = null
+                    genreSlug = null
                     genreQuery = ""
                     producerQuery = ""
+                    slugQuery = ""
                     onReset()
                 }) {
                     Text("Reset")
@@ -153,6 +184,7 @@ fun HentaiMamaFilterSheet(
                                 FilterTab.GENRE -> genre != null
                                 FilterTab.YEAR -> year != null
                                 FilterTab.PRODUCER -> producer != null
+                                FilterTab.SLUG -> !genreSlug.isNullOrBlank()
                             }
                             Text(if (active) "${tab.title} •" else tab.title)
                         },
@@ -192,6 +224,27 @@ fun HentaiMamaFilterSheet(
                     selected = producer,
                     onSelect = { producer = if (producer == it) null else it },
                 )
+
+                FilterTab.SLUG -> Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        text = "Browse a genre page directly (e.g. uncensored, harem, ntr).",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    SearchableSingleSelectTab(
+                        query = slugQuery,
+                        onQueryChange = { slugQuery = it },
+                        placeholder = "Search slugs…",
+                        items = filteredSlugs,
+                        selected = genreSlug,
+                        onSelect = { slug ->
+                            genreSlug = if (genreSlug == slug) null else slug
+                        },
+                    )
+                }
             }
 
             Spacer(Modifier.height(8.dp))
@@ -209,7 +262,9 @@ fun HentaiMamaFilterSheet(
                     Text("Cancel")
                 }
                 Button(
-                    onClick = { onApply(order, genre, year, producer) },
+                    onClick = {
+                        onApply(order, genre, year, producer, genreSlug)
+                    },
                     modifier = Modifier.weight(2f),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(

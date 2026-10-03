@@ -1,4 +1,5 @@
 package com.yenaly.han1meviewer.HentaiMama.data.remote
+
 import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.GET
@@ -53,6 +54,38 @@ interface HentaiMamaService {
         @Query("genres_filter[]") genres: List<String>? = null,
         @Query("years_filter[]") years: List<String>? = null,
         @Query("studios_filter[]") studios: List<String>? = null,
+    ): Response<ResponseBody>
+
+    @GET("genre/{slug}/")
+    suspend fun getGenrePage(
+        @Path("slug") slug: String,
+        @Query("filter") filter: String? = null,
+    ): Response<ResponseBody>
+
+    @GET("genre/{slug}/page/{page}/")
+    suspend fun getGenrePagePaged(
+        @Path("slug") slug: String,
+        @Path("page") page: Int,
+        @Query("filter") filter: String? = null,
+    ): Response<ResponseBody>
+
+    @GET("genre/{slug}/")
+    suspend fun getGenrePageSearch(
+        @Path("slug") slug: String,
+        @Query("s") query: String,
+    ): Response<ResponseBody>
+
+    @GET("genre/{slug}/page/{page}/")
+    suspend fun getGenrePageSearchPaged(
+        @Path("slug") slug: String,
+        @Path("page") page: Int,
+        @Query("s") query: String,
+    ): Response<ResponseBody>
+
+    @GET("studio/{slug}/")
+    suspend fun getStudioPage(
+        @Path("slug") slug: String,
+        @Query("filter") filter: String? = null,
     ): Response<ResponseBody>
 
     @GET
