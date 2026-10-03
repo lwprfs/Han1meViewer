@@ -108,8 +108,6 @@ fun HentaiMamaVideoScreen(
         else HentaiMamaNetwork.normalizeUrl(path)
     }
 
-    // Holds the ExoPlayer created by the inline (portrait) player.
-    // The fullscreen dialog reuses this instance via playerOverride.
     var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
 
     var pendingResume by remember { mutableLongStateOf(0L) }
@@ -230,8 +228,38 @@ fun HentaiMamaVideoScreen(
         return slug.takeIf { it.isNotBlank() }
     }
 
-    BackHandler(enabled = true) {
-        if (playerState.isFullscreen) exitFullscreen() else onBack()
+    BackHandler(enabled = playerState.isFullscreen) {
+        exitFullscreen()
+    }
+
+    if (playerState.isFullscreen) {
+        Dialog(
+            onDismissRequest = { exitFullscreen() },
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows = false,
+            ),
+        ) {
+            HentaiMamaVideoPlayer(
+                state = playerState,
+                coverUrl = (pageState as? VideoLoadingState.Success)?.info?.page?.info?.seriesPoster.orEmpty(),
+                isFullscreen = true,
+                onPlayerReady = { exoPlayer = it },
+                onPlayPause = { viewModel.setPlaying(!playerState.isPlaying) },
+                onSeek = { pos -> exoPlayer?.seekTo(pos) },
+                onSkip = { delta ->
+                    val current = exoPlayer?.currentPosition ?: 0L
+                    val target = (current + delta).coerceAtLeast(0L)
+                    exoPlayer?.seekTo(target)
+                },
+                onToggleFullscreen = { exitFullscreen() },
+                onPositionUpdate = { pos, dur -> viewModel.setPosition(pos, dur) },
+                modifier = Modifier.fillMaxSize(),
+                showResumeButton = false,
+                onResumeFromSaved = {},
+                onStartFromBeginning = {},
+            )
+        }
     }
 
     Scaffold(
@@ -239,14 +267,8 @@ fun HentaiMamaVideoScreen(
             TopAppBar(
                 title = {
                     val videoInfo = (pageState as? VideoLoadingState.Success)?.info
-                    val title = videoInfo?.page?.info?.title
-                        ?: videoInfo?.title
-                        ?: "Video"
-                    Text(
-                        text = title,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    val title = videoInfo?.page?.info?.title ?: videoInfo?.title ?: "Video"
+                    Text(text = title, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -258,16 +280,12 @@ fun HentaiMamaVideoScreen(
     ) { paddingValues ->
         val state = pageState
         when (state) {
-            is VideoLoadingState.Loading -> LoadingContent(
-                modifier = Modifier.padding(paddingValues),
-            )
-
+            is VideoLoadingState.Loading -> LoadingContent(modifier = Modifier.padding(paddingValues))
             is VideoLoadingState.Error -> ErrorContent(
                 message = state.throwable.message ?: "Failed",
                 onRetry = { viewModel.loadEpisodePage(normalizedUrl, force = true) },
                 modifier = Modifier.padding(paddingValues),
             )
-
             is VideoLoadingState.NoContent -> ErrorContent(
                 message = "No content",
                 onRetry = { viewModel.loadEpisodePage(normalizedUrl, force = true) },
@@ -277,7 +295,6 @@ fun HentaiMamaVideoScreen(
             is VideoLoadingState.Success -> {
                 val videoInfo = state.info
                 val page = videoInfo.page
-
                 if (page == null) {
                     ErrorContent(
                         message = "Episode page data missing",
@@ -286,52 +303,38 @@ fun HentaiMamaVideoScreen(
                     )
                 } else {
                     val info = page.info
-
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(paddingValues),
-                    ) {
-                        // Inline (portrait) player. Always mounted while this screen
-                        // is alive so the ExoPlayer is never released by fullscreen
-                        // toggling. When fullscreen is active, we collapse it to
-                        // 0 height AND set isVisible=false so its AndroidView is
-                        // not built and does not steal the surface from the
-                        // fullscreen player.
-                        HentaiMamaVideoPlayer(
-                            state = playerState,
-                            coverUrl = info.seriesPoster,
-                            isFullscreen = false,
-                            isVisible = !playerState.isFullscreen,
-                            playerOverride = null,
-                            onPlayerReady = { exoPlayer = it },
-                            onPlayPause = {
-                                viewModel.setPlaying(!playerState.isPlaying)
-                            },
-                            onSeek = { pos -> exoPlayer?.seekTo(pos) },
-                            onSkip = { delta ->
-                                val current = exoPlayer?.currentPosition ?: 0L
-                                val target = (current + delta).coerceAtLeast(0L)
-                                exoPlayer?.seekTo(target)
-                            },
-                            onToggleFullscreen = { enterFullscreen() },
-                            onPositionUpdate = { pos, dur ->
-                                viewModel.setPosition(pos, dur)
-                            },
-                            modifier = if (playerState.isFullscreen) {
-                                Modifier
-                                    .fillMaxWidth()
-                                    .height(0.dp)
-                            } else {
-                                Modifier.fillMaxWidth()
-                            },
-                        )
-
+                    Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                        if (!playerState.isFullscreen) {
+                            HentaiMamaVideoPlayer(
+                                state = playerState,
+                                coverUrl = info.seriesPoster,
+                                isFullscreen = false,
+                                onPlayerReady = { exoPlayer = it },
+                                onPlayPause = { viewModel.setPlaying(!playerState.isPlaying) },
+                                onSeek = { pos -> exoPlayer?.seekTo(pos) },
+                                onSkip = { delta ->
+                                    val current = exoPlayer?.currentPosition ?: 0L
+                                    val target = (current + delta).coerceAtLeast(0L)
+                                    exoPlayer?.seekTo(target)
+                                },
+                                onToggleFullscreen = { enterFullscreen() },
+                                onPositionUpdate = { pos, dur -> viewModel.setPosition(pos, dur) },
+                                modifier = Modifier.fillMaxWidth(),
+                                showResumeButton = showResumeDialog,
+                                savedPosition = pendingResume,
+                                onResumeFromSaved = {
+                                    exoPlayer?.seekTo(pendingResume)
+                                    showResumeDialog = false
+                                },
+                                onStartFromBeginning = {
+                                    exoPlayer?.seekTo(0)
+                                    showResumeDialog = false
+                                },
+                            )
+                        }
                         LazyColumn(
                             state = listState,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f),
+                            modifier = Modifier.fillMaxWidth().weight(1f),
                             contentPadding = PaddingValues(bottom = 32.dp),
                         ) {
                             item(key = "nav") {
@@ -355,7 +358,6 @@ fun HentaiMamaVideoScreen(
                                     },
                                 )
                             }
-
                             item(key = "mirrors") {
                                 HentaiMamaMirrorSelector(
                                     mirrors = page.player.mirrors,
@@ -553,71 +555,15 @@ fun HentaiMamaVideoScreen(
         }
     }
 
-    if (playerState.isFullscreen) {
-        val currentPlayer = exoPlayer
-        Dialog(
-            onDismissRequest = { exitFullscreen() },
-            properties = DialogProperties(
-                usePlatformDefaultWidth = false,
-                decorFitsSystemWindows = false,
-            ),
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black),
-            ) {
-                val cover = (pageState as? VideoLoadingState.Success)
-                    ?.info?.page?.info?.seriesPoster.orEmpty()
-                HentaiMamaVideoPlayer(
-                    state = playerState,
-                    coverUrl = cover,
-                    isFullscreen = true,
-                    isVisible = true,
-                    playerOverride = currentPlayer,
-                    onPlayerReady = { /* reuse the inline player, do not replace */ },
-                    onPlayPause = { viewModel.setPlaying(!playerState.isPlaying) },
-                    onSeek = { pos -> exoPlayer?.seekTo(pos) },
-                    onSkip = { delta ->
-                        val current = exoPlayer?.currentPosition ?: 0L
-                        val target = (current + delta).coerceAtLeast(0L)
-                        exoPlayer?.seekTo(target)
-                    },
-                    onToggleFullscreen = { exitFullscreen() },
-                    onPositionUpdate = { pos, dur -> viewModel.setPosition(pos, dur) },
-                )
-            }
-        }
-    }
-
-    if (showResumeDialog && resumePosition > 0L) {
-        AlertDialog(
-            onDismissRequest = { showResumeDialog = false },
-            title = { Text("Resume playback?") },
-            text = { Text("Resume from ${formatTime(resumePosition)}?") },
-            confirmButton = {
-                TextButton(onClick = {
-                    pendingResume = resumePosition
-                    showResumeDialog = false
-                }) { Text("Resume") }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    pendingResume = 0L
-                    resumeApplied = true
-                    showResumeDialog = false
-                    coroutineScope.launch {
-                        withContext(Dispatchers.IO) {
-                            runCatching { HentaiMamaHistoryRepo.markStartedOver(videoCode) }
-                        }
-                    }
-                }) { Text("Start over") }
-            },
-        )
+    if (showResumeDialog && !playerState.isFullscreen) {
     }
 
     DisposableEffect(Unit) {
-        onDispose { viewModel.setPlaying(false) }
+        onDispose {
+            viewModel.setPlaying(false)
+            exoPlayer?.release()
+            exoPlayer = null
+        }
     }
 }
 
