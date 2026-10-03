@@ -37,7 +37,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -118,12 +117,6 @@ fun HentaiMamaVideoScreen(
     var showResumeDialog by remember { mutableStateOf(false) }
 
     val listState = rememberLazyListState()
-    val isVideoVisible by remember {
-        derivedStateOf {
-            listState.firstVisibleItemIndex == 0 &&
-                    listState.firstVisibleItemScrollOffset < 200
-        }
-    }
 
     HentaiMamaHistoryRepo.init(context)
 
@@ -153,12 +146,6 @@ fun HentaiMamaVideoScreen(
             val seek: Long = pendingResume.coerceAtMost(maxSeek)
             exoPlayer?.seekTo(seek)
             resumeApplied = true
-        }
-    }
-
-    LaunchedEffect(isVideoVisible) {
-        if (!isVideoVisible && playerState.isPlaying) {
-            viewModel.setPlaying(false)
         }
     }
 
@@ -306,19 +293,18 @@ fun HentaiMamaVideoScreen(
                 } else {
                     val info = page.info
 
-                    LazyColumn(
-                        state = listState,
+                    Column(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(paddingValues),
-                        contentPadding = PaddingValues(bottom = 32.dp),
                     ) {
-                        item(key = "player") {
+                        if (!playerState.isFullscreen) {
                             HentaiMamaVideoPlayer(
                                 state = playerState,
                                 coverUrl = info.seriesPoster,
                                 isFullscreen = false,
-                                isVisible = isVideoVisible,
+                                isVisible = true,
+                                playerOverride = null,
                                 onPlayerReady = { exoPlayer = it },
                                 onPlayPause = { viewModel.setPlaying(!playerState.isPlaying) },
                                 onSeek = { pos: Long -> exoPlayer?.seekTo(pos) },
@@ -332,228 +318,243 @@ fun HentaiMamaVideoScreen(
                                     viewModel.setPosition(pos, dur)
                                 },
                             )
-                        }
-
-                        item(key = "nav") {
-                            HentaiMamaEpisodeNav(
-                                nav = page.nav,
-                                onPrev = {
-                                    page.nav.prevUrl?.let { url: String ->
-                                        val slug: String = url.trimEnd('/').substringAfterLast('/')
-                                        onNavigateToVideo(slug, url)
-                                    }
-                                },
-                                onSeries = {
-                                    val slug: String? = deriveSeriesSlug(
-                                        info.slug,
-                                        page.nav.seriesUrl,
-                                    )
-                                    slug?.let(onNavigateToSeries)
-                                },
-                                onNext = {
-                                    page.nav.nextUrl?.let { url: String ->
-                                        val slug: String = url.trimEnd('/').substringAfterLast('/')
-                                        onNavigateToVideo(slug, url)
-                                    }
-                                },
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(1.dp)
+                                    .background(Color.Black),
                             )
                         }
 
-                        item(key = "mirrors") {
-                            HentaiMamaMirrorSelector(
-                                mirrors = page.player.mirrors,
-                                selectedMirrorIndex = selectedMirrorIndex,
-                                onMirrorSelected = { viewModel.selectMirror(it) },
-                                qualities = playerState.qualityOptions,
-                                selectedQuality = playerState.quality,
-                                onQualitySelected = { viewModel.setQuality(it) },
-                                speeds = playerState.availableSpeeds,
-                                selectedSpeed = playerState.speed,
-                                onSpeedSelected = { viewModel.setSpeed(it) },
-                            )
-                        }
-
-                        if (extractionState is HentaiMamaExtractionState.Loading) {
-                            item(key = "extracting") {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier
-                                            .padding(end = 8.dp)
-                                            .width(18.dp)
-                                            .height(18.dp),
-                                        strokeWidth = 2.dp,
-                                    )
-                                    Text(
-                                        text = "Loading mirror ${selectedMirrorLabel ?: ""}…",
-                                        style = MaterialTheme.typography.bodySmall,
-                                    )
-                                }
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                            contentPadding = PaddingValues(bottom = 32.dp),
+                        ) {
+                            item(key = "nav") {
+                                HentaiMamaEpisodeNav(
+                                    nav = page.nav,
+                                    onPrev = {
+                                        page.nav.prevUrl?.let { url: String ->
+                                            val slug: String = url.trimEnd('/').substringAfterLast('/')
+                                            onNavigateToVideo(slug, url)
+                                        }
+                                    },
+                                    onSeries = {
+                                        val slug: String? = deriveSeriesSlug(
+                                            info.slug,
+                                            page.nav.seriesUrl,
+                                        )
+                                        slug?.let(onNavigateToSeries)
+                                    },
+                                    onNext = {
+                                        page.nav.nextUrl?.let { url: String ->
+                                            val slug: String = url.trimEnd('/').substringAfterLast('/')
+                                            onNavigateToVideo(slug, url)
+                                        }
+                                    },
+                                )
                             }
-                        }
 
-                        if (extractionState is HentaiMamaExtractionState.Failed) {
-                            item(key = "extraction_error") {
-                                val reason: String =
-                                    (extractionState as HentaiMamaExtractionState.Failed).reason
-                                Surface(
-                                    color = MaterialTheme.colorScheme.errorContainer,
-                                    shape = RoundedCornerShape(8.dp),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(12.dp),
-                                ) {
-                                    Column(modifier = Modifier.padding(12.dp)) {
-                                        Text(
-                                            text = "Mirror failed",
-                                            color = MaterialTheme.colorScheme.onErrorContainer,
-                                            style = MaterialTheme.typography.titleSmall,
+                            item(key = "mirrors") {
+                                HentaiMamaMirrorSelector(
+                                    mirrors = page.player.mirrors,
+                                    selectedMirrorIndex = selectedMirrorIndex,
+                                    onMirrorSelected = { viewModel.selectMirror(it) },
+                                    qualities = playerState.qualityOptions,
+                                    selectedQuality = playerState.quality,
+                                    onQualitySelected = { viewModel.setQuality(it) },
+                                    speeds = playerState.availableSpeeds,
+                                    selectedSpeed = playerState.speed,
+                                    onSpeedSelected = { viewModel.setSpeed(it) },
+                                )
+                            }
+
+                            if (extractionState is HentaiMamaExtractionState.Loading) {
+                                item(key = "extracting") {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier
+                                                .padding(end = 8.dp)
+                                                .width(18.dp)
+                                                .height(18.dp),
+                                            strokeWidth = 2.dp,
                                         )
                                         Text(
-                                            text = reason,
-                                            color = MaterialTheme.colorScheme.onErrorContainer,
+                                            text = "Loading mirror ${selectedMirrorLabel ?: ""}…",
                                             style = MaterialTheme.typography.bodySmall,
                                         )
-                                        TextButton(
-                                            onClick = { viewModel.retryExtraction() },
-                                        ) {
-                                            Text("Retry")
+                                    }
+                                }
+                            }
+
+                            if (extractionState is HentaiMamaExtractionState.Failed) {
+                                item(key = "extraction_error") {
+                                    val reason: String =
+                                        (extractionState as HentaiMamaExtractionState.Failed).reason
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.errorContainer,
+                                        shape = RoundedCornerShape(8.dp),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
+                                    ) {
+                                        Column(modifier = Modifier.padding(12.dp)) {
+                                            Text(
+                                                text = "Mirror failed",
+                                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                                style = MaterialTheme.typography.titleSmall,
+                                            )
+                                            Text(
+                                                text = reason,
+                                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                                style = MaterialTheme.typography.bodySmall,
+                                            )
+                                            TextButton(
+                                                onClick = { viewModel.retryExtraction() },
+                                            ) {
+                                                Text("Retry")
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
 
-                        if (mirrorLinks.size > 1) {
-                            item(key = "sources_header") {
-                                Text(
-                                    text = "Sources (${mirrorLinks.size})",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier.padding(
-                                        horizontal = 12.dp,
-                                        vertical = 4.dp,
-                                    ),
-                                )
-                            }
-                            itemsIndexed(
-                                items = mirrorLinks,
-                                key = { _, link: HentaiMamaVideoLink -> link.url },
-                            ) { _, link: HentaiMamaVideoLink ->
-                                val selected: Boolean = link.quality == playerState.quality
-                                Surface(
-                                    color = if (selected)
-                                        MaterialTheme.colorScheme.primaryContainer
-                                    else
-                                        MaterialTheme.colorScheme.surfaceContainerLow,
-                                    shape = RoundedCornerShape(8.dp),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 12.dp, vertical = 2.dp),
-                                    onClick = { viewModel.setQuality(link.quality) },
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(10.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
+                            if (mirrorLinks.size > 1) {
+                                item(key = "sources_header") {
+                                    Text(
+                                        text = "Sources (${mirrorLinks.size})",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.padding(
+                                            horizontal = 12.dp,
+                                            vertical = 4.dp,
+                                        ),
+                                    )
+                                }
+                                itemsIndexed(
+                                    items = mirrorLinks,
+                                    key = { _, link: HentaiMamaVideoLink -> link.url },
+                                ) { _, link: HentaiMamaVideoLink ->
+                                    val selected: Boolean = link.quality == playerState.quality
+                                    Surface(
+                                        color = if (selected)
+                                            MaterialTheme.colorScheme.primaryContainer
+                                        else
+                                            MaterialTheme.colorScheme.surfaceContainerLow,
+                                        shape = RoundedCornerShape(8.dp),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 12.dp, vertical = 2.dp),
+                                        onClick = { viewModel.setQuality(link.quality) },
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Filled.PlayArrow,
-                                            contentDescription = null,
-                                            tint = if (selected)
-                                                MaterialTheme.colorScheme.primary
-                                            else
-                                                MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                        Spacer(Modifier.width(8.dp))
-                                        Text(
-                                            text = link.quality,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = if (selected)
-                                                FontWeight.Bold
-                                            else
-                                                FontWeight.Normal,
-                                        )
+                                        Row(
+                                            modifier = Modifier.padding(10.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Filled.PlayArrow,
+                                                contentDescription = null,
+                                                tint = if (selected)
+                                                    MaterialTheme.colorScheme.primary
+                                                else
+                                                    MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(
+                                                text = link.quality,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = if (selected)
+                                                    FontWeight.Bold
+                                                else
+                                                    FontWeight.Normal,
+                                            )
+                                        }
                                     }
                                 }
                             }
-                        }
 
-                        item(key = "handler") {
-                            HentaiMamaEpisodeHandler(info = info)
-                        }
+                            item(key = "handler") {
+                                HentaiMamaEpisodeHandler(info = info)
+                            }
 
-                        item(key = "header") {
-                            HentaiMamaEpisodeHeader(
-                                info = info,
-                                onSeriesClick = {
-                                    val slug: String? = deriveSeriesSlug(
-                                        info.slug,
-                                        page.nav.seriesUrl,
+                            item(key = "header") {
+                                HentaiMamaEpisodeHeader(
+                                    info = info,
+                                    onSeriesClick = {
+                                        val slug: String? = deriveSeriesSlug(
+                                            info.slug,
+                                            page.nav.seriesUrl,
+                                        )
+                                        slug?.let(onNavigateToSeries)
+                                    },
+                                    onGenreClick = { genre: String -> onNavigateToSearch(genre) },
+                                )
+                            }
+
+                            item(key = "gallery") {
+                                HentaiMamaEpisodeGallery(
+                                    previewUrls = info.previewUrls,
+                                    columns = info.galleryColumns,
+                                )
+                            }
+
+                            if (page.seriesSidebar.isNotEmpty()) {
+                                item(key = "sidebar_header") {
+                                    Text(
+                                        text = "Episodes ${page.seriesSidebarCount ?: ""}",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(
+                                            horizontal = 12.dp,
+                                            vertical = 8.dp,
+                                        ),
                                     )
-                                    slug?.let(onNavigateToSeries)
-                                },
-                                onGenreClick = { genre: String -> onNavigateToSearch(genre) },
-                            )
-                        }
-
-                        item(key = "gallery") {
-                            HentaiMamaEpisodeGallery(
-                                previewUrls = info.previewUrls,
-                                columns = info.galleryColumns,
-                            )
-                        }
-
-                        if (page.seriesSidebar.isNotEmpty()) {
-                            item(key = "sidebar_header") {
-                                Text(
-                                    text = "Episodes ${page.seriesSidebarCount ?: ""}",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(
-                                        horizontal = 12.dp,
-                                        vertical = 8.dp,
-                                    ),
-                                )
+                                }
+                                itemsIndexed(
+                                    items = page.seriesSidebar,
+                                    key = { _, episode: HentaiMamaEpisode -> episode.slug },
+                                ) { _, episode: HentaiMamaEpisode ->
+                                    EpisodeSidebarRow(
+                                        episode = episode,
+                                        onClick = { openEpisode(episode) },
+                                    )
+                                }
                             }
-                            itemsIndexed(
-                                items = page.seriesSidebar,
-                                key = { _, episode: HentaiMamaEpisode -> episode.slug },
-                            ) { _, episode: HentaiMamaEpisode ->
-                                EpisodeSidebarRow(
-                                    episode = episode,
-                                    onClick = { openEpisode(episode) },
-                                )
-                            }
-                        }
 
-                        if (page.similar.isNotEmpty()) {
-                            item(key = "similar_header") {
-                                Text(
-                                    text = "Similar titles",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(
-                                        horizontal = 12.dp,
-                                        vertical = 8.dp,
-                                    ),
-                                )
-                            }
-                            itemsIndexed(
-                                items = page.similar,
-                                key = { _, sim: SimilarCard -> sim.slug },
-                            ) { _, sim: SimilarCard ->
-                                SimilarRow(
-                                    title = sim.name,
-                                    poster = sim.poster,
-                                    rating = sim.rating,
-                                    year = sim.year,
-                                    episodeCount = sim.episodeCount,
-                                    onClick = { onNavigateToVideo(sim.slug, sim.url) },
-                                )
+                            if (page.similar.isNotEmpty()) {
+                                item(key = "similar_header") {
+                                    Text(
+                                        text = "Similar titles",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(
+                                            horizontal = 12.dp,
+                                            vertical = 8.dp,
+                                        ),
+                                    )
+                                }
+                                itemsIndexed(
+                                    items = page.similar,
+                                    key = { _, sim: SimilarCard -> sim.slug },
+                                ) { _, sim: SimilarCard ->
+                                    SimilarRow(
+                                        title = sim.name,
+                                        poster = sim.poster,
+                                        rating = sim.rating,
+                                        year = sim.year,
+                                        episodeCount = sim.episodeCount,
+                                        onClick = { onNavigateToVideo(sim.slug, sim.url) },
+                                    )
+                                }
                             }
                         }
                     }
@@ -563,6 +564,7 @@ fun HentaiMamaVideoScreen(
     }
 
     if (playerState.isFullscreen) {
+        val currentPlayer = exoPlayer
         Dialog(
             onDismissRequest = { exitFullscreen() },
             properties = DialogProperties(
@@ -586,7 +588,8 @@ fun HentaiMamaVideoScreen(
                     coverUrl = cover,
                     isFullscreen = true,
                     isVisible = true,
-                    onPlayerReady = { exoPlayer = it },
+                    playerOverride = currentPlayer,
+                    onPlayerReady = { /* reuse existing player, don't replace */ },
                     onPlayPause = { viewModel.setPlaying(!playerState.isPlaying) },
                     onSeek = { pos: Long -> exoPlayer?.seekTo(pos) },
                     onSkip = { delta: Long ->

@@ -80,6 +80,7 @@ fun HentaiMamaVideoPlayer(
     coverUrl: String,
     isFullscreen: Boolean,
     isVisible: Boolean = true,
+    playerOverride: ExoPlayer? = null,
     onPlayerReady: (ExoPlayer) -> Unit,
     onPlayPause: () -> Unit,
     onSeek: (Long) -> Unit,
@@ -91,6 +92,7 @@ fun HentaiMamaVideoPlayer(
     val context = LocalContext.current
 
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
+    var ownsPlayer by remember { mutableStateOf(false) }
     var showControls by remember { mutableStateOf(true) }
     var subtitleView by remember { mutableStateOf<TextView?>(null) }
     var lastPosition by remember { mutableLongStateOf(0L) }
@@ -102,7 +104,8 @@ fun HentaiMamaVideoPlayer(
         PLAYER_TAG,
         "compose: isReady=${state.isReady}, urlLen=${state.url.length}, " +
                 "urlHead=${state.url.take(80)}, isFullscreen=$isFullscreen, " +
-                "isVisible=$isVisible, playbackState=$playbackState"
+                "isVisible=$isVisible, playbackState=$playbackState, " +
+                "hasOverride=${playerOverride != null}"
     )
 
     val surfaceModifier: Modifier = if (isFullscreen) {
@@ -153,7 +156,11 @@ fun HentaiMamaVideoPlayer(
         if (sourceReady && isVisible) {
             AndroidView(
                 factory = { ctx ->
-                    Log.d(PLAYER_TAG, "AndroidView factory: building ExoPlayer")
+                    Log.d(
+                        PLAYER_TAG,
+                        "AndroidView factory: " +
+                                "override=${playerOverride != null}"
+                    )
                     FrameLayout(ctx).apply {
                         layoutParams = ViewGroup.LayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT,
@@ -183,7 +190,9 @@ fun HentaiMamaVideoPlayer(
                                 override fun onSurfaceTextureDestroyed(
                                     surface: SurfaceTexture,
                                 ): Boolean {
-                                    player?.setVideoTextureView(null)
+                                    if (ownsPlayer) {
+                                        player?.setVideoTextureView(null)
+                                    }
                                     return true
                                 }
 
@@ -217,33 +226,44 @@ fun HentaiMamaVideoPlayer(
                         }
                         addView(subtitle)
 
-                        val exo: ExoPlayer = ExoPlayer.Builder(ctx).build()
-                        player = exo
-                        onPlayerReady(exo)
-
-                        val base: String = HentaiMamaNetwork.baseUrl
-                        val dsFactory = DefaultDataSource.Factory(
-                            ctx,
-                            DefaultHttpDataSource.Factory().setDefaultRequestProperties(
-                                hashMapOf(
-                                    "Referer" to "$base/",
-                                    "Origin" to base.trimEnd('/'),
+                        val exo: ExoPlayer
+                        if (playerOverride != null) {
+                            exo = playerOverride
+                            ownsPlayer = false
+                        } else {
+                            exo = ExoPlayer.Builder(ctx).build()
+                            ownsPlayer = true
+                            val base: String = HentaiMamaNetwork.baseUrl
+                            val dsFactory = DefaultDataSource.Factory(
+                                ctx,
+                                DefaultHttpDataSource.Factory().setDefaultRequestProperties(
+                                    hashMapOf(
+                                        "Referer" to "$base/",
+                                        "Origin" to base.trimEnd('/'),
+                                    )
                                 )
                             )
-                        )
-                        val mediaItem: MediaItem = MediaItem.Builder()
-                            .setUri(state.url)
-                            .build()
-                        val mediaSource = if (state.url.contains(".m3u8")) {
-                            HlsMediaSource.Factory(dsFactory).createMediaSource(mediaItem)
-                        } else {
-                            ProgressiveMediaSource.Factory(dsFactory)
-                                .createMediaSource(mediaItem)
+                            val mediaItem: MediaItem = MediaItem.Builder()
+                                .setUri(state.url)
+                                .build()
+                            val mediaSource = if (state.url.contains(".m3u8")) {
+                                HlsMediaSource.Factory(dsFactory).createMediaSource(mediaItem)
+                            } else {
+                                ProgressiveMediaSource.Factory(dsFactory)
+                                    .createMediaSource(mediaItem)
+                            }
+                            exo.setMediaSource(mediaSource)
+                            exo.prepare()
+                            exo.setPlaybackSpeed(state.speed)
+                            Log.d(
+                                PLAYER_TAG,
+                                "ExoPlayer prepared with url=${state.url.take(80)}"
+                            )
                         }
-                        exo.setMediaSource(mediaSource)
-                        exo.prepare()
-                        exo.setPlaybackSpeed(state.speed)
-                        Log.d(PLAYER_TAG, "ExoPlayer prepared with url=${state.url.take(80)}")
+
+                        player = exo
+                        exo.setVideoTextureView(textureView)
+                        onPlayerReady(exo)
                     }
                 },
                 modifier = Modifier.fillMaxSize(),
@@ -254,32 +274,37 @@ fun HentaiMamaVideoPlayer(
                 },
             )
 
-            LaunchedEffect(state.url) {
-                val exo: ExoPlayer = player ?: return@LaunchedEffect
-                Log.d(PLAYER_TAG, "url changed, swapping media source: ${state.url.take(80)}")
-                hasRenderedFirstFrame = false
-                val base: String = HentaiMamaNetwork.baseUrl
-                val dsFactory = DefaultDataSource.Factory(
-                    context,
-                    DefaultHttpDataSource.Factory().setDefaultRequestProperties(
-                        hashMapOf(
-                            "Referer" to "$base/",
-                            "Origin" to base.trimEnd('/'),
+            if (playerOverride == null) {
+                LaunchedEffect(state.url) {
+                    val exo: ExoPlayer = player ?: return@LaunchedEffect
+                    Log.d(
+                        PLAYER_TAG,
+                        "url changed, swapping media source: ${state.url.take(80)}"
+                    )
+                    hasRenderedFirstFrame = false
+                    val base: String = HentaiMamaNetwork.baseUrl
+                    val dsFactory = DefaultDataSource.Factory(
+                        context,
+                        DefaultHttpDataSource.Factory().setDefaultRequestProperties(
+                            hashMapOf(
+                                "Referer" to "$base/",
+                                "Origin" to base.trimEnd('/'),
+                            )
                         )
                     )
-                )
-                val item: MediaItem = MediaItem.Builder().setUri(state.url).build()
-                val source = if (state.url.contains(".m3u8")) {
-                    HlsMediaSource.Factory(dsFactory).createMediaSource(item)
-                } else {
-                    ProgressiveMediaSource.Factory(dsFactory).createMediaSource(item)
+                    val item: MediaItem = MediaItem.Builder().setUri(state.url).build()
+                    val source = if (state.url.contains(".m3u8")) {
+                        HlsMediaSource.Factory(dsFactory).createMediaSource(item)
+                    } else {
+                        ProgressiveMediaSource.Factory(dsFactory).createMediaSource(item)
+                    }
+                    val wasPlaying: Boolean = exo.playWhenReady
+                    val pos: Long = exo.currentPosition
+                    exo.setMediaSource(source)
+                    exo.prepare()
+                    exo.seekTo(pos)
+                    exo.playWhenReady = wasPlaying
                 }
-                val wasPlaying: Boolean = exo.playWhenReady
-                val pos: Long = exo.currentPosition
-                exo.setMediaSource(source)
-                exo.prepare()
-                exo.seekTo(pos)
-                exo.playWhenReady = wasPlaying
             }
 
             LaunchedEffect(state.speed) {
@@ -453,12 +478,17 @@ fun HentaiMamaVideoPlayer(
 
     DisposableEffect(Unit) {
         onDispose {
-            player?.let { exo: ExoPlayer ->
-                exo.setVideoTextureView(null)
-                exo.stop()
-                exo.release()
+            if (ownsPlayer) {
+                player?.let { exo: ExoPlayer ->
+                    exo.setVideoTextureView(null)
+                    exo.stop()
+                    exo.release()
+                }
+            } else {
+                player?.setVideoTextureView(null)
             }
             player = null
+            ownsPlayer = false
         }
     }
 }
