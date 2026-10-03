@@ -5,7 +5,6 @@ import android.content.pm.ActivityInfo
 import android.os.Build
 import android.view.WindowManager
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -23,7 +22,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -46,7 +44,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -60,7 +57,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.exoplayer.ExoPlayer
 import com.yenaly.han1meviewer.HentaiMama.data.local.HentaiMamaHistoryRepo
 import com.yenaly.han1meviewer.HentaiMama.data.model.HentaiMamaEpisode
-import com.yenaly.han1meviewer.HentaiMama.data.model.SimilarCard
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
 import com.yenaly.han1meviewer.ui.component.content.ErrorContent
@@ -303,7 +299,9 @@ fun HentaiMamaVideoScreen(
                     )
                 } else {
                     val info = page.info
-                    Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                    Column(modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)) {
                         if (!playerState.isFullscreen) {
                             HentaiMamaVideoPlayer(
                                 state = playerState,
@@ -334,7 +332,9 @@ fun HentaiMamaVideoScreen(
                         }
                         LazyColumn(
                             state = listState,
-                            modifier = Modifier.fillMaxWidth().weight(1f),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
                             contentPadding = PaddingValues(bottom = 32.dp),
                         ) {
                             item(key = "nav") {
@@ -553,9 +553,6 @@ fun HentaiMamaVideoScreen(
                 }
             }
         }
-    }
-
-    if (showResumeDialog && !playerState.isFullscreen) {
     }
 
     DisposableEffect(Unit) {

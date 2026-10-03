@@ -27,7 +27,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Forward10
 import androidx.compose.material.icons.filled.Fullscreen
@@ -101,11 +100,19 @@ fun HentaiMamaVideoPlayer(
     var surfaceReady by remember { mutableStateOf(false) }
     var playbackState by remember { mutableIntStateOf(Player.STATE_IDLE) }
     var hasRenderedFirstFrame by remember { mutableStateOf(false) }
+    var isRebuffering by remember { mutableStateOf(false) }
 
     val sourceReady = state.isReady && state.url.isNotBlank()
     val isExoReady = playbackState == Player.STATE_READY
-    val isBuffering = sourceReady && surfaceReady && !hasRenderedFirstFrame &&
-            (playbackState == Player.STATE_BUFFERING || playbackState == Player.STATE_IDLE)
+
+    val isInitialLoading = sourceReady && !hasRenderedFirstFrame
+
+    val isBuffering = sourceReady && (
+            isInitialLoading ||
+                    isRebuffering ||
+                    playbackState == Player.STATE_BUFFERING
+            )
+
     val effectiveIsPlaying = state.isPlaying && isExoReady
 
     val surfaceModifier = if (isFullscreen) {
@@ -283,11 +290,14 @@ fun HentaiMamaVideoPlayer(
 
                     override fun onPlaybackStateChanged(newState: Int) {
                         playbackState = newState
+                        isRebuffering = newState == Player.STATE_BUFFERING &&
+                                hasRenderedFirstFrame
                         player?.let { onPositionUpdate(it.currentPosition, it.duration) }
                     }
 
                     override fun onRenderedFirstFrame() {
                         hasRenderedFirstFrame = true
+                        isRebuffering = false
                     }
                 }
                 exo?.addListener(listener)
