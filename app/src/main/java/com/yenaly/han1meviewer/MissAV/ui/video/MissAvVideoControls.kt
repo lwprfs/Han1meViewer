@@ -1,4 +1,5 @@
 package com.yenaly.han1meviewer.MissAV.ui.video
+
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color as AndroidColor
@@ -14,6 +15,9 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import android.widget.TextView
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -57,7 +61,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -74,6 +83,7 @@ import java.io.InputStream
 import java.nio.charset.StandardCharsets
 
 import com.yenaly.han1meviewer.MissAV.data.remote.MissAvVideoUtils
+
 data class SubtitleCue(
     val startTime: Long,
     val endTime: Long,
@@ -231,6 +241,38 @@ fun MissAvVideoPlayer(
 ) {
     val context = LocalContext.current
 
+    var isBuffering by remember { mutableStateOf(false) }
+    var hasRenderedFirstFrame by remember { mutableStateOf(false) }
+    var lastSurfaceView by remember { mutableStateOf<SurfaceView?>(null) }
+
+    val effectiveIsPlaying = isPlaying && !isBuffering
+
+    DisposableEffect(exoPlayer) {
+        val exo = exoPlayer
+        val listener = object : Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                isBuffering = playbackState == Player.STATE_BUFFERING ||
+                        (playbackState == Player.STATE_IDLE && !hasRenderedFirstFrame)
+            }
+
+            override fun onRenderedFirstFrame() {
+                hasRenderedFirstFrame = true
+                isBuffering = false
+            }
+        }
+        exo?.addListener(listener)
+        onDispose { exo?.removeListener(listener) }
+    }
+
+    LaunchedEffect(currentUrl) {
+        hasRenderedFirstFrame = false
+        if (currentUrl.isNotBlank()) {
+            isBuffering = true
+        } else {
+            isBuffering = false
+        }
+    }
+
     val surfaceModifier = if (isFullscreen) {
         modifier.fillMaxSize()
     } else {
@@ -259,6 +301,7 @@ fun MissAvVideoPlayer(
                             )
                         }
                         addView(surface)
+                        lastSurfaceView = surface
 
                         val subtitleText = TextView(ctx).apply {
                             onSubtitleTextViewCreated(this)
@@ -317,9 +360,24 @@ fun MissAvVideoPlayer(
                 onRelease = { view ->
                     exoPlayer?.setVideoSurfaceView(null)
                     onSurfaceReleased()
+                    lastSurfaceView = null
                     (view as? ViewGroup)?.removeAllViews()
                 },
             )
+
+            if (isBuffering) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.35f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(
+                        color = Color.White,
+                        modifier = Modifier.size(56.dp),
+                    )
+                }
+            }
 
             if (showResumeButton && !isPlaying) {
                 Box(
@@ -373,224 +431,230 @@ fun MissAvVideoPlayer(
                 }
             }
 
-            if (showControls) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .then(if (isFullscreen) Modifier.statusBarsPadding() else Modifier)
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
-                        .align(Alignment.TopCenter),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
+            AnimatedVisibility(
+                visible = showControls && !isBuffering && !showResumeButton,
+                enter = fadeIn(),
+                exit = fadeOut(),
+            ) {
+                Box(modifier = Modifier.fillMaxSize()) {
                     Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(if (isFullscreen) Modifier.statusBarsPadding() else Modifier)
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                            .align(Alignment.TopCenter),
+                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        if (isFullscreen) {
-                            IconButton(
-                                onClick = onExitFullscreen,
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .background(Color.Black.copy(alpha = 0.5f), CircleShape),
-                            ) {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Exit Fullscreen",
-                                    tint = Color.White,
-                                )
-                            }
-                            SkipButton(text = "+10m", onClick = { onSkip(10 * 60_000L) })
-                            SkipButton(text = "+20m", onClick = { onSkip(20 * 60_000L) })
-                            SkipButton(text = "+30m", onClick = { onSkip(30 * 60_000L) })
-                        }
-                    }
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(2.dp),
-                    ) {
-                        IconButton(
-                            onClick = onSubtitleToggle,
-                            modifier = Modifier.size(40.dp),
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
-                            Icon(
-                                if (hasSubtitle) Icons.Filled.ClosedCaption
-                                else Icons.Filled.Subtitles,
-                                contentDescription = if (hasSubtitle)
-                                    "Remove Subtitle" else "Add Subtitle",
-                                tint = if (hasSubtitle) Color.Green else Color.White,
-                            )
+                            if (isFullscreen) {
+                                IconButton(
+                                    onClick = onExitFullscreen,
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .background(Color.Black.copy(alpha = 0.5f), CircleShape),
+                                ) {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = "Exit Fullscreen",
+                                        tint = Color.White,
+                                    )
+                                }
+                                SkipButton(text = "+10m", onClick = { onSkip(10 * 60_000L) })
+                                SkipButton(text = "+20m", onClick = { onSkip(20 * 60_000L) })
+                                SkipButton(text = "+30m", onClick = { onSkip(30 * 60_000L) })
+                            }
                         }
 
-                        Box {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(2.dp),
+                        ) {
                             IconButton(
-                                onClick = onToggleSpeedMenu,
+                                onClick = onSubtitleToggle,
                                 modifier = Modifier.size(40.dp),
                             ) {
                                 Icon(
-                                    Icons.Filled.Speed,
-                                    contentDescription = "Speed",
-                                    tint = Color.White,
+                                    if (hasSubtitle) Icons.Filled.ClosedCaption
+                                    else Icons.Filled.Subtitles,
+                                    contentDescription = if (hasSubtitle)
+                                        "Remove Subtitle" else "Add Subtitle",
+                                    tint = if (hasSubtitle) Color.Green else Color.White,
                                 )
                             }
-                            DropdownMenu(
-                                expanded = showSpeedMenu,
-                                onDismissRequest = onDismissSpeedMenu,
-                                modifier = Modifier.background(Color.Black.copy(alpha = 0.95f)),
-                            ) {
-                                availableSpeeds.forEach { speed ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                "${speed}x",
-                                                color = if (currentSpeed == speed)
-                                                    MaterialTheme.colorScheme.primary
-                                                else Color.White,
-                                            )
-                                        },
-                                        onClick = { onSpeedChange(speed) },
+
+                            Box {
+                                IconButton(
+                                    onClick = onToggleSpeedMenu,
+                                    modifier = Modifier.size(40.dp),
+                                ) {
+                                    Icon(
+                                        Icons.Filled.Speed,
+                                        contentDescription = "Speed",
+                                        tint = Color.White,
                                     )
                                 }
-                            }
-                        }
-
-                        if (qualityMap.isNotEmpty()) {
-                            val distinctQualityUrls = qualityMap.values.distinct()
-                            val hasRealQualityChoices = distinctQualityUrls.size > 1
-                            val isUnavailableOnly =
-                                qualityMap.size == 1 &&
-                                        qualityMap.keys.first() == QUALITY_UNAVAILABLE
-
-                            if (hasRealQualityChoices || isUnavailableOnly) {
-                                Box {
-                                    IconButton(
-                                        onClick = onToggleQualityMenu,
-                                        modifier = Modifier.size(40.dp),
-                                    ) {
-                                        Icon(
-                                            Icons.Filled.Settings,
-                                            contentDescription = "Quality",
-                                            tint = Color.White,
+                                DropdownMenu(
+                                    expanded = showSpeedMenu,
+                                    onDismissRequest = onDismissSpeedMenu,
+                                    modifier = Modifier.background(Color.Black.copy(alpha = 0.95f)),
+                                ) {
+                                    availableSpeeds.forEach { speed ->
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(
+                                                    "${speed}x",
+                                                    color = if (currentSpeed == speed)
+                                                        MaterialTheme.colorScheme.primary
+                                                    else Color.White,
+                                                )
+                                            },
+                                            onClick = { onSpeedChange(speed) },
                                         )
                                     }
-                                    DropdownMenu(
-                                        expanded = showQualityMenu,
-                                        onDismissRequest = onDismissQualityMenu,
-                                        modifier = Modifier.background(
-                                            Color.Black.copy(alpha = 0.95f)
-                                        ),
-                                    ) {
-                                        if (isUnavailableOnly) {
-                                            DropdownMenuItem(
-                                                text = {
-                                                    Text(
-                                                        "Unavailable",
-                                                        color = Color.White.copy(alpha = 0.5f),
-                                                    )
-                                                },
-                                                onClick = { },
-                                                enabled = false,
-                                            )
-                                        } else {
-                                            qualityMap.keys.forEach { quality ->
-                                                val url = qualityMap[quality]
-                                                val isDuplicate =
-                                                    url != null &&
-                                                            qualityMap.entries
-                                                                .firstOrNull { it.value == url }
-                                                                ?.key != quality
-                                                if (isDuplicate) return@forEach
+                                }
+                            }
 
+                            if (qualityMap.isNotEmpty()) {
+                                val distinctQualityUrls = qualityMap.values.distinct()
+                                val hasRealQualityChoices = distinctQualityUrls.size > 1
+                                val isUnavailableOnly =
+                                    qualityMap.size == 1 &&
+                                            qualityMap.keys.first() == QUALITY_UNAVAILABLE
+
+                                if (hasRealQualityChoices || isUnavailableOnly) {
+                                    Box {
+                                        IconButton(
+                                            onClick = onToggleQualityMenu,
+                                            modifier = Modifier.size(40.dp),
+                                        ) {
+                                            Icon(
+                                                Icons.Filled.Settings,
+                                                contentDescription = "Quality",
+                                                tint = Color.White,
+                                            )
+                                        }
+                                        DropdownMenu(
+                                            expanded = showQualityMenu,
+                                            onDismissRequest = onDismissQualityMenu,
+                                            modifier = Modifier.background(
+                                                Color.Black.copy(alpha = 0.95f)
+                                            ),
+                                        ) {
+                                            if (isUnavailableOnly) {
                                                 DropdownMenuItem(
                                                     text = {
                                                         Text(
-                                                            quality,
-                                                            color = if (selectedQuality == quality)
-                                                                MaterialTheme.colorScheme.primary
-                                                            else Color.White,
+                                                            "Unavailable",
+                                                            color = Color.White.copy(alpha = 0.5f),
                                                         )
                                                     },
-                                                    onClick = { onQualityChange(quality) },
+                                                    onClick = { },
+                                                    enabled = false,
                                                 )
+                                            } else {
+                                                qualityMap.keys.forEach { quality ->
+                                                    val url = qualityMap[quality]
+                                                    val isDuplicate =
+                                                        url != null &&
+                                                                qualityMap.entries
+                                                                    .firstOrNull { it.value == url }
+                                                                    ?.key != quality
+                                                    if (isDuplicate) return@forEach
+
+                                                    DropdownMenuItem(
+                                                        text = {
+                                                            Text(
+                                                                quality,
+                                                                color = if (selectedQuality == quality)
+                                                                    MaterialTheme.colorScheme.primary
+                                                                else Color.White,
+                                                            )
+                                                        },
+                                                        onClick = { onQualityChange(quality) },
+                                                    )
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
-                        }
 
-                        IconButton(
-                            onClick = onToggleFullscreen,
-                            modifier = Modifier.size(40.dp),
-                        ) {
-                            Icon(
-                                if (isFullscreen) Icons.Filled.FullscreenExit
-                                else Icons.Filled.Fullscreen,
-                                contentDescription = "Fullscreen",
-                                tint = Color.White,
-                            )
+                            IconButton(
+                                onClick = onToggleFullscreen,
+                                modifier = Modifier.size(40.dp),
+                            ) {
+                                Icon(
+                                    if (isFullscreen) Icons.Filled.FullscreenExit
+                                    else Icons.Filled.Fullscreen,
+                                    contentDescription = "Fullscreen",
+                                    tint = Color.White,
+                                )
+                            }
                         }
                     }
-                }
 
-                IconButton(
-                    onClick = onPlayPause,
-                    modifier = Modifier
-                        .size(if (isFullscreen) 80.dp else 64.dp)
-                        .align(Alignment.Center)
-                        .background(Color.Black.copy(alpha = 0.55f), CircleShape),
-                ) {
-                    Icon(
-                        if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                        contentDescription = if (isPlaying) "Pause" else "Play",
-                        tint = Color.White,
-                        modifier = Modifier.size(if (isFullscreen) 48.dp else 40.dp),
-                    )
-                }
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .then(
-                            if (isFullscreen) Modifier.navigationBarsPadding()
-                            else Modifier
-                        )
-                        .align(Alignment.BottomCenter)
-                        .background(Color.Black.copy(alpha = 0.6f))
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    IconButton(
+                        onClick = onPlayPause,
+                        modifier = Modifier
+                            .size(if (isFullscreen) 80.dp else 64.dp)
+                            .align(Alignment.Center)
+                            .background(Color.Black.copy(alpha = 0.55f), CircleShape),
                     ) {
-                        Text(
-                            MissAvVideoUtils.formatTime(currentPosition),
-                            color = Color.White,
-                            style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier.width(52.dp),
+                        Icon(
+                            if (effectiveIsPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                            contentDescription = if (effectiveIsPlaying) "Pause" else "Play",
+                            tint = Color.White,
+                            modifier = Modifier.size(if (isFullscreen) 48.dp else 40.dp),
                         )
-                        Slider(
-                            value = if (duration > 0) {
-                                currentPosition.toFloat() / duration
-                            } else 0f,
-                            onValueChange = { newValue ->
-                                onSeek((newValue * duration).toLong())
-                            },
-                            modifier = Modifier.weight(1f),
-                            colors = SliderDefaults.colors(
-                                thumbColor = Color.White,
-                                activeTrackColor = MaterialTheme.colorScheme.primary,
-                                inactiveTrackColor = Color.White.copy(alpha = 0.3f),
-                            ),
-                        )
-                        Text(
-                            MissAvVideoUtils.formatTime(duration),
-                            color = Color.White,
-                            style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier.width(52.dp),
-                        )
+                    }
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(
+                                if (isFullscreen) Modifier.navigationBarsPadding()
+                                else Modifier
+                            )
+                            .align(Alignment.BottomCenter)
+                            .background(Color.Black.copy(alpha = 0.6f))
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Text(
+                                MissAvVideoUtils.formatTime(currentPosition),
+                                color = Color.White,
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier.width(52.dp),
+                            )
+                            Slider(
+                                value = if (duration > 0) {
+                                    currentPosition.toFloat() / duration
+                                } else 0f,
+                                onValueChange = { newValue ->
+                                    onSeek((newValue * duration).toLong())
+                                },
+                                modifier = Modifier.weight(1f),
+                                colors = SliderDefaults.colors(
+                                    thumbColor = Color.White,
+                                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                                    inactiveTrackColor = Color.White.copy(alpha = 0.3f),
+                                ),
+                            )
+                            Text(
+                                MissAvVideoUtils.formatTime(duration),
+                                color = Color.White,
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier.width(52.dp),
+                            )
+                        }
                     }
                 }
             }
@@ -658,7 +722,7 @@ fun MissAvVideoPlayer(
                 onRelease = { view ->
                     onWebViewRefChange(null)
                     view.stopLoading()
-                    (view.parent as? ViewGroup)?.removeView(view)
+                    (view as? ViewGroup)?.removeView(view)
                     view.destroy()
                 },
             )
@@ -730,3 +794,5 @@ private fun SkipButton(
         }
     }
 }
+
+internal const val QUALITY_UNAVAILABLE = "Unavailable"
