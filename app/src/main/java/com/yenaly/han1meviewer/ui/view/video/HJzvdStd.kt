@@ -69,6 +69,11 @@ import com.yenaly.yenaly_libs.utils.view.removeItself
 import java.util.Timer
 import kotlin.math.absoluteValue
 
+/**
+ * @project Hanime1
+ * @author Yenaly Liew
+ * @time 2022/06/18 018 15:54
+ */
 class HJzvdStd @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -82,19 +87,38 @@ class HJzvdStd @JvmOverloads constructor(
         get() = MaterialColors.getColor(this, androidx.appcompat.R.attr.colorPrimary)
 
     companion object {
-
+        // 相當於重寫了
+        /**
+         * 滑动操作的阈值
+         */
         const val THRESHOLD = 10
 
+        // 相當於重寫了
+        /**
+         * 默認滑動調整進度條的靈敏度 越大播放进度条滑动越慢
+         */
         const val DEF_PROGRESS_SLIDE_SENSITIVITY = 5
 
         const val DEF_COUNTDOWN_SEC = 10
 
+        /**
+         * 默認速度
+         */
         const val DEF_SPEED = 1.0F
 
+        /**
+         * 默認速度的索引
+         */
         const val DEF_SPEED_INDEX = 2
 
+        /**
+         * 默認長按速度是原先速度的幾倍
+         */
         const val DEF_LONG_PRESS_SPEED_TIMES = 2.5F
 
+        /**
+         * 速度列表
+         */
         val speedArray = floatArrayOf(
             0.5F, 0.75F,
             1.0F, 1.25F, 1.5F, 1.75F,
@@ -102,6 +126,9 @@ class HJzvdStd @JvmOverloads constructor(
             3.0F,
         )
 
+        /**
+         * 速度列表的字符串
+         */
         val speedStringArray = Array(speedArray.size) { "${speedArray[it]}x" }
         const val DEF_SUPER_RESOLUTION_INDEX = 0
     }
@@ -127,22 +154,49 @@ class HJzvdStd @JvmOverloads constructor(
             })
     }
 
+    /**
+     * 用戶定義的是否顯示底部進度條
+     */
     private val showBottomProgress = Preferences.showBottomProgress
 
+    /**
+     * 用戶定義的默認速度
+     */
     private val userDefSpeed = Preferences.playerSpeed
 
+    /**
+     * 用戶定義的默認速度的索引
+     */
     private val userDefSpeedIndex = speedArray.indexOfFirst { it == userDefSpeed }
 
+    /**
+     * 用戶定義的滑動調整進度條的靈敏度
+     */
     private val userDefSlideSensitivity = Preferences.slideSensitivity.toRealSensitivity()
 
+    /**
+     * 用戶定義的默認長按速度是原先速度的幾倍
+     */
     private val userDefLongPressSpeedTimes = Preferences.longPressSpeedTime
 
+    /**
+     * 用戶定義的倒數提醒毫秒數
+     */
     private val userDefWhenCountdownRemind = Preferences.whenCountdownRemind
 
+    /**
+     * 用戶定義的是否在倒數時顯示評論
+     */
     private val userDefShowCommentWhenCountdown = Preferences.showCommentWhenCountdown
 
+    /**
+     * 用戶定義的是否啟用關鍵H幀
+     */
     private val isHKeyframeEnabled = Preferences.hKeyframesEnable
 
+    /**
+     * 當前速度的索引，如果设置速度的话，修改这个，别动 [videoSpeed]
+     */
     private var currentSpeedIndex = userDefSpeedIndex
         @SuppressLint("SetTextI18n")
         set(value) {
@@ -163,13 +217,13 @@ class HJzvdStd @JvmOverloads constructor(
             }
 
             videoSpeed = speedArray[value]
-
+            // #issue-14: 有些机器到这里可能会报空指针异常，所以加了个判断，但是不知道为什么会报空指针异常
             if (jzDataSource.objects == null) {
                 jzDataSource.objects = arrayOf(userDefSpeedIndex)
             }
             jzDataSource.objects[0] = value
         }
-
+    
     fun getSuperResolutionArray(): Array<String> = arrayOf(
         context.getString(R.string.super_resolution_off),
         context.getString(R.string.super_resolution_performance),
@@ -209,6 +263,9 @@ class HJzvdStd @JvmOverloads constructor(
     lateinit var orientationManager: OrientationManager
     private lateinit var superResolution: TextView
 
+    /**
+     * 是否开启单片循环播放
+     */
     var isLooping = false
         set(value) {
             field = value
@@ -229,7 +286,7 @@ class HJzvdStd @JvmOverloads constructor(
     var videoCode: String? = null
         set(value) {
             field = value
-
+            // Reinitialize HKeyframeAdapter when videoCode is set
             if (!value.isNullOrEmpty()) {
                 initHKeyframeAdapter()
             }
@@ -239,10 +296,14 @@ class HJzvdStd @JvmOverloads constructor(
     private val switchPlayerKernel = Preferences.switchPlayerKernel
     var onVideoStateChanged: ((state: Int) -> Unit)? = null
 
+    /**
+     * 初始化關鍵H幀的 Adapter
+     */
     private fun initHKeyframeAdapter() {
         val videoCode = this.videoCode
         if (videoCode.isNullOrEmpty()) {
-
+            // If videoCode is not set yet, create a stub adapter
+            // The adapter will be properly initialized when videoCode is set later
             hKeyframeAdapter = HKeyframesRvAdapter(
                 videoCode = "",
                 onModifyKeyframe = { _, _, _ -> },
@@ -270,15 +331,30 @@ class HJzvdStd @JvmOverloads constructor(
             }
         }
     }
-
+    
     private fun isNeedResumeProgress(): Boolean {
         return savedProgress > 5000 && Preferences.allowResumePlayback && !hasRestoredProgress
     }
 
+    /**
+     * 關鍵H幀的點擊事件
+     *
+     * 作用：打開 Dialog，顯示關鍵H幀的列表
+     */
     var onKeyframeClickListener: ((View) -> Unit)? = null
 
+    /**
+     * 回到主頁的點擊事件
+     *
+     * 作用：關閉所有的 VideoActivity
+     */
     var onGoHomeClickListener: ((View) -> Unit)? = null
 
+    /**
+     * 關鍵H幀的長按事件
+     *
+     * 作用：將當前時刻加入關鍵H幀
+     */
     var onKeyframeLongClickListener: ((View) -> Unit)? = null
 
     private var videoSpeed: Float = userDefSpeed
@@ -293,11 +369,17 @@ class HJzvdStd @JvmOverloads constructor(
             }
         }
 
+    /**
+     * 是否觸發了長按快進
+     */
     @Volatile
     private var isSpeedGestureDetected = false
     private var screenBrightnessBK = -1f
     private var isAdjustBrightness = false
-
+    /**
+     * 長按快進檢測
+     */
+    // #issue-20: 长按倍速功能添加
     private val speedGestureDetector =
         GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
             override fun onLongPress(e: MotionEvent) {
@@ -395,6 +477,7 @@ class HJzvdStd @JvmOverloads constructor(
             gestureLock.isSelected = gestureLocked
         }
 
+        // Initialize HKeyframeAdapter with stub adapter if videoCode not set yet
         initHKeyframeAdapter()
     }
 
@@ -405,7 +488,7 @@ class HJzvdStd @JvmOverloads constructor(
     fun setUp(jzDataSource: JZDataSource?, screen: Int, kernel: HMediaKernel.Type) {
         setUp(jzDataSource, screen, kernel.clazz)
     }
-
+    
     fun setControlsVisible(visible: Boolean) {
         findViewById<View>(R.id.tv_speed)?.isVisible = visible
         findViewById<View>(R.id.tv_keyframe)?.isVisible = visible
@@ -415,7 +498,7 @@ class HJzvdStd @JvmOverloads constructor(
         findViewById<View>(R.id.layout_bottom)?.isVisible = visible
         findViewById<View>(R.id.btn_loop)?.isVisible = visible
     }
-
+    
     override fun setUp(jzDataSource: JZDataSource?, screen: Int, clazz: Class<*>) {
         super.setUp(jzDataSource, screen, clazz)
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
@@ -545,6 +628,7 @@ class HJzvdStd @JvmOverloads constructor(
         }
     }
 
+    // #issue-232: 快进滑动一加载就会出现操作栏，很影响观看体验
     override fun changeUIToPreparingPlaying() {
         when (screen) {
             SCREEN_FULLSCREEN -> {
@@ -602,11 +686,11 @@ class HJzvdStd @JvmOverloads constructor(
             return
         }
         when {
-            CONTAINER_LIST.isNotEmpty() && CURRENT_JZVD != null -> {
+            CONTAINER_LIST.isNotEmpty() && CURRENT_JZVD != null -> { //判断条件，因为当前所有goBack都是回到普通窗口
                 CURRENT_JZVD.gotoNormalScreen()
             }
 
-            CONTAINER_LIST.isEmpty() && CURRENT_JZVD != null && CURRENT_JZVD.screen != SCREEN_NORMAL -> {
+            CONTAINER_LIST.isEmpty() && CURRENT_JZVD != null && CURRENT_JZVD.screen != SCREEN_NORMAL -> { //退出直接进入的全屏
                 CURRENT_JZVD.clearFloatScreen()
             }
             else -> {
@@ -695,7 +779,7 @@ class HJzvdStd @JvmOverloads constructor(
 
         }
     }
-
+    
     @SuppressLint("InflateParams")
     fun clickSuperResolution() {
         onCLickUiToggleToClear()
@@ -764,10 +848,10 @@ class HJzvdStd @JvmOverloads constructor(
         var deltaY = y - mDownY
         val absDeltaX = deltaX.absoluteValue
         val absDeltaY = deltaY.absoluteValue
-
+        // 此處進行了修改，未全屏也能調節進度
         Log.d(TAG, "mDownX=$mDownX, screenWidth=${JZUtils.getScreenWidth(context)}")
         if (screen != SCREEN_TINY && !isSpeedGestureDetected) {
-
+            //拖动的是NavigationBar和状态栏
             if (mDownX > appScreenWidth
                 || mDownY < JZUtils.getStatusBarHeight(context)
             ) {
@@ -777,15 +861,16 @@ class HJzvdStd @JvmOverloads constructor(
                 if (absDeltaX > THRESHOLD || absDeltaY > THRESHOLD) {
                     cancelProgressTimer()
                     if (absDeltaX >= THRESHOLD) {
-
+                        // 全屏模式下的CURRENT_STATE_ERROR状态下,不响应进度拖动事件.
+                        // 否则会因为media player的状态非法导致App Crash
                         if (state != STATE_ERROR) {
                             mChangePosition = true
                             mGestureDownPosition = currentPositionWhenPlaying
                         }
                     } else {
-
+                        //如果y轴滑动距离超过设置的处理范围，那么进行滑动事件处理
                         Log.i("appScreenWidth",appScreenWidth.toString())
-                        if (mDownX < appScreenWidth * 0.5f) {
+                        if (mDownX < appScreenWidth * 0.5f) { //左侧改变亮度
                             mChangeBrightness = true
                             isAdjustBrightness = true
                             val lp = JZUtils.getWindow(context).attributes
@@ -809,7 +894,7 @@ class HJzvdStd @JvmOverloads constructor(
                                     "current activity brightness: $mGestureDownBrightness"
                                 )
                             }
-                        } else {
+                        } else { //右侧改变声音
                             mChangeVolume = true
                             if (mAudioManager == null) {
                                 mAudioManager = context.getSystemService()
@@ -838,7 +923,7 @@ class HJzvdStd @JvmOverloads constructor(
             val max = mAudioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
             val deltaV = (max * deltaY * 3 / mScreenHeight).toInt()
             mAudioManager.setStreamVolume(AudioManager.STREAM_MUSIC, mGestureDownVolume + deltaV, 0)
-
+            //dialog中显示百分比
             val volumePercent =
                 (mGestureDownVolume * 100 / max + deltaY * 3 * 100 / mScreenHeight).toInt()
             showVolumeDialog(-deltaY, volumePercent)
@@ -848,7 +933,7 @@ class HJzvdStd @JvmOverloads constructor(
             deltaY = -deltaY
             val deltaV = (255 * deltaY * 3 / mScreenHeight).toInt()
             val params = JZUtils.getWindow(context).attributes
-            if ((mGestureDownBrightness + deltaV) / 255 >= 1) {
+            if ((mGestureDownBrightness + deltaV) / 255 >= 1) { //这和声音有区别，必须自己过滤一下负值
                 params.screenBrightness = 1f
             } else if ((mGestureDownBrightness + deltaV) / 255 <= 0) {
                 params.screenBrightness = 0.01f
@@ -856,34 +941,33 @@ class HJzvdStd @JvmOverloads constructor(
                 params.screenBrightness = (mGestureDownBrightness + deltaV) / 255
             }
             JZUtils.getWindow(context).attributes = params
-
+            //dialog中显示百分比
             val brightnessPercent =
                 (mGestureDownBrightness * 100 / 255 + deltaY * 3 * 100 / mScreenHeight).toInt()
             showBrightnessDialog(brightnessPercent)
-
+//            mDownY = y;
         }
     }
 
     private var savedConstraintLayoutParams: ConstraintLayout.LayoutParams? = null
 
     override fun gotoNormalScreen() {
-        gobakFullscreenTime = System.currentTimeMillis()
+        gobakFullscreenTime = System.currentTimeMillis() // 退出全屏时间
         fullscreenListener?.onFullscreenChanged(false)
         Log.i(TAG,"${isAdjustBrightness}、${screenBrightnessBK}、${JZUtils.getWindow(context).attributes.screenBrightness}")
         if (isAdjustBrightness) {
             val window = JZUtils.getWindow(context)
             if (window != null) {
                 val params = window.attributes
-                params.screenBrightness = screenBrightnessBK.coerceIn(0f, 1f)
+                params.screenBrightness = screenBrightnessBK.coerceIn(0f, 1f) //恢复亮度
                 window.attributes = params
             }
             isAdjustBrightness = false
         }
-
+        // 从 decorView 移除全屏播放器视图
         val decorView = (JZUtils.scanForActivity(jzvdContext)).window.decorView as ViewGroup
         decorView.removeView(this)
-        (parent as? ViewGroup)?.removeView(this)
-
+        // 恢复到原始容器
         val originalContainer = CONTAINER_LIST.lastOrNull()
         if (originalContainer != null){
             CONTAINER_LIST.pop()
@@ -900,10 +984,10 @@ class HJzvdStd @JvmOverloads constructor(
         } else if (originalContainer is FrameLayout) {
             layoutParams = LayoutParams(blockLayoutParams)
         }
-        val index = blockIndex.coerceIn(0, originalContainer.childCount)
-        originalContainer.addView(this, index, layoutParams)
+        // 把播放器重新添加回原来的位置
+        originalContainer.addView(this, blockIndex, layoutParams)
         originalContainer.requestLayout()
-
+        // 设置播放器状态并恢复系统UI和方向
         setScreenNormal()
         JZUtils.showStatusBar(jzvdContext)
         val activity = JZUtils.scanForActivity(jzvdContext)
@@ -920,6 +1004,7 @@ class HJzvdStd @JvmOverloads constructor(
         val activity = JZUtils.scanForActivity(jzvdContext)
         jzvdContext = vg.context
 
+        // 保存容器与布局信息
         blockLayoutParams = layoutParams
         blockIndex = vg.indexOfChild(this)
         blockWidth = width
@@ -929,7 +1014,7 @@ class HJzvdStd @JvmOverloads constructor(
             savedConstraintLayoutParams =
                 ConstraintLayout.LayoutParams(blockLayoutParams as ConstraintLayout.LayoutParams)
         }
-
+        // 从原来容器中移除播放器
         vg.removeView(this)
         CONTAINER_LIST.push(vg)
         val decorView = (JZUtils.scanForActivity(jzvdContext)).window.decorView as ViewGroup
@@ -990,10 +1075,14 @@ class HJzvdStd @JvmOverloads constructor(
         JZUtils.hideSystemUI(jzvdContext)
     }
 
+
     override fun onStatePreparingChangeUrl() {
         Log.i(TAG, "onStatePreparingChangeUrl " + " [" + this.hashCode() + "] ")
         state = STATE_PREPARING_CHANGE_URL
 
+        // 原方法直接使用下面的方法，會導致全屏切換清晰度返回正常界面時重置影片。
+        // 所以重寫，只抄過調用的方法的一部分。
+        // releaseAllVideos()
         CURRENT_JZVD?.let {
             it.reset()
             CURRENT_JZVD = null
@@ -1021,6 +1110,7 @@ class HJzvdStd @JvmOverloads constructor(
         )
     }
 
+    // 原來是 300 period 我改成了 100 爲了計時準確
     override fun startProgressTimer() {
         Log.i(TAG, "startProgressTimer: " + " [" + this.hashCode() + "] ")
         cancelProgressTimer()
@@ -1090,6 +1180,7 @@ class HJzvdStd @JvmOverloads constructor(
         }
     }
 
+    //安卓7会报错CalledFromWrongThreadException
     fun setAllControlsVisibilitySafe(
         topCon: Int, bottomCon: Int, startBtn: Int, loadingPro: Int,
         posterImg: Int, bottomPro: Int, retryLayout: Int
@@ -1131,7 +1222,7 @@ class HJzvdStd @JvmOverloads constructor(
                 handler.postDelayed(hideResumeBtnRunnable, 5000)
             }
         }
-        if (state == STATE_PREPARED) {
+        if (state == STATE_PREPARED) { //如果是准备完成视频后第一次播放，先判断是否需要跳转进度。
             Log.d(TAG, "onStatePlaying:STATE_PREPARED ")
             mAudioManager =
                 applicationContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -1145,7 +1236,7 @@ class HJzvdStd @JvmOverloads constructor(
             } else {
                 val position = JZUtils.getSavedProgress(context, jzDataSource.currentUrl)
                 if (position != 0L) {
-                    mediaInterface.seekTo(position)
+                    mediaInterface.seekTo(position) //这里为什么区分开呢，第一次的播放和resume播放是不一样的。 这里怎么区分是一个问题。然后
                 }
             }
         }
@@ -1171,6 +1262,7 @@ class HJzvdStd @JvmOverloads constructor(
         onVideoStateChanged?.invoke(STATE_PREPARING)
     }
 
+    // #issue-14: 之前用 XPopup 三键模式下会有 bug，无法呼出，所以换成这个
     @SuppressLint("InflateParams")
     fun clickSpeed() {
         onCLickUiToggleToClear()
@@ -1216,10 +1308,22 @@ class HJzvdStd @JvmOverloads constructor(
         popup.showAtLocation(textureViewContainer, Gravity.END, 0, 0)
     }
 
+    /**
+     * 这个 setSpeed 的 bug 太多了，不同机型效果不一定相同，不得不套个 try-catch。 (previous)
+     *
+     * PS: 套 try-catch 没用，因为在 post 里面，所以还是会报错，只能在调用的地方 try-catch 了。
+     *
+     * #issue-28 就是这个问题，如果我在 HJZMediaSystem 中 setSpeed 方法里加的判断不起作用，
+     * 那么那个机型就先别用这个功能了。
+     */
     private fun setSpeedInternal(speed: Float) {
         mediaInterface?.setSpeed(speed)
     }
 
+    /**
+     * 將靈敏度轉換為實際數值，很多用戶對滑動要求挺高，
+     * 靈敏度太高沒人在乎，所以高靈敏度照舊，低靈敏度差別大一點
+     */
     private fun @receiver:IntRange(from = 1, to = 9) Int.toRealSensitivity(): Int {
         return when (this) {
             1, 2, 3, 4, 5 -> this
@@ -1230,7 +1334,7 @@ class HJzvdStd @JvmOverloads constructor(
             else -> throw IllegalStateException("Invalid sensitivity value: $this")
         }
     }
-
+    
     private fun updateVideoPlayerSize(fullscreen: Boolean) {
         if (mediaInterface is MpvMediaKernel) {
             val kernel = mediaInterface as MpvMediaKernel

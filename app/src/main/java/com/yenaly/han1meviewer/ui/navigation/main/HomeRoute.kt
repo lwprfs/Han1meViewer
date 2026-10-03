@@ -36,7 +36,6 @@ fun HomeRouteScreen(
     onNavigateToSearch: (String?) -> Unit,
     onNavigateToSearchAdvanced: (Map<String, String>) -> Unit,
     onNavigateToVideo: (String) -> Unit,
-    showMenuButton: Boolean = true,
 ) {
     val viewModel = activity.viewModel
     val checkInViewModel: CheckInCalendarViewModel = viewModel()
@@ -56,7 +55,6 @@ fun HomeRouteScreen(
         HomePageScreen(
             viewModel = viewModel,
             isDrawerOpen = isDrawerOpen,
-            showMenuButton = showMenuButton,
             onEvent = { event ->
                 when (event) {
                     is HomeUiEvent.OpenDrawer -> onOpenDrawer()

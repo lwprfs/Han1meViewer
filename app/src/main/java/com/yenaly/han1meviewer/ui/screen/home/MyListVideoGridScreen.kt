@@ -55,7 +55,7 @@ fun VideoGridScreen(
     titleRes: Int,
     helpMessageRes: Int,
     deleteTitleRes: Int,
-    onBack: (() -> Unit)?,
+    onBack: () -> Unit,
     onOpenVideo: (HanimeInfo) -> Unit,
     onDeleteItem: (HanimeInfo) -> Unit,
     onRefresh: () -> Unit,

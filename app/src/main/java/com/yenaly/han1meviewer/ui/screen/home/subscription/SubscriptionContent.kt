@@ -73,7 +73,10 @@ fun SubscriptionContent(
     gridState: LazyGridState,
     modifier: Modifier = Modifier,
 ) {
-    val screenWidthDp = com.yenaly.han1meviewer.ui.adaptive.rememberAvailableWidthDp()
+    val density = LocalDensity.current
+    val windowInfo = LocalWindowInfo.current
+    val screenWidthPx = windowInfo.containerSize.width
+    val screenWidthDp = with(density) { screenWidthPx.toDp() }
     val videoColumns = rememberVideoGridColumns()
     val artistRows = 3
     val artistColumns = maxOf(

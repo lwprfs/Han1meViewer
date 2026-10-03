@@ -3,13 +3,6 @@ package com.yenaly.han1meviewer.ui.screen.home.myplaylist
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.width
-import androidx.activity.compose.BackHandler
-import androidx.compose.material3.VerticalDivider
-import androidx.compose.ui.unit.dp
-import com.yenaly.han1meviewer.ui.adaptive.TabletEmptyDetail
-import com.yenaly.han1meviewer.ui.adaptive.shouldUseListDetail
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -53,7 +46,7 @@ import com.yenaly.han1meviewer.ui.viewmodel.MyPlayListViewModelV2
 @Composable
 fun PlaylistScreen(
     viewModel: MyPlayListViewModelV2,
-    navigateBack: (() -> Unit)?,
+    navigateBack: () -> Unit,
     onClickItem: (String) -> Unit,
     onLongClickItem: (String, String) -> Unit,
 ) {
@@ -102,7 +95,7 @@ fun PlaylistScreen(
 
     val handleEvent: (PlaylistEvent) -> Unit = { event ->
         when (event) {
-            PlaylistEvent.OnBack -> navigateBack?.invoke()
+            PlaylistEvent.OnBack -> navigateBack()
             PlaylistEvent.OnRefresh -> {
                 isRefreshing = true
                 viewModel.loadMyPlayList(forceReload = true)
@@ -123,20 +116,10 @@ fun PlaylistScreen(
         }
     }
 
-    val listDetail = shouldUseListDetail()
-    BackHandler(enabled = listDetail && uiState.showSheet) {
-        handleEvent(PlaylistEvent.OnDismissSheet)
-    }
     HanimeScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         title = stringResource(R.string.my_list),
-        onBack = {
-            if (listDetail && uiState.showSheet) {
-                handleEvent(PlaylistEvent.OnDismissSheet)
-            } else {
-                navigateBack?.invoke()
-            }
-        },
+        onBack = navigateBack,
         scrollBehavior = scrollBehavior,
         actions = {
             FilledIconButton(onClick = { showCreatePlaylistDialog = true }) {
@@ -147,10 +130,8 @@ fun PlaylistScreen(
             }
         },
     ) { innerPadding ->
-        Row(modifier = Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
-                .then(if (listDetail) Modifier.width(360.dp) else Modifier.weight(1f))
                 .padding(innerPadding)
                 .fillMaxSize()
                 .pullToRefresh(
@@ -189,7 +170,7 @@ fun PlaylistScreen(
 
             PullRefreshOverlay(state = refreshState, isRefreshing = isRefreshing)
 
-            if (!listDetail && uiState.showSheet && !temporarilyHideSheetForNavigation) {
+            if (uiState.showSheet && !temporarilyHideSheetForNavigation) {
                 PlaylistBottomSheet(
                     listCode = uiState.selectedListCode,
                     onDismiss = { handleEvent(PlaylistEvent.OnDismissSheet) },
@@ -203,25 +184,6 @@ fun PlaylistScreen(
                     context = context,
                 )
             }
-        }
-        if (listDetail) {
-            VerticalDivider()
-            Box(modifier = Modifier.weight(1f).padding(innerPadding)) {
-                if (uiState.showSheet) {
-                    PlaylistDetailPane(
-                        listCode = uiState.selectedListCode,
-                        playListTitle = uiState.selectedListTitle,
-                        onDismiss = { handleEvent(PlaylistEvent.OnDismissSheet) },
-                        onClickItem = onClickItem,
-                        onLongClickItem = onLongClickItem,
-                        vm = viewModel,
-                        context = context,
-                    )
-                } else {
-                    TabletEmptyDetail(stringResource(R.string.tablet_select_playlist))
-                }
-            }
-        }
         }
 
         TextInputDialog(

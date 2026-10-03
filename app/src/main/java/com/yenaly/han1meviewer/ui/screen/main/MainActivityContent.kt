@@ -1,3 +1,4 @@
+// app/src/main/java/com/yenaly/han1meviewer/ui/screen/main/MainActivityContent.kt
 package com.yenaly.han1meviewer.ui.screen.main
 
 import android.content.Intent
@@ -11,7 +12,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -43,8 +43,6 @@ import com.yenaly.han1meviewer.ui.navigation.main.UnifiedMainNavHost
 import com.yenaly.han1meviewer.ui.navigation.main.handleMainIntent
 import com.yenaly.han1meviewer.ui.navigation.main.navigateDrawerDestination
 import com.yenaly.han1meviewer.ui.theme.HanimeTheme
-import com.yenaly.han1meviewer.ui.adaptive.LocalTabletRailVisible
-import com.yenaly.han1meviewer.ui.adaptive.isTabletWindow
 import com.yenaly.han1meviewer.ui.viewmodel.AppViewModel
 import com.yenaly.han1meviewer.ui.screen.home.homepage.HomePageViewModel
 import com.yenaly.han1meviewer.util.getUpdateIfExists
@@ -75,14 +73,17 @@ fun MainActivityContent(
         LaunchedEffect(windowBackground) {
             activity.window.setBackgroundDrawable(windowBackground.toArgb().toDrawable())
         }
-
+        
+        // FIXED: Call rememberNavController() directly in composable context
+        // This is a @Composable function, so it must be called at the top level of a composable
         val composeNavController = rememberNavController()
-
+        
+        // Use LaunchedEffect to initialize NavigationManager when site changes
         LaunchedEffect(siteChangeKey) {
             onNavigateControllerReady(composeNavController)
             NavigationManager.initialize(composeNavController, Preferences.siteType)
         }
-
+        
         val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
         val scope = rememberCoroutineScope()
         var currentMainDestination by remember { mutableStateOf(MainDestinationSpec.Home) }
@@ -113,14 +114,14 @@ fun MainActivityContent(
                 composeNavController.handleMainIntent(intent)
             }
         }
-
+        
         LaunchedEffect(Unit) {
             AppViewModel.pendingUpdateDialog.collect { latest ->
                 Preferences.lastUpdatePopupTime = kotlin.time.Clock.System.now().epochSeconds
                 pendingUpdate = latest
             }
         }
-
+        
         LaunchedEffect(viewModel) {
             viewModel.sessionExpiredMessage.collect { event ->
                 if (event.message != null) {
@@ -130,7 +131,7 @@ fun MainActivityContent(
                 }
             }
         }
-
+        
         LaunchedEffect(homeState) {
             if (homeState is PageState.Error) {
                 val throwable = (homeState as PageState.Error).throwable
@@ -139,104 +140,93 @@ fun MainActivityContent(
                 }
             }
         }
-
-        val tabletWindow = isTabletWindow()
-        val railVisible = tabletWindow &&
-            currentMainDestination != MainDestinationSpec.Video &&
-            currentMainDestination != MainDestinationSpec.AvatarCrop
-        CompositionLocalProvider(LocalTabletRailVisible provides railVisible) {
-            MainActivityScaffold(
-                drawerState = drawerState,
-                drawerEnabled = currentMainDestination.drawerEnabled,
-                selectedDestination = selectedDrawerDestination,
-                avatarUrl = headerAvatarUrl,
-                username = headerUsername,
-                isLoggedIn = isLoggedIn,
-                isLoading = headerIsLoading,
-                currentSite = Preferences.baseUrl,
-                useRail = railVisible,
-                onAvatarClick = {
-                    if (isLoggedIn) {
-                        if (!railVisible) {
-                            scope.launch { drawerState.close() }
+        
+        MainActivityScaffold(
+            drawerState = drawerState,
+            drawerEnabled = currentMainDestination.drawerEnabled,
+            selectedDestination = selectedDrawerDestination,
+            avatarUrl = headerAvatarUrl,
+            username = headerUsername,
+            isLoggedIn = isLoggedIn,
+            isLoading = headerIsLoading,
+            currentSite = Preferences.baseUrl,
+            onAvatarClick = {
+                if (isLoggedIn) {
+                    scope.launch { drawerState.close() }
+                    onOpenAccount()
+                } else {
+                    onRequireLogin()
+                }
+            },
+            onAvatarLongClick = {
+                onLogoutClick()
+            },
+            onSwitchSiteClick = onSwitchSiteClick,
+            onDrawerItemSelected = { destination ->
+                val handled = composeNavController.navigateDrawerDestination(
+                    destination = destination,
+                    isLoggedIn = isLoggedIn,
+                    onRequireLogin = { GlobalToasts.show(loginFirst, level = GlobalToasts.ToastLevel.WARNING) },
+                )
+                if (handled) {
+                    scope.launch { drawerState.close() }
+                }
+                handled
+            },
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                UnifiedMainNavHost(
+                    activity = activity,
+                    navController = composeNavController,
+                    isDrawerOpen = isDrawerOpen,
+                    onOpenDrawer = {
+                        if (currentMainDestination.drawerEnabled) {
+                            scope.launch { drawerState.open() }
                         }
-                        onOpenAccount()
-                    } else {
-                        onRequireLogin()
-                    }
-                },
-                onAvatarLongClick = {
-                    onLogoutClick()
-                },
-                onSwitchSiteClick = onSwitchSiteClick,
-                onDrawerItemSelected = { destination ->
-                    val handled = composeNavController.navigateDrawerDestination(
-                        destination = destination,
-                        isLoggedIn = isLoggedIn,
-                        onRequireLogin = { GlobalToasts.show(loginFirst, level = GlobalToasts.ToastLevel.WARNING) },
-                        asTopLevel = railVisible,
-                    )
-                    if (handled && !railVisible) {
-                        scope.launch { drawerState.close() }
-                    }
-                    handled
-                },
-            ) {
-                Box(modifier = Modifier.fillMaxSize()) {
-                    UnifiedMainNavHost(
-                        activity = activity,
-                        navController = composeNavController,
-                        isDrawerOpen = isDrawerOpen,
-                        onOpenDrawer = {
-                            if (currentMainDestination.drawerEnabled) {
-                                scope.launch { drawerState.open() }
-                            }
-                        },
-                        onDestinationChanged = { destination ->
-                            currentMainDestination = destination
-                        },
-                        siteChangeKey = siteChangeKey,
-                        railVisible = railVisible,
-                    )
-
-                    if (showAuthGuard) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.Black.copy(alpha = 0.55f)),
-                        )
-                    }
-
-                    pendingUpdate?.let { latest ->
-                        UpdateDialog(
-                            latest = latest,
-                            onDismiss = { pendingUpdate = null },
-                            onConfirm = {
-                                pendingUpdate = null
-                                scope.launch {
-                                    val file = activity.getUpdateIfExists(latest)
-                                    if (file != null) {
-                                        activity.installApkPackage(file)
-                                    } else {
-                                        if (activity.requestPostNotificationPermission()) {
-                                            HUpdateWorker.enqueue(activity.applicationContext, latest)
-                                            GlobalToasts.show(updateDownloadBackground, level = GlobalToasts.ToastLevel.INFO)
-                                        }
-                                    }
-                                }
-                            },
-                        )
-                    }
-
-                    UsageNoticeDialog(
-                        visible = showUsageNotice,
-                        onAccepted = {
-                            Preferences.usageNoticeAccepted = true
-                            showUsageNotice = false
-                        },
-                        onDeclined = { activity.finish() },
+                    },
+                    onDestinationChanged = { destination ->
+                        currentMainDestination = destination
+                    },
+                    siteChangeKey = siteChangeKey,
+                )
+                
+                if (showAuthGuard) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.55f)),
                     )
                 }
+
+                pendingUpdate?.let { latest ->
+                    UpdateDialog(
+                        latest = latest,
+                        onDismiss = { pendingUpdate = null },
+                        onConfirm = {
+                            pendingUpdate = null
+                            scope.launch {
+                                val file = activity.getUpdateIfExists(latest)
+                                if (file != null) {
+                                    activity.installApkPackage(file)
+                                } else {
+                                    if (activity.requestPostNotificationPermission()) {
+                                        HUpdateWorker.enqueue(activity.applicationContext, latest)
+                                        GlobalToasts.show(updateDownloadBackground, level = GlobalToasts.ToastLevel.INFO)
+                                    }
+                                }
+                            }
+                        },
+                    )
+                }
+                
+                UsageNoticeDialog(
+                    visible = showUsageNotice,
+                    onAccepted = {
+                        Preferences.usageNoticeAccepted = true
+                        showUsageNotice = false
+                    },
+                    onDeclined = { activity.finish() },
+                )
             }
         }
 

@@ -8,8 +8,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.Preferences
-import com.yenaly.han1meviewer.ui.adaptive.isTabletWindow
-import com.yenaly.han1meviewer.ui.adaptive.rememberAvailableWidthDp
 
 sealed interface HomeHeroSpec {
 
@@ -34,11 +32,11 @@ private val HeroPanelMaxWidth = 420.dp
 @Composable
 fun rememberHomeHeroSpec(hasSideContent: Boolean): HomeHeroSpec {
     val isPreview = LocalInspectionMode.current
-    if (!isPreview && !Preferences.tabletMode && !isTabletWindow()) return HomeHeroSpec.Default
+    if (!isPreview && !Preferences.tabletMode) return HomeHeroSpec.Default
 
     val containerSize = LocalWindowInfo.current.containerSize
     val density = LocalDensity.current
-    val containerWidth = rememberAvailableWidthDp()
+    val containerWidth = with(density) { containerSize.width.toDp() }
     val containerHeight = with(density) { containerSize.height.toDp() }
 
     val naturalHeight = containerWidth * 9f / 16f

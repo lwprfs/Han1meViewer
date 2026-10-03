@@ -19,8 +19,6 @@ import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.FrameLayout
 import androidx.activity.OnBackPressedCallback
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -32,7 +30,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
@@ -56,8 +53,6 @@ import com.google.firebase.analytics.logEvent
 import com.yenaly.han1meviewer.FirebaseConstants
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
-import com.yenaly.han1meviewer.ui.adaptive.LocalContentWidthDp
-import com.yenaly.han1meviewer.ui.adaptive.isTabletWindow
 import com.yenaly.han1meviewer.getHanimeVideoLink
 import com.yenaly.han1meviewer.logic.DatabaseRepo
 import com.yenaly.han1meviewer.logic.dao.CheckInRecordDatabase
@@ -122,8 +117,6 @@ fun VideoRouteHostScreen(
         VideoRouteShell(activity, player)
     }
     val hostUiState by viewModel.videoHostUiStateFlow.collectAsStateWithLifecycle()
-    val playlistItems =
-        viewModel.hanimeVideoFlow.collectAsStateWithLifecycle().value?.playlist?.video.orEmpty()
     val relatedItems =
         viewModel.hanimeVideoFlow.collectAsStateWithLifecycle().value?.relatedHanimes.orEmpty()
     val stringLongPressShare = remember(activity) {
@@ -143,12 +136,6 @@ fun VideoRouteHostScreen(
     }
     var videoTitle by remember(route.videoCode, route.localUri) { mutableStateOf<String?>(null) }
     var isSideRelatedCollapsed by remember { mutableStateOf(false) }
-    var isPlayerFullscreen by remember { mutableStateOf(false) }
-    var youtubeSplit by remember { mutableStateOf(false) }
-    val splitActive = remember { mutableStateOf(false) }
-    var inlineChildCommentId by rememberSaveable(route.videoCode) {
-        mutableStateOf(commentViewModel.getCommentUiState(route.videoCode).childCommentId)
-    }
     var showAddHKeyframeDialog by remember { mutableStateOf<Pair<Long, String>?>(null) }
     var unsubscribeArtist by remember { mutableStateOf<HanimeVideo.Artist?>(null) }
     var showDownloadPermissionDialog by remember { mutableStateOf(false) }
@@ -357,8 +344,6 @@ fun VideoRouteHostScreen(
                 onIntroductionLinkClick = actions::openIntroductionLink,
                 stringLongPressShare = stringLongPressShare,
                 pageHost = pageHost,
-                inlineChildComments = youtubeSplit && !isSideRelatedCollapsed,
-                onChildCommentIdChange = { inlineChildCommentId = it },
             )
 
             unsubscribeArtist?.let { artist ->
@@ -414,12 +399,7 @@ fun VideoRouteHostScreen(
 
     DisposableEffect(lifecycleOwner, activity, player, shell, route.videoCode) {
         val orientationManager = OrientationManager(activity) { orientation ->
-            val tabletWindow = isTabletWindow(
-                activity.resources.configuration.screenWidthDp,
-                activity.resources.configuration.smallestScreenWidthDp,
-                Preferences.tabletMode,
-            )
-            if (!Preferences.tabletMode && !tabletWindow &&
+            if (!Preferences.tabletMode &&
                 Jzvd.CURRENT_JZVD != null &&
                 (player.state == Jzvd.STATE_PLAYING || player.state == Jzvd.STATE_PAUSE) &&
                 player.screen != Jzvd.SCREEN_TINY &&
@@ -530,7 +510,6 @@ fun VideoRouteHostScreen(
         }
         player.fullscreenListener = object : HJzvdStd.FullscreenListener {
             override fun onFullscreenChanged(isFullscreen: Boolean) {
-                isPlayerFullscreen = isFullscreen
                 jzBackCallback.isEnabled = isFullscreen
                 Log.i("JZVD screen state", isFullscreen.toString())
             }
@@ -557,9 +536,8 @@ fun VideoRouteHostScreen(
     LaunchedEffect(
         hostUiState.isInPipMode,
         isSideRelatedCollapsed,
-        youtubeSplit,
     ) {
-        if (hostUiState.isInPipMode || youtubeSplit) return@LaunchedEffect
+        if (hostUiState.isInPipMode) return@LaunchedEffect
         val height = if (Preferences.tabletMode) {
             if (isSideRelatedCollapsed) 500.dp else 400.dp
         } else {
@@ -692,46 +670,16 @@ fun VideoRouteHostScreen(
     }
 
     VideoShellContent(
+        isTabletMode = Preferences.tabletMode,
         isInPipMode = hostUiState.isInPipMode,
-        isFullscreen = isPlayerFullscreen,
-        playlistItems = playlistItems,
         relatedItems = relatedItems,
-        childCommentId = inlineChildCommentId,
         onHideRelatedInIntroChange = { viewModel.hideRelatedInIntro = it },
-        onHidePlaylistInIntroChange = { viewModel.hidePlaylistInIntro = it },
         onSideRelatedCollapsedChange = { isSideRelatedCollapsed = it },
-        onYoutubeSplitChange = { active ->
-            youtubeSplit = active
-            splitActive.value = active
-        },
         onOpenVideo = { item -> activity.showVideoDetailFragment(item.videoCode) },
-        onPrepareSplit = { playerHeightPx ->
-            shell.setFitsSystemWindows(false)
-            shell.attachToCoordinator()
-            shell.setPlayerHeight(playerHeightPx)
-        },
-        onPrepareCoordinator = {
-            shell.setFitsSystemWindows(true)
-            shell.attachToCoordinator()
-        },
-        onPrepareFullscreen = {
-            shell.setFitsSystemWindows(false)
-        },
-        mainHostFactory = { shell.mainHostView },
-        playerHostFactory = { shell.playerHostView },
-        tabsHostFactory = { shell.tabsHostView },
-        fullscreenHostFactory = { shell.mainHostView },
-        childCommentPane = { commentId ->
-            VideoChildCommentPane(
-                viewModel = commentViewModel,
-                commentId = commentId,
-                isAlreadyLogin = Preferences.isAlreadyLogin,
-                onDismiss = {
-                    inlineChildCommentId = null
-                    commentViewModel.setChildCommentId(route.videoCode, null)
-                    commentViewModel.clearVideoReplyList()
-                },
-            )
+        mainHostFactory = {
+            shell.mainHostView.also { view ->
+                (view.parent as? ViewGroup)?.removeView(view)
+            }
         },
         modifier = Modifier.fillMaxSize(),
     )
@@ -836,52 +784,11 @@ private class VideoRouteShell(
     val mainHostView: View
         get() = rootView
 
-    val playerHostView: View
-        get() = videoPlayerHost
-
-    val tabsHostView: View
-        get() = videoTabsHost
-
-    fun isPlayerInHost(): Boolean = playerView.parent === videoPlayerHost
-
-    fun detachForSplit() {
-        if (videoPlayerHost.parent === collapsingToolbarLayout) {
-            collapsingToolbarLayout.removeView(videoPlayerHost)
-        }
-        if (videoTabsHost.parent === rootView) {
-            rootView.removeView(videoTabsHost)
-        }
-    }
-
-    fun attachToCoordinator() {
-        if (videoPlayerHost.parent !== collapsingToolbarLayout) {
-            (videoPlayerHost.parent as? ViewGroup)?.removeView(videoPlayerHost)
-            collapsingToolbarLayout.addView(videoPlayerHost)
-        }
-        if (playerView.screen != Jzvd.SCREEN_FULLSCREEN && playerView.parent !== videoPlayerHost) {
-            (playerView.parent as? ViewGroup)?.removeView(playerView)
-            videoPlayerHost.addView(playerView)
-        }
-        if (videoTabsHost.parent !== rootView) {
-            (videoTabsHost.parent as? ViewGroup)?.removeView(videoTabsHost)
-            rootView.addView(videoTabsHost, 0)
-        }
-        if (appBarLayout.parent !== rootView) {
-            rootView.addView(appBarLayout)
-        }
-    }
-
     fun setTabsHostContent(content: @Composable () -> Unit) {
         videoTabsHost.setViewCompositionStrategy(
             ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed,
         )
-        videoTabsHost.setContent {
-            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                CompositionLocalProvider(LocalContentWidthDp provides maxWidth) {
-                    content()
-                }
-            }
-        }
+        videoTabsHost.setContent(content)
     }
 
     fun setTabsVisible(visible: Boolean) {
@@ -906,17 +813,11 @@ private class VideoRouteShell(
         block(behavior)
     }
 
-    fun setFitsSystemWindows(enabled: Boolean) {
-        rootView.fitsSystemWindows = enabled
-        rootView.requestApplyInsets()
-    }
-
     fun setPlayerHeight(height: Int) {
         val lp = playerView.layoutParams
         lp.height = height
         playerView.layoutParams = lp
         playerView.requestLayout()
-        appBarLayout.requestLayout()
     }
 
     fun clear() {
