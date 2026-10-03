@@ -99,6 +99,7 @@ fun HentaiMamaVideoPlayer(
     var surfaceReady by remember { mutableStateOf(false) }
     var playbackState by remember { mutableIntStateOf(Player.STATE_IDLE) }
     var hasRenderedFirstFrame by remember { mutableStateOf(false) }
+    var surfaceTextureRef by remember { mutableStateOf<TextureView?>(null) }
 
     Log.d(
         PLAYER_TAG,
@@ -130,13 +131,6 @@ fun HentaiMamaVideoPlayer(
 
     val effectiveIsPlaying = state.isPlaying && isExoReady
 
-    LaunchedEffect(isVisible, isExoReady) {
-        val exo = player ?: return@LaunchedEffect
-        if (!isVisible && exo.playWhenReady) {
-            exo.playWhenReady = false
-        }
-    }
-
     Box(
         modifier = surfaceModifier
             .background(Color.Black)
@@ -158,8 +152,7 @@ fun HentaiMamaVideoPlayer(
                 factory = { ctx ->
                     Log.d(
                         PLAYER_TAG,
-                        "AndroidView factory: " +
-                                "override=${playerOverride != null}"
+                        "AndroidView factory: override=${playerOverride != null}"
                     )
                     FrameLayout(ctx).apply {
                         layoutParams = ViewGroup.LayoutParams(
@@ -178,7 +171,9 @@ fun HentaiMamaVideoPlayer(
                                     width: Int,
                                     height: Int,
                                 ) {
+                                    surfaceTextureRef = this@apply
                                     player?.setVideoTextureView(this@apply)
+                                    Log.d(PLAYER_TAG, "surfaceTextureAvailable: attached for ${if (playerOverride != null) "fullscreen" else "inline"}")
                                 }
 
                                 override fun onSurfaceTextureSizeChanged(
@@ -190,9 +185,8 @@ fun HentaiMamaVideoPlayer(
                                 override fun onSurfaceTextureDestroyed(
                                     surface: SurfaceTexture,
                                 ): Boolean {
-                                    if (ownsPlayer) {
-                                        player?.setVideoTextureView(null)
-                                    }
+                                    Log.d(PLAYER_TAG, "surfaceTextureDestroyed: detaching from ${if (playerOverride != null) "fullscreen" else "inline"}")
+                                    surfaceTextureRef = null
                                     return true
                                 }
 
@@ -268,9 +262,10 @@ fun HentaiMamaVideoPlayer(
                 },
                 modifier = Modifier.fillMaxSize(),
                 onRelease = { view ->
-                    player?.setVideoTextureView(null)
+                    Log.d(PLAYER_TAG, "AndroidView onRelease: ownsPlayer=$ownsPlayer")
                     (view as? ViewGroup)?.removeAllViews()
                     subtitleView = null
+                    surfaceTextureRef = null
                 },
             )
 
@@ -369,9 +364,7 @@ fun HentaiMamaVideoPlayer(
                     .fillMaxSize()
                     .pointerInput(Unit) {
                         detectTapGestures(
-                            onTap = {
-                                showControls = !showControls
-                            },
+                            onTap = { showControls = !showControls },
                             onDoubleTap = { offset ->
                                 val half: Float = size.width / 2f
                                 if (offset.x < half) onSkip(-10_000L)
@@ -476,19 +469,19 @@ fun HentaiMamaVideoPlayer(
         }
     }
 
-    DisposableEffect(Unit) {
+    DisposableEffect(player, ownsPlayer) {
+        val exo: ExoPlayer? = player
+        val isOwner = ownsPlayer
         onDispose {
-            if (ownsPlayer) {
-                player?.let { exo: ExoPlayer ->
-                    exo.setVideoTextureView(null)
-                    exo.stop()
-                    exo.release()
-                }
+            if (isOwner && exo != null) {
+                Log.d(PLAYER_TAG, "Dispose: releasing owned player")
+                exo.setVideoTextureView(null)
+                exo.stop()
+                exo.release()
             } else {
-                player?.setVideoTextureView(null)
+                Log.d(PLAYER_TAG, "Dispose: detaching borrowed player")
+                exo?.setVideoTextureView(null)
             }
-            player = null
-            ownsPlayer = false
         }
     }
 }
