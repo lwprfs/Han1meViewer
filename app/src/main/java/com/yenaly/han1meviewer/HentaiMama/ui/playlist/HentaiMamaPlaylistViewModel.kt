@@ -59,8 +59,6 @@ class HentaiMamaPlaylistViewModel(application: Application) :
     private var indexJob: Job? = null
     private var detailJob: Job? = null
 
-    // ---------- INDEX ----------
-
     fun loadIndex(sortKey: String? = null) {
         indexJob?.cancel()
         indexJob = viewModelScope.launch {
@@ -148,8 +146,6 @@ class HentaiMamaPlaylistViewModel(application: Application) :
             }
         }
     }
-
-    // ---------- DETAIL ----------
 
     fun loadDetail(id: String) {
         detailJob?.cancel()
