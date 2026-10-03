@@ -77,6 +77,8 @@ class HanimeApplication : YenalyApplication() {
 
         MissAvSubtitleHelper.init(this)
 
+        HentaiMamaCardSettings.load()
+
         initCrashX()
         ThemeUtils.applyDarkModeFromPreferences(this)
         if (Preferences.useDynamicColor) {

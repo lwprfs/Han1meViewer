@@ -50,7 +50,6 @@ fun HentaiMamaVideoCard(
 
     Surface(
         modifier = modifier
-            .fillMaxWidth()
             .combinedClickable(
                 onClick = { onClick(videoItem.videoCode) },
                 onLongClick = { onLongClick(videoItem.videoCode, videoItem.title) },
@@ -106,7 +105,6 @@ fun HentaiMamaGenreSeriesCard(
 
     Surface(
         modifier = modifier
-            .fillMaxWidth()
             .combinedClickable(
                 onClick = { onClick(series.slug) },
                 onLongClick = {

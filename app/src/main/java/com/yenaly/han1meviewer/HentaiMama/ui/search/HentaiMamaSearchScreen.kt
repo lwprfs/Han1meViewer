@@ -59,6 +59,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -79,6 +80,8 @@ import com.yenaly.han1meviewer.HentaiMama.ui.home.HentaiMamaViewModel
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.ui.component.content.ErrorContent
 import com.yenaly.han1meviewer.ui.component.content.LoadingContent
+import com.yenaly.han1meviewer.ui.theme.SpacingLarge
+import com.yenaly.han1meviewer.ui.theme.SpacingNormal
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -86,6 +89,18 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private const val BASE_GRID_MIN_SIZE_DP = 150
+
+@Composable
+private fun rememberSearchCardWidth(
+    availableWidthDp: Dp,
+    columns: Int,
+): Dp {
+    val cardMultiplier by HentaiMamaCardSettings.cardMultiplierState
+    val widthMultiplier by HentaiMamaCardSettings.widthMultiplierState
+    val effectiveCount = (columns * cardMultiplier).coerceAtLeast(1f)
+    val availableForCards = availableWidthDp - SpacingLarge * 2 - SpacingNormal * (effectiveCount - 1)
+    return (availableForCards / effectiveCount) * widthMultiplier
+}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -99,22 +114,8 @@ fun HentaiMamaSearchScreen(
     initialGenreSlug: String? = null,
     viewModel: HentaiMamaViewModel = viewModel(),
 ) {
-    var settingsReady by remember { mutableStateOf(false) }
-
     LaunchedEffect(Unit) {
         HentaiMamaCardSettings.load()
-        settingsReady = true
-    }
-
-    if (!settingsReady) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(
-                text = "Loading…",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        return
     }
 
     val context = LocalContext.current
@@ -275,14 +276,7 @@ fun HentaiMamaSearchScreen(
                             },
                             maxLines = 1,
                         )
-                        if (isGenreMode && totalPages > 1) {
-                            Text(
-                                text = "Page $currentPage / $totalPages",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                            )
-                        } else if (!isGenreMode && totalPages > 1) {
+                        if (totalPages > 1) {
                             Text(
                                 text = "Page $currentPage / $totalPages",
                                 style = MaterialTheme.typography.labelSmall,
@@ -525,6 +519,19 @@ fun HentaiMamaSearchScreen(
                         }
                     }
                 }
+
+                null -> {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = if (searchQuery.isBlank())
+                                "Type to search, or pick a genre"
+                            else
+                                "Tap the search icon to search for \"$searchQuery\"",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
             }
         }
     }
@@ -583,10 +590,8 @@ private fun DisplayResults(
             .padding(8.dp),
     ) {
         val gridWidth = maxWidth
-        val columns = HentaiMamaCardSettings
-            .effectiveCardCount(gridWidth.value / BASE_GRID_MIN_SIZE_DP)
-            .toInt()
-            .coerceAtLeast(2)
+        val baseColumns = (gridWidth.value / BASE_GRID_MIN_SIZE_DP).toInt().coerceAtLeast(2)
+        val cardWidth = rememberSearchCardWidth(gridWidth, baseColumns)
 
         if (useSeries && layout == GenreLayout.BARE) {
             androidx.compose.foundation.lazy.LazyColumn(
@@ -624,7 +629,7 @@ private fun DisplayResults(
         }
 
         LazyVerticalGrid(
-            columns = GridCells.Fixed(columns),
+            columns = GridCells.Adaptive(minSize = cardWidth.coerceAtLeast(80.dp)),
             state = gridState,
             modifier = Modifier.fillMaxSize(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),

@@ -36,9 +36,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -74,22 +72,8 @@ fun HentaiMamaHomeScreen(
     modifier: Modifier = Modifier,
     viewModel: HentaiMamaViewModel = viewModel(),
 ) {
-    var settingsReady by remember { mutableStateOf(false) }
-
     LaunchedEffect(Unit) {
         HentaiMamaCardSettings.load()
-        settingsReady = true
-    }
-
-    if (!settingsReady) {
-        Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(
-                text = "Loading…",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        return
     }
 
     val categoryRows by viewModel.categoryRows.collectAsStateWithLifecycle()
@@ -148,6 +132,11 @@ fun HentaiMamaHomeScreen(
                 ) {
                     categoryRows.forEach { row ->
                         val key = row.category.key
+                        val hasContent = row.videos.isNotEmpty() ||
+                                row.series.isNotEmpty() ||
+                                row.error != null ||
+                                row.isLoading
+                        if (!hasContent) return@forEach
 
                         item(key = "header_$key") {
                             SectionHeader(
@@ -206,10 +195,11 @@ private fun rememberCategoryCardWidth(
     availableWidthDp: Dp,
 ): Dp {
     val baseCount = horizontalCardCountConfig.countForWidthDp(availableWidthDp.value.toInt())
-    val effectiveCount = HentaiMamaCardSettings.effectiveCardCount(baseCount)
+    val cardMultiplier by HentaiMamaCardSettings.cardMultiplierState
     val widthMultiplier by HentaiMamaCardSettings.widthMultiplierState
-    return ((availableWidthDp - SpacingLarge * 2 - SpacingNormal * (effectiveCount - 1))
-            / effectiveCount) * widthMultiplier
+    val effectiveCount = (baseCount * cardMultiplier).coerceAtLeast(1f)
+    val availableForCards = availableWidthDp - SpacingLarge * 2 - SpacingNormal * (effectiveCount - 1)
+    return (availableForCards / effectiveCount) * widthMultiplier
 }
 
 @Composable
