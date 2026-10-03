@@ -3,6 +3,7 @@ package com.yenaly.han1meviewer.HentaiMama.ui.video
 import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.os.Build
+import android.util.Log
 import android.view.WindowManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
@@ -54,7 +55,13 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.hls.HlsMediaSource
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import com.yenaly.han1meviewer.HentaiMama.data.local.HentaiMamaHistoryRepo
 import com.yenaly.han1meviewer.HentaiMama.data.model.HentaiMamaEpisode
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
@@ -68,6 +75,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+private const val PLAYER_TAG = "HentaiMamaPlayer"
 private const val RESUME_THRESHOLD_MS = 5_000L
 private const val RESUME_CLAMP_BACKOFF_MS = 5_000L
 private const val SAVE_INTERVAL_MS = 2_000L
@@ -104,15 +112,86 @@ fun HentaiMamaVideoScreen(
         else HentaiMamaNetwork.normalizeUrl(path)
     }
 
-    var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
-
     var pendingResume by remember { mutableLongStateOf(0L) }
     var resumeApplied by remember { mutableStateOf(false) }
     var showResumeDialog by remember { mutableStateOf(false) }
 
     val listState = rememberLazyListState()
 
+    val exoPlayer = remember { mutableStateOf<ExoPlayer?>(null) }
+    val currentMediaUrl = remember { mutableStateOf<String?>(null) }
+
     HentaiMamaHistoryRepo.init(context)
+
+    DisposableEffect(Unit) {
+        onDispose {
+            Log.d(PLAYER_TAG, "Screen disposing: releasing player")
+            exoPlayer.value?.release()
+            exoPlayer.value = null
+            currentMediaUrl.value = null
+        }
+    }
+
+    LaunchedEffect(playerState.url) {
+        val url = playerState.url
+        if (!playerState.isReady || url.isBlank()) return@LaunchedEffect
+
+        val existing = exoPlayer.value
+        if (existing != null && currentMediaUrl.value == url) {
+            return@LaunchedEffect
+        }
+
+        if (existing == null) {
+            Log.d(PLAYER_TAG, "Creating ExoPlayer for url=$url")
+            val base = HentaiMamaNetwork.baseUrl
+            val dsFactory = DefaultDataSource.Factory(
+                context,
+                DefaultHttpDataSource.Factory().setDefaultRequestProperties(
+                    hashMapOf(
+                        "Referer" to "$base/",
+                        "Origin" to base.trimEnd('/'),
+                    )
+                )
+            )
+            val mediaItem = MediaItem.Builder().setUri(url).build()
+            val mediaSource = if (url.contains(".m3u8")) {
+                HlsMediaSource.Factory(dsFactory).createMediaSource(mediaItem)
+            } else {
+                ProgressiveMediaSource.Factory(dsFactory).createMediaSource(mediaItem)
+            }
+            val player = ExoPlayer.Builder(context).build()
+            player.setMediaSource(mediaSource)
+            player.prepare()
+            player.setPlaybackSpeed(playerState.speed)
+            exoPlayer.value = player
+            currentMediaUrl.value = url
+        } else {
+            Log.d(PLAYER_TAG, "Swapping media source to url=$url")
+            val base = HentaiMamaNetwork.baseUrl
+            val dsFactory = DefaultDataSource.Factory(
+                context,
+                DefaultHttpDataSource.Factory().setDefaultRequestProperties(
+                    hashMapOf(
+                        "Referer" to "$base/",
+                        "Origin" to base.trimEnd('/'),
+                    )
+                )
+            )
+            val mediaItem = MediaItem.Builder().setUri(url).build()
+            val mediaSource = if (url.contains(".m3u8")) {
+                HlsMediaSource.Factory(dsFactory).createMediaSource(mediaItem)
+            } else {
+                ProgressiveMediaSource.Factory(dsFactory).createMediaSource(mediaItem)
+            }
+            val wasPlaying = existing.playWhenReady
+            val pos = existing.currentPosition
+            existing.setMediaSource(mediaSource)
+            existing.prepare()
+            existing.seekTo(pos)
+            existing.playWhenReady = wasPlaying
+            currentMediaUrl.value = url
+        }
+    }
 
     LaunchedEffect(normalizedUrl) {
         viewModel.loadEpisodePage(normalizedUrl)
@@ -133,11 +212,11 @@ fun HentaiMamaVideoScreen(
         if (pendingResume > 0L) showResumeDialog = true
     }
 
-    LaunchedEffect(playerState.duration, pendingResume, exoPlayer) {
+    LaunchedEffect(playerState.duration, pendingResume, exoPlayer.value) {
         if (!resumeApplied && pendingResume > 0L && playerState.duration > 0L) {
             val maxSeek = (playerState.duration - RESUME_CLAMP_BACKOFF_MS).coerceAtLeast(0L)
             val seek = pendingResume.coerceAtMost(maxSeek)
-            exoPlayer?.seekTo(seek)
+            exoPlayer.value?.seekTo(seek)
             resumeApplied = true
         }
     }
@@ -238,15 +317,15 @@ fun HentaiMamaVideoScreen(
         ) {
             HentaiMamaVideoPlayer(
                 state = playerState,
+                exoPlayer = exoPlayer.value,
                 coverUrl = (pageState as? VideoLoadingState.Success)?.info?.page?.info?.seriesPoster.orEmpty(),
                 isFullscreen = true,
-                onPlayerReady = { exoPlayer = it },
                 onPlayPause = { viewModel.setPlaying(!playerState.isPlaying) },
-                onSeek = { pos -> exoPlayer?.seekTo(pos) },
+                onSeek = { pos -> exoPlayer.value?.seekTo(pos) },
                 onSkip = { delta ->
-                    val current = exoPlayer?.currentPosition ?: 0L
+                    val current = exoPlayer.value?.currentPosition ?: 0L
                     val target = (current + delta).coerceAtLeast(0L)
-                    exoPlayer?.seekTo(target)
+                    exoPlayer.value?.seekTo(target)
                 },
                 onToggleFullscreen = { exitFullscreen() },
                 onPositionUpdate = { pos, dur -> viewModel.setPosition(pos, dur) },
@@ -305,15 +384,15 @@ fun HentaiMamaVideoScreen(
                         if (!playerState.isFullscreen) {
                             HentaiMamaVideoPlayer(
                                 state = playerState,
+                                exoPlayer = exoPlayer.value,
                                 coverUrl = info.seriesPoster,
                                 isFullscreen = false,
-                                onPlayerReady = { exoPlayer = it },
                                 onPlayPause = { viewModel.setPlaying(!playerState.isPlaying) },
-                                onSeek = { pos -> exoPlayer?.seekTo(pos) },
+                                onSeek = { pos -> exoPlayer.value?.seekTo(pos) },
                                 onSkip = { delta ->
-                                    val current = exoPlayer?.currentPosition ?: 0L
+                                    val current = exoPlayer.value?.currentPosition ?: 0L
                                     val target = (current + delta).coerceAtLeast(0L)
-                                    exoPlayer?.seekTo(target)
+                                    exoPlayer.value?.seekTo(target)
                                 },
                                 onToggleFullscreen = { enterFullscreen() },
                                 onPositionUpdate = { pos, dur -> viewModel.setPosition(pos, dur) },
@@ -321,11 +400,11 @@ fun HentaiMamaVideoScreen(
                                 showResumeButton = showResumeDialog,
                                 savedPosition = pendingResume,
                                 onResumeFromSaved = {
-                                    exoPlayer?.seekTo(pendingResume)
+                                    exoPlayer.value?.seekTo(pendingResume)
                                     showResumeDialog = false
                                 },
                                 onStartFromBeginning = {
-                                    exoPlayer?.seekTo(0)
+                                    exoPlayer.value?.seekTo(0)
                                     showResumeDialog = false
                                 },
                             )
@@ -552,14 +631,6 @@ fun HentaiMamaVideoScreen(
                     }
                 }
             }
-        }
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            viewModel.setPlaying(false)
-            exoPlayer?.release()
-            exoPlayer = null
         }
     }
 }
