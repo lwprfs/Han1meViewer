@@ -18,18 +18,16 @@ object HentaiMamaPlaylistParser {
     private const val CARD_EPISODE = "ol.dt-plp-list li.dt-plp-item"
     private const val PAGINATOR = ".pagination.dt-pg"
 
-    // ----- INDEX -----
-
     fun parseIndex(body: String, baseUrl: String): PlaylistsIndexPage {
         val doc = Jsoup.parse(body, baseUrl)
         return PlaylistsIndexPage(
-            header = parseIndexHeader(doc),
+            header = parseIndexHeader(doc, baseUrl),
             cards = parseIndexCards(doc),
             paginator = parsePaginator(doc),
         )
     }
 
-    private fun parseIndexHeader(doc: Document): PlaylistsHeader {
+    private fun parseIndexHeader(doc: Document, baseUrl: String): PlaylistsHeader {
         val title = doc.selectFirst(".dt-up-crumb-name")?.text().orEmpty()
         val homeUrl = doc.selectFirst("a.dt-up-crumb-home")?.absUrl("href").orEmpty()
         val sortBar = doc.select(".dt-plx-sort .sort_type a")
@@ -114,18 +112,16 @@ object HentaiMamaPlaylistParser {
         )
     }
 
-    // ----- DETAIL -----
-
     fun parseDetail(body: String, baseUrl: String): PlaylistDetailPage {
         val doc = Jsoup.parse(body, baseUrl)
         return PlaylistDetailPage(
-            hero = parseHero(doc),
+            hero = parseHero(doc, baseUrl),
             episodes = parseEpisodes(doc),
             paginator = parsePaginator(doc),
         )
     }
 
-    private fun parseHero(doc: Document): PlaylistHero {
+    private fun parseHero(doc: Document, baseUrl: String): PlaylistHero {
         val root = doc.selectFirst(".dt-plp")
             ?: error("not a playlist page")
 
@@ -213,8 +209,6 @@ object HentaiMamaPlaylistParser {
             thumbSmall, thumbFull,
         )
     }
-
-    // ----- SHARED -----
 
     fun parsePaginator(doc: Document): PlaylistPageInfo? {
         val pg = doc.selectFirst(PAGINATOR) ?: return null

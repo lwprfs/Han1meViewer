@@ -7,15 +7,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -32,7 +28,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -48,7 +43,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -57,7 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yenaly.han1meviewer.HentaiMama.data.model.PlaylistCard
-import com.yenaly.han1meviewer.HentaiMama.ui.components.HentaiMamaFilterSheetPlaceholder
+import com.yenaly.han1meviewer.HentaiMama.data.model.PlaylistSortOption
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.content.EmptyContent
 import com.yenaly.han1meviewer.ui.component.content.ErrorContent
@@ -204,7 +198,7 @@ fun HentaiMamaPlaylistsScreen(
                             }
                         }
 
-                        if (!uiState.hasMore && uiState.items.isNotEmpty
+                        if (!uiState.hasMore && uiState.items.isNotEmpty()) {
                             item(span = { GridItemSpan(maxLineSpan) }) {
                                 Box(
                                     modifier = Modifier
@@ -229,7 +223,7 @@ fun HentaiMamaPlaylistsScreen(
 
 @Composable
 private fun SortChips(
-    options: List<com.yenaly.han1meviewer.HentaiMama.data.model.PlaylistSortOption>,
+    options: List<PlaylistSortOption>,
     activeSort: String?,
     onSortSelected: (String?) -> Unit,
 ) {
@@ -304,9 +298,7 @@ private fun PlaylistCardItem(
                     shape = RoundedCornerShape(8.dp),
                 ) {
                     Text(
-                        text = buildString {
-                            append("${card.videoCount ?: 0} videos")
-                        },
+                        text = "${card.videoCount ?: 0} videos",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.inverseOnSurface,
                         fontWeight = FontWeight.Bold,
@@ -324,29 +316,15 @@ private fun PlaylistCardItem(
                         MaterialTheme.colorScheme.tertiaryContainer,
                     shape = RoundedCornerShape(8.dp),
                 ) {
-                    Row(
+                    Text(
+                        text = card.visibility.replaceFirstChar { it.uppercaseChar() },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (card.visibility == "private")
+                            MaterialTheme.colorScheme.onErrorContainer
+                        else
+                            MaterialTheme.colorScheme.onTertiaryContainer,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_baseline_lock_24),
-                            contentDescription = null,
-                            tint = if (card.visibility == "private")
-                                MaterialTheme.colorScheme.onErrorContainer
-                            else
-                                MaterialTheme.colorScheme.onTertiaryContainer,
-                            modifier = Modifier.size(12.dp),
-                        )
-                        Text(
-                            text = card.visibility.replaceFirstChar { it.uppercaseChar() },
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (card.visibility == "private")
-                                MaterialTheme.colorScheme.onErrorContainer
-                            else
-                                MaterialTheme.colorScheme.onTertiaryContainer,
-                        )
-                    }
+                    )
                 }
 
                 if (card.playUrl != null) {
