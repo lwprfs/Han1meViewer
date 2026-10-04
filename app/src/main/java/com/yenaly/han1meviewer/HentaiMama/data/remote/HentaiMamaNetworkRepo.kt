@@ -196,6 +196,36 @@ object HentaiMamaNetworkRepo {
         }
     }.flowOn(Dispatchers.IO)
 
+    fun searchSeriesCards(page: Int, query: String) = flow {
+        try {
+            val base = HentaiMamaNetwork.baseUrl.trimEnd('/')
+            val encoded = java.net.URLEncoder.encode(query, "UTF-8")
+            val url = if (page <= 1) {
+                "$base/?s=$encoded"
+            } else {
+                "$base/page/$page/?s=$encoded"
+            }
+
+            val response = HentaiMamaNetwork.service.getVideoDetail(url)
+            if (!response.isSuccessful) {
+                emit(emptyList<SeriesCard>())
+                return@flow
+            }
+
+            val body = response.body()?.string().orEmpty()
+            if (body.isBlank()) {
+                emit(emptyList<SeriesCard>())
+                return@flow
+            }
+
+            val cards = HentaiMamaSeriesCardParser.parseCards(Jsoup.parse(body, url), url)
+            emit(cards)
+        } catch (e: Exception) {
+            Log.e(TAG, "searchSeriesCards failed", e)
+            emit(emptyList<SeriesCard>())
+        }
+    }.flowOn(Dispatchers.IO)
+
     fun searchGenreVideos(
         slug: String,
         query: String,
@@ -285,6 +315,56 @@ object HentaiMamaNetworkRepo {
         } catch (e: Exception) {
             Log.e(TAG, "filterVideos error", e)
             emit(PageLoadingState.Error(e))
+        }
+    }.flowOn(Dispatchers.IO)
+
+    fun filterSeriesCards(
+        page: Int,
+        genre: String?,
+        producer: String?,
+        year: String? = null,
+        order: String? = null,
+    ) = flow {
+        try {
+            val genres = genre?.takeIf { it.isNotBlank() }?.let { listOf(it) }
+            val studios = producer?.takeIf { it.isNotBlank() }?.let { listOf(it) }
+            val years = year?.takeIf { it.isNotBlank() }?.let { listOf(it) }
+            val filterOrder = order?.takeIf { it.isNotBlank() }
+
+            val response = if (page <= 1) {
+                HentaiMamaNetwork.service.getFilteredVideos(
+                    filter = filterOrder,
+                    genres = genres,
+                    years = years,
+                    studios = studios,
+                )
+            } else {
+                HentaiMamaNetwork.service.getFilteredVideosPaged(
+                    page = page,
+                    filter = filterOrder,
+                    genres = genres,
+                    years = years,
+                    studios = studios,
+                )
+            }
+
+            if (!response.isSuccessful) {
+                emit(emptyList<SeriesCard>())
+                return@flow
+            }
+
+            val body = response.body()?.string().orEmpty()
+            if (body.isBlank()) {
+                emit(emptyList<SeriesCard>())
+                return@flow
+            }
+
+            val base = HentaiMamaNetwork.baseUrl
+            val cards = HentaiMamaSeriesCardParser.parseCards(Jsoup.parse(body, base), base)
+            emit(cards)
+        } catch (e: Exception) {
+            Log.e(TAG, "filterSeriesCards failed", e)
+            emit(emptyList<SeriesCard>())
         }
     }.flowOn(Dispatchers.IO)
 

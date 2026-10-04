@@ -66,16 +66,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaOptions
 import com.yenaly.han1meviewer.HentaiMama.data.model.GenreLayout
 import com.yenaly.han1meviewer.HentaiMama.data.model.GenreSeries
-import com.yenaly.han1meviewer.HentaiMama.data.parser.HentaiMamaSeriesCardParser
+import com.yenaly.han1meviewer.HentaiMama.data.model.SeriesCard
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetworkRepo
 import com.yenaly.han1meviewer.HentaiMama.settings.HentaiMamaCardSettings
 import com.yenaly.han1meviewer.HentaiMama.ui.components.HentaiMamaFilterSheet
-import com.yenaly.han1meviewer.HentaiMama.ui.components.HentaiMamaGenreCompactSortBar
 import com.yenaly.han1meviewer.HentaiMama.ui.components.HentaiMamaGenreSortBar
 import com.yenaly.han1meviewer.HentaiMama.ui.components.HentaiMamaGenreSeriesCard
 import com.yenaly.han1meviewer.HentaiMama.ui.components.HentaiMamaGenreSeriesRow
-import com.yenaly.han1meviewer.HentaiMama.ui.components.HentaiMamaVideoCard
+import com.yenaly.han1meviewer.HentaiMama.ui.components.HentaiMamaSeriesCardView
 import com.yenaly.han1meviewer.HentaiMama.ui.home.HentaiMamaHomeCategoryRepo
 import com.yenaly.han1meviewer.HentaiMama.ui.home.HentaiMamaViewModel
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
@@ -88,7 +87,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.jsoup.Jsoup
 
 private const val BASE_GRID_MIN_SIZE_DP = 150
 
@@ -129,6 +127,7 @@ fun HentaiMamaSearchScreen(
     val searchState by viewModel.searchState.collectAsStateWithLifecycle()
     val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
     val searchSeries by viewModel.searchSeriesResults.collectAsStateWithLifecycle()
+    val searchCards by viewModel.searchSeriesCards.collectAsStateWithLifecycle()
     val selectedGenre by viewModel.selectedGenre.collectAsStateWithLifecycle()
     val selectedProducer by viewModel.selectedProducer.collectAsStateWithLifecycle()
     val selectedYear by viewModel.selectedYear.collectAsStateWithLifecycle()
@@ -468,6 +467,7 @@ fun HentaiMamaSearchScreen(
                         DisplayResults(
                             allVideos = searchResults,
                             allSeries = searchSeries,
+                            allCards = searchCards,
                             isGenreMode = isGenreMode,
                             layout = genreLayout,
                             isLoadingMore = isLoadingMore,
@@ -479,14 +479,15 @@ fun HentaiMamaSearchScreen(
 
                 is PageLoadingState.Success,
                 is PageLoadingState.NoMoreData -> {
-                    if (searchSeries.isEmpty() && searchResults.isEmpty() && hasSearched) {
+                    if (searchSeries.isEmpty() && searchResults.isEmpty() && searchCards.isEmpty() && hasSearched) {
                         EmptyResults()
-                    } else if (searchSeries.isEmpty() && searchResults.isEmpty()) {
+                    } else if (searchSeries.isEmpty() && searchResults.isEmpty() && searchCards.isEmpty()) {
                         SearchPlaceholder()
                     } else {
                         DisplayResults(
                             allVideos = searchResults,
                             allSeries = searchSeries,
+                            allCards = searchCards,
                             isGenreMode = isGenreMode,
                             layout = genreLayout,
                             isLoadingMore = isLoadingMore,
@@ -497,7 +498,7 @@ fun HentaiMamaSearchScreen(
                 }
 
                 is PageLoadingState.Error -> {
-                    if (searchSeries.isEmpty() && searchResults.isEmpty()) {
+                    if (searchSeries.isEmpty() && searchResults.isEmpty() && searchCards.isEmpty()) {
                         ErrorContent(
                             message = state.throwable.message ?: "Failed to load results",
                             onRetry = { runSearch() },
@@ -507,6 +508,7 @@ fun HentaiMamaSearchScreen(
                             DisplayResults(
                                 allVideos = searchResults,
                                 allSeries = searchSeries,
+                                allCards = searchCards,
                                 isGenreMode = isGenreMode,
                                 layout = genreLayout,
                                 isLoadingMore = isLoadingMore,
@@ -575,6 +577,7 @@ private fun EmptyResults() {
 private fun DisplayResults(
     allVideos: List<com.yenaly.han1meviewer.logic.model.HanimeInfo>,
     allSeries: List<GenreSeries>,
+    allCards: List<SeriesCard>,
     isGenreMode: Boolean,
     layout: GenreLayout,
     isLoadingMore: Boolean,
@@ -583,8 +586,10 @@ private fun DisplayResults(
 ) {
     val uniqueVideos = remember(allVideos) { allVideos.distinctBy { it.videoCode } }
     val uniqueSeries = remember(allSeries) { allSeries.distinctBy { it.slug } }
+    val uniqueCards = remember(allCards) { allCards.distinctBy { it.slug } }
 
-    val useSeries: Boolean = isGenreMode && uniqueSeries.isNotEmpty()
+    val useCards: Boolean = uniqueCards.isNotEmpty()
+    val useSeries: Boolean = !useCards && isGenreMode && uniqueSeries.isNotEmpty()
 
     BoxWithConstraints(
         modifier = Modifier
@@ -638,7 +643,18 @@ private fun DisplayResults(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(bottom = 16.dp),
         ) {
-            if (useSeries) {
+            if (useCards) {
+                items(
+                    count = uniqueCards.size,
+                    key = { i -> "card_${uniqueCards[i].slug}" },
+                ) { index ->
+                    val card = uniqueCards[index]
+                    HentaiMamaSeriesCardView(
+                        card = card,
+                        onClick = { onNavigateToVideo(card.slug) },
+                    )
+                }
+            } else if (useSeries) {
                 items(
                     count = uniqueSeries.size,
                     key = { i -> "series_${uniqueSeries[i].slug}" },

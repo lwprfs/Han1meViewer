@@ -10,6 +10,7 @@ import com.yenaly.han1meviewer.HentaiMama.data.model.GenreLayout
 import com.yenaly.han1meviewer.HentaiMama.data.model.GenrePage
 import com.yenaly.han1meviewer.HentaiMama.data.model.GenrePaginator
 import com.yenaly.han1meviewer.HentaiMama.data.model.GenreSeries
+import com.yenaly.han1meviewer.HentaiMama.data.model.SeriesCard
 import com.yenaly.han1meviewer.HentaiMama.data.model.SeriesDetailPage
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetworkRepo
 import com.yenaly.han1meviewer.logic.model.HanimeInfo
@@ -72,6 +73,9 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
 
     private val _searchSeriesResults = MutableStateFlow<List<GenreSeries>>(emptyList())
     val searchSeriesResults = _searchSeriesResults.asStateFlow()
+
+    private val _searchSeriesCards = MutableStateFlow<List<SeriesCard>>(emptyList())
+    val searchSeriesCards = _searchSeriesCards.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery = _searchQuery.asStateFlow()
@@ -139,6 +143,7 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
     val genrePageState = _genrePageState.asStateFlow()
 
     private var searchJob: Job? = null
+    private var cardsJob: Job? = null
     private var seriesJob: Job? = null
     private var genreJob: Job? = null
 
@@ -220,7 +225,10 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
                     }
                     withContext(Dispatchers.IO) {
                         runCatching {
-                            HentaiMamaSeriesRepo.upsertAll(page.series.toSeriesCards(), "genre:$slug")
+                            HentaiMamaSeriesRepo.upsertAll(
+                                page.series.toSeriesCards(),
+                                "genre:$slug",
+                            )
                         }
                     }
                     updateRow(key) {
@@ -272,9 +280,9 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    private fun List<GenreSeries>.toSeriesCards() =
+    private fun List<GenreSeries>.toSeriesCards(): List<SeriesCard> =
         map { s ->
-            com.yenaly.han1meviewer.HentaiMama.data.model.SeriesCard(
+            SeriesCard(
                 url = s.url,
                 slug = s.slug,
                 title = s.title,
@@ -403,7 +411,9 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
 
     fun clearSearch() {
         searchJob?.cancel()
+        cardsJob?.cancel()
         searchJob = null
+        cardsJob = null
         _searchQuery.value = ""
         _searchInitialQuery.value = null
         _searchPage.value = 1
@@ -413,6 +423,7 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
         _searchIsFilterMode.value = false
         _searchResults.value = emptyList()
         _searchSeriesResults.value = emptyList()
+        _searchSeriesCards.value = emptyList()
         _searchState.value = PageLoadingState.Loading
         _searchNextUrl.value = null
         _searchTotalPages.value = 1
@@ -426,6 +437,7 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
         _genreLayout.value = GenreLayout.DETAILS
         _genrePaginator.value = null
         _searchSeriesResults.value = emptyList()
+        _searchSeriesCards.value = emptyList()
     }
 
     fun resetAll() {
@@ -446,6 +458,7 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
     fun searchVideos(page: Int, query: String) {
         if (query.isBlank()) return
         searchJob?.cancel()
+        cardsJob?.cancel()
         _searchHasSearched.value = true
         _searchIsFilterMode.value = false
 
@@ -459,6 +472,7 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
             _searchPage.value = 1
             _searchResults.value = emptyList()
             _searchSeriesResults.value = emptyList()
+            _searchSeriesCards.value = emptyList()
             _searchState.value = PageLoadingState.Loading
             _searchIsLoadingMore.value = false
             _searchNextUrl.value = null
@@ -474,13 +488,25 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
                     handleSearchState(state, page)
                 }
         }
+
+        cardsJob = viewModelScope.launch {
+            HentaiMamaNetworkRepo.searchSeriesCards(page, query).collect { cards ->
+                if (!isActive) return@collect
+                _searchSeriesCards.update { prev ->
+                    if (page <= 1) cards
+                    else (prev + cards).distinctBy { it.slug }
+                }
+            }
+        }
     }
 
     private fun searchGenreVideos(slug: String, query: String, page: Int) {
+        cardsJob?.cancel()
         if (page <= 1) {
             _searchPage.value = 1
             _searchResults.value = emptyList()
             _searchSeriesResults.value = emptyList()
+            _searchSeriesCards.value = emptyList()
             _searchState.value = PageLoadingState.Loading
             _searchIsLoadingMore.value = false
             _searchNextUrl.value = null
@@ -529,6 +555,7 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
 
     fun filterVideos(page: Int) {
         searchJob?.cancel()
+        cardsJob?.cancel()
         _searchHasSearched.value = true
         _searchIsFilterMode.value = true
         _searchHasMore.value = true
@@ -539,6 +566,7 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
             _searchPage.value = 1
             _searchResults.value = emptyList()
             _searchSeriesResults.value = emptyList()
+            _searchSeriesCards.value = emptyList()
             _searchState.value = PageLoadingState.Loading
             _searchIsLoadingMore.value = false
             _searchNextUrl.value = null
@@ -563,6 +591,22 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
             ).collect { state ->
                 if (!isActive) return@collect
                 handleSearchState(state, page)
+            }
+        }
+
+        cardsJob = viewModelScope.launch {
+            HentaiMamaNetworkRepo.filterSeriesCards(
+                page = page,
+                genre = _selectedGenre.value,
+                producer = _selectedProducer.value,
+                year = _selectedYear.value,
+                order = _selectedOrder.value,
+            ).collect { cards ->
+                if (!isActive) return@collect
+                _searchSeriesCards.update { prev ->
+                    if (page <= 1) cards
+                    else (prev + cards).distinctBy { it.slug }
+                }
             }
         }
     }
@@ -596,6 +640,12 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
                         "genre:$slug",
                     )
                 }
+            }
+
+            val cards: List<SeriesCard> = genrePage.series.toSeriesCards()
+            _searchSeriesCards.update { prev ->
+                if (page <= 1) cards
+                else (prev + cards).distinctBy { it.slug }
             }
 
             val videos = genrePage.series.map { s ->
@@ -650,8 +700,10 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
         _searchPage.value = 1
         _searchResults.value = emptyList()
         _searchSeriesResults.value = emptyList()
+        _searchSeriesCards.value = emptyList()
         _searchNextUrl.value = null
         searchJob?.cancel()
+        cardsJob?.cancel()
         searchJob = viewModelScope.launch {
             _searchState.value = PageLoadingState.Loading
             _searchIsLoadingMore.value = false
@@ -665,8 +717,10 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
         _searchPage.value = 1
         _searchResults.value = emptyList()
         _searchSeriesResults.value = emptyList()
+        _searchSeriesCards.value = emptyList()
         _searchNextUrl.value = null
         searchJob?.cancel()
+        cardsJob?.cancel()
         searchJob = viewModelScope.launch {
             _searchState.value = PageLoadingState.Loading
             _searchIsLoadingMore.value = false
@@ -755,6 +809,7 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
         super.onCleared()
         categoryJobs.values.forEach { it.cancel() }
         searchJob?.cancel()
+        cardsJob?.cancel()
         seriesJob?.cancel()
         genreJob?.cancel()
     }
