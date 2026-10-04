@@ -74,6 +74,7 @@ import com.yenaly.han1meviewer.HentaiMama.ui.components.HentaiMamaFilterSheet
 import com.yenaly.han1meviewer.HentaiMama.ui.components.HentaiMamaGenreSortBar
 import com.yenaly.han1meviewer.HentaiMama.ui.components.HentaiMamaGenreSeriesCard
 import com.yenaly.han1meviewer.HentaiMama.ui.components.HentaiMamaGenreSeriesRow
+import com.yenaly.han1meviewer.HentaiMama.ui.components.HentaiMamaVideoCard
 import com.yenaly.han1meviewer.HentaiMama.ui.components.HentaiMamaSeriesCardView
 import com.yenaly.han1meviewer.HentaiMama.ui.home.HentaiMamaHomeCategoryRepo
 import com.yenaly.han1meviewer.HentaiMama.ui.home.HentaiMamaViewModel
