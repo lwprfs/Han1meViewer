@@ -12,6 +12,8 @@ import com.yenaly.han1meviewer.HentaiMama.data.model.GenrePaginator
 import com.yenaly.han1meviewer.HentaiMama.data.model.GenreSeries
 import com.yenaly.han1meviewer.HentaiMama.data.model.SeriesCard
 import com.yenaly.han1meviewer.HentaiMama.data.model.SeriesDetailPage
+import com.yenaly.han1meviewer.HentaiMama.data.parser.HentaiMamaSeriesCardParser
+import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetworkRepo
 import com.yenaly.han1meviewer.logic.model.HanimeInfo
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
@@ -26,12 +28,14 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jsoup.Jsoup
 import java.util.concurrent.ConcurrentHashMap
 
 data class HentaiMamaCategoryRowState(
     val category: HentaiMamaHomeCategory,
     val videos: List<HanimeInfo> = emptyList(),
     val series: List<GenreSeries> = emptyList(),
+    val cards: List<SeriesCard> = emptyList(),
     val genreHeader: GenreHeader? = null,
     val isLoading: Boolean = false,
     val error: String? = null,
@@ -223,17 +227,16 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
                         }
                         return@launch
                     }
+                    val cards: List<SeriesCard> = page.series.toSeriesCards()
                     withContext(Dispatchers.IO) {
                         runCatching {
-                            HentaiMamaSeriesRepo.upsertAll(
-                                page.series.toSeriesCards(),
-                                "genre:$slug",
-                            )
+                            HentaiMamaSeriesRepo.upsertAll(cards, "genre:$slug")
                         }
                     }
                     updateRow(key) {
                         it.copy(
                             series = page.series,
+                            cards = cards,
                             videos = page.series.map { s ->
                                 HanimeInfo(
                                     title = s.title.ifBlank { s.altTitle.orEmpty() },
@@ -254,12 +257,47 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
                         )
                     }
                 } else {
-                    val videos: List<HanimeInfo> = withContext(Dispatchers.IO) {
-                        HentaiMamaNetworkRepo.getCategoryVideos(category)
+                    val fullUrl = resolveCategoryUrl(category)
+                    val body: String = withContext(Dispatchers.IO) {
+                        runCatching {
+                            val resp = HentaiMamaNetwork.service.getVideoDetail(fullUrl)
+                            if (resp.isSuccessful) resp.body()?.string().orEmpty() else ""
+                        }.getOrDefault("")
                     }
+
+                    val cards: List<SeriesCard> = withContext(Dispatchers.IO) {
+                        if (body.isBlank()) emptyList()
+                        else HentaiMamaSeriesCardParser.parseCards(
+                            Jsoup.parse(body, fullUrl),
+                            fullUrl,
+                        )
+                    }
+
+                    val videos: List<HanimeInfo> = if (cards.isNotEmpty()) {
+                        cards.map { card ->
+                            HanimeInfo(
+                                title = card.title,
+                                coverUrl = card.thumbFull.ifBlank { card.thumbSmall.orEmpty() },
+                                videoCode = card.slug,
+                                duration = card.episodeCount?.let { "$it eps" },
+                                views = card.viewsRaw,
+                                uploadTime = card.year?.toString(),
+                                genre = card.genres.firstOrNull(),
+                                reviews = card.rating?.let { "%.1f".format(it) },
+                                currentArtist = card.studios.firstOrNull(),
+                                itemType = HanimeInfo.NORMAL,
+                            )
+                        }
+                    } else {
+                        withContext(Dispatchers.IO) {
+                            HentaiMamaNetworkRepo.getCategoryVideos(category)
+                        }
+                    }
+
                     updateRow(key) {
                         it.copy(
                             videos = videos,
+                            cards = cards,
                             series = emptyList(),
                             genreHeader = null,
                             isLoading = false,
@@ -277,6 +315,21 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
                     it.copy(isLoading = false, error = e.message ?: "Failed to load")
                 }
             }
+        }
+    }
+
+    private fun resolveCategoryUrl(category: HentaiMamaHomeCategory): String {
+        val baseUrl = HentaiMamaNetwork.baseUrl
+        val rawPath = category.genrePath.trim()
+        val relative = rawPath.trimStart('/')
+        val fullUrl = if (relative.startsWith("http")) relative else "$baseUrl/$relative"
+        return if (!category.sort.isNullOrBlank() &&
+            !fullUrl.contains("filter=", ignoreCase = true)
+        ) {
+            val sep = if ('?' in fullUrl) "&" else "?"
+            "$fullUrl${sep}filter=${category.sort}"
+        } else {
+            fullUrl
         }
     }
 

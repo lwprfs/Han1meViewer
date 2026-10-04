@@ -48,10 +48,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yenaly.han1meviewer.HentaiMama.data.model.GenreSeries
+import com.yenaly.han1meviewer.HentaiMama.data.model.SeriesCard
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetworkRepo
 import com.yenaly.han1meviewer.HentaiMama.settings.HentaiMamaCardSettings
 import com.yenaly.han1meviewer.HentaiMama.ui.components.HentaiMamaGenreSeriesCard
+import com.yenaly.han1meviewer.HentaiMama.ui.components.HentaiMamaSeriesCardView
 import com.yenaly.han1meviewer.HentaiMama.ui.components.HentaiMamaVideoCard
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
@@ -135,6 +137,7 @@ fun HentaiMamaHomeScreen(
                         val key = row.category.key
                         val hasContent = row.videos.isNotEmpty() ||
                                 row.series.isNotEmpty() ||
+                                row.cards.isNotEmpty() ||
                                 row.error != null ||
                                 row.isLoading
                         if (!hasContent) return@forEach
@@ -161,13 +164,19 @@ fun HentaiMamaHomeScreen(
 
                         item(key = "body_$key") {
                             when {
+                                row.cards.isNotEmpty() -> CategoryRowContent(
+                                    cards = row.cards,
+                                    horizontalCardCountConfig = horizontalCardCountConfig,
+                                    onNavigateToVideo = onNavigateToVideo,
+                                )
+
                                 row.series.isNotEmpty() -> GenreRowContent(
                                     series = row.series,
                                     horizontalCardCountConfig = horizontalCardCountConfig,
                                     onNavigateToVideo = onNavigateToVideo,
                                 )
 
-                                row.videos.isNotEmpty() -> CategoryRowContent(
+                                row.videos.isNotEmpty() -> VideoRowContent(
                                     videos = row.videos,
                                     horizontalCardCountConfig = horizontalCardCountConfig,
                                     onNavigateToVideo = onNavigateToVideo,
@@ -205,7 +214,7 @@ private fun rememberCategoryCardWidth(
 
 @Composable
 private fun CategoryRowContent(
-    videos: List<HanimeInfo>,
+    cards: List<SeriesCard>,
     horizontalCardCountConfig: com.yenaly.han1meviewer.HorizontalCardCountConfig,
     onNavigateToVideo: (String, String) -> Unit,
 ) {
@@ -215,15 +224,14 @@ private fun CategoryRowContent(
             horizontalArrangement = Arrangement.spacedBy(SpacingNormal),
             contentPadding = PaddingValues(horizontal = SpacingLarge),
         ) {
-            items(videos, key = { it.videoCode }) { video ->
-                HentaiMamaVideoCard(
+            items(cards, key = { it.slug }) { card ->
+                HentaiMamaSeriesCardView(
                     modifier = Modifier.width(cardWidth),
-                    videoItem = video,
-                    onClick = {
-                        val path = HentaiMamaNetwork.normalizeUrl("/${video.videoCode}")
-                        onNavigateToVideo(video.videoCode, path)
+                    card = card,
+                    onClick = { slug ->
+                        val path = HentaiMamaNetwork.normalizeUrl("/$slug")
+                        onNavigateToVideo(slug, path)
                     },
-                    onLongClick = { _, _ -> },
                 )
             }
         }
@@ -250,6 +258,33 @@ private fun GenreRowContent(
                         val path = HentaiMamaNetwork.normalizeUrl("/tvshows/$slug/")
                         onNavigateToVideo(slug, path)
                     },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun VideoRowContent(
+    videos: List<HanimeInfo>,
+    horizontalCardCountConfig: com.yenaly.han1meviewer.HorizontalCardCountConfig,
+    onNavigateToVideo: (String, String) -> Unit,
+) {
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val cardWidth = rememberCategoryCardWidth(horizontalCardCountConfig, maxWidth)
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(SpacingNormal),
+            contentPadding = PaddingValues(horizontal = SpacingLarge),
+        ) {
+            items(videos, key = { it.videoCode }) { video ->
+                HentaiMamaVideoCard(
+                    modifier = Modifier.width(cardWidth),
+                    videoItem = video,
+                    onClick = {
+                        val path = HentaiMamaNetwork.normalizeUrl("/${video.videoCode}")
+                        onNavigateToVideo(video.videoCode, path)
+                    },
+                    onLongClick = { _, _ -> },
                 )
             }
         }
