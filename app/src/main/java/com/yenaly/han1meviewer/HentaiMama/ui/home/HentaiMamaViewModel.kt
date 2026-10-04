@@ -4,14 +4,13 @@ import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.yenaly.han1meviewer.HentaiMama.data.local.HentaiMamaSeriesRepo
 import com.yenaly.han1meviewer.HentaiMama.data.model.GenreHeader
 import com.yenaly.han1meviewer.HentaiMama.data.model.GenreLayout
 import com.yenaly.han1meviewer.HentaiMama.data.model.GenrePage
 import com.yenaly.han1meviewer.HentaiMama.data.model.GenrePaginator
 import com.yenaly.han1meviewer.HentaiMama.data.model.GenreSeries
 import com.yenaly.han1meviewer.HentaiMama.data.model.SeriesDetailPage
-import com.yenaly.han1meviewer.HentaiMama.data.parser.HentaiMamaGenreParser
-import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetworkRepo
 import com.yenaly.han1meviewer.logic.model.HanimeInfo
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
@@ -144,6 +143,7 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
     private var genreJob: Job? = null
 
     init {
+        HentaiMamaSeriesRepo.init(application)
         viewModelScope.launch {
             loadCategories()
             syncCategoryRows()
@@ -218,6 +218,11 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
                         }
                         return@launch
                     }
+                    withContext(Dispatchers.IO) {
+                        runCatching {
+                            HentaiMamaSeriesRepo.upsertAll(page.series.toSeriesCards(), "genre:$slug")
+                        }
+                    }
                     updateRow(key) {
                         it.copy(
                             series = page.series,
@@ -266,6 +271,33 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
             }
         }
     }
+
+    private fun List<GenreSeries>.toSeriesCards() =
+        map { s ->
+            com.yenaly.han1meviewer.HentaiMama.data.model.SeriesCard(
+                url = s.url,
+                slug = s.slug,
+                title = s.title,
+                altTitles = listOfNotNull(s.altTitle),
+                thumbSmall = s.posterSmall,
+                thumbFull = s.posterFull,
+                posterAlt = s.altText,
+                rating = s.rating,
+                favorites = s.favorites,
+                postId = s.favoritePostId,
+                nonce = s.favoriteNonce,
+                studios = s.studios,
+                studioUrls = s.studioUrls,
+                year = s.year,
+                viewsRaw = s.viewsRaw.takeIf { it.isNotBlank() },
+                views = s.views,
+                episodeCount = s.episodeCount,
+                description = s.synopsis,
+                hasLongDescription = false,
+                genres = s.genres,
+                genreSlugs = s.genreSlugs,
+            )
+        }
 
     private inline fun updateRow(
         key: String,
@@ -557,6 +589,15 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
             _searchTotalPages.value = genrePage.paginator?.total ?: 1
             _searchCurrentPage.value = genrePage.paginator?.current ?: page
 
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    HentaiMamaSeriesRepo.upsertAll(
+                        genrePage.series.toSeriesCards(),
+                        "genre:$slug",
+                    )
+                }
+            }
+
             val videos = genrePage.series.map { s ->
                 HanimeInfo(
                     title = s.title.ifBlank { s.altTitle.orEmpty() },
@@ -697,6 +738,14 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
                 if (state is VideoLoadingState.Success) {
                     _genreHeader.value = state.info.header
                     _genrePaginator.value = state.info.paginator
+                    withContext(Dispatchers.IO) {
+                        runCatching {
+                            HentaiMamaSeriesRepo.upsertAll(
+                                state.info.series.toSeriesCards(),
+                                "genre:$slug",
+                            )
+                        }
+                    }
                 }
             }
         }

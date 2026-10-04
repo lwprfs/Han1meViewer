@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.yenaly.han1meviewer.HentaiMama.data.model.GenreSeries
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetworkRepo
 import com.yenaly.han1meviewer.HentaiMama.settings.HentaiMamaCardSettings
@@ -231,7 +232,7 @@ private fun CategoryRowContent(
 
 @Composable
 private fun GenreRowContent(
-    series: List<com.yenaly.han1meviewer.HentaiMama.data.model.GenreSeries>,
+    series: List<GenreSeries>,
     horizontalCardCountConfig: com.yenaly.han1meviewer.HorizontalCardCountConfig,
     onNavigateToVideo: (String, String) -> Unit,
 ) {

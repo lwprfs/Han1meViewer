@@ -66,6 +66,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaOptions
 import com.yenaly.han1meviewer.HentaiMama.data.model.GenreLayout
 import com.yenaly.han1meviewer.HentaiMama.data.model.GenreSeries
+import com.yenaly.han1meviewer.HentaiMama.data.parser.HentaiMamaSeriesCardParser
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetworkRepo
 import com.yenaly.han1meviewer.HentaiMama.settings.HentaiMamaCardSettings
@@ -87,6 +88,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jsoup.Jsoup
 
 private const val BASE_GRID_MIN_SIZE_DP = 150
 

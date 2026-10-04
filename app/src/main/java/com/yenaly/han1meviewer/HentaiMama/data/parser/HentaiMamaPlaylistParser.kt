@@ -237,7 +237,7 @@ object HentaiMamaPlaylistParser {
 
     private fun parseSrcset(s: String): Map<Int, String> =
         s.split(',').mapNotNull {
-            val b = it.trim().split(' ')
+            val b = it.trim().split(Regex("\\s+"))
             if (b.size == 2 && b[1].endsWith("w"))
                 b[1].dropLast(1).toIntOrNull()?.let { w -> w to b[0] }
             else null

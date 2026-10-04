@@ -2,7 +2,8 @@ package com.yenaly.han1meviewer.HentaiMama.data.remote
 
 import android.util.Log
 import com.yenaly.han1meviewer.EMPTY_STRING
-import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaConstants
+import com.yenaly.han1meviewer.HentaiMama.data.local.HentaiMamaSeriesRepo
+import com.yenaly.han1meviewer.HentaiMama.data.model.AzLink
 import com.yenaly.han1meviewer.HentaiMama.data.model.EpisodeDetailPage
 import com.yenaly.han1meviewer.HentaiMama.data.model.GenreHeader
 import com.yenaly.han1meviewer.HentaiMama.data.model.GenreLayout
@@ -11,9 +12,11 @@ import com.yenaly.han1meviewer.HentaiMama.data.model.GenrePaginator
 import com.yenaly.han1meviewer.HentaiMama.data.model.GenreSeries
 import com.yenaly.han1meviewer.HentaiMama.data.model.HentaiMamaHomePage
 import com.yenaly.han1meviewer.HentaiMama.data.model.HentaiMamaVideoLink
+import com.yenaly.han1meviewer.HentaiMama.data.model.SeriesCard
 import com.yenaly.han1meviewer.HentaiMama.data.model.SeriesDetailPage
 import com.yenaly.han1meviewer.HentaiMama.data.parser.HentaiMamaGenreParser
 import com.yenaly.han1meviewer.HentaiMama.data.parser.HentaiMamaParser
+import com.yenaly.han1meviewer.HentaiMama.data.parser.HentaiMamaSeriesCardParser
 import com.yenaly.han1meviewer.HentaiMama.ui.home.HentaiMamaHomeCategory
 import com.yenaly.han1meviewer.logic.model.HanimeInfo
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
@@ -22,6 +25,8 @@ import com.yenaly.han1meviewer.logic.state.WebsiteState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.withContext
+import org.jsoup.Jsoup
 
 object HentaiMamaNetworkRepo {
 
@@ -161,7 +166,25 @@ object HentaiMamaNetworkRepo {
                 return@flow
             }
 
-            val videos = HentaiMamaParser.parseCardList(body, base)
+            val doc = Jsoup.parse(body, url)
+            val cards: List<SeriesCard> = HentaiMamaSeriesCardParser.parseCards(doc, url)
+            val videos = cards.map { card ->
+                HanimeInfo(
+                    title = card.title,
+                    coverUrl = card.thumbFull.ifBlank { card.thumbSmall.orEmpty() },
+                    videoCode = card.slug,
+                    duration = card.episodeCount?.let { "$it eps" },
+                    views = card.viewsRaw,
+                    uploadTime = card.year?.toString(),
+                    genre = card.genres.firstOrNull(),
+                    reviews = card.rating?.let { "%.1f".format(it) },
+                    currentArtist = card.studios.firstOrNull(),
+                    itemType = HanimeInfo.NORMAL,
+                )
+            }.ifEmpty {
+                HentaiMamaParser.parseCardList(body, base)
+            }
+
             if (videos.isEmpty()) {
                 emit(PageLoadingState.NoMoreData)
                 return@flow
@@ -192,7 +215,24 @@ object HentaiMamaNetworkRepo {
                 emit(PageLoadingState.NoMoreData)
                 return@flow
             }
-            val videos = HentaiMamaParser.parseCardList(body, fullUrl)
+            val doc = Jsoup.parse(body, fullUrl)
+            val cards = HentaiMamaSeriesCardParser.parseCards(doc, fullUrl)
+            val videos = cards.map { card ->
+                HanimeInfo(
+                    title = card.title,
+                    coverUrl = card.thumbFull.ifBlank { card.thumbSmall.orEmpty() },
+                    videoCode = card.slug,
+                    duration = card.episodeCount?.let { "$it eps" },
+                    views = card.viewsRaw,
+                    uploadTime = card.year?.toString(),
+                    genre = card.genres.firstOrNull(),
+                    reviews = card.rating?.let { "%.1f".format(it) },
+                    currentArtist = card.studios.firstOrNull(),
+                    itemType = HanimeInfo.NORMAL,
+                )
+            }.ifEmpty {
+                HentaiMamaParser.parseCardList(body, fullUrl)
+            }
             if (videos.isEmpty()) {
                 emit(PageLoadingState.NoMoreData)
             } else {
@@ -420,6 +460,59 @@ object HentaiMamaNetworkRepo {
         sort = sort,
     )
 
+    suspend fun getAzBar(url: String): List<AzLink> = withContext(Dispatchers.IO) {
+        try {
+            val full = if (url.startsWith("http")) url else HentaiMamaNetwork.normalizeUrl(url)
+            val resp = HentaiMamaNetwork.service.getVideoDetail(full)
+            val body = if (resp.isSuccessful) resp.body()?.string().orEmpty() else ""
+            if (body.isBlank()) emptyList()
+            else HentaiMamaSeriesCardParser.parseAzBar(Jsoup.parse(body, full))
+        } catch (e: Exception) {
+            Log.e(TAG, "getAzBar failed", e)
+            emptyList()
+        }
+    }
+
+    suspend fun fetchAdvanceSearch(
+        genres: List<String> = emptyList(),
+        years: List<Int> = emptyList(),
+        studios: List<String> = emptyList(),
+        sort: String = "alphabet",
+        page: Int = 1,
+    ): List<SeriesCard> = withContext(Dispatchers.IO) {
+        try {
+            val response = if (page <= 1) {
+                HentaiMamaNetwork.service.getFilteredVideos(
+                    filter = sort,
+                    genres = genres.takeIf { it.isNotEmpty() },
+                    years = years.map { it.toString() }.takeIf { it.isNotEmpty() },
+                    studios = studios.takeIf { it.isNotEmpty() },
+                )
+            } else {
+                HentaiMamaNetwork.service.getFilteredVideosPaged(
+                    page = page,
+                    filter = sort,
+                    genres = genres.takeIf { it.isNotEmpty() },
+                    years = years.map { it.toString() }.takeIf { it.isNotEmpty() },
+                    studios = studios.takeIf { it.isNotEmpty() },
+                )
+            }
+            if (!response.isSuccessful) return@withContext emptyList()
+            val body = response.body()?.string().orEmpty()
+            if (body.isBlank()) return@withContext emptyList()
+            val base = HentaiMamaNetwork.baseUrl
+            val cards = HentaiMamaSeriesCardParser.parseCards(Jsoup.parse(body, base), base)
+            if (cards.isNotEmpty()) {
+                runCatching { HentaiMamaSeriesRepo.upsertAll(cards, "advance") }
+                    .onFailure { Log.w(TAG, "advance-search persistence skipped: ${it.message}") }
+            }
+            cards
+        } catch (e: Exception) {
+            Log.e(TAG, "fetchAdvanceSearch failed", e)
+            emptyList()
+        }
+    }
+
     private fun enrichWithPagination(
         state: PageLoadingState<List<HanimeInfo>>,
         body: String,
@@ -436,7 +529,7 @@ object HentaiMamaNetworkRepo {
     fun hasNextPage(body: String): Boolean {
         if (body.isBlank()) return false
         return try {
-            val doc = org.jsoup.Jsoup.parse(body)
+            val doc = Jsoup.parse(body)
             val next = doc.selectFirst("a.dt-pg-next")
                 ?.absUrl("href")
                 ?.takeIf { it.isNotBlank() }
@@ -455,7 +548,7 @@ object HentaiMamaNetworkRepo {
     fun extractNextPageUrl(body: String): String? {
         if (body.isBlank()) return null
         return try {
-            val doc = org.jsoup.Jsoup.parse(body)
+            val doc = Jsoup.parse(body)
             doc.selectFirst("a.dt-pg-next")
                 ?.absUrl("href")
                 ?.takeIf { it.isNotBlank() }
@@ -467,7 +560,7 @@ object HentaiMamaNetworkRepo {
     fun extractPaginator(body: String): GenrePaginator? {
         if (body.isBlank()) return null
         return try {
-            val doc = org.jsoup.Jsoup.parse(body)
+            val doc = Jsoup.parse(body)
             val p = doc.selectFirst(".dt-series-pagination-top .pagination.dt-pg")
                 ?: doc.selectFirst(".pagination.dt-pg")
                 ?: return null
@@ -493,7 +586,7 @@ object HentaiMamaNetworkRepo {
     fun extractGenreHeader(body: String, baseUrl: String, slug: String): GenreHeader? {
         if (body.isBlank()) return null
         return try {
-            val doc = org.jsoup.Jsoup.parse(body, baseUrl)
+            val doc = Jsoup.parse(body, baseUrl)
             HentaiMamaGenreParser.parseHeader(doc, baseUrl, slug)
         } catch (_: Exception) {
             null

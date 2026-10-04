@@ -46,9 +46,9 @@ interface HentaiMamaService {
         @Query("studios_filter[]") studios: List<String>? = null,
     ): Response<ResponseBody>
 
-    @GET("advance-search/page/{page}/")
+    @GET("advance-search/")
     suspend fun getFilteredVideosPaged(
-        @Path("page") page: Int,
+        @Query("page") page: Int,
         @Query("submit") submit: String = "Submit",
         @Query("filter") filter: String? = null,
         @Query("genres_filter[]") genres: List<String>? = null,

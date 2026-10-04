@@ -39,7 +39,7 @@ internal object HentaiMamaHtmlUtils {
         raw.split(',').forEach { part: String ->
             val trimmed: String = part.trim()
             if (trimmed.isEmpty()) return@forEach
-            val pieces: List<String> = trimmed.split(' ').filter { it.isNotBlank() }
+            val pieces: List<String> = trimmed.split(Regex("\\s+")).filter { it.isNotBlank() }
             if (pieces.size < 2) return@forEach
             val url: String = pieces[0]
             val widthToken: String = pieces[1].trim()
@@ -50,6 +50,11 @@ internal object HentaiMamaHtmlUtils {
             }
         }
         return out
+    }
+
+    fun parseFavoritesCount(raw: String?): Int? {
+        if (raw.isNullOrBlank()) return null
+        return raw.replace(Regex("[^\\d]"), "").toIntOrNull()
     }
 
     fun parseViews(raw: String?): Long? {

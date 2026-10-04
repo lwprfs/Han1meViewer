@@ -1,7 +1,6 @@
 package com.yenaly.han1meviewer.HentaiMama.data.parser
 
 import android.util.Log
-import com.yenaly.han1meviewer.EMPTY_STRING
 import com.yenaly.han1meviewer.HentaiMama.data.model.UpcomingCard
 import com.yenaly.han1meviewer.HentaiMama.data.model.UpcomingHeader
 import com.yenaly.han1meviewer.HentaiMama.data.model.UpcomingMonthOption

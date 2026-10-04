@@ -14,12 +14,12 @@ import com.yenaly.han1meviewer.HentaiMama.data.model.HentaiMamaVideoInfo
 import com.yenaly.han1meviewer.HentaiMama.data.model.HentaiMamaVideoLink
 import com.yenaly.han1meviewer.HentaiMama.data.model.Mirror
 import com.yenaly.han1meviewer.HentaiMama.data.model.PlayerBlock
+import com.yenaly.han1meviewer.HentaiMama.data.model.SeriesCard
 import com.yenaly.han1meviewer.HentaiMama.data.model.SeriesDetailPage
 import com.yenaly.han1meviewer.HentaiMama.data.model.SeriesHero
 import com.yenaly.han1meviewer.HentaiMama.data.model.SimilarCard
 import com.yenaly.han1meviewer.HentaiMama.data.model.StudioRef
 import com.yenaly.han1meviewer.HentaiMama.data.parser.HentaiMamaHtmlUtils.parseSrcset
-import com.yenaly.han1meviewer.HentaiMama.data.parser.HentaiMamaHtmlUtils.parseViews
 import com.yenaly.han1meviewer.HentaiMama.data.parser.HentaiMamaHtmlUtils.resolveUrl
 import com.yenaly.han1meviewer.HentaiMama.data.parser.HentaiMamaHtmlUtils.slugFromStudioUrl
 import com.yenaly.han1meviewer.HentaiMama.data.parser.HentaiMamaHtmlUtils.slugFromUrl
@@ -106,13 +106,9 @@ object HentaiMamaParser {
     fun parseCardList(body: String, baseUrl: String): List<HanimeInfo> {
         return try {
             val doc: Document = Jsoup.parse(body, baseUrl)
-            val cards = doc.select("article.series-card")
+            val cards: List<SeriesCard> = HentaiMamaSeriesCardParser.parseCards(doc, baseUrl)
             if (cards.isNotEmpty()) {
-                return cards.mapNotNull { parseSeriesCard(it, baseUrl) }
-            }
-            val altCards = doc.select(".dt-series-cards article")
-            if (altCards.isNotEmpty()) {
-                return altCards.mapNotNull { parseSeriesCard(it, baseUrl) }
+                return cards.map { it.toHanimeInfo() }
             }
             doc.select("a.sc-poster").mapNotNull { a ->
                 runCatching {
@@ -141,116 +137,18 @@ object HentaiMamaParser {
         }
     }
 
-    private fun parseSeriesCard(el: Element, baseUrl: String): HanimeInfo? {
-        return try {
-            val poster = el.selectFirst("a.sc-poster")
-                ?: el.selectFirst("a.sc-title")
-                ?: el.selectFirst("h3.sc-title a")
-                ?: return null
-
-            val rawHref = poster.attr("href")
-            val url = if (rawHref.startsWith("http")) rawHref
-            else baseUrl.trimEnd('/') + "/" + rawHref.trimStart('/')
-            val slug = url.trimEnd('/').substringAfterLast('/')
-            if (slug.isBlank()) return null
-
-            val titleLink = el.selectFirst("a.sc-title") ?: el.selectFirst("h3.sc-title a")
-            val title = titleLink?.text()?.trim().orEmpty()
-                .ifBlank { el.selectFirst(".sc-alt")?.text()?.trim().orEmpty() }
-            if (title.isBlank()) return null
-
-            val img = poster.selectFirst("img") ?: el.selectFirst(".sc-poster img")
-            val srcsetRaw = img?.attr("data-savepage-srcset").orEmpty()
-                .ifBlank { img?.attr("srcset").orEmpty() }
-            val variants = parseSrcsetMap(srcsetRaw)
-            val posterSmall = variants[175] ?: variants[300]
-            val posterFull = img?.attr("data-savepage-src")?.takeIf { it.isNotBlank() }
-                ?: img?.attr("data-lazy-src")?.takeIf { it.isNotBlank() }
-                ?: img?.absUrl("src").orEmpty()
-                ?: posterSmall.orEmpty()
-
-            val rating: Double? = el.selectFirst(".sc-btn-rating")
-                ?.ownText()?.trim()?.toDoubleOrNull()
-
-            val favAnchor = el.selectFirst(".sc-btn-fav")
-            val favorites: Int? = favAnchor?.selectFirst(".sc-fav-n")
-                ?.text()?.replace(",", "")?.trim()?.toIntOrNull()
-
-            val studioAnchors = el.select(".sc-meta-studios a.sc-tag-studio")
-            val studios: List<String> = studioAnchors.map { it.text().trim() }
-                .filter { it.isNotBlank() }
-
-            val metaSpans: List<String> = el.select(".sc-meta:not(.sc-meta-studios) .sc-tag")
-                .map { it.text().trim() }
-                .filter { it.isNotBlank() }
-
-            val year: Int? = metaSpans.getOrNull(0)
-                ?.takeIf { it.length in 4..5 && it.all(Char::isDigit) }
-                ?.toIntOrNull()
-
-            val viewsRaw: String = metaSpans.getOrNull(1).orEmpty()
-            val views: Long? = parseViews(viewsRaw)
-
-            val episodeCount: Int? = metaSpans.getOrNull(2)
-                ?.substringBefore(' ')
-                ?.filter(Char::isDigit)
-                ?.toIntOrNull()
-
-            val synopsis: String? = el.selectFirst(".sc-desc")
-                ?.text()?.trim()?.takeIf { it.isNotBlank() }
-
-            val genreAnchors = el.select(".sc-genres a[rel=tag]")
-            val genres: List<String> = genreAnchors.map { it.text().trim() }
-                .filter { it.isNotBlank() }
-
-            HanimeInfo(
-                title = title,
-                coverUrl = posterFull,
-                videoCode = slug,
-                duration = episodeCount?.let { "$it eps" },
-                views = viewsRaw.takeIf { it.isNotBlank() },
-                uploadTime = year?.toString(),
-                genre = genres.firstOrNull(),
-                reviews = rating?.let { "%.1f".format(it) },
-                currentArtist = studios.firstOrNull(),
-                itemType = HanimeInfo.NORMAL,
-            )
-        } catch (e: Exception) {
-            Log.w(TAG, "parseSeriesCard failed", e)
-            null
-        }
-    }
-
-    private fun parseViews(raw: String): Long? {
-        val t = raw.trim().replace(",", "")
-        if (t.isEmpty()) return null
-        return when {
-            t.endsWith("K", ignoreCase = true) ->
-                t.dropLast(1).toDoubleOrNull()?.let { (it * 1_000).toLong() }
-            t.endsWith("M", ignoreCase = true) ->
-                t.dropLast(1).toDoubleOrNull()?.let { (it * 1_000_000).toLong() }
-            t.endsWith("B", ignoreCase = true) ->
-                t.dropLast(1).toDoubleOrNull()?.let { (it * 1_000_000_000).toLong() }
-            else -> t.toLongOrNull()
-        }
-    }
-
-    private fun parseSrcsetMap(raw: String): Map<Int, String> {
-        if (raw.isBlank()) return emptyMap()
-        val out = LinkedHashMap<Int, String>()
-        raw.split(',').forEach { part ->
-            val trimmed = part.trim()
-            if (trimmed.isEmpty()) return@forEach
-            val pieces = trimmed.split(' ').filter { it.isNotBlank() }
-            if (pieces.size < 2) return@forEach
-            val url = pieces[0]
-            val token = pieces[1].trim()
-            if (!token.endsWith("w", ignoreCase = true)) return@forEach
-            val width = token.dropLast(1).toIntOrNull() ?: return@forEach
-            if (url.isNotBlank() && width > 0) out[width] = url
-        }
-        return out
-    }
+    private fun SeriesCard.toHanimeInfo(): HanimeInfo = HanimeInfo(
+        title = title,
+        coverUrl = thumbFull.ifBlank { thumbSmall.orEmpty() },
+        videoCode = slug,
+        duration = episodeCount?.let { "$it eps" },
+        views = viewsRaw,
+        uploadTime = year?.toString(),
+        genre = genres.firstOrNull(),
+        reviews = rating?.let { "%.1f".format(it) },
+        currentArtist = studios.firstOrNull(),
+        itemType = HanimeInfo.NORMAL,
+    )
 
     fun parseSeriesDetail(body: String, url: String): VideoLoadingState<SeriesDetailPage> {
         return try {
@@ -738,7 +636,9 @@ object HentaiMamaParser {
                         ?.text()
                         ?.takeIf { it.isNotBlank() },
                     year = metas.getOrNull(0)?.toIntOrNull(),
-                    views = metas.getOrNull(1)?.let { it: String -> parseViews(it) },
+                    views = metas.getOrNull(1)?.let { it: String ->
+                        HentaiMamaHtmlUtils.parseViews(it)
+                    },
                     episodeCount = metas.getOrNull(2)
                         ?.substringBefore(' ')
                         ?.toIntOrNull(),
