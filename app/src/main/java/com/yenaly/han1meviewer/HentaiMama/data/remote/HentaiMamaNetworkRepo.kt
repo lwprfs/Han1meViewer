@@ -27,7 +27,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
+import okhttp3.ResponseBody
 import org.jsoup.Jsoup
+import retrofit2.Response
 
 object HentaiMamaNetworkRepo {
 
@@ -64,18 +66,6 @@ object HentaiMamaNetworkRepo {
             }
         }
         throw lastError ?: IllegalStateException("Retries exhausted")
-    }
-
-    private fun checkResponse(
-        response: retrofit2.Response<okhttp3.ResponseBody>,
-        bodyForChallengeCheck: String? = null,
-    ): Boolean {
-        if (response.isSuccessful) return true
-        if (isChallengeResponse(response.code(), bodyForChallengeCheck)) {
-            Log.w(TAG, "Cloudflare challenge detected (HTTP ${response.code()})")
-            return false
-        }
-        return false
     }
 
     fun getHomePage() = flow {
@@ -239,9 +229,7 @@ object HentaiMamaNetworkRepo {
                 }
 
                 val body = response.body()?.string().orEmpty()
-                if (body.isBlank()) {
-                    return@withRetry PageLoadingState.NoMoreData
-                }
+                if (body.isBlank()) return@withRetry PageLoadingState.NoMoreData
 
                 val doc = Jsoup.parse(body, url)
                 val cards: List<SeriesCard> = HentaiMamaSeriesCardParser.parseCards(doc, url)
@@ -262,11 +250,8 @@ object HentaiMamaNetworkRepo {
                     HentaiMamaParser.parseCardList(body, base)
                 }
 
-                if (videos.isEmpty()) {
-                    PageLoadingState.NoMoreData
-                } else {
-                    PageLoadingState.Success(videos)
-                }
+                if (videos.isEmpty()) PageLoadingState.NoMoreData
+                else PageLoadingState.Success(videos)
             }
             emit(result)
         } catch (e: Exception) {
@@ -296,9 +281,7 @@ object HentaiMamaNetworkRepo {
                 }
 
                 val body = response.body()?.string().orEmpty()
-                if (body.isBlank()) {
-                    return@withRetry emptyList<SeriesCard>()
-                }
+                if (body.isBlank()) return@withRetry emptyList<SeriesCard>()
 
                 HentaiMamaSeriesCardParser.parseCards(Jsoup.parse(body, url), url)
             }
@@ -328,9 +311,7 @@ object HentaiMamaNetworkRepo {
                     throw IllegalStateException("HTTP ${response.code()}")
                 }
                 val body = response.body()?.string().orEmpty()
-                if (body.isBlank()) {
-                    return@withRetry PageLoadingState.NoMoreData
-                }
+                if (body.isBlank()) return@withRetry PageLoadingState.NoMoreData
                 val doc = Jsoup.parse(body, fullUrl)
                 val cards = HentaiMamaSeriesCardParser.parseCards(doc, fullUrl)
                 val videos = cards.map { card ->
@@ -349,11 +330,8 @@ object HentaiMamaNetworkRepo {
                 }.ifEmpty {
                     HentaiMamaParser.parseCardList(body, fullUrl)
                 }
-                if (videos.isEmpty()) {
-                    PageLoadingState.NoMoreData
-                } else {
-                    PageLoadingState.Success(videos)
-                }
+                if (videos.isEmpty()) PageLoadingState.NoMoreData
+                else PageLoadingState.Success(videos)
             }
             emit(result)
         } catch (e: Exception) {
@@ -453,9 +431,7 @@ object HentaiMamaNetworkRepo {
                 }
 
                 val body = response.body()?.string().orEmpty()
-                if (body.isBlank()) {
-                    return@withRetry emptyList<SeriesCard>()
-                }
+                if (body.isBlank()) return@withRetry emptyList<SeriesCard>()
 
                 val base = HentaiMamaNetwork.baseUrl
                 HentaiMamaSeriesCardParser.parseCards(Jsoup.parse(body, base), base)
@@ -535,9 +511,7 @@ object HentaiMamaNetworkRepo {
                     }
                 }
                 val body = response.body()?.string().orEmpty()
-                if (body.isBlank()) {
-                    return@withRetry VideoLoadingState.NoContent
-                }
+                if (body.isBlank()) return@withRetry VideoLoadingState.NoContent
                 val parsed: GenrePage = HentaiMamaGenreParser.parse(
                     body = body,
                     baseUrl = url,
@@ -848,7 +822,7 @@ object HentaiMamaNetworkRepo {
         val path = if (page <= 1) {
             "$base/genre/$slug/"
         } else {
-            "$base/genre/$page/$slug/"
+            "$base/genre/$slug/page/$page/"
         }
         val params = buildList {
             if (!sort.isNullOrBlank()) add("filter=$sort")

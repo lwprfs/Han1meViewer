@@ -2,7 +2,6 @@ package com.yenaly.han1meviewer.HentaiMama.ui.video
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,10 +32,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaImageLoader
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
 
@@ -49,6 +50,9 @@ fun HentaiMamaEpisodeGallery(
     modifier: Modifier = Modifier,
 ) {
     if (previewUrls.isEmpty()) return
+
+    val context = LocalContext.current
+    val imageLoader = remember(context) { HentaiMamaImageLoader.get(context) }
 
     var expandedGallery by remember { mutableStateOf(false) }
     var fullscreenIndex by remember { mutableStateOf<Int?>(null) }
@@ -87,6 +91,7 @@ fun HentaiMamaEpisodeGallery(
                             placeholder = painterResource(R.drawable.h_chan_loading),
                             error = painterResource(R.drawable.h_chan_load_failed),
                             contentScale = ContentScale.Crop,
+                            imageLoader = imageLoader,
                         )
                     }
                 }
@@ -121,6 +126,9 @@ private fun GalleryFullscreenDialog(
     initialIndex: Int,
     onDismiss: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val imageLoader = remember(context) { HentaiMamaImageLoader.get(context) }
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
@@ -159,6 +167,7 @@ private fun GalleryFullscreenDialog(
                         placeholder = painterResource(R.drawable.h_chan_loading),
                         error = painterResource(R.drawable.h_chan_load_failed),
                         contentScale = ContentScale.Fit,
+                        imageLoader = imageLoader,
                     )
                 }
             }

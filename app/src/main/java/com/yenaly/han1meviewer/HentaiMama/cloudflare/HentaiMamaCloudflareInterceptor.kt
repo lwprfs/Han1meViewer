@@ -5,7 +5,10 @@ import android.util.Log
 import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaConstants
 import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
+import okhttp3.Protocol
+import okhttp3.Request
 import okhttp3.Response
+import okhttp3.ResponseBody
 
 class HentaiMamaCloudflareInterceptor(
     private val context: Context
@@ -17,16 +20,11 @@ class HentaiMamaCloudflareInterceptor(
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
-        var response = chain.proceed(request)
+        val response = chain.proceed(request)
 
         val host = request.url.host
-        if (!isTargetHost(host)) {
-            return response
-        }
-
-        if (!isChallenge(response)) {
-            return response
-        }
+        if (!isTargetHost(host)) return response
+        if (!isChallenge(response)) return response
 
         Log.w(TAG, "Cloudflare challenge detected for $request.url")
         response.close()
@@ -62,16 +60,16 @@ class HentaiMamaCloudflareInterceptor(
     }
 
     private fun buildErrorResponse(
-        request: okhttp3.Request,
+        request: Request,
         code: Int,
         message: String,
     ): Response {
         return Response.Builder()
             .request(request)
-            .protocol(okhttp3.Protocol.HTTP_1_1)
+            .protocol(Protocol.HTTP_1_1)
             .code(code)
             .message(message)
-            .body(okhttp3.ResponseBody.create(null, message))
+            .body(ResponseBody.create(null, message))
             .build()
     }
 

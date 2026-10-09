@@ -39,10 +39,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaImageLoader
 import com.yenaly.han1meviewer.HentaiMama.data.model.EpisodeInfo
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
@@ -56,6 +58,8 @@ fun HentaiMamaEpisodeHeader(
     modifier: Modifier = Modifier,
 ) {
     var synopsisExpanded by remember(info.slug) { mutableStateOf(false) }
+    val context = LocalContext.current
+    val imageLoader = remember(context) { HentaiMamaImageLoader.get(context) }
 
     Card(
         modifier = modifier
@@ -87,6 +91,7 @@ fun HentaiMamaEpisodeHeader(
                         placeholder = painterResource(R.drawable.h_chan_loading),
                         error = painterResource(R.drawable.h_chan_load_failed),
                         contentScale = ContentScale.Crop,
+                        imageLoader = imageLoader,
                     )
                 }
 

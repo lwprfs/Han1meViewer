@@ -44,12 +44,14 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaImageLoader
 import com.yenaly.han1meviewer.HentaiMama.data.model.PlaylistCard
 import com.yenaly.han1meviewer.HentaiMama.data.model.PlaylistSortOption
 import com.yenaly.han1meviewer.R
@@ -267,6 +269,9 @@ private fun PlaylistCardItem(
     onClick: () -> Unit,
     onPlay: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val imageLoader = remember(context) { HentaiMamaImageLoader.get(context) }
+
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(14.dp),
@@ -288,6 +293,7 @@ private fun PlaylistCardItem(
                     placeholder = painterResource(R.drawable.h_chan_loading),
                     error = painterResource(R.drawable.h_chan_load_failed),
                     contentScale = ContentScale.Crop,
+                    imageLoader = imageLoader,
                 )
 
                 Surface(

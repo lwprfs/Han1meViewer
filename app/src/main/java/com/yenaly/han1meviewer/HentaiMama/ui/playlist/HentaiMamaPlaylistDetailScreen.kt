@@ -40,18 +40,21 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaImageLoader
 import com.yenaly.han1meviewer.HentaiMama.data.model.PlaylistEpisode
 import com.yenaly.han1meviewer.HentaiMama.data.model.PlaylistHero
 import com.yenaly.han1meviewer.R
@@ -327,6 +330,8 @@ private fun PlaylistHeroBlock(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             if (!hero.ownerAvatar.isNullOrBlank()) {
+                val context = LocalContext.current
+                val imageLoader = remember(context) { HentaiMamaImageLoader.get(context) }
                 RetryableImage(
                     model = hero.ownerAvatar,
                     contentDescription = hero.ownerName,
@@ -336,6 +341,7 @@ private fun PlaylistHeroBlock(
                     placeholder = painterResource(R.drawable.h_chan_loading),
                     error = painterResource(R.drawable.h_chan_load_failed),
                     contentScale = ContentScale.Crop,
+                    imageLoader = imageLoader,
                 )
             }
             Text(
@@ -454,6 +460,9 @@ private fun PlaylistEpisodeRow(
     episode: PlaylistEpisode,
     onClick: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val imageLoader = remember(context) { HentaiMamaImageLoader.get(context) }
+
     Surface(
         onClick = onClick,
         color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -488,6 +497,7 @@ private fun PlaylistEpisodeRow(
                     placeholder = painterResource(R.drawable.h_chan_loading),
                     error = painterResource(R.drawable.h_chan_load_failed),
                     contentScale = ContentScale.Crop,
+                    imageLoader = imageLoader,
                 )
             }
 

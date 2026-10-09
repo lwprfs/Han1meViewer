@@ -17,6 +17,8 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import coil3.ImageLoader
+import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
@@ -31,24 +33,33 @@ fun RetryableImage(
     model: Any,
     modifier: Modifier = Modifier,
     contentDescription: String? = null,
-    retryLimit: Int = 1,
+    retryLimit: Int = 2,
     placeholder: Painter,
     error: Painter,
-    contentScale: ContentScale? = ContentScale.Fit
+    contentScale: ContentScale? = ContentScale.Fit,
+    imageLoader: ImageLoader? = null,
 ) {
     val context = LocalContext.current
-    var retryCount by remember { mutableIntStateOf(0) }
-    var currentModel by remember { mutableStateOf(model) }
+    val resolvedLoader = imageLoader ?: SingletonImageLoader.get(context)
 
-    AsyncImage(
-        model = ImageRequest.Builder(context)
-            .data(currentModel)
+    var retryCount by remember(model) { mutableIntStateOf(0) }
+    val request = remember(model, retryCount) {
+        ImageRequest.Builder(context)
+            .data(model)
             .crossfade(true)
+            .memoryCacheKey("$model#r$retryCount")
+            .diskCacheKey("$model#r$retryCount")
             .listener(
                 onError = { _, result ->
-                    Log.e("CoilError", "Image load failed", result.throwable)
+                    Log.e("CoilError", "Image load failed for $model", result.throwable)
                 }
-            ).build(),
+            )
+            .build()
+    }
+
+    AsyncImage(
+        model = request,
+        imageLoader = resolvedLoader,
         contentDescription = contentDescription,
         placeholder = placeholder,
         error = error,
@@ -56,10 +67,9 @@ fun RetryableImage(
         onError = {
             if (retryCount < retryLimit) {
                 retryCount++
-                currentModel = "$model?retry=$retryCount"
             }
         },
-        contentScale = contentScale ?: ContentScale.Fit
+        contentScale = contentScale ?: ContentScale.Fit,
     )
 }
 
