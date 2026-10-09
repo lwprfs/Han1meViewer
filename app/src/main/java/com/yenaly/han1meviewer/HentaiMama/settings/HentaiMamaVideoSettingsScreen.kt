@@ -136,7 +136,7 @@ fun HentaiMamaVideoSettingsScreen(
                     summary = "Force the app to re-solve the Cloudflare challenge " +
                             "on the next request. Use this if HentaiMama starts " +
                             "rejecting a cookie that has not yet expired.",
-                    iconRes = R.drawable.baseline_dns_24,
+                    iconRes = R.drawable.baseline_hosts_24,
                     onClick = {
                         HentaiMamaCloudflareCookieManager.clearAllCloudflareCookies()
                         HentaiMamaCookieJar().clearCookies()
