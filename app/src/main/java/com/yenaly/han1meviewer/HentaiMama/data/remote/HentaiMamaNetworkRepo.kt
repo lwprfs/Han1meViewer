@@ -23,6 +23,7 @@ import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
@@ -31,39 +32,98 @@ import org.jsoup.Jsoup
 object HentaiMamaNetworkRepo {
 
     private const val TAG = "HentaiMamaRepo"
+    private const val MAX_RETRY_COUNT = 3
+    private const val RETRY_DELAY_MS = 1500L
+
+    private fun isChallengeResponse(code: Int, body: String?): Boolean {
+        if (code != 403) return false
+        if (body.isNullOrBlank()) return true
+        return body.contains("Just a moment", ignoreCase = true) ||
+                body.contains("cf-chl", ignoreCase = true) ||
+                body.contains("__cf_chl", ignoreCase = true) ||
+                body.contains("challenge-platform", ignoreCase = true) ||
+                body.contains("cf_clearance", ignoreCase = true) ||
+                body.contains("Attention Required", ignoreCase = true) ||
+                body.contains("403 Forbidden", ignoreCase = true)
+    }
+
+    private suspend fun <T> withRetry(
+        maxRetries: Int = MAX_RETRY_COUNT,
+        operation: suspend () -> T,
+    ): T {
+        var lastError: Throwable? = null
+        repeat(maxRetries) { attempt ->
+            try {
+                return operation()
+            } catch (e: Exception) {
+                lastError = e
+                Log.w(TAG, "Attempt ${attempt + 1}/$maxRetries failed: ${e.message}")
+                if (attempt < maxRetries - 1) {
+                    delay(RETRY_DELAY_MS * (attempt + 1))
+                }
+            }
+        }
+        throw lastError ?: IllegalStateException("Retries exhausted")
+    }
+
+    private fun checkResponse(
+        response: retrofit2.Response<okhttp3.ResponseBody>,
+        bodyForChallengeCheck: String? = null,
+    ): Boolean {
+        if (response.isSuccessful) return true
+        if (isChallengeResponse(response.code(), bodyForChallengeCheck)) {
+            Log.w(TAG, "Cloudflare challenge detected (HTTP ${response.code()})")
+            return false
+        }
+        return false
+    }
 
     fun getHomePage() = flow {
         emit(WebsiteState.Loading)
         try {
-            val popularResp = HentaiMamaNetwork.service.getPopularVideos()
-            val popularBody = if (popularResp.isSuccessful) {
-                popularResp.body()?.string().orEmpty()
-            } else ""
+            val result = withRetry {
+                val popularResp = HentaiMamaNetwork.service.getPopularVideos()
+                val popularBody = if (popularResp.isSuccessful) {
+                    popularResp.body()?.string().orEmpty()
+                } else {
+                    val errBody = runCatching { popularResp.errorBody()?.string() }.getOrNull()
+                    if (isChallengeResponse(popularResp.code(), errBody)) {
+                        throw IllegalStateException("Cloudflare challenge on popular videos")
+                    }
+                    ""
+                }
 
-            val latestResp = HentaiMamaNetwork.service.getLatestVideos()
-            val latestBody = if (latestResp.isSuccessful) {
-                latestResp.body()?.string().orEmpty()
-            } else ""
+                val latestResp = HentaiMamaNetwork.service.getLatestVideos()
+                val latestBody = if (latestResp.isSuccessful) {
+                    latestResp.body()?.string().orEmpty()
+                } else {
+                    val errBody = runCatching { latestResp.errorBody()?.string() }.getOrNull()
+                    if (isChallengeResponse(latestResp.code(), errBody)) {
+                        throw IllegalStateException("Cloudflare challenge on latest videos")
+                    }
+                    ""
+                }
 
-            val popularState = HentaiMamaParser.parseVideoList(popularBody)
-            val latestState = HentaiMamaParser.parseVideoList(latestBody)
+                val popularState = HentaiMamaParser.parseVideoList(popularBody)
+                val latestState = HentaiMamaParser.parseVideoList(latestBody)
 
-            val popular = (popularState as? PageLoadingState.Success)?.info ?: emptyList()
-            val latest = (latestState as? PageLoadingState.Success)?.info ?: popular
+                val popular = (popularState as? PageLoadingState.Success)?.info ?: emptyList()
+                val latest = (latestState as? PageLoadingState.Success)?.info ?: popular
 
-            if (popular.isEmpty() && latest.isEmpty()) {
-                emit(WebsiteState.Error(IllegalStateException("No videos found")))
-            } else {
-                emit(
-                    WebsiteState.Success(
-                        HentaiMamaHomePage(
-                            popularVideos = popular,
-                            latestVideos = latest,
-                        )
+                if (popular.isEmpty() && latest.isEmpty()) {
+                    throw IllegalStateException("No videos found")
+                }
+
+                WebsiteState.Success(
+                    HentaiMamaHomePage(
+                        popularVideos = popular,
+                        latestVideos = latest,
                     )
                 )
             }
+            emit(result)
         } catch (e: Exception) {
+            Log.e(TAG, "getHomePage error", e)
             emit(WebsiteState.Error(e))
         }
     }.flowOn(Dispatchers.IO)
@@ -107,16 +167,22 @@ object HentaiMamaNetworkRepo {
         }
 
         return try {
-            val response = HentaiMamaNetwork.service.getVideoDetail(finalUrl)
-            if (!response.isSuccessful) {
-                Log.w(TAG, "getCategoryVideos HTTP ${response.code()} for ${category.key}")
-                return emptyList()
-            }
-            val body = response.body()?.string().orEmpty()
-            if (body.isBlank()) return emptyList()
-            when (val state = HentaiMamaParser.parseSearchResults(body, isFilterSearch = true)) {
-                is PageLoadingState.Success -> state.info
-                else -> emptyList()
+            withRetry {
+                val response = HentaiMamaNetwork.service.getVideoDetail(finalUrl)
+                if (!response.isSuccessful) {
+                    val errBody = runCatching { response.errorBody()?.string() }.getOrNull()
+                    if (isChallengeResponse(response.code(), errBody)) {
+                        throw IllegalStateException("Cloudflare challenge on category ${category.key}")
+                    }
+                    Log.w(TAG, "getCategoryVideos HTTP ${response.code()} for ${category.key}")
+                    return@withRetry emptyList()
+                }
+                val body = response.body()?.string().orEmpty()
+                if (body.isBlank()) return@withRetry emptyList()
+                when (val state = HentaiMamaParser.parseSearchResults(body, isFilterSearch = true)) {
+                    is PageLoadingState.Success -> state.info
+                    else -> emptyList()
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "getCategoryVideos failed for '${category.key}'", e)
@@ -127,18 +193,26 @@ object HentaiMamaNetworkRepo {
     fun getLatestVideos(page: Int) = flow {
         emit(PageLoadingState.Loading)
         try {
-            val response = if (page <= 1) {
-                HentaiMamaNetwork.service.getLatestVideos()
-            } else {
-                HentaiMamaNetwork.service.getLatestVideosPaged(page)
+            val result = withRetry {
+                val response = if (page <= 1) {
+                    HentaiMamaNetwork.service.getLatestVideos()
+                } else {
+                    HentaiMamaNetwork.service.getLatestVideosPaged(page)
+                }
+                if (response.isSuccessful) {
+                    val body = response.body()?.string() ?: EMPTY_STRING
+                    HentaiMamaParser.parseVideoList(body)
+                } else {
+                    val errBody = runCatching { response.errorBody()?.string() }.getOrNull()
+                    if (isChallengeResponse(response.code(), errBody)) {
+                        throw IllegalStateException("Cloudflare challenge on latest videos page $page")
+                    }
+                    PageLoadingState.Error(IllegalStateException("Failed: ${response.code()}"))
+                }
             }
-            if (response.isSuccessful) {
-                val body = response.body()?.string() ?: EMPTY_STRING
-                emit(HentaiMamaParser.parseVideoList(body))
-            } else {
-                emit(PageLoadingState.Error(IllegalStateException("Failed: ${response.code()}")))
-            }
+            emit(result)
         } catch (e: Exception) {
+            Log.e(TAG, "getLatestVideos error", e)
             emit(PageLoadingState.Error(e))
         }
     }.flowOn(Dispatchers.IO)
@@ -146,50 +220,55 @@ object HentaiMamaNetworkRepo {
     fun searchVideos(page: Int, query: String, sort: String? = null) = flow {
         emit(PageLoadingState.Loading)
         try {
-            val base = HentaiMamaNetwork.baseUrl.trimEnd('/')
-            val encoded = java.net.URLEncoder.encode(query, "UTF-8")
-            val url = if (page <= 1) {
-                "$base/?s=$encoded"
-            } else {
-                "$base/page/$page/?s=$encoded"
-            }
+            val result = withRetry {
+                val base = HentaiMamaNetwork.baseUrl.trimEnd('/')
+                val encoded = java.net.URLEncoder.encode(query, "UTF-8")
+                val url = if (page <= 1) {
+                    "$base/?s=$encoded"
+                } else {
+                    "$base/page/$page/?s=$encoded"
+                }
 
-            val response = HentaiMamaNetwork.service.getVideoDetail(url)
-            if (!response.isSuccessful) {
-                emit(PageLoadingState.Error(IllegalStateException("Search failed: ${response.code()}")))
-                return@flow
-            }
+                val response = HentaiMamaNetwork.service.getVideoDetail(url)
+                if (!response.isSuccessful) {
+                    val errBody = runCatching { response.errorBody()?.string() }.getOrNull()
+                    if (isChallengeResponse(response.code(), errBody)) {
+                        throw IllegalStateException("Cloudflare challenge on search page $page")
+                    }
+                    throw IllegalStateException("Search failed: ${response.code()}")
+                }
 
-            val body = response.body()?.string().orEmpty()
-            if (body.isBlank()) {
-                emit(PageLoadingState.NoMoreData)
-                return@flow
-            }
+                val body = response.body()?.string().orEmpty()
+                if (body.isBlank()) {
+                    return@withRetry PageLoadingState.NoMoreData
+                }
 
-            val doc = Jsoup.parse(body, url)
-            val cards: List<SeriesCard> = HentaiMamaSeriesCardParser.parseCards(doc, url)
-            val videos = cards.map { card ->
-                HanimeInfo(
-                    title = card.title,
-                    coverUrl = card.thumbFull.ifBlank { card.thumbSmall.orEmpty() },
-                    videoCode = card.slug,
-                    duration = card.episodeCount?.let { "$it eps" },
-                    views = card.viewsRaw,
-                    uploadTime = card.year?.toString(),
-                    genre = card.genres.firstOrNull(),
-                    reviews = card.rating?.let { "%.1f".format(it) },
-                    currentArtist = card.studios.firstOrNull(),
-                    itemType = HanimeInfo.NORMAL,
-                )
-            }.ifEmpty {
-                HentaiMamaParser.parseCardList(body, base)
-            }
+                val doc = Jsoup.parse(body, url)
+                val cards: List<SeriesCard> = HentaiMamaSeriesCardParser.parseCards(doc, url)
+                val videos = cards.map { card ->
+                    HanimeInfo(
+                        title = card.title,
+                        coverUrl = card.thumbFull.ifBlank { card.thumbSmall.orEmpty() },
+                        videoCode = card.slug,
+                        duration = card.episodeCount?.let { "$it eps" },
+                        views = card.viewsRaw,
+                        uploadTime = card.year?.toString(),
+                        genre = card.genres.firstOrNull(),
+                        reviews = card.rating?.let { "%.1f".format(it) },
+                        currentArtist = card.studios.firstOrNull(),
+                        itemType = HanimeInfo.NORMAL,
+                    )
+                }.ifEmpty {
+                    HentaiMamaParser.parseCardList(body, base)
+                }
 
-            if (videos.isEmpty()) {
-                emit(PageLoadingState.NoMoreData)
-                return@flow
+                if (videos.isEmpty()) {
+                    PageLoadingState.NoMoreData
+                } else {
+                    PageLoadingState.Success(videos)
+                }
             }
-            emit(PageLoadingState.Success(videos))
+            emit(result)
         } catch (e: Exception) {
             Log.e(TAG, "searchVideos failed", e)
             emit(PageLoadingState.Error(e))
@@ -198,28 +277,32 @@ object HentaiMamaNetworkRepo {
 
     fun searchSeriesCards(page: Int, query: String) = flow {
         try {
-            val base = HentaiMamaNetwork.baseUrl.trimEnd('/')
-            val encoded = java.net.URLEncoder.encode(query, "UTF-8")
-            val url = if (page <= 1) {
-                "$base/?s=$encoded"
-            } else {
-                "$base/page/$page/?s=$encoded"
-            }
+            val result = withRetry {
+                val base = HentaiMamaNetwork.baseUrl.trimEnd('/')
+                val encoded = java.net.URLEncoder.encode(query, "UTF-8")
+                val url = if (page <= 1) {
+                    "$base/?s=$encoded"
+                } else {
+                    "$base/page/$page/?s=$encoded"
+                }
 
-            val response = HentaiMamaNetwork.service.getVideoDetail(url)
-            if (!response.isSuccessful) {
-                emit(emptyList<SeriesCard>())
-                return@flow
-            }
+                val response = HentaiMamaNetwork.service.getVideoDetail(url)
+                if (!response.isSuccessful) {
+                    val errBody = runCatching { response.errorBody()?.string() }.getOrNull()
+                    if (isChallengeResponse(response.code(), errBody)) {
+                        throw IllegalStateException("Cloudflare challenge on search cards page $page")
+                    }
+                    return@withRetry emptyList<SeriesCard>()
+                }
 
-            val body = response.body()?.string().orEmpty()
-            if (body.isBlank()) {
-                emit(emptyList<SeriesCard>())
-                return@flow
-            }
+                val body = response.body()?.string().orEmpty()
+                if (body.isBlank()) {
+                    return@withRetry emptyList<SeriesCard>()
+                }
 
-            val cards = HentaiMamaSeriesCardParser.parseCards(Jsoup.parse(body, url), url)
-            emit(cards)
+                HentaiMamaSeriesCardParser.parseCards(Jsoup.parse(body, url), url)
+            }
+            emit(result)
         } catch (e: Exception) {
             Log.e(TAG, "searchSeriesCards failed", e)
             emit(emptyList<SeriesCard>())
@@ -234,40 +317,45 @@ object HentaiMamaNetworkRepo {
     ) = flow {
         emit(PageLoadingState.Loading)
         try {
-            val fullUrl = buildGenreSearchUrl(slug, query, page, sort)
-            val response = HentaiMamaNetwork.service.getVideoDetail(fullUrl)
-            if (!response.isSuccessful) {
-                emit(PageLoadingState.Error(IllegalStateException("HTTP ${response.code()}")))
-                return@flow
+            val result = withRetry {
+                val fullUrl = buildGenreSearchUrl(slug, query, page, sort)
+                val response = HentaiMamaNetwork.service.getVideoDetail(fullUrl)
+                if (!response.isSuccessful) {
+                    val errBody = runCatching { response.errorBody()?.string() }.getOrNull()
+                    if (isChallengeResponse(response.code(), errBody)) {
+                        throw IllegalStateException("Cloudflare challenge on genre search page $page")
+                    }
+                    throw IllegalStateException("HTTP ${response.code()}")
+                }
+                val body = response.body()?.string().orEmpty()
+                if (body.isBlank()) {
+                    return@withRetry PageLoadingState.NoMoreData
+                }
+                val doc = Jsoup.parse(body, fullUrl)
+                val cards = HentaiMamaSeriesCardParser.parseCards(doc, fullUrl)
+                val videos = cards.map { card ->
+                    HanimeInfo(
+                        title = card.title,
+                        coverUrl = card.thumbFull.ifBlank { card.thumbSmall.orEmpty() },
+                        videoCode = card.slug,
+                        duration = card.episodeCount?.let { "$it eps" },
+                        views = card.viewsRaw,
+                        uploadTime = card.year?.toString(),
+                        genre = card.genres.firstOrNull(),
+                        reviews = card.rating?.let { "%.1f".format(it) },
+                        currentArtist = card.studios.firstOrNull(),
+                        itemType = HanimeInfo.NORMAL,
+                    )
+                }.ifEmpty {
+                    HentaiMamaParser.parseCardList(body, fullUrl)
+                }
+                if (videos.isEmpty()) {
+                    PageLoadingState.NoMoreData
+                } else {
+                    PageLoadingState.Success(videos)
+                }
             }
-            val body = response.body()?.string().orEmpty()
-            if (body.isBlank()) {
-                emit(PageLoadingState.NoMoreData)
-                return@flow
-            }
-            val doc = Jsoup.parse(body, fullUrl)
-            val cards = HentaiMamaSeriesCardParser.parseCards(doc, fullUrl)
-            val videos = cards.map { card ->
-                HanimeInfo(
-                    title = card.title,
-                    coverUrl = card.thumbFull.ifBlank { card.thumbSmall.orEmpty() },
-                    videoCode = card.slug,
-                    duration = card.episodeCount?.let { "$it eps" },
-                    views = card.viewsRaw,
-                    uploadTime = card.year?.toString(),
-                    genre = card.genres.firstOrNull(),
-                    reviews = card.rating?.let { "%.1f".format(it) },
-                    currentArtist = card.studios.firstOrNull(),
-                    itemType = HanimeInfo.NORMAL,
-                )
-            }.ifEmpty {
-                HentaiMamaParser.parseCardList(body, fullUrl)
-            }
-            if (videos.isEmpty()) {
-                emit(PageLoadingState.NoMoreData)
-            } else {
-                emit(PageLoadingState.Success(videos))
-            }
+            emit(result)
         } catch (e: Exception) {
             Log.e(TAG, "searchGenreVideos failed", e)
             emit(PageLoadingState.Error(e))
@@ -283,35 +371,42 @@ object HentaiMamaNetworkRepo {
     ) = flow {
         emit(PageLoadingState.Loading)
         try {
-            val genres = genre?.takeIf { it.isNotBlank() }?.let { listOf(it) }
-            val studios = producer?.takeIf { it.isNotBlank() }?.let { listOf(it) }
-            val years = year?.takeIf { it.isNotBlank() }?.let { listOf(it) }
-            val filterOrder = order?.takeIf { it.isNotBlank() }
+            val result = withRetry {
+                val genres = genre?.takeIf { it.isNotBlank() }?.let { listOf(it) }
+                val studios = producer?.takeIf { it.isNotBlank() }?.let { listOf(it) }
+                val years = year?.takeIf { it.isNotBlank() }?.let { listOf(it) }
+                val filterOrder = order?.takeIf { it.isNotBlank() }
 
-            val response = if (page <= 1) {
-                HentaiMamaNetwork.service.getFilteredVideos(
-                    filter = filterOrder,
-                    genres = genres,
-                    years = years,
-                    studios = studios,
-                )
-            } else {
-                HentaiMamaNetwork.service.getFilteredVideosPaged(
-                    page = page,
-                    filter = filterOrder,
-                    genres = genres,
-                    years = years,
-                    studios = studios,
-                )
-            }
+                val response = if (page <= 1) {
+                    HentaiMamaNetwork.service.getFilteredVideos(
+                        filter = filterOrder,
+                        genres = genres,
+                        years = years,
+                        studios = studios,
+                    )
+                } else {
+                    HentaiMamaNetwork.service.getFilteredVideosPaged(
+                        page = page,
+                        filter = filterOrder,
+                        genres = genres,
+                        years = years,
+                        studios = studios,
+                    )
+                }
 
-            if (response.isSuccessful) {
+                if (!response.isSuccessful) {
+                    val errBody = runCatching { response.errorBody()?.string() }.getOrNull()
+                    if (isChallengeResponse(response.code(), errBody)) {
+                        throw IllegalStateException("Cloudflare challenge on filter page $page")
+                    }
+                    throw IllegalStateException("Filter failed: ${response.code()}")
+                }
+
                 val body = response.body()?.string() ?: EMPTY_STRING
                 val state = HentaiMamaParser.parseSearchResults(body, isFilterSearch = true)
-                emit(enrichWithPagination(state, body))
-            } else {
-                emit(PageLoadingState.Error(IllegalStateException("Filter failed: ${response.code()}")))
+                enrichWithPagination(state, body)
             }
+            emit(result)
         } catch (e: Exception) {
             Log.e(TAG, "filterVideos error", e)
             emit(PageLoadingState.Error(e))
@@ -326,42 +421,46 @@ object HentaiMamaNetworkRepo {
         order: String? = null,
     ) = flow {
         try {
-            val genres = genre?.takeIf { it.isNotBlank() }?.let { listOf(it) }
-            val studios = producer?.takeIf { it.isNotBlank() }?.let { listOf(it) }
-            val years = year?.takeIf { it.isNotBlank() }?.let { listOf(it) }
-            val filterOrder = order?.takeIf { it.isNotBlank() }
+            val result = withRetry {
+                val genres = genre?.takeIf { it.isNotBlank() }?.let { listOf(it) }
+                val studios = producer?.takeIf { it.isNotBlank() }?.let { listOf(it) }
+                val years = year?.takeIf { it.isNotBlank() }?.let { listOf(it) }
+                val filterOrder = order?.takeIf { it.isNotBlank() }
 
-            val response = if (page <= 1) {
-                HentaiMamaNetwork.service.getFilteredVideos(
-                    filter = filterOrder,
-                    genres = genres,
-                    years = years,
-                    studios = studios,
-                )
-            } else {
-                HentaiMamaNetwork.service.getFilteredVideosPaged(
-                    page = page,
-                    filter = filterOrder,
-                    genres = genres,
-                    years = years,
-                    studios = studios,
-                )
+                val response = if (page <= 1) {
+                    HentaiMamaNetwork.service.getFilteredVideos(
+                        filter = filterOrder,
+                        genres = genres,
+                        years = years,
+                        studios = studios,
+                    )
+                } else {
+                    HentaiMamaNetwork.service.getFilteredVideosPaged(
+                        page = page,
+                        filter = filterOrder,
+                        genres = genres,
+                        years = years,
+                        studios = studios,
+                    )
+                }
+
+                if (!response.isSuccessful) {
+                    val errBody = runCatching { response.errorBody()?.string() }.getOrNull()
+                    if (isChallengeResponse(response.code(), errBody)) {
+                        throw IllegalStateException("Cloudflare challenge on filter cards page $page")
+                    }
+                    return@withRetry emptyList<SeriesCard>()
+                }
+
+                val body = response.body()?.string().orEmpty()
+                if (body.isBlank()) {
+                    return@withRetry emptyList<SeriesCard>()
+                }
+
+                val base = HentaiMamaNetwork.baseUrl
+                HentaiMamaSeriesCardParser.parseCards(Jsoup.parse(body, base), base)
             }
-
-            if (!response.isSuccessful) {
-                emit(emptyList<SeriesCard>())
-                return@flow
-            }
-
-            val body = response.body()?.string().orEmpty()
-            if (body.isBlank()) {
-                emit(emptyList<SeriesCard>())
-                return@flow
-            }
-
-            val base = HentaiMamaNetwork.baseUrl
-            val cards = HentaiMamaSeriesCardParser.parseCards(Jsoup.parse(body, base), base)
-            emit(cards)
+            emit(result)
         } catch (e: Exception) {
             Log.e(TAG, "filterSeriesCards failed", e)
             emit(emptyList<SeriesCard>())
@@ -375,27 +474,33 @@ object HentaiMamaNetworkRepo {
         layout: GenreLayout = GenreLayout.DETAILS,
     ): GenrePage? {
         return try {
-            val url = HentaiMamaGenreParser.buildGenreUrl(
-                baseUrl = HentaiMamaNetwork.baseUrl,
-                slug = slug,
-                sort = sort,
-                layout = layout,
-                page = page,
-            )
-            val response = HentaiMamaNetwork.service.getVideoDetail(url)
-            if (!response.isSuccessful) {
-                Log.w(TAG, "fetchGenrePage HTTP ${response.code()} for $url")
-                return null
+            withRetry {
+                val url = HentaiMamaGenreParser.buildGenreUrl(
+                    baseUrl = HentaiMamaNetwork.baseUrl,
+                    slug = slug,
+                    sort = sort,
+                    layout = layout,
+                    page = page,
+                )
+                val response = HentaiMamaNetwork.service.getVideoDetail(url)
+                if (!response.isSuccessful) {
+                    val errBody = runCatching { response.errorBody()?.string() }.getOrNull()
+                    if (isChallengeResponse(response.code(), errBody)) {
+                        throw IllegalStateException("Cloudflare challenge on genre page $slug")
+                    }
+                    Log.w(TAG, "fetchGenrePage HTTP ${response.code()} for $url")
+                    return@withRetry null
+                }
+                val body = response.body()?.string().orEmpty()
+                if (body.isBlank()) return@withRetry null
+                HentaiMamaGenreParser.parse(
+                    body = body,
+                    baseUrl = url,
+                    slug = slug,
+                    sort = sort,
+                    layout = layout,
+                )
             }
-            val body = response.body()?.string().orEmpty()
-            if (body.isBlank()) return null
-            HentaiMamaGenreParser.parse(
-                body = body,
-                baseUrl = url,
-                slug = slug,
-                sort = sort,
-                layout = layout,
-            )
         } catch (e: Exception) {
             Log.e(TAG, "fetchGenrePage failed for $slug", e)
             null
@@ -410,38 +515,39 @@ object HentaiMamaNetworkRepo {
     ) = flow {
         emit(VideoLoadingState.Loading)
         try {
-            val url = HentaiMamaGenreParser.buildGenreUrl(
-                baseUrl = HentaiMamaNetwork.baseUrl,
-                slug = slug,
-                sort = sort,
-                layout = layout,
-                page = page,
-            )
-            val response = HentaiMamaNetwork.service.getVideoDetail(url)
-            if (!response.isSuccessful) {
-                when (response.code()) {
-                    404 -> emit(VideoLoadingState.NoContent)
-                    else -> emit(
-                        VideoLoadingState.Error(
-                            IllegalStateException("HTTP ${response.code()}")
-                        )
-                    )
+            val result = withRetry {
+                val url = HentaiMamaGenreParser.buildGenreUrl(
+                    baseUrl = HentaiMamaNetwork.baseUrl,
+                    slug = slug,
+                    sort = sort,
+                    layout = layout,
+                    page = page,
+                )
+                val response = HentaiMamaNetwork.service.getVideoDetail(url)
+                if (!response.isSuccessful) {
+                    val errBody = runCatching { response.errorBody()?.string() }.getOrNull()
+                    if (isChallengeResponse(response.code(), errBody)) {
+                        throw IllegalStateException("Cloudflare challenge on genre page flow $slug")
+                    }
+                    return@withRetry when (response.code()) {
+                        404 -> VideoLoadingState.NoContent
+                        else -> VideoLoadingState.Error(IllegalStateException("HTTP ${response.code()}"))
+                    }
                 }
-                return@flow
+                val body = response.body()?.string().orEmpty()
+                if (body.isBlank()) {
+                    return@withRetry VideoLoadingState.NoContent
+                }
+                val parsed: GenrePage = HentaiMamaGenreParser.parse(
+                    body = body,
+                    baseUrl = url,
+                    slug = slug,
+                    sort = sort,
+                    layout = layout,
+                )
+                VideoLoadingState.Success(parsed)
             }
-            val body = response.body()?.string().orEmpty()
-            if (body.isBlank()) {
-                emit(VideoLoadingState.NoContent)
-                return@flow
-            }
-            val parsed: GenrePage = HentaiMamaGenreParser.parse(
-                body = body,
-                baseUrl = url,
-                slug = slug,
-                sort = sort,
-                layout = layout,
-            )
-            emit(VideoLoadingState.Success(parsed))
+            emit(result)
         } catch (e: Exception) {
             Log.e(TAG, "getGenrePageFlow failed", e)
             emit(VideoLoadingState.Error(e))
@@ -450,11 +556,19 @@ object HentaiMamaNetworkRepo {
 
     suspend fun fetchGenreNextPage(nextUrl: String, slug: String): GenrePage? {
         return try {
-            val response = HentaiMamaNetwork.service.getVideoDetail(nextUrl)
-            if (!response.isSuccessful) return null
-            val body = response.body()?.string().orEmpty()
-            if (body.isBlank()) return null
-            HentaiMamaGenreParser.parse(body = body, baseUrl = nextUrl, slug = slug)
+            withRetry {
+                val response = HentaiMamaNetwork.service.getVideoDetail(nextUrl)
+                if (!response.isSuccessful) {
+                    val errBody = runCatching { response.errorBody()?.string() }.getOrNull()
+                    if (isChallengeResponse(response.code(), errBody)) {
+                        throw IllegalStateException("Cloudflare challenge on genre next page")
+                    }
+                    return@withRetry null
+                }
+                val body = response.body()?.string().orEmpty()
+                if (body.isBlank()) return@withRetry null
+                HentaiMamaGenreParser.parse(body = body, baseUrl = nextUrl, slug = slug)
+            }
         } catch (e: Exception) {
             Log.e(TAG, "fetchGenreNextPage failed", e)
             null
@@ -464,23 +578,29 @@ object HentaiMamaNetworkRepo {
     fun getVideoDetail(url: String) = flow {
         emit(VideoLoadingState.Loading)
         try {
-            val full = if (url.startsWith("http")) url else HentaiMamaNetwork.normalizeUrl(url)
-            val response = HentaiMamaNetwork.service.getVideoDetail(full)
-            if (response.isSuccessful) {
-                val body = response.body()?.string() ?: EMPTY_STRING
-                Log.d(TAG, "getVideoDetail: len=${body.length} url=$full")
-                emit(HentaiMamaParser.parseVideoDetail(body, full))
-            } else {
-                when (response.code()) {
-                    404 -> emit(VideoLoadingState.NoContent)
-                    else -> emit(
-                        VideoLoadingState.Error(
+            val result = withRetry {
+                val full = if (url.startsWith("http")) url else HentaiMamaNetwork.normalizeUrl(url)
+                val response = HentaiMamaNetwork.service.getVideoDetail(full)
+                if (response.isSuccessful) {
+                    val body = response.body()?.string() ?: EMPTY_STRING
+                    Log.d(TAG, "getVideoDetail: len=${body.length} url=$full")
+                    HentaiMamaParser.parseVideoDetail(body, full)
+                } else {
+                    val errBody = runCatching { response.errorBody()?.string() }.getOrNull()
+                    if (isChallengeResponse(response.code(), errBody)) {
+                        throw IllegalStateException("Cloudflare challenge on video detail")
+                    }
+                    when (response.code()) {
+                        404 -> VideoLoadingState.NoContent
+                        else -> VideoLoadingState.Error(
                             IllegalStateException("Failed: ${response.code()}")
                         )
-                    )
+                    }
                 }
             }
+            emit(result)
         } catch (e: Exception) {
+            Log.e(TAG, "getVideoDetail failed", e)
             emit(VideoLoadingState.Error(e))
         }
     }.flowOn(Dispatchers.IO)
@@ -488,23 +608,29 @@ object HentaiMamaNetworkRepo {
     fun getSeriesDetail(url: String) = flow {
         emit(VideoLoadingState.Loading)
         try {
-            val full = if (url.startsWith("http")) url else HentaiMamaNetwork.normalizeUrl(url)
-            val response = HentaiMamaNetwork.service.getVideoDetail(full)
-            if (response.isSuccessful) {
-                val body = response.body()?.string() ?: EMPTY_STRING
-                Log.d(TAG, "getSeriesDetail: len=${body.length} url=$full")
-                emit(HentaiMamaParser.parseSeriesDetail(body, full))
-            } else {
-                when (response.code()) {
-                    404 -> emit(VideoLoadingState.NoContent)
-                    else -> emit(
-                        VideoLoadingState.Error(
+            val result = withRetry {
+                val full = if (url.startsWith("http")) url else HentaiMamaNetwork.normalizeUrl(url)
+                val response = HentaiMamaNetwork.service.getVideoDetail(full)
+                if (response.isSuccessful) {
+                    val body = response.body()?.string() ?: EMPTY_STRING
+                    Log.d(TAG, "getSeriesDetail: len=${body.length} url=$full")
+                    HentaiMamaParser.parseSeriesDetail(body, full)
+                } else {
+                    val errBody = runCatching { response.errorBody()?.string() }.getOrNull()
+                    if (isChallengeResponse(response.code(), errBody)) {
+                        throw IllegalStateException("Cloudflare challenge on series detail")
+                    }
+                    when (response.code()) {
+                        404 -> VideoLoadingState.NoContent
+                        else -> VideoLoadingState.Error(
                             IllegalStateException("Failed: ${response.code()}")
                         )
-                    )
+                    }
                 }
             }
+            emit(result)
         } catch (e: Exception) {
+            Log.e(TAG, "getSeriesDetail failed", e)
             emit(VideoLoadingState.Error(e))
         }
     }.flowOn(Dispatchers.IO)
@@ -542,11 +668,21 @@ object HentaiMamaNetworkRepo {
 
     suspend fun getAzBar(url: String): List<AzLink> = withContext(Dispatchers.IO) {
         try {
-            val full = if (url.startsWith("http")) url else HentaiMamaNetwork.normalizeUrl(url)
-            val resp = HentaiMamaNetwork.service.getVideoDetail(full)
-            val body = if (resp.isSuccessful) resp.body()?.string().orEmpty() else ""
-            if (body.isBlank()) emptyList()
-            else HentaiMamaSeriesCardParser.parseAzBar(Jsoup.parse(body, full))
+            withRetry {
+                val full = if (url.startsWith("http")) url else HentaiMamaNetwork.normalizeUrl(url)
+                val resp = HentaiMamaNetwork.service.getVideoDetail(full)
+                val body = if (resp.isSuccessful) {
+                    resp.body()?.string().orEmpty()
+                } else {
+                    val errBody = runCatching { resp.errorBody()?.string() }.getOrNull()
+                    if (isChallengeResponse(resp.code(), errBody)) {
+                        throw IllegalStateException("Cloudflare challenge on AZ bar")
+                    }
+                    ""
+                }
+                if (body.isBlank()) emptyList()
+                else HentaiMamaSeriesCardParser.parseAzBar(Jsoup.parse(body, full))
+            }
         } catch (e: Exception) {
             Log.e(TAG, "getAzBar failed", e)
             emptyList()
@@ -561,32 +697,40 @@ object HentaiMamaNetworkRepo {
         page: Int = 1,
     ): List<SeriesCard> = withContext(Dispatchers.IO) {
         try {
-            val response = if (page <= 1) {
-                HentaiMamaNetwork.service.getFilteredVideos(
-                    filter = sort,
-                    genres = genres.takeIf { it.isNotEmpty() },
-                    years = years.map { it.toString() }.takeIf { it.isNotEmpty() },
-                    studios = studios.takeIf { it.isNotEmpty() },
-                )
-            } else {
-                HentaiMamaNetwork.service.getFilteredVideosPaged(
-                    page = page,
-                    filter = sort,
-                    genres = genres.takeIf { it.isNotEmpty() },
-                    years = years.map { it.toString() }.takeIf { it.isNotEmpty() },
-                    studios = studios.takeIf { it.isNotEmpty() },
-                )
+            withRetry {
+                val response = if (page <= 1) {
+                    HentaiMamaNetwork.service.getFilteredVideos(
+                        filter = sort,
+                        genres = genres.takeIf { it.isNotEmpty() },
+                        years = years.map { it.toString() }.takeIf { it.isNotEmpty() },
+                        studios = studios.takeIf { it.isNotEmpty() },
+                    )
+                } else {
+                    HentaiMamaNetwork.service.getFilteredVideosPaged(
+                        page = page,
+                        filter = sort,
+                        genres = genres.takeIf { it.isNotEmpty() },
+                        years = years.map { it.toString() }.takeIf { it.isNotEmpty() },
+                        studios = studios.takeIf { it.isNotEmpty() },
+                    )
+                }
+                if (!response.isSuccessful) {
+                    val errBody = runCatching { response.errorBody()?.string() }.getOrNull()
+                    if (isChallengeResponse(response.code(), errBody)) {
+                        throw IllegalStateException("Cloudflare challenge on advance search")
+                    }
+                    return@withRetry emptyList()
+                }
+                val body = response.body()?.string().orEmpty()
+                if (body.isBlank()) return@withRetry emptyList()
+                val base = HentaiMamaNetwork.baseUrl
+                val cards = HentaiMamaSeriesCardParser.parseCards(Jsoup.parse(body, base), base)
+                if (cards.isNotEmpty()) {
+                    runCatching { HentaiMamaSeriesRepo.upsertAll(cards, "advance") }
+                        .onFailure { Log.w(TAG, "advance-search persistence skipped: ${it.message}") }
+                }
+                cards
             }
-            if (!response.isSuccessful) return@withContext emptyList()
-            val body = response.body()?.string().orEmpty()
-            if (body.isBlank()) return@withContext emptyList()
-            val base = HentaiMamaNetwork.baseUrl
-            val cards = HentaiMamaSeriesCardParser.parseCards(Jsoup.parse(body, base), base)
-            if (cards.isNotEmpty()) {
-                runCatching { HentaiMamaSeriesRepo.upsertAll(cards, "advance") }
-                    .onFailure { Log.w(TAG, "advance-search persistence skipped: ${it.message}") }
-            }
-            cards
         } catch (e: Exception) {
             Log.e(TAG, "fetchAdvanceSearch failed", e)
             emptyList()
@@ -704,7 +848,7 @@ object HentaiMamaNetworkRepo {
         val path = if (page <= 1) {
             "$base/genre/$slug/"
         } else {
-            "$base/genre/$slug/page/$page/"
+            "$base/genre/$page/$slug/"
         }
         val params = buildList {
             if (!sort.isNullOrBlank()) add("filter=$sort")

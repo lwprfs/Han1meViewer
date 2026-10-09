@@ -30,9 +30,7 @@ class HentaiMamaCloudflareActivity : AppCompatActivity() {
     companion object {
         private const val TAG = "HMCloudflareActivity"
         const val EXTRA_URL = "request_url"
-
         private const val MIN_DWELL_MS = 4_000L
-
         var onFinished: (() -> Unit)? = null
     }
 
@@ -51,8 +49,7 @@ class HentaiMamaCloudflareActivity : AppCompatActivity() {
             return
         }
 
-        tipTextState.value =
-            getString(R.string.complete_cloudflare_verification_with_warning)
+        tipTextState.value = getString(R.string.complete_cloudflare_verification_with_warning)
 
         val composeView = ComposeView(this)
         setContentView(composeView)
@@ -145,7 +142,6 @@ class HentaiMamaCloudflareActivity : AppCompatActivity() {
         if (!existing.contains("cf_clearance")) return
 
         Log.d(TAG, "Clearing stale cf_clearance from WebView for $host")
-
         cookieMgr.setCookie(host, "cf_clearance=; Max-Age=0; Path=/")
         cookieMgr.flush()
     }
@@ -170,7 +166,6 @@ class HentaiMamaCloudflareActivity : AppCompatActivity() {
 
         val existing = HentaiMamaCloudflareCookieManager.getCloudflareCookie(host)
         if (existing != null && existing == fresh) {
-
             Log.d(TAG, "cf_clearance unchanged; waiting for a fresh value")
             return
         }
@@ -180,13 +175,11 @@ class HentaiMamaCloudflareActivity : AppCompatActivity() {
         HentaiMamaCloudflareCookieManager.saveCloudflareCookie(host, cookies)
         cookieMgr.flush()
         finish()
-        onFinished?.invoke()
-        onFinished = null
     }
 
     override fun onDestroy() {
         super.onDestroy()
-
+        Log.d(TAG, "onDestroy: Invoking onFinished callback.")
         onFinished?.invoke()
         onFinished = null
     }

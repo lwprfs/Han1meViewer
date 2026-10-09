@@ -237,15 +237,10 @@ fun HentaiMamaNavHost(
             HentaiMamaHistoryScreen(
                 onBack = { navController.popBackStack() },
                 onNavigateToSeries = { videoCode, lastEpisodeUrl, resumePosition ->
-                    if (navController.canNavigateSafely()) {
-                        navController.navigateSafely(
-                            HentaiMamaVideoRoute(
-                                videoCode = videoCode,
-                                path = lastEpisodeUrl,
-                                resumePosition = resumePosition,
-                            )
-                        )
-                    }
+                    NavigationManager.navigateToVideo(
+                        videoCode = videoCode,
+                        path = lastEpisodeUrl,
+                    )
                 },
                 onBrowseHome = {
                     navController.popBackStack(HentaiMamaHomeRoute, inclusive = false)
