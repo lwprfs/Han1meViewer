@@ -54,6 +54,36 @@ object HentaiMamaUpcomingParser {
         return UpcomingPage(header = header, cards = cards)
     }
 
+    fun parseMonths(body: String, baseUrl: String): List<UpcomingMonthOption> {
+        if (body.isBlank()) return emptyList()
+        val doc = Jsoup.parse(body, baseUrl)
+        val root = doc.selectFirst("div.dt-up-index")
+            ?: doc.selectFirst(".dt-up-index")
+            ?: return emptyList()
+
+        return root.select("a.ep-sim-card").mapNotNull { a ->
+            val href = a.attr("href").ifBlank { return@mapNotNull null }
+            val slug = href.trimEnd('/').substringAfterLast('/')
+                .ifBlank { return@mapNotNull null }
+
+            val name = a.selectFirst("span.ep-sim-name")?.text()?.trim()
+                ?.takeIf { it.isNotBlank() }
+                ?: slug.replace('-', ' ').replaceFirstChar { it.uppercase() }
+
+            val parts = name.split(' ').filter { it.isNotBlank() }
+            val monthName = parts.getOrNull(0)?.lowercase() ?: return@mapNotNull null
+            val year = parts.getOrNull(1)?.toIntOrNull() ?: return@mapNotNull null
+            val monthNumber = MONTH_MAP[monthName] ?: return@mapNotNull null
+
+            UpcomingMonthOption(
+                displayName = name,
+                monthName = monthName,
+                monthNumber = monthNumber,
+                year = year,
+            )
+        }.distinctBy { it.slug }
+    }
+
     private fun parseHeader(doc: Document): UpcomingHeader {
         val parentAnchor = doc.selectFirst(
             ".dt-up-crumb a[href*=/upcoming/]:not(.dt-up-crumb-home)"
@@ -170,44 +200,6 @@ object HentaiMamaUpcomingParser {
             studioUrl = studioUrl,
             synopsis = synopsis,
             hasReadMore = hasReadMore,
-        )
-    }
-
-    fun buildMonthOptions(
-        centerYear: Int,
-        centerMonth: Int,
-        monthsBefore: Int = 12,
-        monthsAfter: Int = 6,
-    ): List<UpcomingMonthOption> {
-        val options = mutableListOf<UpcomingMonthOption>()
-        var year = centerYear
-        var month = centerMonth
-        for (i in 0 until monthsBefore) {
-            options += monthOptionFor(year, month)
-            month -= 1
-            if (month < 1) {
-                month = 12
-                year -= 1
-            }
-        }
-        options.reverse()
-        year = centerYear
-        month = centerMonth
-        for (i in 0 until monthsAfter) {
-            year += if (month == 12) 1 else 0
-            month = if (month == 12) 1 else month + 1
-            options += monthOptionFor(year, month)
-        }
-        return options.distinctBy { it.slug }
-    }
-
-    private fun monthOptionFor(year: Int, month: Int): UpcomingMonthOption {
-        val name = MONTH_NAMES[(month - 1).coerceIn(0, 11)]
-        return UpcomingMonthOption(
-            displayName = "${name.replaceFirstChar(Char::uppercaseChar)} $year",
-            monthName = name,
-            monthNumber = month,
-            year = year,
         )
     }
 

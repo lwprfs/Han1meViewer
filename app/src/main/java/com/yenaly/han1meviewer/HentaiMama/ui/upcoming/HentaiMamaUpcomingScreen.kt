@@ -1,6 +1,5 @@
 package com.yenaly.han1meviewer.HentaiMama.ui.upcoming
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -122,7 +122,7 @@ fun HentaiMamaUpcomingScreen(
                             maxLines = 1,
                         )
                         Text(
-                            text = uiState.selectedMonth.displayName,
+                            text = uiState.selectedMonth?.displayName ?: "—",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
@@ -138,7 +138,10 @@ fun HentaiMamaUpcomingScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showMonthPicker = true }) {
+                    IconButton(
+                        onClick = { showMonthPicker = true },
+                        enabled = uiState.availableMonths.isNotEmpty(),
+                    ) {
                         Icon(
                             imageVector = Icons.Filled.CalendarMonth,
                             contentDescription = "Pick month",
@@ -165,9 +168,29 @@ fun HentaiMamaUpcomingScreen(
                 .fillMaxSize()
                 .padding(paddingValues),
         ) {
+            val selected = uiState.selectedMonth
             when {
+                uiState.isLoadingMonths && selected == null -> {
+                    LoadingContent(message = "Loading upcoming months…")
+                }
+
+                selected == null && uiState.error != null -> {
+                    ErrorContent(
+                        title = "Failed to load upcoming",
+                        message = uiState.error?.message,
+                        onRetry = { viewModel.refresh() },
+                    )
+                }
+
+                selected == null -> {
+                    EmptyContent(
+                        hint = "No upcoming months",
+                        subHint = "",
+                    )
+                }
+
                 uiState.isLoading && uiState.cards.isEmpty() -> {
-                    LoadingContent(message = "Loading ${uiState.selectedMonth.displayName}…")
+                    LoadingContent(message = "Loading ${selected.displayName}…")
                 }
 
                 uiState.error != null && uiState.cards.isEmpty() -> {
@@ -181,7 +204,7 @@ fun HentaiMamaUpcomingScreen(
                 uiState.cards.isEmpty() -> {
                     EmptyContent(
                         hint = "No upcoming episodes",
-                        subHint = "${uiState.selectedMonth.displayName} has nothing scheduled yet.",
+                        subHint = "${selected.displayName} has nothing scheduled yet.",
                     )
                 }
 
@@ -198,10 +221,11 @@ fun HentaiMamaUpcomingScreen(
         }
     }
 
-    if (showMonthPicker) {
+    val selectedForDialog = uiState.selectedMonth
+    if (showMonthPicker && selectedForDialog != null) {
         MonthPickerDialog(
             months = uiState.availableMonths,
-            selectedSlug = uiState.selectedMonth.slug,
+            selectedSlug = selectedForDialog.slug,
             onDismiss = { showMonthPicker = false },
             onSelect = { option ->
                 showMonthPicker = false
@@ -215,7 +239,7 @@ fun HentaiMamaUpcomingScreen(
 @Composable
 private fun UpcomingGrid(
     cards: List<UpcomingCard>,
-    gridState: androidx.compose.foundation.lazy.grid.LazyGridState,
+    gridState: LazyGridState,
     onOpenEpisode: (String, String) -> Unit,
     onOpenSeries: (String) -> Unit,
     onOpenStudio: (String) -> Unit,
