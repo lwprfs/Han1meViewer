@@ -13,6 +13,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
@@ -31,6 +32,9 @@ import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.ChoiceDialog
 import com.yenaly.han1meviewer.ui.component.SettingInfoItem
 import com.yenaly.han1meviewer.ui.component.SettingNavigationItem
+import com.yenaly.han1meviewer.HentaiMama.cloudflare.HentaiMamaCloudflareCookieManager
+import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaCookieJar
+import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
 
 private val SERVER_OPTIONS: List<Pair<String, String>> = listOf(
     "Automatic (first available)" to HentaiMamaVideoSettings.SERVER_AUTO,
@@ -123,6 +127,21 @@ fun HentaiMamaVideoSettingsScreen(
                     valueText = qualityLabel,
                     iconRes = R.drawable.baseline_decoder_24,
                     onClick = { showQualityDialog = true },
+                )
+            }
+
+            item {
+                SettingNavigationItem(
+                    title = "Clear Cloudflare cookie",
+                    summary = "Force the app to re-solve the Cloudflare challenge " +
+                            "on the next request. Use this if HentaiMama starts " +
+                            "rejecting a cookie that has not yet expired.",
+                    iconRes = R.drawable.baseline_dns_24,
+                    onClick = {
+                        HentaiMamaCloudflareCookieManager.clearAllCloudflareCookies()
+                        HentaiMamaCookieJar().clearCookies()
+                        HentaiMamaNetwork.rebuildNetwork()
+                    },
                 )
             }
 

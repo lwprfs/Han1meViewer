@@ -71,12 +71,8 @@ object HentaiMamaParser {
     private val BASE64_P_REGEX: Regex = Regex("""[?&]p=([^&]+)""")
     private val RESOLUTION_SEGMENT: Regex = Regex("""/(\d+)p/""")
 
-    private val httpClient: OkHttpClient by lazy {
-        OkHttpClient.Builder()
-            .followRedirects(true)
-            .followSslRedirects(true)
-            .build()
-    }
+    private val httpClient: OkHttpClient
+        get() = HentaiMamaNetwork.sharedOkHttpClient
 
     fun parseVideoList(body: String): PageLoadingState<List<HanimeInfo>> {
         return try {
