@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaConstants
 import com.yenaly.han1meviewer.ui.component.GlobalToasts
 import okhttp3.Interceptor
@@ -27,16 +28,20 @@ class HentaiMamaCloudflareInterceptor(
         val request = chain.request()
         val response = chain.proceed(request)
 
+        val host = request.url.host
+        if (!isTargetHost(host)) return response
         if (!isChallenge(response)) return response
-        if (!isTargetHost(request.url.host)) return response
 
         val url = request.url.toString()
-        val host = request.url.host
-
         response.close()
 
+        Log.w(TAG, "Cloudflare challenge detected for $url")
+
         if (HentaiMamaCloudflareCookieManager.hasValidCookieForHost(host)) {
-            return chain.proceed(request)
+            val retry = chain.proceed(request)
+            if (!isChallenge(retry)) return retry
+            retry.close()
+            Log.w(TAG, "Retry with stored cookie still 403; opening solver")
         }
 
         val latch = CountDownLatch(1)
@@ -46,7 +51,7 @@ class HentaiMamaCloudflareInterceptor(
 
         try {
             val intent = Intent(context, HentaiMamaCloudflareActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
                 putExtra(HentaiMamaCloudflareActivity.EXTRA_URL, url)
             }
             context.startActivity(intent)
@@ -62,17 +67,28 @@ class HentaiMamaCloudflareInterceptor(
         }
 
         latch.await()
+
         return chain.proceed(request)
     }
 
     private fun isChallenge(response: Response): Boolean {
         if (response.code != 403) return false
+
         if (response.header("cf-mitigated") == "challenge") return true
-        val body = runCatching { response.peekBody(2048).string() }.getOrDefault("")
+
+        val server = response.header("Server").orEmpty()
+        if (server.contains("cloudflare", ignoreCase = true)) return true
+
+        val body = runCatching { response.peekBody(8192).string() }.getOrDefault("")
+        if (body.isEmpty()) return false
+
         return body.contains("Just a moment", ignoreCase = true) ||
                 body.contains("cf-chl", ignoreCase = true) ||
                 body.contains("__cf_chl", ignoreCase = true) ||
-                body.contains("challenge-platform", ignoreCase = true)
+                body.contains("challenge-platform", ignoreCase = true) ||
+                body.contains("cf_clearance", ignoreCase = true) ||
+                body.contains("Attention Required", ignoreCase = true) ||
+                body.contains("403 Forbidden", ignoreCase = true)
     }
 
     private fun isTargetHost(host: String): Boolean {

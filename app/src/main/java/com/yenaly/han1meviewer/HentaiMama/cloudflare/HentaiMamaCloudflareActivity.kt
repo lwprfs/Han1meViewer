@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.res.Configuration
 import android.content.res.Resources
 import android.os.Bundle
+import android.util.Log
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
@@ -27,12 +28,19 @@ import java.util.Locale
 class HentaiMamaCloudflareActivity : AppCompatActivity() {
 
     companion object {
+        private const val TAG = "HMCloudflareActivity"
         const val EXTRA_URL = "request_url"
+
+        private const val MIN_DWELL_MS = 4_000L
+
         var onFinished: (() -> Unit)? = null
     }
 
     private val progressState = mutableIntStateOf(0)
     private val tipTextState = mutableStateOf("")
+
+    private val activityStartMs = System.currentTimeMillis()
+    private var persistedOnce = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -78,6 +86,8 @@ class HentaiMamaCloudflareActivity : AppCompatActivity() {
                 setAcceptThirdPartyCookies(wv, true)
             }
 
+            clearStaleCfClearance(url, cookieMgr)
+
             webViewClient = object : WebViewClient() {
                 override fun shouldOverrideUrlLoading(
                     view: WebView?,
@@ -107,14 +117,15 @@ class HentaiMamaCloudflareActivity : AppCompatActivity() {
                             ) { html ->
                                 val hasChallenge =
                                     html.contains("#challenge-form") ||
-                                    html.contains("cf-challenge") ||
-                                    html.contains("Just a moment")
+                                            html.contains("cf-challenge") ||
+                                            html.contains("Just a moment") ||
+                                            html.contains("challenge-platform")
                                 if (!hasChallenge) {
                                     val cookies = cookieMgr.getCookie(url) ?: ""
                                     persistCookieIfPresent(url, cookies, cookieMgr)
                                 }
                             }
-                        }, 1000)
+                        }, 1500)
                     }
                 }
             }
@@ -128,13 +139,44 @@ class HentaiMamaCloudflareActivity : AppCompatActivity() {
         }
     }
 
+    private fun clearStaleCfClearance(url: String, cookieMgr: CookieManager) {
+        val host = url.toHttpUrlOrNull()?.host ?: return
+        val existing = cookieMgr.getCookie(host).orEmpty()
+        if (!existing.contains("cf_clearance")) return
+
+        Log.d(TAG, "Clearing stale cf_clearance from WebView for $host")
+
+        cookieMgr.setCookie(host, "cf_clearance=; Max-Age=0; Path=/")
+        cookieMgr.flush()
+    }
+
     private fun persistCookieIfPresent(
         url: String?,
         cookies: String,
         cookieMgr: CookieManager,
     ) {
+        if (persistedOnce) return
         if (!cookies.contains("cf_clearance")) return
+
+        val elapsed = System.currentTimeMillis() - activityStartMs
+        if (elapsed < MIN_DWELL_MS) {
+            Log.d(TAG, "Ignoring early solution (${elapsed}ms < ${MIN_DWELL_MS}ms)")
+            return
+        }
+
         val host = url?.toHttpUrlOrNull()?.host ?: return
+        val fresh = Regex("cf_clearance=([^;]+)").find(cookies)?.groupValues?.get(1)
+        if (fresh.isNullOrBlank()) return
+
+        val existing = HentaiMamaCloudflareCookieManager.getCloudflareCookie(host)
+        if (existing != null && existing == fresh) {
+
+            Log.d(TAG, "cf_clearance unchanged; waiting for a fresh value")
+            return
+        }
+
+        persistedOnce = true
+        Log.d(TAG, "Persisting new cf_clearance for $host")
         HentaiMamaCloudflareCookieManager.saveCloudflareCookie(host, cookies)
         cookieMgr.flush()
         finish()
@@ -144,6 +186,7 @@ class HentaiMamaCloudflareActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+
         onFinished?.invoke()
         onFinished = null
     }

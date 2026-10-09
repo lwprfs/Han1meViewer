@@ -17,6 +17,8 @@ object HentaiMamaCloudflareCookieManager {
 
     private val cookieCache = ConcurrentHashMap<String, String>()
 
+    private val rejectedCache = ConcurrentHashMap<String, String>()
+
     private fun cookieKey(host: String) = "${PREF_PREFIX_COOKIE}_$host"
     private fun expiryKey(host: String) = "${PREF_PREFIX_EXPIRY}_$host"
 
@@ -26,6 +28,7 @@ object HentaiMamaCloudflareCookieManager {
             ?: (System.currentTimeMillis() + FALLBACK_EXPIRY_MS)
 
         cookieCache[host] = cfClearance
+        rejectedCache.remove(host)
         Preferences.preferenceSp.edit()
             .putString(cookieKey(host), cfClearance)
             .putLong(expiryKey(host), expiry)
@@ -35,11 +38,15 @@ object HentaiMamaCloudflareCookieManager {
     }
 
     fun getCloudflareCookie(host: String): String? {
-        cookieCache[host]?.let { return it }
+        val rejected = rejectedCache[host]
+
+        val cached = cookieCache[host]
+        if (cached != null && cached != rejected) return cached
 
         val cookie = Preferences.preferenceSp.getString(cookieKey(host), null) ?: return null
-        val expiry = Preferences.preferenceSp.getLong(expiryKey(host), 0L)
+        if (cookie == rejected) return null
 
+        val expiry = Preferences.preferenceSp.getLong(expiryKey(host), 0L)
         if (expiry > 0L && System.currentTimeMillis() > expiry) {
             Log.d(TAG, "Cookie for $host expired, clearing")
             clearCloudflareCookie(host)
@@ -50,8 +57,17 @@ object HentaiMamaCloudflareCookieManager {
         return cookie
     }
 
+    fun markCurrentCookieRejected(host: String) {
+        val current = cookieCache[host]
+            ?: Preferences.preferenceSp.getString(cookieKey(host), null)
+            ?: return
+        rejectedCache[host] = current
+        Log.d(TAG, "Marked cf_clearance for $host as rejected")
+    }
+
     fun clearCloudflareCookie(host: String) {
         cookieCache.remove(host)
+        rejectedCache.remove(host)
         Preferences.preferenceSp.edit()
             .remove(cookieKey(host))
             .remove(expiryKey(host))
@@ -60,6 +76,7 @@ object HentaiMamaCloudflareCookieManager {
 
     fun clearAllCloudflareCookies() {
         cookieCache.clear()
+        rejectedCache.clear()
         val prefs = Preferences.preferenceSp
         val editor = prefs.edit()
         prefs.all.keys.forEach { key ->
