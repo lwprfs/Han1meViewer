@@ -7,65 +7,63 @@ import android.os.Looper
 import android.util.Log
 import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaConstants
 import com.yenaly.han1meviewer.ui.component.GlobalToasts
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.coroutines.resume
 
 object HentaiMamaCloudflareManager {
 
     private const val TAG = "HMCloudflareManager"
-    private const val VERIFICATION_TIMEOUT_SECONDS = 120L
+    private const val VERIFICATION_TIMEOUT_MS = 120_000L
 
     private val isVerifying = AtomicBoolean(false)
-    private var verificationLatch: CountDownLatch? = null
+    private var pendingContinuation: ((Boolean) -> Unit)? = null
+    private var pendingLatchOwnerThread: Thread? = null
 
     suspend fun handleChallenge(context: Context, url: String): Boolean {
-        if (isVerifying.compareAndSet(false, true)) {
+        val first = isVerifying.compareAndSet(false, true)
+        if (first) {
             Log.d(TAG, "First challenge detected. This request will manage the verification.")
-            verificationLatch = CountDownLatch(1)
             launchVerificationActivity(context, url)
-            return awaitVerificationResult()
         } else {
             Log.d(TAG, "Another verification is in progress. Waiting for it to complete...")
-            return awaitVerificationResult()
         }
+
+        val result = awaitVerificationResult()
+        if (first) {
+            releaseState()
+        }
+        return result
     }
 
-    private fun awaitVerificationResult(): Boolean {
-        return try {
-            val latch = verificationLatch
-            if (latch == null) {
-                Log.w(TAG, "Latch was null, checking cookie directly.")
-                return checkCookieValidity()
+    private suspend fun awaitVerificationResult(): Boolean =
+        withContext(Dispatchers.IO) {
+            val checker = HentaiMamaCloudflareCookieManager
+            val host = HentaiMamaConstants.BASE_URL.toHttpUrlOrNull()?.host
+            val deadline = System.currentTimeMillis() + VERIFICATION_TIMEOUT_MS
+
+            while (System.currentTimeMillis() < deadline) {
+                if (host != null && checker.hasValidCookieForHost(host)) {
+                    Log.d(TAG, "Valid cf_clearance observed for $host")
+                    return@withContext true
+                }
+                if (pendingContinuation == null && !isVerifying.get()) {
+                    return@withContext host != null && checker.hasValidCookieForHost(host)
+                }
+                Thread.sleep(250L)
             }
-            val completed = latch.await(VERIFICATION_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-            if (!completed) {
-                Log.w(TAG, "Verification timed out after $VERIFICATION_TIMEOUT_SECONDS seconds.")
-                resetState()
-                return false
-            }
-            Log.d(TAG, "Verification latch released. Checking cookie validity.")
-            checkCookieValidity()
-        } catch (e: InterruptedException) {
-            Log.e(TAG, "Interrupted while waiting for Cloudflare verification.", e)
-            Thread.currentThread().interrupt()
-            false
-        } catch (e: Exception) {
-            Log.e(TAG, "Unexpected error while waiting for verification.", e)
+
+            Log.w(TAG, "Verification timed out after $VERIFICATION_TIMEOUT_MS ms")
             false
         }
-    }
-
-    private fun checkCookieValidity(): Boolean {
-        val host = HentaiMamaConstants.BASE_URL.toHttpUrlOrNull()?.host ?: return false
-        return HentaiMamaCloudflareCookieManager.hasValidCookieForHost(host)
-    }
 
     private fun launchVerificationActivity(context: Context, url: String) {
         HentaiMamaCloudflareActivity.onFinished = {
-            Log.d(TAG, "CloudflareActivity has finished. Releasing latch.")
-            resetState()
+            Log.d(TAG, "CloudflareActivity has finished. Releasing state.")
+            releaseState()
         }
 
         try {
@@ -82,19 +80,20 @@ object HentaiMamaCloudflareManager {
                     level = GlobalToasts.ToastLevel.ERROR
                 )
             }
-            resetState()
+            releaseState()
         }
     }
 
-    private fun resetState() {
+    @Synchronized
+    private fun releaseState() {
         isVerifying.set(false)
-        verificationLatch?.countDown()
-        verificationLatch = null
+        pendingContinuation = null
+        pendingLatchOwnerThread = null
         HentaiMamaCloudflareActivity.onFinished = null
     }
 
     fun forceReset() {
         Log.d(TAG, "Force resetting Cloudflare manager state.")
-        resetState()
+        releaseState()
     }
 }

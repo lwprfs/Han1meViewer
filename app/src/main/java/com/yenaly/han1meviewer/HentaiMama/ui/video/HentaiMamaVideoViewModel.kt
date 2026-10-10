@@ -48,6 +48,7 @@ class HentaiMamaVideoViewModel(application: Application) : AndroidViewModel(appl
 
     companion object {
         private const val TAG = "HentaiMamaVideoVM"
+        private const val MAX_PAGE_LOAD_ATTEMPTS = 3
     }
 
     private val _pageState =
@@ -135,30 +136,57 @@ class HentaiMamaVideoViewModel(application: Application) : AndroidViewModel(appl
     }
 
     private suspend fun loadEpisodeDetail(url: String) {
-        HentaiMamaNetworkRepo.getVideoDetail(url).collect { state ->
-            _pageState.value = state
-            if (state is VideoLoadingState.Success) {
-                val page: EpisodeDetailPage? = state.info.page
-                Log.d(
-                    TAG,
-                    "detail loaded: page=${page != null}, " +
-                            "infoTitle=${state.info.title.take(40)}, " +
-                            "videoUrls=${state.info.videoUrls.size}"
-                )
-                if (page != null) {
-                    val htmlApplied: Boolean = applyHtmlLinks(page)
-                    applyInitialMirror(page)
-
-                    if (!htmlApplied) {
+        var attempt = 0
+        while (attempt < MAX_PAGE_LOAD_ATTEMPTS) {
+            attempt++
+            var terminal = false
+            HentaiMamaNetworkRepo.getVideoDetail(url).collect { state ->
+                _pageState.value = state
+                when (state) {
+                    is VideoLoadingState.Success -> {
+                        terminal = true
+                        val page: EpisodeDetailPage? = state.info.page
                         Log.d(
                             TAG,
-                            "loadEpisodeDetail: no HTML URL, falling back to AJAX extraction"
+                            "detail loaded: page=${page != null}, " +
+                                    "infoTitle=${state.info.title.take(40)}, " +
+                                    "videoUrls=${state.info.videoUrls.size}"
                         )
-                        fetchMirrorLinks(_selectedMirrorIndex.value, page)
+                        if (page != null) {
+                            val htmlApplied: Boolean = applyHtmlLinks(page)
+                            applyInitialMirror(page)
+
+                            if (!htmlApplied) {
+                                Log.d(
+                                    TAG,
+                                    "loadEpisodeDetail: no HTML URL, falling back to AJAX extraction"
+                                )
+                                fetchMirrorLinks(_selectedMirrorIndex.value, page)
+                            }
+                        }
                     }
+
+                    is VideoLoadingState.Error -> {
+                        terminal = true
+                    }
+
+                    is VideoLoadingState.NoContent -> {
+                        terminal = true
+                    }
+
+                    is VideoLoadingState.Loading -> Unit
                 }
             }
+
+            if (terminal) return
+
+            Log.w(TAG, "loadEpisodeDetail: attempt $attempt produced no terminal state, retrying")
+            kotlinx.coroutines.delay(750L)
         }
+        Log.e(TAG, "loadEpisodeDetail: exhausted $MAX_PAGE_LOAD_ATTEMPTS attempts for $url")
+        _pageState.value = VideoLoadingState.Error(
+            IllegalStateException("Could not load episode page after $MAX_PAGE_LOAD_ATTEMPTS attempts")
+        )
     }
 
     private suspend fun resolveSeriesFirstEpisode(url: String): Pair<String, String>? {

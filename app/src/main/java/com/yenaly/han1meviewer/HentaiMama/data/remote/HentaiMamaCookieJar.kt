@@ -20,8 +20,9 @@ class HentaiMamaCookieJar : CookieJar {
         cookieStore[host]?.values?.let { cookies.addAll(it) }
         cookies.addAll(HentaiMamaCloudflareCookieManager.getOkHttpCookies(host))
 
-        Log.d(TAG, "loadForRequest: $host, cookies=${cookies.size}")
-        return cookies
+        val deduped = cookies.distinctBy { it.name to it.domain }
+        Log.d(TAG, "loadForRequest: $host, cookies=${deduped.size}")
+        return deduped
     }
 
     override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {

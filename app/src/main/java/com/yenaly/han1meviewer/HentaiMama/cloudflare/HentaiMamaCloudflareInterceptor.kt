@@ -8,7 +8,7 @@ import okhttp3.Interceptor
 import okhttp3.Protocol
 import okhttp3.Request
 import okhttp3.Response
-import okhttp3.ResponseBody
+import okhttp3.ResponseBody.Companion.toResponseBody
 
 class HentaiMamaCloudflareInterceptor(
     private val context: Context
@@ -69,7 +69,7 @@ class HentaiMamaCloudflareInterceptor(
             .protocol(Protocol.HTTP_1_1)
             .code(code)
             .message(message)
-            .body(ResponseBody.create(null, message))
+            .body(message.toResponseBody(null))
             .build()
     }
 
@@ -79,8 +79,7 @@ class HentaiMamaCloudflareInterceptor(
 
         val server = response.header("Server").orEmpty()
         if (server.contains("cloudflare", ignoreCase = true)) {
-            val body = runCatching { response.peekBody(8192).string() }.getOrDefault("")
-            if (body.isEmpty()) return true
+            return true
         }
 
         val body = runCatching { response.peekBody(8192).string() }.getOrDefault("")

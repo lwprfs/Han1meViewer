@@ -22,56 +22,79 @@ object HentaiMamaCloudflareCookieManager {
     private fun cookieKey(host: String) = "${PREF_PREFIX_COOKIE}_$host"
     private fun expiryKey(host: String) = "${PREF_PREFIX_EXPIRY}_$host"
 
+    private fun hostVariants(host: String): List<String> {
+        val lower = host.lowercase()
+        val bare = lower.removePrefix("www.")
+        val www = "www.$bare"
+        return listOf(lower, bare, www).distinct()
+    }
+
     fun saveCloudflareCookie(host: String, cookieString: String) {
         val cfClearance = extractCfClearance(cookieString) ?: return
         val expiry = extractCookieExpiry(cookieString)
             ?: (System.currentTimeMillis() + FALLBACK_EXPIRY_MS)
 
-        cookieCache[host] = cfClearance
-        rejectedCache.remove(host)
-        Preferences.preferenceSp.edit()
-            .putString(cookieKey(host), cfClearance)
-            .putLong(expiryKey(host), expiry)
-            .apply()
+        val variants = hostVariants(host)
+        val editor = Preferences.preferenceSp.edit()
+        variants.forEach { h ->
+            cookieCache[h] = cfClearance
+            rejectedCache.remove(h)
+            editor.putString(cookieKey(h), cfClearance)
+            editor.putLong(expiryKey(h), expiry)
+        }
+        editor.apply()
 
-        Log.d(TAG, "Saved cf_clearance for $host")
+        Log.d(TAG, "Saved cf_clearance for variants=$variants")
     }
 
     fun getCloudflareCookie(host: String): String? {
-        val rejected = rejectedCache[host]
+        val variants = hostVariants(host)
 
-        val cached = cookieCache[host]
-        if (cached != null && cached != rejected) return cached
+        for (h in variants) {
+            val rejected = rejectedCache[h]
 
-        val cookie = Preferences.preferenceSp.getString(cookieKey(host), null) ?: return null
-        if (cookie == rejected) return null
+            val cached = cookieCache[h]
+            if (cached != null && cached != rejected) {
+                if (h != host) cookieCache[host] = cached
+                return cached
+            }
 
-        val expiry = Preferences.preferenceSp.getLong(expiryKey(host), 0L)
-        if (expiry > 0L && System.currentTimeMillis() > expiry) {
-            Log.d(TAG, "Cookie for $host expired, clearing")
-            clearCloudflareCookie(host)
-            return null
+            val cookie = Preferences.preferenceSp.getString(cookieKey(h), null) ?: continue
+            if (cookie == rejected) continue
+
+            val expiry = Preferences.preferenceSp.getLong(expiryKey(h), 0L)
+            if (expiry > 0L && System.currentTimeMillis() > expiry) {
+                Log.d(TAG, "Cookie for $h expired, clearing")
+                clearCloudflareCookie(h)
+                continue
+            }
+
+            cookieCache[h] = cookie
+            if (h != host) cookieCache[host] = cookie
+            return cookie
         }
-
-        cookieCache[host] = cookie
-        return cookie
+        return null
     }
 
     fun markCurrentCookieRejected(host: String) {
-        val current = cookieCache[host]
-            ?: Preferences.preferenceSp.getString(cookieKey(host), null)
-            ?: return
-        rejectedCache[host] = current
-        Log.d(TAG, "Marked cf_clearance for $host as rejected")
+        hostVariants(host).forEach { h ->
+            val current = cookieCache[h]
+                ?: Preferences.preferenceSp.getString(cookieKey(h), null)
+                ?: return@forEach
+            rejectedCache[h] = current
+        }
+        Log.d(TAG, "Marked cf_clearance for ${hostVariants(host)} as rejected")
     }
 
     fun clearCloudflareCookie(host: String) {
-        cookieCache.remove(host)
-        rejectedCache.remove(host)
-        Preferences.preferenceSp.edit()
-            .remove(cookieKey(host))
-            .remove(expiryKey(host))
-            .apply()
+        val editor = Preferences.preferenceSp.edit()
+        hostVariants(host).forEach { h ->
+            cookieCache.remove(h)
+            rejectedCache.remove(h)
+            editor.remove(cookieKey(h))
+            editor.remove(expiryKey(h))
+        }
+        editor.apply()
     }
 
     fun clearAllCloudflareCookies() {

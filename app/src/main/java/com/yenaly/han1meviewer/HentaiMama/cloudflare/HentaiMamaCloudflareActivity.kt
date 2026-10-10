@@ -39,6 +39,7 @@ class HentaiMamaCloudflareActivity : AppCompatActivity() {
 
     private val activityStartMs = System.currentTimeMillis()
     private var persistedOnce = false
+    private var originalHost: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -48,6 +49,8 @@ class HentaiMamaCloudflareActivity : AppCompatActivity() {
             finish()
             return
         }
+
+        originalHost = url.toHttpUrlOrNull()?.host
 
         tipTextState.value = getString(R.string.complete_cloudflare_verification_with_warning)
 
@@ -83,8 +86,6 @@ class HentaiMamaCloudflareActivity : AppCompatActivity() {
                 setAcceptThirdPartyCookies(wv, true)
             }
 
-            clearStaleCfClearance(url, cookieMgr)
-
             webViewClient = object : WebViewClient() {
                 override fun shouldOverrideUrlLoading(
                     view: WebView?,
@@ -98,7 +99,7 @@ class HentaiMamaCloudflareActivity : AppCompatActivity() {
                     ) { result ->
                         if (result == "null") {
                             val cookies = cookieMgr.getCookie(loadedUrl) ?: ""
-                            persistCookieIfPresent(loadedUrl, cookies, cookieMgr)
+                            persistCookieIfPresent(cookies, cookieMgr)
                         }
                     }
                 }
@@ -119,7 +120,7 @@ class HentaiMamaCloudflareActivity : AppCompatActivity() {
                                             html.contains("challenge-platform")
                                 if (!hasChallenge) {
                                     val cookies = cookieMgr.getCookie(url) ?: ""
-                                    persistCookieIfPresent(url, cookies, cookieMgr)
+                                    persistCookieIfPresent(cookies, cookieMgr)
                                 }
                             }
                         }, 1500)
@@ -136,18 +137,7 @@ class HentaiMamaCloudflareActivity : AppCompatActivity() {
         }
     }
 
-    private fun clearStaleCfClearance(url: String, cookieMgr: CookieManager) {
-        val host = url.toHttpUrlOrNull()?.host ?: return
-        val existing = cookieMgr.getCookie(host).orEmpty()
-        if (!existing.contains("cf_clearance")) return
-
-        Log.d(TAG, "Clearing stale cf_clearance from WebView for $host")
-        cookieMgr.setCookie(host, "cf_clearance=; Max-Age=0; Path=/")
-        cookieMgr.flush()
-    }
-
     private fun persistCookieIfPresent(
-        url: String?,
         cookies: String,
         cookieMgr: CookieManager,
     ) {
@@ -160,7 +150,7 @@ class HentaiMamaCloudflareActivity : AppCompatActivity() {
             return
         }
 
-        val host = url?.toHttpUrlOrNull()?.host ?: return
+        val host = originalHost ?: return
         val fresh = Regex("cf_clearance=([^;]+)").find(cookies)?.groupValues?.get(1)
         if (fresh.isNullOrBlank()) return
 
