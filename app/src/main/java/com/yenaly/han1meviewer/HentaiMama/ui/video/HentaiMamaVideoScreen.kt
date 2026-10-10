@@ -40,7 +40,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -72,7 +71,6 @@ import com.yenaly.han1meviewer.ui.screen.RetryableImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private const val PLAYER_TAG = "HentaiMamaPlayer"
@@ -83,6 +81,21 @@ private const val DELTA_GUARD_MS = 10_000L
 
 private val EPISODE_SUFFIX_REGEX: Regex =
     Regex(""".*-episode-\d+/?$""", RegexOption.IGNORE_CASE)
+
+private fun normalizeEpisodeUrl(path: String): String {
+    if (path.isBlank()) return path
+    return when {
+        path.startsWith("http://") || path.startsWith("https://") -> path
+        path.startsWith("/episodes/") ->
+            "${HentaiMamaNetwork.baseUrl.trimEnd('/')}$path"
+        path.startsWith("/") ->
+            "${HentaiMamaNetwork.baseUrl.trimEnd('/')}$path"
+        path.contains("/episodes/") ->
+            HentaiMamaNetwork.normalizeUrl("/$path")
+        else ->
+            "${HentaiMamaNetwork.baseUrl.trimEnd('/')}/episodes/$path/"
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -98,7 +111,6 @@ fun HentaiMamaVideoScreen(
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
-    val coroutineScope = rememberCoroutineScope()
 
     val pageState by viewModel.pageState.collectAsStateWithLifecycle()
     val playerState by viewModel.playerState.collectAsStateWithLifecycle()
@@ -107,10 +119,7 @@ fun HentaiMamaVideoScreen(
     val selectedMirrorIndex by viewModel.selectedMirrorIndex.collectAsStateWithLifecycle()
     val selectedMirrorLabel by viewModel.selectedMirrorLabel.collectAsStateWithLifecycle()
 
-    val normalizedUrl: String = remember(path) {
-        if (path.startsWith("http")) path
-        else HentaiMamaNetwork.normalizeUrl(path)
-    }
+    val normalizedUrl: String = remember(path) { normalizeEpisodeUrl(path) }
 
     var pendingResume by remember { mutableLongStateOf(0L) }
     var resumeApplied by remember { mutableStateOf(false) }
@@ -240,7 +249,7 @@ fun HentaiMamaVideoScreen(
                             videoCode = videoCode,
                             title = page.info.title,
                             coverUrl = page.info.seriesPoster,
-                            episodeUrl = page.info.slug,
+                            episodeUrl = normalizedUrl,
                             episodeNumber = page.seriesSidebar
                                 .firstOrNull { it.slug == page.info.slug }
                                 ?.episodeNumber ?: 1f,

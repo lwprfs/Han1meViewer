@@ -95,7 +95,7 @@ object HentaiMamaHistoryRepo {
                     lastEpisodeNumber = if (episodeNumber > 0f) episodeNumber
                     else existing.lastEpisodeNumber,
                     lastEpisodeTitle = episodeTitle.ifBlank { existing.lastEpisodeTitle },
-                    lastPosition = if (episodeChanged) position else position,
+                    lastPosition = position,
                     totalDuration = if (duration > 0) duration else existing.totalDuration,
                     watchDate = now,
                     watchDuration = existing.watchDuration + creditedDelta,
