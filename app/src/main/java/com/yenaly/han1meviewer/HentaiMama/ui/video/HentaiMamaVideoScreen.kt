@@ -61,6 +61,7 @@ import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
+import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaImageLoader
 import com.yenaly.han1meviewer.HentaiMama.data.local.HentaiMamaHistoryRepo
 import com.yenaly.han1meviewer.HentaiMama.data.model.HentaiMamaEpisode
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
@@ -704,6 +705,9 @@ private fun SimilarRow(
     episodeCount: Int?,
     onClick: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val imageLoader = remember(context) { HentaiMamaImageLoader.get(context) }
+
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerLow,
         shape = RoundedCornerShape(8.dp),
@@ -726,9 +730,10 @@ private fun SimilarRow(
                     model = poster,
                     contentDescription = title,
                     modifier = Modifier.fillMaxSize(),
-                    placeholder = painterResource(com.yenaly.han1meviewer.R.drawable.h_chan_loading),
-                    error = painterResource(com.yenaly.han1meviewer.R.drawable.h_chan_load_failed),
+                    placeholder = painterResource(R.drawable.h_chan_loading),
+                    error = painterResource(R.drawable.h_chan_load_failed),
                     contentScale = ContentScale.Crop,
+                    imageLoader = imageLoader,
                 )
             }
             Spacer(Modifier.width(10.dp))
