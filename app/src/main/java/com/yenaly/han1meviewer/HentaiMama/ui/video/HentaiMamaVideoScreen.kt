@@ -62,11 +62,12 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaImageLoader
+import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaUrlUtils
 import com.yenaly.han1meviewer.HentaiMama.data.local.HentaiMamaHistoryRepo
 import com.yenaly.han1meviewer.HentaiMama.data.model.HentaiMamaEpisode
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
-import com.yenaly.han1meviewer.logic.state.VideoLoadingState
 import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.logic.state.VideoLoadingState
 import com.yenaly.han1meviewer.ui.component.content.ErrorContent
 import com.yenaly.han1meviewer.ui.component.content.LoadingContent
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
@@ -83,21 +84,6 @@ private const val DELTA_GUARD_MS = 10_000L
 
 private val EPISODE_SUFFIX_REGEX: Regex =
     Regex(""".*-episode-\d+/?$""", RegexOption.IGNORE_CASE)
-
-private fun normalizeEpisodeUrl(path: String): String {
-    if (path.isBlank()) return path
-    return when {
-        path.startsWith("http://") || path.startsWith("https://") -> path
-        path.startsWith("/episodes/") ->
-            "${HentaiMamaNetwork.baseUrl.trimEnd('/')}$path"
-        path.startsWith("/") ->
-            "${HentaiMamaNetwork.baseUrl.trimEnd('/')}$path"
-        path.contains("/episodes/") ->
-            HentaiMamaNetwork.normalizeUrl("/$path")
-        else ->
-            "${HentaiMamaNetwork.baseUrl.trimEnd('/')}/episodes/$path/"
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -121,7 +107,9 @@ fun HentaiMamaVideoScreen(
     val selectedMirrorIndex by viewModel.selectedMirrorIndex.collectAsStateWithLifecycle()
     val selectedMirrorLabel by viewModel.selectedMirrorLabel.collectAsStateWithLifecycle()
 
-    val normalizedUrl: String = remember(path) { normalizeEpisodeUrl(path) }
+    val normalizedUrl: String = remember(path) {
+        HentaiMamaUrlUtils.normalizeEpisodeUrl(path)
+    }
 
     var pendingResume by remember { mutableLongStateOf(0L) }
     var resumeApplied by remember { mutableStateOf(false) }
@@ -297,8 +285,7 @@ fun HentaiMamaVideoScreen(
 
     fun openEpisode(episode: HentaiMamaEpisode) {
         if (episode.slug == videoCode) return
-        val target = if (episode.url.startsWith("http")) episode.url
-        else HentaiMamaNetwork.normalizeUrl(episode.url)
+        val target = HentaiMamaUrlUtils.normalizeEpisodeUrl(episode.url)
         onNavigateToVideo(episode.slug, target)
     }
 
@@ -433,7 +420,10 @@ fun HentaiMamaVideoScreen(
                                     onPrev = {
                                         page.nav.prevUrl?.let { url ->
                                             val slug = url.trimEnd('/').substringAfterLast('/')
-                                            onNavigateToVideo(slug, url)
+                                            onNavigateToVideo(
+                                                slug,
+                                                HentaiMamaUrlUtils.normalizeEpisodeUrl(url),
+                                            )
                                         }
                                     },
                                     onSeries = {
@@ -443,7 +433,10 @@ fun HentaiMamaVideoScreen(
                                     onNext = {
                                         page.nav.nextUrl?.let { url ->
                                             val slug = url.trimEnd('/').substringAfterLast('/')
-                                            onNavigateToVideo(slug, url)
+                                            onNavigateToVideo(
+                                                slug,
+                                                HentaiMamaUrlUtils.normalizeEpisodeUrl(url),
+                                            )
                                         }
                                     },
                                 )
@@ -634,7 +627,12 @@ fun HentaiMamaVideoScreen(
                                         rating = sim.rating,
                                         year = sim.year,
                                         episodeCount = sim.episodeCount,
-                                        onClick = { onNavigateToVideo(sim.slug, sim.url) },
+                                        onClick = {
+                                            onNavigateToVideo(
+                                                sim.slug,
+                                                HentaiMamaUrlUtils.normalizeEpisodeUrl(sim.url),
+                                            )
+                                        },
                                     )
                                 }
                             }
