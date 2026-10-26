@@ -21,7 +21,7 @@ import kotlin.time.Duration.Companion.days
 import kotlin.time.ExperimentalTime
 
 enum class SiteType {
-    HANIME, MISSAV, HENTAIMAMA, JAVCHU
+    HANIME, MISSAV, HENTAIMAMA, JAVCHU, ONAIR
 }
 
 object MissAvConstants {
@@ -114,6 +114,9 @@ object Preferences {
 
     val javchuBaseUrl: String
         get() = preferenceSp.getString("javchu_base_url", "https://javchu.com") ?: "https://javchu.com"
+
+    val onAirBaseUrl: String
+        get() = com.yenaly.han1meviewer.OnAir.common.OnAirSitePreferences.selectedBaseUrl
 
     val switchPlayerKernel: String
         get() = preferenceSp.getString(
@@ -232,6 +235,10 @@ object Preferences {
                 return hentaiMamaBaseUrl
             }
 
+            if (siteType == SiteType.ONAIR) {
+                return onAirBaseUrl
+            }
+
             return HanimeConstants.HANIME_URL[0]
         }
 
@@ -247,6 +254,7 @@ object Preferences {
             }
             SiteType.MISSAV -> missAvBaseUrl
             SiteType.HENTAIMAMA -> hentaiMamaBaseUrl
+            SiteType.ONAIR -> onAirBaseUrl
         }
 
     val useCustomMirrorSite: Boolean
@@ -288,6 +296,7 @@ object Preferences {
             }
             SiteType.MISSAV -> missAvBaseUrl
             SiteType.HENTAIMAMA -> hentaiMamaBaseUrl
+            SiteType.ONAIR -> onAirBaseUrl
         }
 
     private fun String.toRetrofitBaseUrl(): String = if (endsWith('/')) this else "$this/"

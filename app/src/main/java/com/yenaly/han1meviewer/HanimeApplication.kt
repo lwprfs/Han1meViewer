@@ -17,6 +17,8 @@ import com.google.firebase.remoteconfig.remoteConfigSettings
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
 import com.yenaly.han1meviewer.HentaiMama.data.local.HentaiMamaHistoryRepo
 import com.yenaly.han1meviewer.HentaiMama.settings.HentaiMamaCardSettings
+import com.yenaly.han1meviewer.OnAir.data.local.OnAirHistoryRepo
+import com.yenaly.han1meviewer.OnAir.data.remote.OnAirNetwork
 import com.yenaly.han1meviewer.logic.network.HProxySelector
 import com.yenaly.han1meviewer.ui.viewmodel.AppViewModel
 import com.yenaly.han1meviewer.ui.activity.MainActivity
@@ -129,6 +131,14 @@ class HanimeApplication : YenalyApplication() {
         } catch (e: Exception) {
             Log.e(TAG, "Failed to load HentaiMamaCardSettings", e)
         }
+
+        try {
+            OnAirNetwork.init(applicationContext)
+            OnAirHistoryRepo.init(applicationContext)
+            Log.d(TAG, "OnAirNetwork initialized successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to initialize OnAirNetwork", e)
+        }
     }
 
     private fun initFirebase() {
@@ -138,11 +148,11 @@ class HanimeApplication : YenalyApplication() {
             setCustomKeys {
                 key(
                     FirebaseConstants.APP_LANGUAGE,
-                    LanguageHelper.preferredLanguage.toLanguageTag()
+                    LanguageHelper.preferredLanguage.toLanguageTag(),
                 )
                 key(
                     FirebaseConstants.VERSION_SOURCE,
-                    BuildConfig.VERSION_SOURCE
+                    BuildConfig.VERSION_SOURCE,
                 )
             }
         }
@@ -164,13 +174,13 @@ class HanimeApplication : YenalyApplication() {
 
         val hanimeDownloadChannel = NotificationChannelCompat.Builder(
             DOWNLOAD_NOTIFICATION_CHANNEL,
-            NotificationManagerCompat.IMPORTANCE_HIGH
+            NotificationManagerCompat.IMPORTANCE_HIGH,
         ).setName("Hanime Download").build()
         nm.createNotificationChannel(hanimeDownloadChannel)
 
         val appUpdateChannel = NotificationChannelCompat.Builder(
             UPDATE_NOTIFICATION_CHANNEL,
-            NotificationManagerCompat.IMPORTANCE_HIGH
+            NotificationManagerCompat.IMPORTANCE_HIGH,
         ).setName("App Update").build()
         nm.createNotificationChannel(appUpdateChannel)
     }
@@ -182,7 +192,7 @@ class HanimeApplication : YenalyApplication() {
             "com.yenaly.han1meviewer.LauncherAliasDefault",
             "com.yenaly.han1meviewer.LauncherFakeCalc",
             "com.yenaly.han1meviewer.LauncherFakeCornhub",
-            "com.yenaly.han1meviewer.LauncherFakeXxt"
+            "com.yenaly.han1meviewer.LauncherFakeXxt",
         )
 
         allAliases.forEach { a ->
@@ -194,7 +204,7 @@ class HanimeApplication : YenalyApplication() {
             pm.setComponentEnabledSetting(
                 ComponentName(this, a),
                 state,
-                PackageManager.DONT_KILL_APP
+                PackageManager.DONT_KILL_APP,
             )
         }
     }

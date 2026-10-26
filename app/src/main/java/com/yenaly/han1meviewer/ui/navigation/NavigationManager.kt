@@ -7,6 +7,9 @@ import androidx.navigation.NavHostController
 import com.yenaly.han1meviewer.HentaiMama.ui.navigation.HentaiMamaHomeRoute
 import com.yenaly.han1meviewer.HentaiMama.ui.navigation.HentaiMamaSearchRoute
 import com.yenaly.han1meviewer.HentaiMama.ui.navigation.HentaiMamaVideoRoute
+import com.yenaly.han1meviewer.OnAir.ui.navigation.OnAirHomeRoute
+import com.yenaly.han1meviewer.OnAir.ui.navigation.OnAirSearchRoute
+import com.yenaly.han1meviewer.OnAir.ui.navigation.OnAirVideoRoute
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.ui.navigation.main.HomeRoute
@@ -46,6 +49,9 @@ object NavigationManager {
                     SiteType.HENTAIMAMA -> {
                         navController.navigate(HentaiMamaVideoRoute(videoCode, path ?: "/$videoCode"))
                     }
+                    SiteType.ONAIR -> {
+                        navController.navigate(OnAirVideoRoute(videoId = videoCode))
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "navigateToVideo failed: ${e.message}")
@@ -66,6 +72,9 @@ object NavigationManager {
                     SiteType.HENTAIMAMA -> {
                         navController.navigate(HentaiMamaSearchRoute(query))
                     }
+                    SiteType.ONAIR -> {
+                        navController.navigate(OnAirSearchRoute(query = query))
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "navigateToSearch failed: ${e.message}")
@@ -79,7 +88,6 @@ object NavigationManager {
                 Log.d(TAG, "navigateToHome called for site: ${getCurrentSiteType()}")
                 when (getCurrentSiteType()) {
                     SiteType.HANIME, SiteType.JAVCHU -> {
-
                         navController.popBackStack(0, false)
                         navController.navigate(HomeRoute)
                     }
@@ -91,10 +99,13 @@ object NavigationManager {
                         navController.popBackStack(0, false)
                         navController.navigate(HentaiMamaHomeRoute)
                     }
+                    SiteType.ONAIR -> {
+                        navController.popBackStack(0, false)
+                        navController.navigate(OnAirHomeRoute)
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "navigateToHome failed: ${e.message}")
-
                 navController.popBackStack(0, false)
             }
         }
@@ -112,9 +123,7 @@ object NavigationManager {
         Log.d(TAG, "switchSite called: $newSiteType")
         currentSiteType = newSiteType
         Preferences.siteType = newSiteType
-
         currentNavController?.popBackStack(0, false)
-
         Handler(Looper.getMainLooper()).postDelayed({
             navigateToHome()
         }, 300)

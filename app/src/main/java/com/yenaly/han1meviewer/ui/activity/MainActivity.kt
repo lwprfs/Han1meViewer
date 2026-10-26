@@ -73,6 +73,8 @@ import androidx.navigation.NavHostController
 import androidx.preference.PreferenceManager
 import com.google.android.material.snackbar.Snackbar
 import com.yenaly.han1meviewer.HanimeConstants
+import com.yenaly.han1meviewer.OnAir.common.OnAirSitePreferences
+import com.yenaly.han1meviewer.OnAir.data.remote.OnAirNetwork
 import com.yenaly.han1meviewer.PermissionRequester
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
@@ -100,6 +102,7 @@ import com.yenaly.han1meviewer.MissAV.common.MissAvConstants
 import com.yenaly.han1meviewer.MissAV.data.remote.MissAvNetwork
 import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaConstants
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
+
 class MainActivity : FrameActivity(), PermissionRequester {
 
     val viewModel: HomePageViewModel by viewModels()
@@ -348,6 +351,10 @@ class MainActivity : FrameActivity(), PermissionRequester {
                 }
                 HentaiMamaNetwork.rebuildNetwork()
             }
+
+            SiteType.ONAIR -> {
+                OnAirNetwork.rebuildNetwork()
+            }
         }
 
         Log.d(TAG, "New baseUrl after: ${Preferences.baseUrl}")
@@ -365,10 +372,10 @@ class MainActivity : FrameActivity(), PermissionRequester {
         }, SITE_SWITCH_NAVIGATION_DELAY_MS)
 
         Handler(Looper.getMainLooper()).postDelayed({
-            val urlDisplay = if (siteType == SiteType.JAVCHU) {
-                "Javchu (Fixed: https://javchu.com)"
-            } else {
-                Preferences.displayUrl
+            val urlDisplay = when (siteType) {
+                SiteType.JAVCHU -> "Javchu (Fixed: https://javchu.com)"
+                SiteType.ONAIR -> "OnAir (${OnAirSitePreferences.currentHostname()})"
+                else -> Preferences.displayUrl
             }
             GlobalToasts.show(
                 getString(R.string.switched_to_site, urlDisplay),
@@ -624,6 +631,13 @@ class MainActivity : FrameActivity(), PermissionRequester {
                     siteType = SiteType.JAVCHU,
                     logoRes = R.drawable.s_switch_javchu,
                     accentColor = Color(0xFFFB8C00),
+                ),
+                SiteInfo(
+                    name = "OnAir",
+                    description = "Self-hosted onion video site",
+                    siteType = SiteType.ONAIR,
+                    logoRes = R.drawable.s_switch_onair,
+                    accentColor = Color(0xFF00897B),
                 ),
             )
         }
