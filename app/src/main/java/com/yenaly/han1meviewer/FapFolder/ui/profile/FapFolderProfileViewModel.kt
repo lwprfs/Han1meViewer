@@ -12,7 +12,6 @@ import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderGroupRow
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderLoadMoreRequest
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderMedia
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderPost
-import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderProfileTabStream
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderUserProfile
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderUserRow
 import com.yenaly.han1meviewer.FapFolder.data.model.PostVariant
@@ -34,14 +33,14 @@ import org.jsoup.Jsoup
 
 enum class FapFolderProfileTab(val label: String, val param: String) {
     TIMELINE("Timeline", "posts"),
-    PHOTOS("Photos", "photos"),
+    PHOTOS("Gallery", "photos"),
     VIDEOS("Videos", "videos");
 
     companion object {
         fun fromParam(value: String?): FapFolderProfileTab {
             val v = value?.lowercase().orEmpty()
             return when {
-                v.contains("photo") -> PHOTOS
+                v.contains("photo") || v.contains("gallery") -> PHOTOS
                 v.contains("video") -> VIDEOS
                 else -> TIMELINE
             }
@@ -79,6 +78,8 @@ data class FapFolderProfileUiState(
     val headerError: String? = null,
     val sessionExpired: Boolean = false,
     val items: List<FapFolderFeedItem> = emptyList(),
+    val photoTiles: List<FapFolderProfileParser.PhotoTile> = emptyList(),
+    val videoTiles: List<FapFolderProfileParser.VideoTile> = emptyList(),
     val isLoadingMore: Boolean = false,
     val hasMore: Boolean = false,
     val itemsError: String? = null,
@@ -102,13 +103,16 @@ data class FapFolderProfileUiState(
 
     val groups: List<FapFolderGroupRow>
         get() = items.filterIsInstance<FapFolderFeedItem.Community>().map { it.group }
+
+    val mediaImages: List<FapFolderMedia.Image>
+        get() = FapFolderProfileParser.toMediaImages(photoTiles)
 }
 
 class FapFolderProfileViewModel(application: Application) : AndroidViewModel(application) {
 
     companion object {
         private const val TAG = "FapFolderProfileVM"
-        private const val MAX_PAGES = 50
+        private const val MAX_PAGES = 100
     }
 
     private val _uiState = MutableStateFlow(FapFolderProfileUiState())
@@ -119,6 +123,10 @@ class FapFolderProfileViewModel(application: Application) : AndroidViewModel(app
     private var followJob: Job? = null
 
     private val seenKeys = mutableSetOf<String>()
+    private val seenPhotoIds = mutableSetOf<Long?>()
+    private val seenPhotoUrls = mutableSetOf<String>()
+    private val seenVideoPostIds = mutableSetOf<Long?>()
+    private val seenVideoUrls = mutableSetOf<String>()
 
     fun load(username: String, initialTab: String?) {
         val clean = username.trim('/')
@@ -138,6 +146,10 @@ class FapFolderProfileViewModel(application: Application) : AndroidViewModel(app
         itemsJob?.cancel()
         followJob?.cancel()
         seenKeys.clear()
+        seenPhotoIds.clear()
+        seenPhotoUrls.clear()
+        seenVideoPostIds.clear()
+        seenVideoUrls.clear()
 
         _uiState.update {
             it.copy(
@@ -148,6 +160,8 @@ class FapFolderProfileViewModel(application: Application) : AndroidViewModel(app
                 headerError = null,
                 sessionExpired = false,
                 items = emptyList(),
+                photoTiles = emptyList(),
+                videoTiles = emptyList(),
                 itemsError = null,
                 hasMore = false,
                 currentOffset = 1,
@@ -203,12 +217,18 @@ class FapFolderProfileViewModel(application: Application) : AndroidViewModel(app
             it.copy(
                 activeTab = normalised,
                 items = emptyList(),
+                photoTiles = emptyList(),
+                videoTiles = emptyList(),
                 itemsError = null,
                 hasMore = false,
                 currentOffset = 1,
             )
         }
         seenKeys.clear()
+        seenPhotoIds.clear()
+        seenPhotoUrls.clear()
+        seenVideoPostIds.clear()
+        seenVideoUrls.clear()
         loadTabItems(normalised)
     }
 
@@ -220,6 +240,10 @@ class FapFolderProfileViewModel(application: Application) : AndroidViewModel(app
         itemsJob?.cancel()
         followJob?.cancel()
         seenKeys.clear()
+        seenPhotoIds.clear()
+        seenPhotoUrls.clear()
+        seenVideoPostIds.clear()
+        seenVideoUrls.clear()
         _uiState.update { it.copy(profile = null, isLoading = true, headerError = null) }
         load(username, currentTab.param)
     }
@@ -241,12 +265,13 @@ class FapFolderProfileViewModel(application: Application) : AndroidViewModel(app
                 when (page) {
                     is PageLoadingState.Loading -> Unit
                     is PageLoadingState.Success -> {
-                        val fresh = page.info.filter { item ->
-                            seenKeys.add(item.stableKey)
+                        when (state.activeTab) {
+                            FapFolderProfileTab.TIMELINE -> appendPostItems(page.info)
+                            FapFolderProfileTab.PHOTOS -> appendPhotoItems(page.info)
+                            FapFolderProfileTab.VIDEOS -> appendVideoItems(page.info)
                         }
                         _uiState.update {
                             it.copy(
-                                items = it.items + fresh,
                                 isLoadingMore = false,
                                 hasMore = page.info.isNotEmpty(),
                                 itemsError = null,
@@ -322,49 +347,18 @@ class FapFolderProfileViewModel(application: Application) : AndroidViewModel(app
 
         val base = FapFolderNetwork.baseUrl.trimEnd('/')
         val isGroupProfile = !profile.groupSlug.isNullOrBlank()
-        val tabUrl = profile.tabUrls[tab.param]
-            ?: if (isGroupProfile) {
-                val slug = profile.groupSlug
-                when (tab) {
-                    FapFolderProfileTab.PHOTOS -> "$base/groups/$slug/photos"
-                    FapFolderProfileTab.VIDEOS -> "$base/groups/$slug/videos"
-                    FapFolderProfileTab.TIMELINE -> "$base/groups/$slug"
-                }
-            } else {
-                when (tab) {
-                    FapFolderProfileTab.PHOTOS -> "$base/$username/photos"
-                    FapFolderProfileTab.VIDEOS -> "$base/$username/videos"
-                    FapFolderProfileTab.TIMELINE -> "$base/$username"
-                }
-            }
-
-        val stream = profile.tabStreams[tab.param]
-        if (stream != null && tab == FapFolderProfileTab.TIMELINE) {
-            applyStreamState(stream)
-            loadFirstPageFromUrl(tabUrl, tab, null, profile.uid?.toString())
-            return
+        val tabUrl = profile.tabUrls[tab.param] ?: when (tab) {
+            FapFolderProfileTab.PHOTOS -> if (isGroupProfile) {
+                "$base/groups/${profile.groupSlug}/photos"
+            } else "$base/$username/photos"
+            FapFolderProfileTab.VIDEOS -> if (isGroupProfile) {
+                "$base/groups/${profile.groupSlug}/videos"
+            } else "$base/$username/videos"
+            FapFolderProfileTab.TIMELINE -> if (isGroupProfile) {
+                "$base/groups/${profile.groupSlug}"
+            } else "$base/$username"
         }
 
-        val fallbackFilter = when (tab) {
-            FapFolderProfileTab.PHOTOS -> "photos"
-            FapFolderProfileTab.VIDEOS -> "videos"
-            FapFolderProfileTab.TIMELINE -> null
-        }
-
-        loadFirstPageFromUrl(
-            tabUrl = tabUrl,
-            tab = tab,
-            fallbackFilter = fallbackFilter,
-            fallbackId = profile.uid?.toString() ?: profile.groupSlug,
-        )
-    }
-
-    private fun loadFirstPageFromUrl(
-        tabUrl: String,
-        tab: FapFolderProfileTab,
-        fallbackFilter: String?,
-        fallbackId: String?,
-    ) {
         itemsJob?.cancel()
         itemsJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, itemsError = null) }
@@ -382,38 +376,13 @@ class FapFolderProfileViewModel(application: Application) : AndroidViewModel(app
                     return@launch
                 }
 
-                val snapshot = FapFolderNetworkRepo.parseFirstPageFromHtml(
-                    html = rawBody,
-                    pageUrl = tabUrl,
-                    filter = fallbackFilter,
-                    fallbackId = fallbackId,
-                )
-
-                val items: List<FapFolderFeedItem> = snapshot.items.ifEmpty {
-                    fallbackItemsFromTabPage(rawBody, tabUrl, tab)
-                }
-
-                seenKeys.clear()
-                items.forEach { seenKeys.add(it.stableKey) }
-
-                _uiState.update {
-                    it.copy(
-                        items = items,
-                        isLoading = false,
-                        hasMore = snapshot.hasMore && items.isNotEmpty(),
-                        currentOffset = 2,
-                        streamGet = snapshot.get ?: defaultGetForTab(tab),
-                        streamFilter = snapshot.filter ?: fallbackFilter,
-                        streamId = snapshot.id ?: fallbackId,
-                        streamType = snapshot.type,
-                        streamUid = snapshot.uid,
-                        streamSearch = snapshot.search,
-                        streamHashtag = snapshot.hashtag,
-                        itemsError = null,
-                    )
+                when (tab) {
+                    FapFolderProfileTab.PHOTOS -> applyPhotoPage(rawBody, tabUrl)
+                    FapFolderProfileTab.VIDEOS -> applyVideoPage(rawBody, tabUrl)
+                    FapFolderProfileTab.TIMELINE -> applyTimelinePage(rawBody, tabUrl, profile)
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "loadFirstPageFromUrl($tab) failed", e)
+                Log.e(TAG, "loadTabItems($tab) failed", e)
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -424,180 +393,246 @@ class FapFolderProfileViewModel(application: Application) : AndroidViewModel(app
         }
     }
 
-    private fun defaultGetForTab(tab: FapFolderProfileTab): String = when (tab) {
-        FapFolderProfileTab.TIMELINE -> FapFolderProfileParser.FALLBACK_GET_POSTS
-        FapFolderProfileTab.PHOTOS -> FapFolderProfileParser.FALLBACK_GET_POSTS
-        FapFolderProfileTab.VIDEOS -> FapFolderProfileParser.FALLBACK_GET_POSTS
-    }
-
-    private fun fallbackItemsFromTabPage(
+    private fun applyTimelinePage(
         html: String,
         tabUrl: String,
-        tab: FapFolderProfileTab,
+        profile: FapFolderUserProfile,
+    ) {
+        val snapshot = FapFolderNetworkRepo.parseFirstPageFromHtml(
+            html = html,
+            pageUrl = tabUrl,
+            filter = null,
+            fallbackId = profile.uid?.toString(),
+        )
+        val items = snapshot.items.ifEmpty {
+            fallbackPostsFromTimeline(html, tabUrl, profile)
+        }
+
+        seenKeys.clear()
+        items.forEach { seenKeys.add(it.stableKey) }
+
+        _uiState.update {
+            it.copy(
+                items = items,
+                isLoading = false,
+                hasMore = snapshot.hasMore && items.isNotEmpty(),
+                currentOffset = 2,
+                streamGet = snapshot.get
+                    ?: FapFolderProfileParser.FALLBACK_GET_POSTS_GROUP,
+                streamFilter = snapshot.filter ?: FapFolderConstants.FILTER_ALL,
+                streamId = snapshot.id ?: profile.uid?.toString(),
+                streamType = snapshot.type,
+                streamUid = snapshot.uid,
+                streamSearch = snapshot.search,
+                streamHashtag = snapshot.hashtag,
+                itemsError = null,
+            )
+        }
+    }
+
+    private fun applyPhotoPage(html: String, tabUrl: String) {
+        val snapshot = FapFolderProfileParser.parseGalleryPage(html, tabUrl)
+            ?: FapFolderProfileParser.GallerySnapshot(
+                photos = emptyList(),
+                hasMore = false,
+                streamGet = FapFolderProfileParser.FALLBACK_GET_PHOTOS,
+                streamId = null,
+                streamType = "group",
+            )
+
+        val fresh = snapshot.photos.filter { tile ->
+            val id = tile.photoId
+            val url = tile.fullUrl
+            val idTaken = id != null && seenPhotoIds.contains(id)
+            val urlTaken = seenPhotoUrls.contains(url)
+            if (!idTaken && !urlTaken) {
+                seenPhotoIds.add(id)
+                seenPhotoUrls.add(url)
+                true
+            } else false
+        }
+
+        _uiState.update {
+            it.copy(
+                photoTiles = fresh,
+                isLoading = false,
+                hasMore = snapshot.hasMore && fresh.isNotEmpty(),
+                currentOffset = 2,
+                streamGet = snapshot.streamGet
+                    ?: FapFolderProfileParser.FALLBACK_GET_PHOTOS,
+                streamId = snapshot.streamId ?: _uiState.value.profile?.uid?.toString(),
+                streamType = snapshot.streamType ?: "group",
+                streamFilter = null,
+                itemsError = null,
+            )
+        }
+    }
+
+    private fun applyVideoPage(html: String, tabUrl: String) {
+        val snapshot = FapFolderProfileParser.parseVideosPage(html, tabUrl)
+            ?: FapFolderProfileParser.VideosSnapshot(
+                videos = emptyList(),
+                hasMore = false,
+                streamGet = FapFolderProfileParser.FALLBACK_GET_VIDEOS,
+                streamId = null,
+                streamType = "group",
+            )
+
+        val fresh = snapshot.videos.filter { tile ->
+            val id = tile.postId
+            val url = tile.postUrl
+            val idTaken = id != null && seenVideoPostIds.contains(id)
+            val urlTaken = seenVideoUrls.contains(url)
+            if (!idTaken && !urlTaken) {
+                seenVideoPostIds.add(id)
+                seenVideoUrls.add(url)
+                true
+            } else false
+        }
+
+        _uiState.update {
+            it.copy(
+                videoTiles = fresh,
+                isLoading = false,
+                hasMore = snapshot.hasMore && fresh.isNotEmpty(),
+                currentOffset = 2,
+                streamGet = snapshot.streamGet
+                    ?: FapFolderProfileParser.FALLBACK_GET_VIDEOS,
+                streamId = snapshot.streamId ?: _uiState.value.profile?.uid?.toString(),
+                streamType = snapshot.streamType ?: "group",
+                streamFilter = null,
+                itemsError = null,
+            )
+        }
+    }
+
+    private fun appendPostItems(newItems: List<FapFolderFeedItem>) {
+        val fresh = newItems.filter { seenKeys.add(it.stableKey) }
+        _uiState.update { it.copy(items = it.items + fresh) }
+    }
+
+    private fun appendPhotoItems(newItems: List<FapFolderFeedItem>) {
+        val tiles = newItems.mapNotNull { item ->
+            (item as? FapFolderFeedItem.Post)?.post?.primaryImage
+        }.map { image ->
+            FapFolderProfileParser.PhotoTile(
+                photoId = image.photoId,
+                fullUrl = image.fullUrl,
+                previewUrl = image.previewUrl,
+                pageUrl = image.photoId?.let {
+                    "${FapFolderNetwork.baseUrl.trimEnd('/')}/photos/$it"
+                },
+                alt = image.alt,
+            )
+        }
+        val fresh = tiles.filter { tile ->
+            val id = tile.photoId
+            val url = tile.fullUrl
+            val idTaken = id != null && seenPhotoIds.contains(id)
+            val urlTaken = seenPhotoUrls.contains(url)
+            if (!idTaken && !urlTaken) {
+                seenPhotoIds.add(id)
+                seenPhotoUrls.add(url)
+                true
+            } else false
+        }
+        _uiState.update { it.copy(photoTiles = it.photoTiles + fresh) }
+    }
+
+    private fun appendVideoItems(newItems: List<FapFolderFeedItem>) {
+        val tiles = newItems.filterIsInstance<FapFolderFeedItem.Post>().map { item ->
+            val post = item.post
+            FapFolderProfileParser.VideoTile(
+                postId = post.postId,
+                postUrl = post.permalink ?: "${FapFolderNetwork.baseUrl.trimEnd('/')}/posts/${post.postId}",
+                thumbnailUrl = post.primaryVideo?.posterUrl
+                    ?: post.primaryImage?.fullUrl,
+                title = post.bodyPlain.take(80).ifBlank { null },
+            )
+        }
+        val fresh = tiles.filter { tile ->
+            val id = tile.postId
+            val url = tile.postUrl
+            val idTaken = id != null && seenVideoPostIds.contains(id)
+            val urlTaken = seenVideoUrls.contains(url)
+            if (!idTaken && !urlTaken) {
+                seenVideoPostIds.add(id)
+                seenVideoUrls.add(url)
+                true
+            } else false
+        }
+        _uiState.update { it.copy(videoTiles = it.videoTiles + fresh) }
+    }
+
+    private fun fallbackPostsFromTimeline(
+        html: String,
+        tabUrl: String,
+        profile: FapFolderUserProfile,
     ): List<FapFolderFeedItem> {
         val doc = runCatching { Jsoup.parse(html, tabUrl) }.getOrNull()
             ?: return emptyList()
-
-        val groupSlug = FapFolderUrlUtils.extractGroupSlug(tabUrl)
-        val displayName = groupSlug
-            ?: FapFolderUrlUtils.extractUsername(tabUrl)
-            ?: "FapFolder"
-        val author = FapFolderAuthor(
-            uid = null,
-            username = FapFolderUrlUtils.extractUsername(tabUrl),
-            groupSlug = groupSlug,
-            displayName = displayName,
-            profileUrl = null,
-            avatarUrl = null,
-            isGold = false,
-            isAnonymous = false,
+        val streamRoot = doc.selectFirst("div.js_posts_stream") ?: doc.body()
+        val posts = FapFolderNetworkRepo.parseFirstPageFromHtml(
+            html = html,
+            pageUrl = tabUrl,
+            filter = null,
+            fallbackId = profile.uid?.toString(),
         )
-
-        if (tab == FapFolderProfileTab.PHOTOS) {
-            val anchors = doc.select("a.pg_photo[href], a.js_lightbox[href]")
-            val images = anchors.mapNotNull { anchor ->
-                val fullUrl = (anchor.attr("data-image").takeIf { it.isNotBlank() }
-                    ?: FapFolderHtmlUtils.extractBackgroundImageUrl(anchor.attr("style"))
-                    ?: anchor.selectFirst("img[data-src]")?.attr("data-src")
-                    ?: anchor.selectFirst("img[src]")?.absUrl("src"))
-                    ?.let { FapFolderUrlUtils.normalizeMediaUrl(it) }
-                    ?: return@mapNotNull null
-                FapFolderMedia.Image(
-                    photoId = anchor.attr("data-id").toLongOrNull()
-                        ?: FapFolderUrlUtils.extractPhotoId(anchor.attr("href")),
-                    fullUrl = fullUrl,
-                    previewUrl = anchor.selectFirst("img[data-src]")?.attr("data-src")
-                        ?.takeIf { it.isNotBlank() }
-                        ?.let { FapFolderUrlUtils.normalizeMediaUrl(it) },
-                    context = anchor.attr("data-context").takeIf { it.isNotBlank() },
-                    alt = anchor.selectFirst("img")?.attr("alt")?.takeIf { it.isNotBlank() },
-                )
-            }.distinctBy { it.photoId ?: it.fullUrl }
-
-            if (images.isEmpty()) return emptyList()
-            val synthetic = FapFolderPost(
-                postId = images.first().photoId ?: tabUrl.hashCode().toLong(),
-                slug = null,
-                permalink = tabUrl,
-                author = author,
-                uploaderUsername = null,
-                uploaderUrl = null,
-                uploaderIsGold = false,
-                action = null,
-                postedAtIso = "",
-                bodyHtml = "",
-                bodyPlain = "",
-                hashtags = emptyList(),
-                media = listOf(
-                    FapFolderMedia.Gallery(
-                        photos = images,
-                        totalCount = images.size,
-                        albumId = images.first().photoId?.toString(),
-                    )
-                ),
-                variants = setOf(PostVariant.GALLERY),
-                isPremium = false,
-                reactions = ReactionCount.EMPTY,
-                commentCount = 0,
-                shareCount = 0,
-                viewCount = null,
-            )
-            return listOf(FapFolderFeedItem.Post(synthetic))
-        }
-
-        if (tab == FapFolderProfileTab.VIDEOS) {
-            val blocks = doc.select("div.vid-placeholder[data-src]")
-            if (blocks.isEmpty()) return emptyList()
-            val media = blocks.mapNotNull { el ->
-                val src = el.attr("data-src").takeIf { it.isNotBlank() }
-                    ?: return@mapNotNull null
-                val poster = el.attr("data-poster").takeIf { it.isNotBlank() }
-                    ?: FapFolderHtmlUtils.extractBackgroundImageUrl(el.attr("style"))
-                        ?.let { FapFolderUrlUtils.normalizeMediaUrl(it) }
-                FapFolderMedia.Video(
-                    videoId = el.attr("data-id").removePrefix("video-").toLongOrNull(),
-                    onPlayId = el.attr("data-onplay-id").toLongOrNull(),
-                    playUrl = src,
-                    posterUrl = poster,
-                    durationSeconds = el.attr("data-length").toIntOrNull(),
-                    aspectRatio = el.attr("data-aspect-ratio").toDoubleOrNull(),
-                    adEligible = el.attr("data-ad-eligible") == "1",
-                    fileExtension = "mp4",
-                    expirationEpoch = FapFolderUrlUtils.videoExpirationEpoch(src),
-                    signature = FapFolderUrlUtils.videoSignature(src),
-                )
-            }
-            if (media.isEmpty()) return emptyList()
-            val synthetic = FapFolderPost(
-                postId = tabUrl.hashCode().toLong(),
-                slug = null,
-                permalink = tabUrl,
-                author = author,
-                uploaderUsername = null,
-                uploaderUrl = null,
-                uploaderIsGold = false,
-                action = null,
-                postedAtIso = "",
-                bodyHtml = "",
-                bodyPlain = "",
-                hashtags = emptyList(),
-                media = media,
-                variants = setOf(PostVariant.VIDEO),
-                isPremium = false,
-                reactions = ReactionCount.EMPTY,
-                commentCount = 0,
-                shareCount = 0,
-                viewCount = null,
-            )
-            return listOf(FapFolderFeedItem.Post(synthetic))
-        }
-
-        return emptyList()
-    }
-
-    private fun applyStreamState(stream: FapFolderProfileTabStream) {
-        _uiState.update {
-            it.copy(
-                streamGet = stream.get,
-                streamFilter = stream.filter,
-                streamId = stream.id,
-                streamType = stream.type,
-                streamUid = stream.uid,
-                streamSearch = stream.search,
-                streamHashtag = stream.hashtag,
-                currentOffset = stream.offset.coerceAtLeast(2),
-                hasMore = !stream.done,
-            )
-        }
+        if (posts.items.isNotEmpty()) return posts.items
+        return FapFolderPostParser
+            .parsePostsFromList(streamRoot, tabUrl, null, includeComments = false)
+            .map { FapFolderFeedItem.Post(it) }
     }
 
     private fun buildStreamRequest(
         state: FapFolderProfileUiState,
         offset: Int,
     ): FapFolderLoadMoreRequest {
-        val fallbackFilter = when (state.activeTab) {
-            FapFolderProfileTab.PHOTOS -> "photos"
-            FapFolderProfileTab.VIDEOS -> "videos"
-            FapFolderProfileTab.TIMELINE -> FapFolderConstants.FILTER_ALL
-        }
-        val fallbackGet = FapFolderProfileParser.FALLBACK_GET_POSTS
         val id = state.streamId
             ?: state.profile?.uid?.toString()
             ?: state.profile?.groupSlug
-        val uid = state.streamUid ?: id
 
-        return FapFolderFeedPaging.fromStream(
-            get = state.streamGet ?: fallbackGet,
-            filter = state.streamFilter ?: fallbackFilter,
-            id = id,
-            type = state.streamType,
-            uid = uid,
-            search = state.streamSearch,
-            hashtag = state.streamHashtag,
-            offset = offset,
-            premfeed = FapFolderConstants.PREMFEED_OFF,
-            time = FapFolderConstants.TIME_NO_FILTER,
-        )
+        return when (state.activeTab) {
+            FapFolderProfileTab.TIMELINE -> FapFolderFeedPaging.fromStream(
+                get = state.streamGet
+                    ?: FapFolderProfileParser.FALLBACK_GET_POSTS_GROUP,
+                filter = state.streamFilter ?: FapFolderConstants.FILTER_ALL,
+                id = id,
+                type = state.streamType,
+                uid = state.streamUid,
+                search = state.streamSearch,
+                hashtag = state.streamHashtag,
+                offset = offset,
+                premfeed = FapFolderConstants.PREMFEED_OFF,
+                time = FapFolderConstants.TIME_NO_FILTER,
+            )
+            FapFolderProfileTab.PHOTOS -> FapFolderLoadMoreRequest(
+                get = state.streamGet
+                    ?: FapFolderProfileParser.FALLBACK_GET_PHOTOS,
+                offset = offset,
+                filter = null,
+                id = id,
+                type = state.streamType ?: "group",
+                uid = null,
+                premfeed = FapFolderConstants.PREMFEED_OFF,
+                time = FapFolderConstants.TIME_NO_FILTER,
+                search = null,
+                hashtag = null,
+            )
+            FapFolderProfileTab.VIDEOS -> FapFolderLoadMoreRequest(
+                get = state.streamGet
+                    ?: FapFolderProfileParser.FALLBACK_GET_VIDEOS,
+                offset = offset,
+                filter = null,
+                id = id,
+                type = state.streamType ?: "group",
+                uid = null,
+                premfeed = FapFolderConstants.PREMFEED_OFF,
+                time = FapFolderConstants.TIME_NO_FILTER,
+                search = null,
+                hashtag = null,
+            )
+        }
     }
 
     override fun onCleared() {

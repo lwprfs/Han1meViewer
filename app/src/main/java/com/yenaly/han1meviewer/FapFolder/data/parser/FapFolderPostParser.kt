@@ -39,32 +39,46 @@ object FapFolderPostParser {
 
         val author = parseAuthor(postEl, baseUrl)
 
-        val uploaderAnchor = postEl.selectFirst(".post-time > a[href]")
+        val postTimeEl = postEl.selectFirst(".post-time")
+        val momentAnchor = postTimeEl?.selectFirst("a.js_moment[data-time]")
+            ?: postEl.selectFirst(".js_moment[data-time]")
 
-        val uploaderUsername: String? = uploaderAnchor?.text()?.trim()?.takeIf { it.isNotBlank() }
-        val uploaderUrl: String? = uploaderAnchor?.absUrl("href")?.takeIf { it.isNotBlank() }
+        val isProfileLayout = postTimeEl != null &&
+                momentAnchor != null &&
+                postTimeEl.select("a[href]").size == 1
+
+        val uploaderAnchor: Element? = if (isProfileLayout) null
+        else postTimeEl?.selectFirst("a[href]")
+
+        val uploaderUsername: String? = uploaderAnchor?.text()?.trim()
+            ?.takeIf { it.isNotBlank() }
+        val uploaderUrl: String? = uploaderAnchor?.absUrl("href")
+            ?.takeIf { it.isNotBlank() }
             ?: uploaderAnchor?.attr("href")?.takeIf { it.isNotBlank() }
                 ?.let(FapFolderUrlUtils::absoluteUrl)
 
         val uploaderIsGold: Boolean = postEl.selectFirst(".post-time i.gold-badge") != null
 
-        val action: String? = postEl.selectFirst(".post-title")?.text()?.trim()
-            ?.takeIf { it.isNotBlank() }
-
-        val postedAtIso: String = postEl.selectFirst(".post-time a.js_moment[data-time]")
-            ?.attr("data-time")
-            ?.let(FapFolderHtmlUtils::parseDataTimeIso)
-            ?: postEl.selectFirst(".js_moment[data-time]")
-                ?.attr("data-time")
-                ?.let(FapFolderHtmlUtils::parseDataTimeIso)
-                ?: ""
-
-        val permalink: String? = postEl.selectFirst("a.dropdown-item[href*='/posts/']")
-            ?.absUrl("href")
-            ?.takeIf { it.isNotBlank() }
-            ?: postEl.selectFirst("a[href*='/posts/']")
-                ?.absUrl("href")
+        val action: String? = if (isProfileLayout) {
+            postEl.selectFirst(".post-meta > .post-title")?.text()?.trim()
                 ?.takeIf { it.isNotBlank() }
+                ?: postEl.selectFirst(".post-title")?.text()?.trim()
+                    ?.takeIf { it.isNotBlank() }
+        } else {
+            postEl.selectFirst(".post-title")?.text()?.trim()
+                ?.takeIf { it.isNotBlank() }
+        }
+
+        val postedAtIso: String = momentAnchor?.attr("data-time")
+            ?.let(FapFolderHtmlUtils::parseDataTimeIso)
+            ?: ""
+
+        val permalink: String? = momentAnchor?.absUrl("href")
+            ?.takeIf { it.isNotBlank() }
+            ?: postEl.selectFirst("a.dropdown-item[href*='/posts/']")
+                ?.absUrl("href")?.takeIf { it.isNotBlank() }
+            ?: postEl.selectFirst("a[href*='/posts/']")
+                ?.absUrl("href")?.takeIf { it.isNotBlank() }
         val slug = permalink?.let(FapFolderUrlUtils::extractPostSlug)
 
         val bodyHtml: String = postEl.selectFirst("div.post-text")
@@ -80,7 +94,8 @@ object FapFolderPostParser {
             .mapNotNull { anchor ->
                 val href = anchor.attr("href")
                 FapFolderUrlUtils.extractTagFromHashtagHref(href)
-                    ?: anchor.text().removePrefix("#").trim().takeIf { it.isNotBlank() }
+                    ?: anchor.text().removePrefix("#").trim()
+                        .takeIf { it.isNotBlank() }
             }
             .distinct()
 
@@ -140,6 +155,10 @@ object FapFolderPostParser {
     ): List<FapFolderPost> {
         if (root == null) return emptyList()
         val candidates = root.select("li > div.post[data-id], div.post[data-id]")
+            .filter { el ->
+                val id = el.attr("data-id")
+                id.isNotEmpty() && id.all(Char::isDigit)
+            }
             .distinctBy { it.attr("data-id") }
         return candidates.mapNotNull { el ->
             if (el.containsOnlyAdContent()) return@mapNotNull null
@@ -176,6 +195,7 @@ object FapFolderPostParser {
         } else null
 
         val displayName: String = anchor?.text()?.trim()
+            ?.takeIf { it.isNotBlank() }
             ?: "Unknown"
 
         val avatarUrl: String? = run {
@@ -184,13 +204,16 @@ object FapFolderPostParser {
             val style = avatarEl.attr("style")
             FapFolderHtmlUtils.extractBackgroundImageUrl(style)
                 ?.let(FapFolderUrlUtils::normalizeMediaUrl)
-                ?: avatarEl.selectFirst("img[src]")?.absUrl("src")?.takeIf { it.isNotBlank() }
+                ?: avatarEl.selectFirst("img[src]")?.absUrl("src")
+                    ?.takeIf { it.isNotBlank() }
                 ?: avatarEl.attr("data-image").takeIf { it.isNotBlank() }
         }
 
-        val isGold: Boolean = postEl.selectFirst(".post-author i.gold-badge, .post-author .gold-badge") != null
+        val isGold: Boolean =
+            postEl.selectFirst(".post-author i.gold-badge, .post-author .gold-badge") != null
 
         val popover = postEl.selectFirst(".js_user-popover[data-uid]")
+            ?: postEl.selectFirst("span.js_user-popover[data-uid]")
         val uid = popover?.attr("data-uid")?.toLongOrNull()
 
         return FapFolderAuthor(
@@ -223,6 +246,7 @@ object FapFolderPostParser {
         }
 
         val photoAnchors = postEl.select(photoGridSelector)
+            .ifEmpty { postEl.select("a.js_lightbox[data-image], a.js_lightbox[href]") }
         if (photoAnchors.isNotEmpty()) {
             val singleImageLayout = postEl.selectFirst(".pg_1x") != null
             val multiLayout = postEl.selectFirst(".pg_2x, .pg_2o3, .pg_1o3") != null
@@ -232,15 +256,14 @@ object FapFolderPostParser {
 
             if (images.isNotEmpty()) {
                 val overlayMore = postEl.selectFirst(".pg_2o3 .more, .pg_1o3 .more")
-                val totalCount = overlayMore?.text()?.let { morePhotosRegex.find(it)?.groupValues?.get(1)?.toIntOrNull() }
+                val totalCount = overlayMore?.text()
+                    ?.let { morePhotosRegex.find(it)?.groupValues?.get(1)?.toIntOrNull() }
                     ?: postEl.selectFirst("a[href*='/photos/']")
                         ?.text()
                         ?.let { FapFolderHtmlUtils.parseLeadingInt(it) }
 
                 if (multiLayout || images.size > 1) {
-                    val albumId = images.firstOrNull()?.let { img ->
-                        img.photoId?.toString()
-                    }
+                    val albumId = images.firstOrNull()?.photoId?.toString()
                     media += FapFolderMedia.Gallery(
                         photos = images,
                         totalCount = totalCount ?: images.size,
@@ -286,7 +309,8 @@ object FapFolderPostParser {
                     title = title,
                     description = description.takeIf { it.isNotBlank() },
                     thumbnailUrl = thumbnail,
-                    host = host.takeIf { it.isNotBlank() } ?: FapFolderUrlUtils.hostOf(targetUrl).orEmpty(),
+                    host = host.takeIf { it.isNotBlank() }
+                        ?: FapFolderUrlUtils.hostOf(targetUrl).orEmpty(),
                     targetUrl = targetUrl,
                 )
                 variants += PostVariant.LINK
@@ -428,7 +452,9 @@ object FapFolderPostParser {
         val photoId = anchor.attr("data-id").toLongOrNull()
             ?: FapFolderUrlUtils.extractPhotoId(anchor.attr("href"))
 
-        val previewUrl = imgDataSrc?.let { FapFolderUrlUtils.normalizeMediaUrl(it, uploadsBase) }
+        val previewUrl = imgDataSrc?.let {
+            FapFolderUrlUtils.normalizeMediaUrl(it, uploadsBase)
+        }
 
         val context = anchor.attr("data-context").takeIf { it.isNotBlank() }
 
@@ -455,10 +481,14 @@ object FapFolderPostParser {
                 ?: FapFolderHtmlUtils.parseLeadingInt(optionEl.text())
                 ?: 0
             val percentText = optionEl.selectFirst(".percentage-bg")?.attr("style")
-                ?.let { Regex("""width\s*:\s*([\d.]+)""").find(it)?.groupValues?.getOrNull(1) }
+                ?.let {
+                    Regex("""width\s*:\s*([\d.]+)""").find(it)
+                        ?.groupValues?.getOrNull(1)
+                }
                 ?.toFloatOrNull()
                 ?: 0f
-            val isSelected = optionEl.selectFirst("input[type=radio]")?.hasAttr("checked") == true
+            val isSelected =
+                optionEl.selectFirst("input[type=radio]")?.hasAttr("checked") == true
             FapFolderPollOption(
                 id = id,
                 label = label,

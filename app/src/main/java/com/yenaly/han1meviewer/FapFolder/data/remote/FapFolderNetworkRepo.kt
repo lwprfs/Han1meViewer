@@ -121,9 +121,11 @@ object FapFolderNetworkRepo {
     private fun uploadsBase(): String =
         FapFolderSessionCache.uploadsBase()
 
-    fun getHomePageWithExtras(): Flow<WebsiteState<HomePageBundle>> = flow {
+    fun getPageWithExtras(
+        path: String,
+    ): Flow<WebsiteState<HomePageBundle>> = flow {
         emit(WebsiteState.Loading)
-        val url = basePath() + "/"
+        val url = basePath().trimEnd('/') + path
         try {
             val response = FapFolderNetwork.service.getByUrl(url)
             val rawBody = response.body()?.string()
@@ -132,7 +134,6 @@ object FapFolderNetworkRepo {
                 emit(errorState(code, rawBody))
                 return@flow
             }
-
             if (FapFolderHtmlUtils.looksLikeCloudflareChallenge(rawBody)) {
                 emit(WebsiteState.Error(IllegalStateException("Cloudflare challenge.")))
                 return@flow
@@ -179,100 +180,19 @@ object FapFolderNetworkRepo {
 
             emit(WebsiteState.Success(HomePageBundle(page = page, extras = extras)))
         } catch (e: Exception) {
-            Log.e(TAG, "getHomePageWithExtras failed", e)
+            Log.e(TAG, "getPageWithExtras($path) failed", e)
             emit(WebsiteState.Error(e))
         }
     }.flowOn(Dispatchers.IO)
 
-    fun getHomePage(): Flow<WebsiteState<FapFolderFeedPage>> = flow {
-        emit(WebsiteState.Loading)
-        val url = basePath() + "/"
-        try {
-            val response = FapFolderNetwork.service.getByUrl(url)
-            val rawBody = response.body()?.string()
-            val code = response.code()
-            if (!response.isSuccessful || rawBody.isNullOrBlank()) {
-                emit(errorState(code, rawBody))
-                return@flow
-            }
+    fun getHomePageWithExtras(): Flow<WebsiteState<HomePageBundle>> =
+        getPageWithExtras(FapFolderConstants.PATH_HOME)
 
-            if (FapFolderHtmlUtils.looksLikeCloudflareChallenge(rawBody)) {
-                emit(
-                    WebsiteState.Error(
-                        IllegalStateException("Cloudflare challenge. Try again later.")
-                    )
-                )
-                return@flow
-            }
+    fun getHotPageWithExtras(): Flow<WebsiteState<HomePageBundle>> =
+        getPageWithExtras(FapFolderConstants.PATH_HOT)
 
-            val session = FapFolderSessionParser.parseAndCache(rawBody, url)
-            val doc = Jsoup.parse(rawBody, url)
-
-            val streamRoot = doc.selectFirst("div.js_posts_stream")
-            val feedGet = streamRoot?.attr("data-get")?.takeIf { it.isNotBlank() }
-                ?: FapFolderConstants.FEED_GET_NEWSFEED
-            val feedFilter = streamRoot?.attr("data-filter")?.takeIf { it.isNotBlank() }
-                ?: FapFolderConstants.FILTER_ALL
-            val feedId = streamRoot?.attr("data-id")?.takeIf { it.isNotBlank() }
-            val feedType = streamRoot?.attr("data-type")?.takeIf { it.isNotBlank() }
-            val feedUid = streamRoot?.attr("data-uid")?.takeIf { it.isNotBlank() }
-
-            val posts = FapFolderPostParser.parsePostsFromList(
-                root = streamRoot ?: doc.body(),
-                baseUrl = url,
-                uploadsBase = uploadsBase(),
-                includeComments = false,
-            )
-
-            val items = posts.map { FapFolderFeedItem.Post(it) }
-
-            val seeMore = doc.selectFirst(".js_see-more-infinite")
-            val hasMore = seeMore != null && !seeMore.hasClass("done") && posts.isNotEmpty()
-
-            emit(
-                WebsiteState.Success(
-                    FapFolderFeedPage(
-                        items = items,
-                        session = session,
-                        nextOffset = 1,
-                        hasMore = hasMore,
-                        feedGet = feedGet,
-                        feedFilter = feedFilter,
-                        feedId = feedId,
-                        feedType = feedType,
-                        feedUid = feedUid,
-                    )
-                )
-            )
-        } catch (e: Exception) {
-            Log.e(TAG, "getHomePage failed", e)
-            emit(WebsiteState.Error(e))
-        }
-    }.flowOn(Dispatchers.IO)
-
-    fun getHomeExtras(): Flow<WebsiteState<HomeExtras>> = flow {
-        emit(WebsiteState.Loading)
-        val url = basePath() + "/"
-        try {
-            val response = FapFolderNetwork.service.getByUrl(url)
-            val rawBody = response.body()?.string().orEmpty()
-            if (!response.isSuccessful || rawBody.isBlank()) {
-                emit(errorState(response.code(), rawBody))
-                return@flow
-            }
-            if (FapFolderHtmlUtils.looksLikeCloudflareChallenge(rawBody)) {
-                emit(WebsiteState.Error(IllegalStateException("Cloudflare challenge.")))
-                return@flow
-            }
-            val doc = Jsoup.parse(rawBody, url)
-            val trending = FapFolderHomeExtrasParser.parseTrending(doc, url)
-            val suggested = FapFolderHomeExtrasParser.parseSuggested(doc, url)
-            emit(WebsiteState.Success(HomeExtras(trending, suggested)))
-        } catch (e: Exception) {
-            Log.e(TAG, "getHomeExtras failed", e)
-            emit(WebsiteState.Error(e))
-        }
-    }.flowOn(Dispatchers.IO)
+    fun getDiscoverPageWithExtras(): Flow<WebsiteState<HomePageBundle>> =
+        getPageWithExtras(FapFolderConstants.PATH_DISCOVER)
 
     fun loadMore(
         request: FapFolderLoadMoreRequest,

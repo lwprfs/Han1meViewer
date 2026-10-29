@@ -198,6 +198,7 @@ fun FapFolderProfileScreen(
                             onSwitchTab = { viewModel.switchTab(it.param) },
                             onOpenImage = { images, idx -> lightboxPayload = images to idx },
                             onOpenVideo = { videoToPlay = it },
+                            onOpenPost = onOpenPost,
                             onRetry = { viewModel.refresh() },
                             onToggleFollow = { viewModel.toggleFollow() },
                         )
@@ -400,6 +401,7 @@ private fun ProfileGridTab(
     onSwitchTab: (FapFolderProfileTab) -> Unit,
     onOpenImage: (List<FapFolderMedia.Image>, Int) -> Unit,
     onOpenVideo: (FapFolderMedia.Video) -> Unit,
+    onOpenPost: (String) -> Unit,
     onRetry: () -> Unit,
     onToggleFollow: () -> Unit,
 ) {
@@ -510,8 +512,12 @@ private fun ProfileGridTab(
                                     model = tile.photo.previewUrl ?: tile.photo.fullUrl,
                                     contentDescription = tile.photo.alt,
                                     modifier = Modifier.fillMaxSize(),
-                                    placeholder = painterResource(R.drawable.h_chan_loading_small),
-                                    error = painterResource(R.drawable.h_chan_load_failed_small),
+                                    placeholder = painterResource(
+                                        R.drawable.h_chan_loading_small
+                                    ),
+                                    error = painterResource(
+                                        R.drawable.h_chan_load_failed_small
+                                    ),
                                     contentScale = ContentScale.Crop,
                                 )
                             }
@@ -531,8 +537,12 @@ private fun ProfileGridTab(
                                         model = poster,
                                         contentDescription = null,
                                         modifier = Modifier.fillMaxSize(),
-                                        placeholder = painterResource(R.drawable.h_chan_loading_small),
-                                        error = painterResource(R.drawable.h_chan_load_failed_small),
+                                        placeholder = painterResource(
+                                            R.drawable.h_chan_loading_small
+                                        ),
+                                        error = painterResource(
+                                            R.drawable.h_chan_load_failed_small
+                                        ),
                                         contentScale = ContentScale.Crop,
                                     )
                                 }
@@ -542,7 +552,8 @@ private fun ProfileGridTab(
                                         .size(44.dp)
                                         .clip(CircleShape)
                                         .background(
-                                            MaterialTheme.colorScheme.scrim.copy(alpha = 0.55f)
+                                            MaterialTheme.colorScheme.scrim
+                                                .copy(alpha = 0.55f)
                                         ),
                                     contentAlignment = Alignment.Center,
                                 ) {
@@ -558,7 +569,8 @@ private fun ProfileGridTab(
                                             .align(Alignment.BottomEnd)
                                             .padding(6.dp),
                                         shape = RoundedCornerShape(4.dp),
-                                        color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.65f),
+                                        color = MaterialTheme.colorScheme.scrim
+                                            .copy(alpha = 0.65f),
                                     ) {
                                         Text(
                                             text = formatDuration(secs),
@@ -570,6 +582,54 @@ private fun ProfileGridTab(
                                             ),
                                         )
                                     }
+                                }
+                            }
+                        }
+                        is GridTile.VideoTile -> {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .aspectRatio(16f / 9f)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                                    .clickable {
+                                        val slugOrId = tile.postId?.toString()
+                                            ?: tile.postUrl.trimEnd('/')
+                                                .substringAfterLast('/')
+                                        onOpenPost(slugOrId)
+                                    },
+                            ) {
+                                val poster = tile.thumbnailUrl
+                                if (!poster.isNullOrBlank()) {
+                                    RetryableImage(
+                                        model = poster,
+                                        contentDescription = tile.title,
+                                        modifier = Modifier.fillMaxSize(),
+                                        placeholder = painterResource(
+                                            R.drawable.h_chan_loading_small
+                                        ),
+                                        error = painterResource(
+                                            R.drawable.h_chan_load_failed_small
+                                        ),
+                                        contentScale = ContentScale.Crop,
+                                    )
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.Center)
+                                        .size(44.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            MaterialTheme.colorScheme.scrim
+                                                .copy(alpha = 0.55f)
+                                        ),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.PlayArrow,
+                                        contentDescription = "Play",
+                                        tint = MaterialTheme.colorScheme.onPrimary,
+                                    )
                                 }
                             }
                         }
@@ -615,34 +675,33 @@ private sealed interface GridTile {
         override val key: String =
             "video_${video.videoId ?: video.playUrl.hashCode()}"
     }
+
+    data class VideoTile(
+        val postId: Long?,
+        val postUrl: String,
+        val thumbnailUrl: String?,
+        val title: String?,
+    ) : GridTile {
+        override val key: String = "videotile_${postId ?: postUrl.hashCode()}"
+    }
 }
 
 private fun buildPhotoTiles(uiState: FapFolderProfileUiState): List<GridTile> {
-    val photos = uiState.items
-        .filterIsInstance<FapFolderFeedItem.Post>()
-        .flatMap { item ->
-            item.post.media.flatMap { m ->
-                when (m) {
-                    is FapFolderMedia.Gallery -> m.photos
-                    is FapFolderMedia.Image -> listOf(m)
-                    else -> emptyList()
-                }
-            }
-        }
-        .distinctBy { it.photoId ?: it.fullUrl }
-    return photos.mapIndexed { index, photo ->
-        GridTile.Photo(photo = photo, all = photos, index = index)
+    val images = uiState.mediaImages
+    return images.mapIndexed { index, photo ->
+        GridTile.Photo(photo = photo, all = images, index = index)
     }
 }
 
 private fun buildVideoTiles(uiState: FapFolderProfileUiState): List<GridTile> =
-    uiState.items
-        .filterIsInstance<FapFolderFeedItem.Post>()
-        .flatMap { item ->
-            item.post.media.filterIsInstance<FapFolderMedia.Video>()
-        }
-        .distinctBy { it.videoId ?: it.playUrl }
-        .map { GridTile.Video(it) }
+    uiState.videoTiles.map { tile ->
+        GridTile.VideoTile(
+            postId = tile.postId,
+            postUrl = tile.postUrl,
+            thumbnailUrl = tile.thumbnailUrl,
+            title = tile.title,
+        )
+    }
 
 @Composable
 private fun ProfileTabRow(
@@ -725,7 +784,8 @@ private fun ProfileHeader(
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Text(
-                                text = profile.displayName.firstOrNull()?.uppercase() ?: "?",
+                                text = profile.displayName.firstOrNull()?.uppercase()
+                                    ?: "?",
                                 style = MaterialTheme.typography.headlineSmall,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                                 fontWeight = FontWeight.Bold,
@@ -755,7 +815,10 @@ private fun ProfileHeader(
                     OutlinedButton(
                         onClick = onToggleFollow,
                         enabled = !followPending,
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                        contentPadding = PaddingValues(
+                            horizontal = 14.dp,
+                            vertical = 6.dp,
+                        ),
                     ) {
                         if (followPending) {
                             CircularProgressIndicator(
@@ -773,7 +836,10 @@ private fun ProfileHeader(
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
                         ),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                        contentPadding = PaddingValues(
+                            horizontal = 14.dp,
+                            vertical = 6.dp,
+                        ),
                     ) {
                         if (followPending) {
                             CircularProgressIndicator(

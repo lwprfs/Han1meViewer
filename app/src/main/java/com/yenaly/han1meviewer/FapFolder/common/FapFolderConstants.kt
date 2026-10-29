@@ -37,6 +37,22 @@ object FapFolderConstants {
     const val FEED_GET_SEARCH = "search"
     const val FEED_GET_POSTS_PROFILE = "posts_profile"
     const val FEED_GET_POSTS_GROUP = "posts_group"
+    const val FEED_GET_POPULAR = "popular"
+    const val FEED_GET_DISCOVER = "discover"
+    const val FEED_GET_PHOTOS_TAB = "photos"
+    const val FEED_GET_VIDEOS_TAB = "videos"
+
+    const val PATH_HOME = "/"
+    const val PATH_HOT = "/popular"
+    const val PATH_DISCOVER = "/discover"
+
+    const val HOME_TAB_MY_FEED = "my_feed"
+    const val HOME_TAB_HOT = "hot"
+    const val HOME_TAB_DISCOVER = "discover"
+
+    const val RANGE_ALL_TIME = 0
+    const val RANGE_MONTH = 30
+    const val RANGE_WEEK = 7
 
     const val FILTER_ALL = "all"
     const val FILTER_PHOTOS = "photos"
@@ -116,17 +132,6 @@ object FapFolderConstants {
     const val TIME_NO_FILTER = -1
     const val PREMFEED_OFF = 0
     const val PREMFEED_ON = 1
-
-    const val HOME_TAB_MY_FEED = "my_feed"
-    const val HOME_TAB_HOT = "hot"
-    const val HOME_TAB_DISCOVER = "discover"
-
-    const val RANGE_ALL_TIME = 0
-    const val RANGE_MONTH = 30
-    const val RANGE_WEEK = 7
-
-    const val PATH_DISCOVER_VIDEOS = "/videos"
-    const val PATH_DISCOVER_PHOTOS = "/photos"
 
     val AD_HOSTS_TO_SKIP = setOf(
         "vbuidencestures.com",
