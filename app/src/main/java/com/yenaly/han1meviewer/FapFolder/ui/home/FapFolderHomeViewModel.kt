@@ -68,7 +68,6 @@ data class FapFolderHomeUiState(
     val feedUid: String? = null,
 
     val nextTime: Int = 1,
-
     val offset: Int = 0,
 
     val totalPagesLoaded: Int = 0,
@@ -170,10 +169,8 @@ class FapFolderHomeViewModel(application: Application) : AndroidViewModel(applic
         refresh()
     }
 
-    fun changeHotRange(range: FapFolderHotRange) {
-
+    fun changeHotRange() {
         if (_uiState.value.activeTab != FapFolderHomeTab.HOT) return
-        _uiState.update { it.copy(hotRange = range) }
         refresh()
     }
 

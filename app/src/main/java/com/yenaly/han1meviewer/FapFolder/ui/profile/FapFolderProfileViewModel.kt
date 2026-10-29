@@ -18,6 +18,7 @@ import com.yenaly.han1meviewer.FapFolder.data.model.PostVariant
 import com.yenaly.han1meviewer.FapFolder.data.model.ReactionCount
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderHtmlUtils
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderProfileParser
+import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderPostParser
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderFeedPaging
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetwork
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetworkRepo
@@ -572,13 +573,15 @@ class FapFolderProfileViewModel(application: Application) : AndroidViewModel(app
         val doc = runCatching { Jsoup.parse(html, tabUrl) }.getOrNull()
             ?: return emptyList()
         val streamRoot = doc.selectFirst("div.js_posts_stream") ?: doc.body()
-        val posts = FapFolderNetworkRepo.parseFirstPageFromHtml(
+
+        val snapshot = FapFolderNetworkRepo.parseFirstPageFromHtml(
             html = html,
             pageUrl = tabUrl,
             filter = null,
             fallbackId = profile.uid?.toString(),
         )
-        if (posts.items.isNotEmpty()) return posts.items
+        if (snapshot.items.isNotEmpty()) return snapshot.items
+
         return FapFolderPostParser
             .parsePostsFromList(streamRoot, tabUrl, null, includeComments = false)
             .map { FapFolderFeedItem.Post(it) }

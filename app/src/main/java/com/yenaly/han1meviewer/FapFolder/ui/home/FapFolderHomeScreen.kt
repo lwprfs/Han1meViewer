@@ -12,20 +12,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -48,14 +44,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.yenaly.han1meviewer.FapFolder.common.FapFolderConstants
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderFeedItem
 import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderPostCard
 import com.yenaly.han1meviewer.R
@@ -84,7 +78,6 @@ fun FapFolderHomeScreen(
     val refreshState = rememberPullToRefreshState()
     val scope = rememberCoroutineScope()
     var isRefreshing by remember { mutableStateOf(false) }
-    var rangeMenuOpen by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.refreshIfStale()
@@ -128,44 +121,7 @@ fun FapFolderHomeScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(text = "FapFolder", fontWeight = FontWeight.Bold)
-                        if (uiState.activeTab == FapFolderHomeTab.HOT) {
-                            Box {
-                                Row(
-                                    modifier = Modifier
-                                        .clickable { rangeMenuOpen = true }
-                                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Text(
-                                        text = uiState.hotRange.label,
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.primary,
-                                    )
-                                    Icon(
-                                        imageVector = Icons.Default.ArrowDropDown,
-                                        contentDescription = "Range",
-                                        tint = MaterialTheme.colorScheme.primary,
-                                    )
-                                }
-                                DropdownMenu(
-                                    expanded = rangeMenuOpen,
-                                    onDismissRequest = { rangeMenuOpen = false },
-                                ) {
-                                    FapFolderHotRange.entries.forEach { option ->
-                                        DropdownMenuItem(
-                                            text = { Text(option.label) },
-                                            onClick = {
-                                                rangeMenuOpen = false
-                                                viewModel.changeHotRange(option)
-                                            },
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    Text(text = "FapFolder", fontWeight = FontWeight.Bold)
                 },
                 actions = {
                     IconButton(onClick = onOpenHistory) {
@@ -460,7 +416,10 @@ private fun FeedList(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            modifier = Modifier.padding(
+                                horizontal = 12.dp,
+                                vertical = 6.dp,
+                            ),
                         )
                     }
                 }
@@ -471,6 +430,6 @@ private fun FeedList(
 
 private fun emptyTextForTab(tab: FapFolderHomeTab): String = when (tab) {
     FapFolderHomeTab.MY_FEED -> "Your feed is empty. Follow some creators to see posts here."
-    FapFolderHomeTab.HOT -> "Nothing trending right now. Try a different range."
+    FapFolderHomeTab.HOT -> "Nothing trending right now."
     FapFolderHomeTab.DISCOVER -> "Nothing to discover yet."
 }
