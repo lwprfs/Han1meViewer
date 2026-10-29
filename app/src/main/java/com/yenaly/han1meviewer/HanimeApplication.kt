@@ -19,6 +19,7 @@ import com.yenaly.han1meviewer.HentaiMama.data.local.HentaiMamaHistoryRepo
 import com.yenaly.han1meviewer.HentaiMama.settings.HentaiMamaCardSettings
 import com.yenaly.han1meviewer.OnAir.data.local.OnAirHistoryRepo
 import com.yenaly.han1meviewer.OnAir.data.remote.OnAirNetwork
+import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetwork
 import com.yenaly.han1meviewer.logic.network.HProxySelector
 import com.yenaly.han1meviewer.ui.viewmodel.AppViewModel
 import com.yenaly.han1meviewer.ui.activity.MainActivity
@@ -138,6 +139,13 @@ class HanimeApplication : YenalyApplication() {
             Log.d(TAG, "OnAirNetwork initialized successfully")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize OnAirNetwork", e)
+        }
+
+        try {
+            FapFolderNetwork.init(applicationContext)
+            Log.d(TAG, "FapFolderNetwork initialized successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to initialize FapFolderNetwork", e)
         }
     }
 

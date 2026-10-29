@@ -10,6 +10,9 @@ import com.yenaly.han1meviewer.HentaiMama.ui.navigation.HentaiMamaVideoRoute
 import com.yenaly.han1meviewer.OnAir.ui.navigation.OnAirHomeRoute
 import com.yenaly.han1meviewer.OnAir.ui.navigation.OnAirSearchRoute
 import com.yenaly.han1meviewer.OnAir.ui.navigation.OnAirVideoRoute
+import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderHomeRoute
+import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderPostRoute
+import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderSearchRoute
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.ui.navigation.main.HomeRoute
@@ -52,6 +55,9 @@ object NavigationManager {
                     SiteType.ONAIR -> {
                         navController.navigate(OnAirVideoRoute(videoId = videoCode))
                     }
+                    SiteType.FAPFOLDER -> {
+                        navController.navigate(FapFolderPostRoute(slugOrId = videoCode))
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "navigateToVideo failed: ${e.message}")
@@ -74,6 +80,9 @@ object NavigationManager {
                     }
                     SiteType.ONAIR -> {
                         navController.navigate(OnAirSearchRoute(query = query))
+                    }
+                    SiteType.FAPFOLDER -> {
+                        navController.navigate(FapFolderSearchRoute(query = query))
                     }
                 }
             } catch (e: Exception) {
@@ -102,6 +111,10 @@ object NavigationManager {
                     SiteType.ONAIR -> {
                         navController.popBackStack(0, false)
                         navController.navigate(OnAirHomeRoute)
+                    }
+                    SiteType.FAPFOLDER -> {
+                        navController.popBackStack(0, false)
+                        navController.navigate(FapFolderHomeRoute)
                     }
                 }
             } catch (e: Exception) {

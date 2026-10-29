@@ -21,7 +21,7 @@ import kotlin.time.Duration.Companion.days
 import kotlin.time.ExperimentalTime
 
 enum class SiteType {
-    HANIME, MISSAV, HENTAIMAMA, JAVCHU, ONAIR
+    HANIME, MISSAV, HENTAIMAMA, JAVCHU, ONAIR, FAPFOLDER
 }
 
 object MissAvConstants {
@@ -54,7 +54,7 @@ object Preferences {
         set(value) = preferenceSp.edit { putBoolean(USAGE_NOTICE_ACCEPTED, value) }
 
     val savedUserId: String
-        get() = preferenceSp.getString(SAVED_USER_ID,"") ?: ""
+        get() = preferenceSp.getString(SAVED_USER_ID, "") ?: ""
 
     var loginCookie
         get() = CookieString(getSpValue(LOGIN_COOKIE, EMPTY_STRING))
@@ -66,7 +66,7 @@ object Preferences {
     val loginCookieStateFlow = MutableStateFlow(loginCookie)
 
     var cloudFlareCookie
-        get() = CookieString(getSpValue(CLOUDFLARE_COOKIE   , EMPTY_STRING))
+        get() = CookieString(getSpValue(CLOUDFLARE_COOKIE, EMPTY_STRING))
         set(value) {
             cloudFlareCookieStateFlow.value = value
             putSpValue(CLOUDFLARE_COOKIE, value.cookie)
@@ -118,6 +118,9 @@ object Preferences {
     val onAirBaseUrl: String
         get() = com.yenaly.han1meviewer.OnAir.common.OnAirSitePreferences.selectedBaseUrl
 
+    val fapFolderBaseUrl: String
+        get() = com.yenaly.han1meviewer.FapFolder.common.FapFolderConstants.BASE_URL
+
     val switchPlayerKernel: String
         get() = preferenceSp.getString(
             SettingsPreferenceKeys.SWITCH_PLAYER_KERNEL,
@@ -155,7 +158,7 @@ object Preferences {
         get() = preferenceSp.getString(SettingsPreferenceKeys.DEFAULT_VIDEO_QUALITY, "1080P") ?: "1080P"
 
     val showPlayedIndicator: Boolean
-        get() = preferenceSp.getBoolean(SettingsPreferenceKeys.SHOW_PLAYED_INDICATOR,true)
+        get() = preferenceSp.getBoolean(SettingsPreferenceKeys.SHOW_PLAYED_INDICATOR, true)
 
     val watchedProgressThreshold: Int
         get() = preferenceSp.getInt(SettingsPreferenceKeys.WATCHED_PROGRESS_THRESHOLD, 90)
@@ -239,6 +242,10 @@ object Preferences {
                 return onAirBaseUrl
             }
 
+            if (siteType == SiteType.FAPFOLDER) {
+                return fapFolderBaseUrl
+            }
+
             return HanimeConstants.HANIME_URL[0]
         }
 
@@ -255,6 +262,7 @@ object Preferences {
             SiteType.MISSAV -> missAvBaseUrl
             SiteType.HENTAIMAMA -> hentaiMamaBaseUrl
             SiteType.ONAIR -> onAirBaseUrl
+            SiteType.FAPFOLDER -> fapFolderBaseUrl
         }
 
     val useCustomMirrorSite: Boolean
@@ -297,6 +305,7 @@ object Preferences {
             SiteType.MISSAV -> missAvBaseUrl
             SiteType.HENTAIMAMA -> hentaiMamaBaseUrl
             SiteType.ONAIR -> onAirBaseUrl
+            SiteType.FAPFOLDER -> fapFolderBaseUrl
         }
 
     private fun String.toRetrofitBaseUrl(): String = if (endsWith('/')) this else "$this/"
@@ -386,7 +395,7 @@ object Preferences {
         )
 
     val collapseDownloadedGroup: Boolean
-        get() = preferenceSp.getBoolean(SettingsPreferenceKeys.COLLAPSE_DOWNLOADED_GROUP,false)
+        get() = preferenceSp.getBoolean(SettingsPreferenceKeys.COLLAPSE_DOWNLOADED_GROUP, false)
 
     var downloadAutoGroup: Boolean
         get() = preferenceSp.getBoolean(SettingsPreferenceKeys.DOWNLOAD_AUTO_GROUP, true)
@@ -412,26 +421,26 @@ object Preferences {
             putBoolean(SettingsPreferenceKeys.DOWNLOAD_GROUP_TRADITIONAL, value)
         }
     val isUsePrivateStorage: Boolean
-        get() = preferenceSp.getBoolean(SettingsPreferenceKeys.USE_PRIVATE_STORAGE,true)
+        get() = preferenceSp.getBoolean(SettingsPreferenceKeys.USE_PRIVATE_STORAGE, true)
     val safDownloadPath: String?
-        get() = preferenceSp.getString(SafFileManager.KEY_TREE_URI,null)
+        get() = preferenceSp.getString(SafFileManager.KEY_TREE_URI, null)
 
     val useDarkMode: String
-        get() = preferenceSp.getString(SettingsPreferenceKeys.USE_DARK_MODE,"always_off") ?: "always_off"
+        get() = preferenceSp.getString(SettingsPreferenceKeys.USE_DARK_MODE, "always_off") ?: "always_off"
     val useDynamicColor: Boolean
-        get() = preferenceSp.getBoolean(SettingsPreferenceKeys.USE_DYNAMIC_COLOR,false)
+        get() = preferenceSp.getBoolean(SettingsPreferenceKeys.USE_DYNAMIC_COLOR, false)
     val themeColor: String?
         get() = preferenceSp.getString(SettingsPreferenceKeys.THEME_COLOR, null)
     val pureBlackDarkMode: Boolean
         get() = preferenceSp.getBoolean(SettingsPreferenceKeys.PURE_BLACK_DARK_MODE, false)
     val allowResumePlayback: Boolean
-        get() = preferenceSp.getBoolean(SettingsPreferenceKeys.ALLOW_RESUME_PLAYBACK,true)
+        get() = preferenceSp.getBoolean(SettingsPreferenceKeys.ALLOW_RESUME_PLAYBACK, true)
 
     val searchArtistIgnoreVideoType: Boolean
-        get() = preferenceSp.getBoolean(SettingsPreferenceKeys.SEARCH_ARTIST_IGNORE_VIDEO_TYPE,false)
+        get() = preferenceSp.getBoolean(SettingsPreferenceKeys.SEARCH_ARTIST_IGNORE_VIDEO_TYPE, false)
 
     val disableMobileDataWarning: Boolean
-        get() = preferenceSp.getBoolean(SettingsPreferenceKeys.DISABLE_MOBILE_DATA_WARNING,false)
+        get() = preferenceSp.getBoolean(SettingsPreferenceKeys.DISABLE_MOBILE_DATA_WARNING, false)
 
     val disablePredictiveBack: Boolean
         get() = preferenceSp.getBoolean(SettingsPreferenceKeys.DISABLE_PREDICTIVE_BACK, false)
@@ -458,7 +467,7 @@ object Preferences {
         get() = preferenceSp.getBoolean(SettingsPreferenceKeys.MPV_FRAMEDROP, true)
 
     val mpvHwdec: String
-        get() = preferenceSp.getString(SettingsPreferenceKeys.MPV_HWDEC, "Auto")?: "Auto"
+        get() = preferenceSp.getString(SettingsPreferenceKeys.MPV_HWDEC, "Auto") ?: "Auto"
 
     val mpvCacheSecs: Int
         get() = preferenceSp.getInt(SettingsPreferenceKeys.MPV_CACHE_SECS, 60)
@@ -470,7 +479,7 @@ object Preferences {
         get() = preferenceSp.getInt(SettingsPreferenceKeys.MPV_NETWORK_TIMEOUT, 10)
 
     val customMpvParams: String
-        get() = preferenceSp.getString(SettingsPreferenceKeys.CUSTOM_PARAMS,"")?: ""
+        get() = preferenceSp.getString(SettingsPreferenceKeys.CUSTOM_PARAMS, "") ?: ""
 
     val downloadSpeedLimit: Long
         get() {

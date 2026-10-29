@@ -146,7 +146,6 @@ fun OnAirNavHost(
         )
     }
 
-    // Child-screen failures must NOT re-run the gate.
     val recoverableError: (String) -> Unit = { _ -> }
 
     if (gateState is OnAirGateState.Passed) {

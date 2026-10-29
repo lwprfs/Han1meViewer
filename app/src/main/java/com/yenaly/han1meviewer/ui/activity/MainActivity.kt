@@ -355,6 +355,9 @@ class MainActivity : FrameActivity(), PermissionRequester {
             SiteType.ONAIR -> {
                 OnAirNetwork.rebuildNetwork()
             }
+
+            SiteType.FAPFOLDER -> {
+            }
         }
 
         Log.d(TAG, "New baseUrl after: ${Preferences.baseUrl}")
@@ -375,6 +378,7 @@ class MainActivity : FrameActivity(), PermissionRequester {
             val urlDisplay = when (siteType) {
                 SiteType.JAVCHU -> "Javchu (Fixed: https://javchu.com)"
                 SiteType.ONAIR -> "OnAir (${OnAirSitePreferences.currentHostname()})"
+                SiteType.FAPFOLDER -> "FapFolder (${Preferences.baseUrl})"
                 else -> Preferences.displayUrl
             }
             GlobalToasts.show(
@@ -638,6 +642,13 @@ class MainActivity : FrameActivity(), PermissionRequester {
                     siteType = SiteType.ONAIR,
                     logoRes = R.drawable.s_switch_onair,
                     accentColor = Color(0xFF00897B),
+                ),
+                SiteInfo(
+                    name = "FapFolder",
+                    description = "Community image/video posts",
+                    siteType = SiteType.FAPFOLDER,
+                    logoRes = R.drawable.s_switch_fapfolder,
+                    accentColor = Color(0xFF7E57C2),
                 ),
             )
         }

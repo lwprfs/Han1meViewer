@@ -8,6 +8,7 @@ import androidx.navigation.NavHostController
 import com.yenaly.han1meviewer.HentaiMama.ui.navigation.HentaiMamaNavHost
 import com.yenaly.han1meviewer.MissAV.ui.navigation.MissAvNavHost
 import com.yenaly.han1meviewer.OnAir.ui.navigation.OnAirNavHost
+import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderNavHost
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.ui.activity.MainActivity
@@ -65,6 +66,15 @@ fun UnifiedMainNavHost(
             }
             SiteType.ONAIR -> {
                 OnAirNavHost(
+                    activity = activity,
+                    navController = navController,
+                    isDrawerOpen = isDrawerOpen,
+                    onOpenDrawer = onOpenDrawer,
+                    onDestinationChanged = onDestinationChanged,
+                )
+            }
+            SiteType.FAPFOLDER -> {
+                FapFolderNavHost(
                     activity = activity,
                     navController = navController,
                     isDrawerOpen = isDrawerOpen,
