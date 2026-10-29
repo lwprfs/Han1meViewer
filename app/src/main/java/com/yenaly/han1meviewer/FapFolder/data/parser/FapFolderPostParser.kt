@@ -20,6 +20,13 @@ object FapFolderPostParser {
     private val styleAspectRegex =
         Regex("""aspect-ratio\s*:\s*([\d.]+)""", RegexOption.IGNORE_CASE)
 
+    private fun decodeAmp(raw: String?): String? {
+        if (raw.isNullOrBlank()) return null
+        return raw.replace("&amp;", "&")
+            .replace("&#38;", "&")
+            .replace("&#x26;", "&")
+    }
+
     fun parsePost(
         postEl: Element,
         baseUrl: String,
@@ -362,7 +369,8 @@ object FapFolderPostParser {
         baseUrl: String,
         uploadsBase: String?,
     ): FapFolderMedia.Video? {
-        val playUrl = vidPlaceholder.attr("data-src").trim().takeIf { it.isNotBlank() }
+        val playUrl = decodeAmp(vidPlaceholder.attr("data-src").trim())
+            ?.takeIf { it.isNotBlank() }
             ?: return null
 
         val rawVideoId = FapFolderHtmlUtils.extractVideoId(vidPlaceholder.attr("data-id"))
@@ -370,9 +378,11 @@ object FapFolderPostParser {
         val onPlayId = vidPlaceholder.attr("data-onplay-id").toLongOrNull()
         val videoId = rawVideoId ?: onPlayId
 
-        val posterUrl = vidPlaceholder.attr("data-poster").takeIf { it.isNotBlank() }
-            ?: FapFolderHtmlUtils.extractBackgroundImageUrl(vidPlaceholder.attr("style"))
-                ?.let { FapFolderUrlUtils.normalizeMediaUrl(it, uploadsBase) }
+        val posterUrl = decodeAmp(vidPlaceholder.attr("data-poster"))
+            ?.takeIf { it.isNotBlank() }
+            ?: decodeAmp(
+                FapFolderHtmlUtils.extractBackgroundImageUrl(vidPlaceholder.attr("style"))
+            )?.let { FapFolderUrlUtils.normalizeMediaUrl(it, uploadsBase) }
             ?: vidPlaceholder.selectFirst("img.sr-only[src]")
                 ?.absUrl("src")?.takeIf { it.isNotBlank() }
 
@@ -404,10 +414,11 @@ object FapFolderPostParser {
         anchor: Element,
         uploadsBase: String?,
     ): FapFolderMedia.Image? {
-        val dataImage = anchor.attr("data-image").takeIf { it.isNotBlank() }
-        val bg = FapFolderHtmlUtils.extractBackgroundImageUrl(anchor.attr("style"))
-        val imgSrc = anchor.selectFirst("img[src]")?.absUrl("src")?.takeIf { it.isNotBlank() }
-        val imgDataSrc = anchor.selectFirst("img[data-src]")?.attr("data-src")
+        val dataImage = decodeAmp(anchor.attr("data-image"))?.takeIf { it.isNotBlank() }
+        val bg = decodeAmp(FapFolderHtmlUtils.extractBackgroundImageUrl(anchor.attr("style")))
+        val imgSrc = decodeAmp(anchor.selectFirst("img[src]")?.absUrl("src"))
+            ?.takeIf { it.isNotBlank() }
+        val imgDataSrc = decodeAmp(anchor.selectFirst("img[data-src]")?.attr("data-src"))
             ?.takeIf { it.isNotBlank() }
 
         val fullUrl = (dataImage ?: bg ?: imgSrc ?: imgDataSrc)

@@ -73,6 +73,8 @@ import com.yenaly.han1meviewer.FapFolder.common.FapFolderConstants
 import com.yenaly.han1meviewer.FapFolder.data.local.FapFolderHistoryRepo
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderMedia
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetwork
+import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetworkRepo
+import com.yenaly.han1meviewer.logic.state.WebsiteState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -110,12 +112,50 @@ fun FapFolderVideoPlayerScreen(
     var completionReported by remember { mutableStateOf(false) }
     var expiryHandled by remember { mutableStateOf(false) }
 
+    var resolvedUrl by remember(reloadToken) { mutableStateOf<String?>(null) }
+    var resolvingError by remember(reloadToken) { mutableStateOf<String?>(null) }
+
     LaunchedEffect(video.playUrl, video.expirationEpoch) {
         if (expiryHandled) return@LaunchedEffect
         if (video.isExpired() && onExpired != null) {
             expiryHandled = true
             playbackError = "Video link expired. Refreshing…"
             onExpired()
+        }
+    }
+
+    LaunchedEffect(video.playUrl, reloadToken) {
+        if (video.playUrl.isBlank()) {
+            resolvingError = "Empty video URL"
+            return@LaunchedEffect
+        }
+        resolvedUrl = null
+        resolvingError = null
+        isBuffering = true
+
+        val looksLikePlayApi = video.playUrl.contains("/video/play")
+        if (!looksLikePlayApi) {
+
+            resolvedUrl = video.playUrl.replace("&amp;", "&")
+            return@LaunchedEffect
+        }
+
+        var lastError: String? = null
+        FapFolderNetworkRepo.resolveVideoPlayUrl(video.playUrl).collect { state ->
+            when (state) {
+                is WebsiteState.Loading -> Unit
+                is WebsiteState.Success -> {
+                    resolvedUrl = state.info
+                }
+                is WebsiteState.Error -> {
+                    lastError = state.throwable.message
+                }
+            }
+        }
+        if (resolvedUrl == null) {
+            resolvingError = lastError ?: "Could not resolve video URL"
+            playbackError = resolvingError
+            isBuffering = false
         }
     }
 
@@ -142,21 +182,15 @@ fun FapFolderVideoPlayerScreen(
         }
     }
 
-    DisposableEffect(playerKey, reloadToken) {
+    DisposableEffect(resolvedUrl, reloadToken) {
+        val playableUrl = resolvedUrl ?: return@DisposableEffect onDispose { }
         val player = ExoPlayer.Builder(context).build().apply {
-            val cookieHeader = runCatching { FapFolderNetwork.snapshotCookies() }
-                .getOrDefault("")
 
-            val playHost = runCatching {
-                video.playUrl.toHttpUrlOrNull()?.host
-            }.getOrNull().orEmpty()
-            val isCdnHost = playHost.contains("fap.onl", ignoreCase = true)
+            val playHost = runCatching { playableUrl.toHttpUrlOrNull()?.host }
+                .getOrNull().orEmpty()
+            val isR2 = playHost.contains("cloudflarestorage.com", ignoreCase = true)
 
-            val referer = if (isCdnHost) {
-                postPermalinkForReferer ?: FapFolderConstants.HEADER_REFERER
-            } else {
-                FapFolderConstants.HEADER_REFERER
-            }
+            val referer = postPermalinkForReferer ?: FapFolderConstants.HEADER_REFERER
 
             val requestHeaders = buildMap {
                 put("referer", referer)
@@ -164,13 +198,14 @@ fun FapFolderVideoPlayerScreen(
                 put("user-agent", FapFolderConstants.USER_AGENT_FAPFOLDER)
                 put("accept", "*/*")
                 put("accept-language", FapFolderConstants.ACCEPT_LANGUAGE)
-
                 put("accept-encoding", "identity")
+                put("range", "bytes=0-")
+                if (!isR2) {
 
-                put("sec-fetch-dest", "video")
-                put("sec-fetch-mode", "no-cors")
-                put("sec-fetch-site", "same-site")
-                if (cookieHeader.isNotBlank()) put("cookie", cookieHeader)
+                    val cookieHeader = runCatching { FapFolderNetwork.snapshotCookies() }
+                        .getOrDefault("")
+                    if (cookieHeader.isNotBlank()) put("cookie", cookieHeader)
+                }
             }
 
             val httpFactory = DefaultHttpDataSource.Factory()
@@ -181,7 +216,10 @@ fun FapFolderVideoPlayerScreen(
                 .setReadTimeoutMs(20_000)
 
             val dataSourceFactory = DefaultDataSource.Factory(context, httpFactory)
-            val mediaItem = MediaItem.Builder().setUri(video.playUrl).build()
+            val mediaItem = MediaItem.Builder()
+                .setUri(playableUrl)
+                .setMimeType("video/mp4")
+                .build()
             val mediaSource = ProgressiveMediaSource.Factory(dataSourceFactory)
                 .createMediaSource(mediaItem)
             setMediaSource(mediaSource)
@@ -224,10 +262,14 @@ fun FapFolderVideoPlayerScreen(
                     onExpired()
                 } else if (error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS) {
 
-                    playbackError =
-                        "This video link is no longer valid. " +
-                                "Re-open the post or paste fresh cookies."
+                    playbackError = "Video link expired. Refreshing…"
                     isBuffering = false
+                    if (onExpired != null && !expiryHandled) {
+                        expiryHandled = true
+                        onExpired()
+                    } else {
+                        reloadToken++
+                    }
                 } else {
                     playbackError = error.message ?: "Playback error"
                     isBuffering = false
@@ -252,7 +294,6 @@ fun FapFolderVideoPlayerScreen(
         var lastReportedPosition = -1L
         while (isActive) {
             delay(500)
-
             if (player.isPlaying) {
                 val currentPos = runCatching { player.currentPosition }.getOrDefault(0L)
                 val currentDur = runCatching { player.duration }.getOrDefault(0L)
@@ -558,7 +599,7 @@ fun FapFolderVideoPlayerScreen(
                         color = Color.White.copy(alpha = 0.08f),
                     ) {
                         Text(
-                            text = video.playUrl,
+                            text = resolvedUrl ?: video.playUrl,
                             color = Color.White.copy(alpha = 0.55f),
                             style = MaterialTheme.typography.labelSmall,
                             maxLines = 2,

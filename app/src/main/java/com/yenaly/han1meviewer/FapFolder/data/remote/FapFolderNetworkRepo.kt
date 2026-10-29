@@ -42,6 +42,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import org.jsoup.Jsoup
+import okhttp3.Request
+import okhttp3.OkHttpClient
 
 object FapFolderNetworkRepo {
 
@@ -659,6 +661,57 @@ object FapFolderNetworkRepo {
         } catch (e: Exception) {
             Log.e(TAG, "getPostDetail failed", e)
             emit(VideoLoadingState.Error(e))
+        }
+    }.flowOn(Dispatchers.IO)
+
+    fun resolveVideoPlayUrl(playUrl: String): Flow<WebsiteState<String>> = flow {
+        emit(WebsiteState.Loading)
+        val cleaned = playUrl
+            .replace("&amp;", "&")
+            .replace("&#38;", "&")
+            .replace("&#x26;", "&")
+            .trim()
+        if (cleaned.isBlank()) {
+            emit(WebsiteState.Error(IllegalArgumentException("Empty play URL")))
+            return@flow
+        }
+        try {
+            val request = okhttp3.Request.Builder()
+                .url(cleaned)
+                .get()
+                .header("referer", FapFolderConstants.HEADER_REFERER)
+                .header("origin", FapFolderConstants.HEADER_ORIGIN)
+                .header("accept", "*/*")
+                .header("accept-encoding", "identity")
+                .header("range", "bytes=0-")
+                .header("user-agent", FapFolderConstants.USER_AGENT_FAPFOLDER)
+                .build()
+
+            FapFolderNetwork.sharedOkHttpClient
+                .newBuilder()
+                .followRedirects(false)
+                .followSslRedirects(false)
+                .build()
+                .newCall(request)
+                .execute()
+                .use { resp ->
+                    val code = resp.code
+                    val location = resp.header("Location")
+                    if (code !in 300..399 || location.isNullOrBlank()) {
+                        emit(
+                            WebsiteState.Error(
+                                IllegalStateException(
+                                    "No redirect from /video/play (HTTP $code)"
+                                )
+                            )
+                        )
+                        return@use
+                    }
+                    emit(WebsiteState.Success(location))
+                }
+        } catch (e: Exception) {
+            Log.e(TAG, "resolveVideoPlayUrl failed", e)
+            emit(WebsiteState.Error(e))
         }
     }.flowOn(Dispatchers.IO)
 
