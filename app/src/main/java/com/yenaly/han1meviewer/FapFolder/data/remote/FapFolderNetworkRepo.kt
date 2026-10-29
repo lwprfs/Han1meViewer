@@ -649,8 +649,8 @@ object FapFolderNetworkRepo {
                     authorName = post.author.displayName,
                     postSlug = post.slug,
                     isVideo = isVideo,
-                    position = 0L,
-                    duration = 0L,
+                    positionMs = 0L,
+                    durationMs = 0L,
                     isPlaying = false,
                 )
             }.onFailure { Log.w(TAG, "saveProgress failed: ${it.message}") }
