@@ -94,21 +94,21 @@ object FapFolderSessionParser {
         val avatarUrl: String? = userMenuImg?.absUrl("src")
             ?.takeIf { it.isNotBlank() }
             ?: userMenuImg?.attr("src")?.takeIf { it.isNotBlank() }
-            ?.let(FapFolderUrlUtils::absoluteUrl)
+                ?.let(FapFolderUrlUtils::absoluteUrl)
 
         val usernameFromAlt: String? = userMenuImg?.attr("alt")
             ?.let { alt -> usernameAltRegex.find(alt)?.groupValues?.getOrNull(1)?.trim() }
             ?.takeIf { it.isNotBlank() }
 
         val username: String? = usernameFromAlt
-            ?: doc.selectFirst("a[href*='/settings'] .dropdown-item, .offcanvas-sidebar a[href*='/'][title]")
-                ?.let { null }
             ?: extractUsernameFromMenu(doc)
+            ?: parseLoggedInUsername(html)
 
-        val userId: Long? = run {
-            val m = Regex("""c_user=(\d+)""").find(html)
-            m?.groupValues?.getOrNull(1)?.toLongOrNull()
-        }
+        val userId: Long? = parseLoggedInUserId(html)
+            ?: run {
+                val m = Regex("""c_user=(\d+)""").find(html)
+                m?.groupValues?.getOrNull(1)?.toLongOrNull()
+            }
 
         val points: String? = pointsRegex.find(html)
             ?.groupValues?.getOrNull(1)?.trim()?.takeIf { it.isNotBlank() }
@@ -164,6 +164,17 @@ object FapFolderSessionParser {
             if (!slug.isNullOrBlank()) return slug
         }
 
+        return null
+    }
+
+    fun parseLoggedInUserId(html: String?): Long? {
+        if (html.isNullOrBlank()) return null
+        val doc = runCatching { Jsoup.parse(html) }.getOrNull() ?: return null
+        val crop = doc.selectFirst("i.js_init-crop-picture[data-handle=user][data-id]")
+            ?: doc.selectFirst("i.js_init-position-picture[data-handle=user][data-id]")
+        crop?.attr("data-id")?.toLongOrNull()?.let { return it }
+        doc.selectFirst("div.js_see-more[data-get=profile_groups][data-uid]")
+            ?.attr("data-uid")?.toLongOrNull()?.let { return it }
         return null
     }
 
