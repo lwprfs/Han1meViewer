@@ -220,6 +220,7 @@ dependencies {
 
     implementation(libs.crashx)
     // debugImplementation(libs.leak.canary)
+    implementation("com.squareup.okhttp3:okhttp-brotli:4.12.0")
 }
 
 /**

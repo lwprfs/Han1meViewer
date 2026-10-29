@@ -11,6 +11,7 @@ import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderPost
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderPollOption
 import com.yenaly.han1meviewer.FapFolder.data.model.ReactionCount
 import com.yenaly.han1meviewer.FapFolder.data.model.withLiked
+import com.yenaly.han1meviewer.FapFolder.data.model.liked
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderCommentParser
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetworkRepo
 import com.yenaly.han1meviewer.logic.state.PageLoadingState

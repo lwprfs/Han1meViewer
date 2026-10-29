@@ -9,6 +9,15 @@ import org.jsoup.nodes.Element
 
 object FapFolderProfileParser {
 
+    const val TAB_POSTS = "posts"
+    const val TAB_PHOTOS = "photos"
+    const val TAB_VIDEOS = "videos"
+    const val TAB_FOLLOWERS = "followers"
+    const val TAB_FOLLOWING = "following"
+    const val FALLBACK_GET_POSTS = FapFolderConstants.FEED_GET_POSTS_PROFILE
+    const val FALLBACK_GET_GROUPS = "profile_groups"
+    const val FALLBACK_GET_FRIENDS = "friends"
+
     data class ProfileTab(
         val label: String,
         val param: String,
@@ -237,16 +246,5 @@ object FapFolderProfileParser {
             }
         }
         return map
-    }
-
-    companion object Constants {
-        const val TAB_POSTS = "posts"
-        const val TAB_PHOTOS = "photos"
-        const val TAB_VIDEOS = "videos"
-        const val TAB_FOLLOWERS = "followers"
-        const val TAB_FOLLOWING = "following"
-        const val FALLBACK_GET_POSTS = FapFolderConstants.FEED_GET_POSTS_PROFILE
-        const val FALLBACK_GET_GROUPS = "profile_groups"
-        const val FALLBACK_GET_FRIENDS = "friends"
     }
 }

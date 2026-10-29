@@ -12,6 +12,10 @@ import org.jsoup.nodes.Element
 
 object FapFolderCommentParser {
 
+    const val FILTER_MOST_RECENT = "post_comments"
+    const val FILTER_TOP = "post_comments_top"
+    const val FILTER_ALL = "post_comments_all"
+
     fun parseComments(
         root: Element?,
         baseUrl: String,
@@ -177,18 +181,12 @@ object FapFolderCommentParser {
 
     fun parseCommentFilterLabel(filterValue: String?): String {
         return when (filterValue) {
-            "post_comments_top" -> "Top Comments"
-            "post_comments_all" -> "All Comments"
-            "post_comments" -> "Most Recent"
+            FILTER_TOP -> "Top Comments"
+            FILTER_ALL -> "All Comments"
+            FILTER_MOST_RECENT -> "Most Recent"
             else -> "Most Recent"
         }
     }
 
-    fun defaultFilterValue(): String = "post_comments"
-
-    companion object Constants {
-        const val FILTER_MOST_RECENT = "post_comments"
-        const val FILTER_TOP = "post_comments_top"
-        const val FILTER_ALL = "post_comments_all"
-    }
+    fun defaultFilterValue(): String = FILTER_MOST_RECENT
 }

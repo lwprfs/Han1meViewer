@@ -25,6 +25,7 @@ import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderAlbumParser
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderAutocompleteParser
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderCommentParser
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderGroupParser
+import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderHtmlUtils
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderLightboxParser
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderPostParser
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderProfileParser
@@ -40,10 +41,59 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import org.jsoup.Jsoup
 
 object FapFolderNetworkRepo {
 
     private const val TAG = "FapFolderNetworkRepo"
+
+    data class FirstPageSnapshot(
+        val items: List<FapFolderFeedItem>,
+        val hasMore: Boolean,
+        val get: String?,
+        val filter: String?,
+        val id: String?,
+        val type: String?,
+        val uid: String?,
+        val search: String?,
+        val hashtag: String?,
+    )
+
+    fun parseFirstPageFromHtml(
+        html: String,
+        pageUrl: String,
+        filter: String?,
+        fallbackId: String?,
+    ): FirstPageSnapshot {
+        val doc = Jsoup.parse(html, pageUrl)
+        val streamRoot = doc.selectFirst("div.js_posts_stream")
+        val attrs = FapFolderGroupParser.parseStreamAttrs(doc)
+        val uploads = FapFolderSessionCache.uploadsBase()
+
+        val posts = FapFolderPostParser.parsePostsFromList(
+            root = streamRoot ?: doc.body(),
+            baseUrl = pageUrl,
+            uploadsBase = uploads,
+            includeComments = false,
+        )
+        val items: List<FapFolderFeedItem> = posts.map { FapFolderFeedItem.Post(it) }
+
+        val seeMore = doc.selectFirst(".js_see-more-infinite")
+            ?: doc.selectFirst(".js_see-more")
+        val hasMore = seeMore != null && !seeMore.hasClass("done") && posts.isNotEmpty()
+
+        return FirstPageSnapshot(
+            items = items,
+            hasMore = hasMore,
+            get = attrs?.get,
+            filter = attrs?.filter ?: filter,
+            id = attrs?.id ?: fallbackId,
+            type = attrs?.type,
+            uid = attrs?.uid,
+            search = attrs?.search,
+            hashtag = attrs?.hashtag,
+        )
+    }
 
     private suspend fun rateLimit() {
         delay(FapFolderConstants.MIN_GAP_BETWEEN_PAGES_MS)
@@ -86,7 +136,7 @@ object FapFolderNetworkRepo {
             }
 
             val session = FapFolderSessionParser.parseAndCache(rawBody, url)
-            val doc = org.jsoup.Jsoup.parse(rawBody, url)
+            val doc = Jsoup.parse(rawBody, url)
 
             val streamRoot = doc.selectFirst("div.js_posts_stream")
             val feedGet = streamRoot?.attr("data-get")?.takeIf { it.isNotBlank() }
@@ -144,7 +194,7 @@ object FapFolderNetworkRepo {
                 emit(WebsiteState.Error(IllegalStateException("Cloudflare challenge.")))
                 return@flow
             }
-            val doc = org.jsoup.Jsoup.parse(rawBody, url)
+            val doc = Jsoup.parse(rawBody, url)
             val trending = FapFolderTrendingParser.parse(doc, url)
             val suggested = FapFolderSuggestedCommunitiesParser.parse(doc, url)
             emit(WebsiteState.Success(HomeExtras(trending, suggested)))
@@ -301,25 +351,25 @@ object FapFolderNetworkRepo {
             }
 
             get == "members" -> {
-                val doc = org.jsoup.Jsoup.parseBodyFragment(dataHtml, base)
+                val doc = Jsoup.parseBodyFragment(dataHtml, base)
                 FapFolderGroupParser.parseMemberRows(doc, base)
                     .map { FapFolderFeedItem.User(it) }
             }
 
             get == "profile_groups" -> {
-                val doc = org.jsoup.Jsoup.parseBodyFragment(dataHtml, base)
+                val doc = Jsoup.parseBodyFragment(dataHtml, base)
                 FapFolderGroupParser.parseGroupRows(doc, base)
                     .map { FapFolderFeedItem.Community(it) }
             }
 
             get == "followers" || get == "following" || get == "users" -> {
-                val doc = org.jsoup.Jsoup.parseBodyFragment(dataHtml, base)
+                val doc = Jsoup.parseBodyFragment(dataHtml, base)
                 FapFolderSearchParser.parseUserRows(doc, base)
                     .map { FapFolderFeedItem.User(it) }
             }
 
             get == "communities" -> {
-                val doc = org.jsoup.Jsoup.parseBodyFragment(dataHtml, base)
+                val doc = Jsoup.parseBodyFragment(dataHtml, base)
                 FapFolderSearchParser.parseCommunityRows(doc, base)
                     .map { FapFolderFeedItem.Community(it) }
             }
@@ -469,7 +519,7 @@ object FapFolderNetworkRepo {
             }
 
             FapFolderSessionParser.parseAndCache(rawBody, url)
-            val doc = org.jsoup.Jsoup.parse(rawBody, url)
+            val doc = Jsoup.parse(rawBody, url)
             val postEl = doc.selectFirst("div.post[data-id]")
             if (postEl == null) {
                 emit(VideoLoadingState.NoContent)
@@ -776,7 +826,7 @@ object FapFolderNetworkRepo {
                 return@flow
             }
             FapFolderSessionParser.parseAndCache(rawBody, url)
-            val doc = org.jsoup.Jsoup.parse(rawBody, url)
+            val doc = Jsoup.parse(rawBody, url)
             val rows = FapFolderGroupParser.parseMemberRows(doc, url)
             if (rows.isEmpty()) {
                 emit(PageLoadingState.NoMoreData)

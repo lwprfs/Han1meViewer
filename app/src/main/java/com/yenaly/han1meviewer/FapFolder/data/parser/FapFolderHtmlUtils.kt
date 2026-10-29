@@ -120,25 +120,6 @@ internal object FapFolderHtmlUtils {
     fun Element.optionalAbsUrl(selector: String, attr: String): String? =
         selectFirst(selector)?.absUrl(attr)?.takeIf { it.isNotBlank() }
 
-    fun Element.isAdContainer(): Boolean {
-        if (hasClass("hbanner") || hasClass("hmbanner") || hasClass("postbanner")) return true
-        if (hasClass("of-ad-banner-parent") || hasClass("ui-box-ad")) return true
-        if (hasClass("mof-ad-banner-parent") || hasClass("mof-ad-banner-mobile")) return true
-        if (hasClass("mof-ad-banner-pc") || hasClass("of-ad-banner-pc")) return true
-        if (hasClass("global-promo-banner")) return true
-        if (id() == "global-promo-banner") return true
-        return false
-    }
-
-    fun Element.containsOnlyAdContent(): Boolean {
-        if (isAdContainer()) return true
-        val iframe = selectFirst("iframe[src]") ?: return false
-        val src = iframe.absUrl("src").takeIf { it.isNotBlank() }
-            ?: iframe.attr("src").takeIf { it.isNotBlank() }
-            ?: return false
-        return FapFolderUrlUtils.isAdHost(src)
-    }
-
     fun isAdUrl(url: String?): Boolean = FapFolderUrlUtils.isAdHost(url)
 
     fun parseDataTimeIso(raw: String?): String {
@@ -220,4 +201,23 @@ internal object FapFolderHtmlUtils {
             ?: FapFolderConstants.VIDEO_EXTENSIONS.firstOrNull { "mp4" == it }
             ?: "mp4"
     }
+}
+
+internal fun Element.isAdContainer(): Boolean {
+    if (hasClass("hbanner") || hasClass("hmbanner") || hasClass("postbanner")) return true
+    if (hasClass("of-ad-banner-parent") || hasClass("ui-box-ad")) return true
+    if (hasClass("mof-ad-banner-parent") || hasClass("mof-ad-banner-mobile")) return true
+    if (hasClass("mof-ad-banner-pc") || hasClass("of-ad-banner-pc")) return true
+    if (hasClass("global-promo-banner")) return true
+    if (id() == "global-promo-banner") return true
+    return false
+}
+
+internal fun Element.containsOnlyAdContent(): Boolean {
+    if (isAdContainer()) return true
+    val iframe = selectFirst("iframe[src]") ?: return false
+    val src = iframe.absUrl("src").takeIf { it.isNotBlank() }
+        ?: iframe.attr("src").takeIf { it.isNotBlank() }
+        ?: return false
+    return FapFolderUrlUtils.isAdHost(src)
 }

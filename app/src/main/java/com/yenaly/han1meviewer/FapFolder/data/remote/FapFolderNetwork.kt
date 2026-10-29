@@ -41,7 +41,7 @@ object FapFolderNetwork {
             jar.restoreFromPreferences()
             Log.d(
                 TAG,
-                "init: cookieJar restored, hasAuth=${jar.hasRequiredAuthCookie()}"
+                "init: cookieJar restored, hasAuth=${FapFolderCookieJar.hasRequiredAuthCookie()}",
             )
         }
     }
@@ -185,7 +185,7 @@ object FapFolderNetwork {
         cookieJar.persistToPreferences()
     }
 
-    fun hasAuthCookies(): Boolean = cookieJar.hasRequiredAuthCookie()
+    fun hasAuthCookies(): Boolean = FapFolderCookieJar.hasRequiredAuthCookie()
 
     fun isChallengeResponse(body: String?): Boolean =
         cookieJar.isCloudflareChallengeBody(body)

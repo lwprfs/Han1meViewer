@@ -40,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderComment
+import com.yenaly.han1meviewer.FapFolder.data.model.attachmentUrls
 import com.yenaly.han1meviewer.FapFolder.data.model.authorAvatar
 import com.yenaly.han1meviewer.FapFolder.data.model.authorName
 import com.yenaly.han1meviewer.FapFolder.data.model.authorUrl

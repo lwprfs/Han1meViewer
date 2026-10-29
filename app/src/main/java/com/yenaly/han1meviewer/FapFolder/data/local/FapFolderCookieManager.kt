@@ -3,6 +3,7 @@ package com.yenaly.han1meviewer.FapFolder.data.local
 import android.util.Log
 import androidx.core.content.edit
 import com.yenaly.han1meviewer.Preferences
+import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetwork
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

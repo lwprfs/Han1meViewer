@@ -55,6 +55,7 @@ import com.yenaly.han1meviewer.ui.navigation.NavigationManager
 import com.yenaly.han1meviewer.ui.navigation.navigateSafely
 import com.yenaly.han1meviewer.ui.navigation.main.MainDestinationSpec
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 
 @Composable
 fun FapFolderNavHost(
@@ -83,7 +84,7 @@ fun FapFolderNavHost(
             return@LaunchedEffect
         }
 
-        val probe = runCatching { FapFolderAuthRepo.probe(activity).firstOrNull() }
+        val probe = runCatching { FapFolderAuthRepo.probe(activity).first() }
             .getOrNull()
 
         gateState = when {
