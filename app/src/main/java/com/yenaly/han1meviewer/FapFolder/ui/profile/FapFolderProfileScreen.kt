@@ -13,11 +13,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
@@ -163,137 +163,147 @@ fun FapFolderProfileScreen(
                                 )
                             }
 
-                            item(key = "profile_tabs") {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                ) {
-                                    uiState.tabs.forEach { tab ->
-                                        FilterChip(
-                                            selected = uiState.activeTab == tab.param,
-                                            onClick = { viewModel.switchTab(tab.param) },
-                                            label = {
-                                                Text(
-                                                    tab.label,
-                                                    style = MaterialTheme.typography.labelMedium,
-                                                )
-                                            },
-                                            colors = FilterChipDefaults.filterChipColors(
-                                                selectedContainerColor =
-                                                    MaterialTheme.colorScheme.primaryContainer,
-                                                selectedLabelColor =
-                                                    MaterialTheme.colorScheme.onPrimaryContainer,
-                                            ),
-                                        )
+                            if (uiState.tabs.isNotEmpty()) {
+                                item(key = "profile_tabs") {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    ) {
+                                        uiState.tabs.forEach { tab ->
+                                            FilterChip(
+                                                selected = uiState.activeTab == tab.param,
+                                                onClick = { viewModel.switchTab(tab.param) },
+                                                label = {
+                                                    Text(
+                                                        tab.label,
+                                                        style = MaterialTheme.typography.labelMedium,
+                                                    )
+                                                },
+                                                colors = FilterChipDefaults.filterChipColors(
+                                                    selectedContainerColor =
+                                                        MaterialTheme.colorScheme.primaryContainer,
+                                                    selectedLabelColor =
+                                                        MaterialTheme.colorScheme.onPrimaryContainer,
+                                                ),
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
 
-                        when {
-                            uiState.isLoading && uiState.items.isEmpty() -> item("items_loading") {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(24.dp),
-                                    contentAlignment = Alignment.Center,
-                                ) { CircularProgressIndicator() }
-                            }
-
-                            uiState.itemsError != null && uiState.items.isEmpty() ->
-                                item("items_error") {
-                                    ProfileError(
-                                        title = "Failed to load",
-                                        message = uiState.itemsError ?: "",
-                                        onRetry = { viewModel.loadMore() },
-                                        compact = true,
-                                    )
-                                }
-
-                            uiState.items.isEmpty() -> item("items_empty") {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(24.dp),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Text(
-                                        text = "Nothing here yet.",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
+                        if (uiState.activeTab == "about") {
+                            uiState.profile?.let { profile ->
+                                item(key = "about_bio") {
+                                    AboutTab(profile = profile)
                                 }
                             }
+                        } else {
+                            when {
+                                uiState.isLoading && uiState.items.isEmpty() -> item("items_loading") {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(24.dp),
+                                        contentAlignment = Alignment.Center,
+                                    ) { CircularProgressIndicator() }
+                                }
 
-                            else -> {
-                                items(uiState.items, key = { it.stableKey }) { item ->
-                                    when (item) {
-                                        is FapFolderFeedItem.Post -> {
-                                            val post = item.post
-                                            FapFolderPostCard(
-                                                post = post,
-                                                modifier = Modifier.padding(horizontal = 8.dp),
-                                                onClickPost = {
-                                                    val slug = post.slug
-                                                        ?: post.postId.toString()
-                                                    onOpenPost(slug)
-                                                },
-                                                onClickHashtag = onOpenHashtag,
-                                                onClickAuthor = { author ->
-                                                    val groupSlug = author.groupSlug
-                                                    val user = author.username
-                                                    when {
-                                                        !groupSlug.isNullOrBlank() ->
-                                                            onOpenGroup(groupSlug)
-                                                        !user.isNullOrBlank() ->
-                                                            onOpenProfile(user)
-                                                    }
-                                                },
-                                                onClickVideo = { },
-                                                onClickImage = { img, all ->
-                                                    val albumId = img.photoId?.toString()
-                                                        ?: all.firstOrNull()?.photoId?.toString()
-                                                    if (albumId != null) onOpenAlbum(albumId)
-                                                },
-                                                onClickPoll = { },
-                                                onClickLink = { },
-                                                onLongClickPost = { },
-                                            )
-                                        }
-                                        is FapFolderFeedItem.User -> FapFolderUserRowCard(
-                                            user = item.user,
-                                            modifier = Modifier.padding(horizontal = 8.dp),
-                                            onClick = {
-                                                if (item.user.username.isNotBlank()) {
-                                                    onOpenProfile(item.user.username)
-                                                }
-                                            },
+                                uiState.itemsError != null && uiState.items.isEmpty() ->
+                                    item("items_error") {
+                                        ProfileError(
+                                            title = "Failed to load",
+                                            message = uiState.itemsError ?: "",
+                                            onRetry = { viewModel.refresh() },
+                                            compact = true,
                                         )
-                                        is FapFolderFeedItem.Community -> FapFolderGroupRowCard(
-                                            group = item.group,
-                                            modifier = Modifier.padding(horizontal = 8.dp),
-                                            onClick = {
-                                                if (item.group.slug.isNotBlank()) {
-                                                    onOpenGroup(item.group.slug)
-                                                }
-                                            },
+                                    }
+
+                                uiState.items.isEmpty() -> item("items_empty") {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(24.dp),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Text(
+                                            text = "Nothing here yet.",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
                                 }
-                                if (uiState.isLoadingMore) {
-                                    item(key = "items_more_loading") {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(16.dp),
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            CircularProgressIndicator(
-                                                modifier = Modifier.size(24.dp),
-                                                strokeWidth = 2.dp,
+
+                                else -> {
+                                    items(uiState.items, key = { it.stableKey }) { item ->
+                                        when (item) {
+                                            is FapFolderFeedItem.Post -> {
+                                                val post = item.post
+                                                FapFolderPostCard(
+                                                    post = post,
+                                                    modifier = Modifier.padding(horizontal = 8.dp),
+                                                    onClickPost = {
+                                                        val slug = post.slug
+                                                            ?: post.postId.toString()
+                                                        onOpenPost(slug)
+                                                    },
+                                                    onClickHashtag = onOpenHashtag,
+                                                    onClickAuthor = { author ->
+                                                        val groupSlug = author.groupSlug
+                                                        val user = author.username
+                                                        when {
+                                                            !groupSlug.isNullOrBlank() ->
+                                                                onOpenGroup(groupSlug)
+                                                            !user.isNullOrBlank() ->
+                                                                onOpenProfile(user)
+                                                        }
+                                                    },
+                                                    onClickVideo = { },
+                                                    onClickImage = { img, all ->
+                                                        val albumId = img.photoId?.toString()
+                                                            ?: all.firstOrNull()?.photoId?.toString()
+                                                        if (albumId != null) onOpenAlbum(albumId)
+                                                    },
+                                                    onClickPoll = { },
+                                                    onClickLink = { },
+                                                    onLongClickPost = { },
+                                                )
+                                            }
+                                            is FapFolderFeedItem.User -> FapFolderUserRowCard(
+                                                user = item.user,
+                                                modifier = Modifier.padding(horizontal = 8.dp),
+                                                onClick = {
+                                                    if (item.user.username.isNotBlank()) {
+                                                        onOpenProfile(item.user.username)
+                                                    }
+                                                },
                                             )
+                                            is FapFolderFeedItem.Community -> FapFolderGroupRowCard(
+                                                group = item.group,
+                                                modifier = Modifier.padding(horizontal = 8.dp),
+                                                onClick = {
+                                                    if (item.group.slug.isNotBlank()) {
+                                                        onOpenGroup(item.group.slug)
+                                                    }
+                                                },
+                                            )
+                                        }
+                                    }
+                                    if (uiState.isLoadingMore) {
+                                        item(key = "items_more_loading") {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(16.dp),
+                                                contentAlignment = Alignment.Center,
+                                            ) {
+                                                CircularProgressIndicator(
+                                                    modifier = Modifier.size(24.dp),
+                                                    strokeWidth = 2.dp,
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -459,6 +469,56 @@ private fun ProfileHeader(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun AboutTab(profile: FapFolderUserProfile) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        if (!profile.bio.isNullOrBlank()) {
+            Text(
+                text = "About",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    text = profile.bio ?: "",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(12.dp),
+                )
+            }
+        }
+        if (!profile.joinedLabel.isNullOrBlank()) {
+            Text(
+                text = "Joined ${profile.joinedLabel}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        val counters = buildList {
+            profile.followerCount?.let { add("$it followers") }
+            profile.followingCount?.let { add("$it following") }
+            profile.postCount?.let { add("$it posts") }
+            profile.photoCount?.let { add("$it photos") }
+            profile.videoCount?.let { add("$it videos") }
+        }
+        if (counters.isNotEmpty()) {
+            Text(
+                text = counters.joinToString(" · "),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

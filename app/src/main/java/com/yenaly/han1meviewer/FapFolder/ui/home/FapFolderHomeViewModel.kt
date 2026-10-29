@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.yenaly.han1meviewer.FapFolder.common.FapFolderConstants
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderFeedItem
+import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderHomeExtras
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderLoadMoreRequest
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderSuggestedCommunity
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderTrendingTag
@@ -39,9 +40,21 @@ data class FapFolderHomeUiState(
     val trending: List<FapFolderTrendingTag> = emptyList(),
     val suggested: List<FapFolderSuggestedCommunity> = emptyList(),
     val filterSwitching: Boolean = false,
+    val extrasLoadedAt: Long = 0L,
+    val feedLoadedAt: Long = 0L,
 ) {
     val posts: List<FapFolderFeedItem.Post>
         get() = items.filterIsInstance<FapFolderFeedItem.Post>()
+
+    val isFresh: Boolean
+        get() {
+            if (feedLoadedAt == 0L) return false
+            return System.currentTimeMillis() - feedLoadedAt < FRESH_LIMIT_MS
+        }
+
+    companion object {
+        const val FRESH_LIMIT_MS = 10 * 60 * 1000L
+    }
 }
 
 sealed interface FapFolderHomeEvent {
@@ -72,9 +85,21 @@ class FapFolderHomeViewModel(application: Application) : AndroidViewModel(applic
 
     private val seenKeys = mutableSetOf<String>()
 
+    fun refreshIfStale() {
+        val state = _uiState.value
+        if (state.isRefreshing || state.filterSwitching) return
+        if (state.items.isEmpty()) {
+            refresh()
+            return
+        }
+        if (!state.isFresh) refresh()
+    }
+
     fun refresh() {
         refreshJob?.cancel()
         loadMoreJob?.cancel()
+        filterJob?.cancel()
+        extrasJob?.cancel()
         seenKeys.clear()
 
         refreshJob = viewModelScope.launch {
@@ -86,10 +111,11 @@ class FapFolderHomeViewModel(application: Application) : AndroidViewModel(applic
                     sessionExpired = false,
                     hasMore = true,
                     currentOffset = 1,
+                    filterSwitching = false,
                 )
             }
 
-            FapFolderNetworkRepo.getHomePage().collect { state ->
+            FapFolderNetworkRepo.getHomePageWithExtras().collect { state ->
                 when (state) {
                     is WebsiteState.Loading -> {
                         if (_uiState.value.items.isEmpty()) {
@@ -98,8 +124,11 @@ class FapFolderHomeViewModel(application: Application) : AndroidViewModel(applic
                     }
 
                     is WebsiteState.Success -> {
-                        val page = state.info
+                        val bundle = state.info
+                        val page = bundle.page
+                        val extras = bundle.extras
                         val merged = mergeItems(emptyList(), page.items)
+                        val now = System.currentTimeMillis()
                         _uiState.update {
                             it.copy(
                                 items = merged,
@@ -117,6 +146,11 @@ class FapFolderHomeViewModel(application: Application) : AndroidViewModel(applic
                                 currentOffset = 1,
                                 lastPageCount = page.items.size,
                                 totalPagesLoaded = 1,
+                                trending = extras.trending,
+                                suggested = extras.suggested,
+                                feedLoadedAt = now,
+                                extrasLoadedAt = now,
+                                filterSwitching = false,
                             )
                         }
                     }
@@ -133,34 +167,10 @@ class FapFolderHomeViewModel(application: Application) : AndroidViewModel(applic
                                     "session",
                                     ignoreCase = true,
                                 ) == true,
+                                filterSwitching = false,
                             )
                         }
                     }
-                }
-            }
-
-            if (_uiState.value.trending.isEmpty() && _uiState.value.suggested.isEmpty()) {
-                loadExtras()
-            }
-        }
-    }
-
-    private fun loadExtras() {
-        extrasJob?.cancel()
-        extrasJob = viewModelScope.launch {
-            FapFolderNetworkRepo.getHomeExtras().collect { state ->
-                when (state) {
-                    is WebsiteState.Loading -> Unit
-                    is WebsiteState.Success -> _uiState.update {
-                        it.copy(
-                            trending = state.info.trending,
-                            suggested = state.info.suggested,
-                        )
-                    }
-                    is WebsiteState.Error -> Log.w(
-                        TAG,
-                        "loadExtras failed: ${state.throwable.message}",
-                    )
                 }
             }
         }
@@ -199,6 +209,7 @@ class FapFolderHomeViewModel(application: Application) : AndroidViewModel(applic
                     is PageLoadingState.Loading -> Unit
                     is PageLoadingState.Success -> {
                         val merged = mergeItems(emptyList(), pageState.info)
+                        val now = System.currentTimeMillis()
                         _uiState.update {
                             it.copy(
                                 items = merged,
@@ -208,6 +219,7 @@ class FapFolderHomeViewModel(application: Application) : AndroidViewModel(applic
                                 currentOffset = 2,
                                 lastPageCount = pageState.info.size,
                                 totalPagesLoaded = 1,
+                                feedLoadedAt = now,
                             )
                         }
                     }
@@ -246,8 +258,14 @@ class FapFolderHomeViewModel(application: Application) : AndroidViewModel(applic
         loadMoreJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoadingMore = true, errorMessage = null) }
 
+            val filterGet = when (state.feedFilter) {
+                FapFolderConstants.FILTER_PHOTOS -> FapFolderConstants.FEED_GET_POSTS_GROUP
+                FapFolderConstants.FILTER_VIDEOS -> FapFolderConstants.FEED_GET_POSTS_GROUP
+                else -> state.feedGet
+            }
+
             val request = FapFolderLoadMoreRequest(
-                get = state.feedGet,
+                get = filterGet,
                 offset = state.currentOffset,
                 filter = state.feedFilter,
                 id = state.feedId,
@@ -264,6 +282,7 @@ class FapFolderHomeViewModel(application: Application) : AndroidViewModel(applic
                     is PageLoadingState.Success -> {
                         val newItems = pageState.info
                         val merged = mergeItems(_uiState.value.items, newItems)
+                        val now = System.currentTimeMillis()
                         _uiState.update {
                             it.copy(
                                 items = merged,
@@ -273,6 +292,7 @@ class FapFolderHomeViewModel(application: Application) : AndroidViewModel(applic
                                 currentOffset = it.currentOffset + 1,
                                 lastPageCount = newItems.size,
                                 totalPagesLoaded = it.totalPagesLoaded + 1,
+                                feedLoadedAt = now,
                             )
                         }
                     }

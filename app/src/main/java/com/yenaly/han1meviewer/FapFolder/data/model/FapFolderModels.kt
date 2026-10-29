@@ -253,6 +253,18 @@ data class FapFolderGroupCategory(
     val name: String,
 )
 
+data class FapFolderProfileTabStream(
+    val get: String? = null,
+    val filter: String? = null,
+    val id: String? = null,
+    val type: String? = null,
+    val uid: String? = null,
+    val search: String? = null,
+    val hashtag: String? = null,
+    val offset: Int = 1,
+    val done: Boolean = false,
+)
+
 data class FapFolderUserProfile(
     val uid: Long?,
     val username: String,
@@ -272,6 +284,11 @@ data class FapFolderUserProfile(
     val isFriendPending: Boolean,
     val isSelf: Boolean,
     val activeTab: String?,
+    val followUid: Long? = null,
+    val tabUrls: Map<String, String> = emptyMap(),
+    val tabStreams: Map<String, FapFolderProfileTabStream> = emptyMap(),
+    val isGroup: Boolean = false,
+    val groupSlug: String? = null,
 )
 
 data class FapFolderGroupRow(
@@ -365,4 +382,25 @@ data class FapFolderFeedPage(
     val feedId: String?,
     val feedType: String?,
     val feedUid: String?,
+)
+
+data class FapFolderTrendingTag(
+    val tag: String,
+    val postCount: Int?,
+    val url: String,
+)
+
+data class FapFolderSuggestedCommunity(
+    val groupId: Long?,
+    val slug: String,
+    val name: String,
+    val avatarUrl: String?,
+    val followerCount: Int?,
+    val isMember: Boolean,
+)
+
+data class FapFolderHomeExtras(
+    val trending: List<FapFolderTrendingTag> = emptyList(),
+    val suggested: List<FapFolderSuggestedCommunity> = emptyList(),
+    val loadedAt: Long = System.currentTimeMillis(),
 )

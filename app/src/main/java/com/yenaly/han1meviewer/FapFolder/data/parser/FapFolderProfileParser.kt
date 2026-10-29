@@ -2,6 +2,7 @@ package com.yenaly.han1meviewer.FapFolder.data.parser
 
 import com.yenaly.han1meviewer.FapFolder.common.FapFolderConstants
 import com.yenaly.han1meviewer.FapFolder.common.FapFolderUrlUtils
+import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderProfileTabStream
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderUserProfile
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
@@ -12,8 +13,10 @@ object FapFolderProfileParser {
     const val TAB_POSTS = "posts"
     const val TAB_PHOTOS = "photos"
     const val TAB_VIDEOS = "videos"
-    const val TAB_FOLLOWERS = "followers"
-    const val TAB_FOLLOWING = "following"
+    const val TAB_GROUPS = "groups"
+    const val TAB_FRIENDS = "friends"
+    const val TAB_ABOUT = "about"
+
     const val FALLBACK_GET_POSTS = FapFolderConstants.FEED_GET_POSTS_PROFILE
     const val FALLBACK_GET_GROUPS = "profile_groups"
     const val FALLBACK_GET_FRIENDS = "friends"
@@ -35,14 +38,21 @@ object FapFolderProfileParser {
             return null
         }
 
-        val header = doc.selectFirst("div.profile-header") ?: return null
+        val header = doc.selectFirst("div.profile-header")
+            ?: doc.selectFirst("div.profile-header-cover")
+            ?: doc.selectFirst(".profile-header-wrapper")
+            ?: return null
 
-        val username = FapFolderUrlUtils.extractUsername(pageUrl)
-            ?.takeIf { it.isNotBlank() }
-            ?: parseDisplayName(header)
+        val groupSlug = FapFolderUrlUtils.extractGroupSlug(pageUrl)
+        val urlUsername = FapFolderUrlUtils.extractUsername(pageUrl)
 
-        val displayName: String = parseDisplayName(header)
+        val displayName = parseDisplayName(header)
         if (displayName.isBlank()) return null
+
+        val username = urlUsername
+            ?.takeIf { it.isNotBlank() }
+            ?: groupSlug
+            ?: displayName.lowercase().replace(' ', '_')
 
         val avatarUrl: String? = header.selectFirst("div.profile-avatar-wrapper > img")
             ?.let { img ->
@@ -59,6 +69,9 @@ object FapFolderProfileParser {
                     ?: img.attr("src").takeIf { it.isNotBlank() }
                         ?.let(FapFolderUrlUtils::absoluteUrl)
             }
+            ?: header.attr("style")
+                .let { FapFolderHtmlUtils.extractBackgroundImageUrl(it) }
+                ?.let(FapFolderUrlUtils::normalizeMediaUrl)
 
         val (bio, bioHtml) = parseBio(doc)
         val aboutMap = parseAboutList(doc)
@@ -66,6 +79,7 @@ object FapFolderProfileParser {
         val joinedLabel: String? = aboutMap["joined"]
             ?: aboutMap["join date"]
             ?: aboutMap["joined date"]
+            ?: aboutMap["created"]
 
         val followerCount = FapFolderHtmlUtils.parseLeadingInt(
             header.selectFirst("a[href$='/followers']")?.text()
@@ -89,21 +103,29 @@ object FapFolderProfileParser {
         )
 
         val followButton = header.selectFirst("button.js_follow, button.js_unfollow")
-        val isFollowed = followButton?.hasClass("js_unfollow") == true
+        val followUid = followButton?.attr("data-uid")?.toLongOrNull()
+            ?: header.selectFirst("button[data-uid]")?.attr("data-uid")?.toLongOrNull()
 
+        val uid = followUid
+            ?: doc.selectFirst("div.js_posts_stream[data-id]")
+                ?.attr("data-id")?.toLongOrNull()
+            ?: doc.selectFirst("button[data-uid]")
+                ?.attr("data-uid")?.toLongOrNull()
+
+        val isFollowed = followButton?.hasClass("js_unfollow") == true
         val isFriend = header.selectFirst("button.js_friend-remove") != null
         val isFriendPending = header.selectFirst("button.js_friend-cancel") != null
+        val isSelf = followButton == null &&
+                header.selectFirst(".js_friend-add") == null &&
+                header.selectFirst("button.js_friend-remove") == null
 
-        val isSelf = header.selectFirst("button.js_follow") == null &&
-                header.selectFirst("button.js_unfollow") == null &&
-                header.selectFirst(".js_friend-add") == null
-
-        val uid = extractUid(doc, header)
         val activeTab = parseActiveTab(doc)
+        val tabUrls = parseTabUrls(doc, pageUrl)
+        val tabStreams = parseTabStreams(doc)
 
         return FapFolderUserProfile(
             uid = uid,
-            username = username.orEmpty(),
+            username = username,
             displayName = displayName,
             bio = bio?.takeIf { it.isNotBlank() },
             bioHtml = bioHtml?.takeIf { it.isNotBlank() },
@@ -120,6 +142,11 @@ object FapFolderProfileParser {
             isFriendPending = isFriendPending,
             isSelf = isSelf,
             activeTab = activeTab,
+            followUid = followUid ?: uid,
+            tabUrls = tabUrls,
+            tabStreams = tabStreams,
+            isGroup = !groupSlug.isNullOrBlank(),
+            groupSlug = groupSlug,
         )
     }
 
@@ -145,10 +172,6 @@ object FapFolderProfileParser {
         if (result.isEmpty()) {
             val base = pageUrl.trimEnd('/')
             result += ProfileTab("Posts", "posts", base)
-            result += ProfileTab("Photos", "photos", "$base/photos")
-            result += ProfileTab("Videos", "videos", "$base/videos")
-            result += ProfileTab("Groups", "groups", "$base/groups")
-            result += ProfileTab("Friends", "friends", "$base/friends")
         }
         return result
     }
@@ -160,33 +183,17 @@ object FapFolderProfileParser {
             v.contains("video") -> "videos"
             v.contains("group") || v.contains("communit") -> "groups"
             v.contains("friend") -> "friends"
+            v.contains("about") -> "about"
             v.contains("post") -> "posts"
             else -> "posts"
         }
-    }
-
-    private fun extractUid(doc: Document, header: Element): Long? {
-        header.selectFirst("button.js_follow[data-uid]")
-            ?.attr("data-uid")?.toLongOrNull()?.let { return it }
-        header.selectFirst("button.js_unfollow[data-uid]")
-            ?.attr("data-uid")?.toLongOrNull()?.let { return it }
-        header.selectFirst("button.js_friend-add[data-uid]")
-            ?.attr("data-uid")?.toLongOrNull()?.let { return it }
-        header.selectFirst("button.js_friend-cancel[data-uid]")
-            ?.attr("data-uid")?.toLongOrNull()?.let { return it }
-        header.selectFirst("button.js_friend-remove[data-uid]")
-            ?.attr("data-uid")?.toLongOrNull()?.let { return it }
-        doc.selectFirst("div.js_posts_stream[data-id]")
-            ?.attr("data-id")?.toLongOrNull()?.let { return it }
-        doc.selectFirst("button[data-uid]")
-            ?.attr("data-uid")?.toLongOrNull()?.let { return it }
-        return null
     }
 
     private fun parseDisplayName(header: Element): String {
         return FapFolderHtmlUtils.cleanText(
             header.selectFirst("div.profile-name-wrapper a")?.text()
                 ?: header.selectFirst("div.profile-name-wrapper")?.text()
+                ?: header.selectFirst("h1")?.text()
         )
     }
 
@@ -241,10 +248,35 @@ object FapFolderProfileParser {
             val href = anchor.absUrl("href").takeIf { it.isNotBlank() }
                 ?: anchor.attr("href").takeIf { it.isNotBlank() }
                     ?.let(FapFolderUrlUtils::absoluteUrl)
-            if (!href.isNullOrBlank() && label.isNotBlank()) {
-                map[label] = href
-            }
+                    ?: return@forEach
+            val param = paramForLabel(label)
+            if (param.isNotBlank()) map[param] = href
         }
         return map
+    }
+
+    private fun parseTabStreams(doc: Document): Map<String, FapFolderProfileTabStream> {
+        val result = mutableMapOf<String, FapFolderProfileTabStream>()
+        val root = doc.selectFirst("div.js_posts_stream") ?: return result
+        val seeMore = doc.selectFirst(".js_see-more-infinite")
+            ?: doc.selectFirst(".js_see-more")
+        val offset = seeMore?.attr("data-offset")?.toIntOrNull() ?: 1
+        val done = seeMore?.hasClass("done") == true
+        val stream = FapFolderProfileTabStream(
+            get = root.attr("data-get").takeIf { it.isNotBlank() },
+            filter = root.attr("data-filter").takeIf { it.isNotBlank() },
+            id = root.attr("data-id").takeIf { it.isNotBlank() },
+            type = root.attr("data-type").takeIf { it.isNotBlank() },
+            uid = root.attr("data-uid").takeIf { it.isNotBlank() },
+            search = root.attr("data-search").takeIf { it.isNotBlank() },
+            hashtag = root.attr("data-hashtag").takeIf { it.isNotBlank() },
+            offset = offset,
+            done = done,
+        )
+        val activeLabel = parseActiveTab(doc)?.lowercase()
+        val activeParam = activeLabel?.let { paramForLabel(it) } ?: "posts"
+        result[activeParam] = stream
+        result["posts"] = stream
+        return result
     }
 }

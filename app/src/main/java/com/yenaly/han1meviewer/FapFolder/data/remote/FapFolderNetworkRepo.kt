@@ -13,6 +13,7 @@ import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderFeedItem
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderFeedPage
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderGroup
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderGroupMembersPage
+import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderHomeExtras
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderLightboxResponse
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderLoadMoreRequest
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderPost
@@ -25,14 +26,13 @@ import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderAlbumParser
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderAutocompleteParser
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderCommentParser
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderGroupParser
+import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderHomeExtrasParser
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderHtmlUtils
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderLightboxParser
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderPostParser
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderProfileParser
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderSearchParser
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderSessionParser
-import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderSuggestedCommunitiesParser
-import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderTrendingParser
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
@@ -57,6 +57,16 @@ object FapFolderNetworkRepo {
         val uid: String?,
         val search: String?,
         val hashtag: String?,
+    )
+
+    data class HomeExtras(
+        val trending: List<FapFolderTrendingTag>,
+        val suggested: List<FapFolderSuggestedCommunity>,
+    )
+
+    data class HomePageBundle(
+        val page: FapFolderFeedPage,
+        val extras: HomeExtras,
     )
 
     fun parseFirstPageFromHtml(
@@ -109,10 +119,68 @@ object FapFolderNetworkRepo {
     private fun uploadsBase(): String =
         FapFolderSessionCache.uploadsBase()
 
-    data class HomeExtras(
-        val trending: List<FapFolderTrendingTag>,
-        val suggested: List<FapFolderSuggestedCommunity>,
-    )
+    fun getHomePageWithExtras(): Flow<WebsiteState<HomePageBundle>> = flow {
+        emit(WebsiteState.Loading)
+        val url = basePath() + "/"
+        try {
+            val response = FapFolderNetwork.service.getByUrl(url)
+            val rawBody = response.body()?.string()
+            val code = response.code()
+            if (!response.isSuccessful || rawBody.isNullOrBlank()) {
+                emit(errorState(code, rawBody))
+                return@flow
+            }
+
+            if (FapFolderHtmlUtils.looksLikeCloudflareChallenge(rawBody)) {
+                emit(WebsiteState.Error(IllegalStateException("Cloudflare challenge.")))
+                return@flow
+            }
+
+            val session = FapFolderSessionParser.parseAndCache(rawBody, url)
+            val doc = Jsoup.parse(rawBody, url)
+
+            val streamRoot = doc.selectFirst("div.js_posts_stream")
+            val feedGet = streamRoot?.attr("data-get")?.takeIf { it.isNotBlank() }
+                ?: FapFolderConstants.FEED_GET_NEWSFEED
+            val feedFilter = streamRoot?.attr("data-filter")?.takeIf { it.isNotBlank() }
+                ?: FapFolderConstants.FILTER_ALL
+            val feedId = streamRoot?.attr("data-id")?.takeIf { it.isNotBlank() }
+            val feedType = streamRoot?.attr("data-type")?.takeIf { it.isNotBlank() }
+            val feedUid = streamRoot?.attr("data-uid")?.takeIf { it.isNotBlank() }
+
+            val posts = FapFolderPostParser.parsePostsFromList(
+                root = streamRoot ?: doc.body(),
+                baseUrl = url,
+                uploadsBase = uploadsBase(),
+                includeComments = false,
+            )
+
+            val seeMore = doc.selectFirst(".js_see-more-infinite")
+                ?: doc.selectFirst(".js_see-more")
+            val hasMore = seeMore != null && !seeMore.hasClass("done") && posts.isNotEmpty()
+
+            val page = FapFolderFeedPage(
+                items = posts.map { FapFolderFeedItem.Post(it) },
+                session = session,
+                nextOffset = 1,
+                hasMore = hasMore,
+                feedGet = feedGet,
+                feedFilter = feedFilter,
+                feedId = feedId,
+                feedType = feedType,
+                feedUid = feedUid,
+            )
+            val extras = HomeExtras(
+                trending = FapFolderHomeExtrasParser.parseTrending(doc, url),
+                suggested = FapFolderHomeExtrasParser.parseSuggested(doc, url),
+            )
+
+            emit(WebsiteState.Success(HomePageBundle(page = page, extras = extras)))
+        } catch (e: Exception) {
+            Log.e(TAG, "getHomePageWithExtras failed", e)
+            emit(WebsiteState.Error(e))
+        }
+    }.flowOn(Dispatchers.IO)
 
     fun getHomePage(): Flow<WebsiteState<FapFolderFeedPage>> = flow {
         emit(WebsiteState.Loading)
@@ -195,8 +263,8 @@ object FapFolderNetworkRepo {
                 return@flow
             }
             val doc = Jsoup.parse(rawBody, url)
-            val trending = FapFolderTrendingParser.parse(doc, url)
-            val suggested = FapFolderSuggestedCommunitiesParser.parse(doc, url)
+            val trending = FapFolderHomeExtrasParser.parseTrending(doc, url)
+            val suggested = FapFolderHomeExtrasParser.parseSuggested(doc, url)
             emit(WebsiteState.Success(HomeExtras(trending, suggested)))
         } catch (e: Exception) {
             Log.e(TAG, "getHomeExtras failed", e)
@@ -587,9 +655,16 @@ object FapFolderNetworkRepo {
         }
     }.flowOn(Dispatchers.IO)
 
-    fun getProfilePage(username: String): Flow<VideoLoadingState<FapFolderUserProfile>> = flow {
+    fun getProfilePage(pathOrUsername: String): Flow<VideoLoadingState<FapFolderUserProfile>> = flow {
         emit(VideoLoadingState.Loading)
-        val url = basePath() + "/" + username.trim('/')
+        val clean = pathOrUsername.trim('/')
+        val url = if (clean.startsWith("http")) {
+            clean
+        } else if (clean.startsWith("groups/")) {
+            basePath() + "/$clean"
+        } else {
+            basePath() + "/$clean"
+        }
         try {
             val response = FapFolderNetwork.service.getProfileUrl(url)
             val rawBody = response.body()?.string().orEmpty()

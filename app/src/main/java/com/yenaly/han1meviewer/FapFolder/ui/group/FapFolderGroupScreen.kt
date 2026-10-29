@@ -393,7 +393,7 @@ fun FapFolderGroupScreen(
                                                 },
                                             )
                                             is FapFolderFeedItem.Community -> {
-                                                // Should not appear in a group feed, skip
+
                                             }
                                         }
                                     }

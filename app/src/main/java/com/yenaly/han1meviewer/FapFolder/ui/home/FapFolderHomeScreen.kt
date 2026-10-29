@@ -89,9 +89,7 @@ fun FapFolderHomeScreen(
     var sortMenuOpen by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        if (uiState.items.isEmpty() && uiState.firstLoad) {
-            viewModel.refresh()
-        }
+        viewModel.refreshIfStale()
     }
 
     LaunchedEffect(uiState.errorMessage) {
@@ -122,8 +120,8 @@ fun FapFolderHomeScreen(
             }
     }
 
-    LaunchedEffect(uiState.firstLoad, uiState.isLoadingMore) {
-        if (!uiState.firstLoad && !uiState.isLoadingMore) {
+    LaunchedEffect(uiState.isRefreshing, uiState.isLoadingMore) {
+        if (!uiState.isRefreshing && !uiState.isLoadingMore) {
             isRefreshing = false
         }
     }
@@ -305,6 +303,23 @@ private fun FeedList(
         ),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        if (trending.isNotEmpty()) {
+            item(key = "__trending__") {
+                FapFolderTrendingCard(
+                    tags = trending,
+                    onTagClick = onOpenHashtag,
+                )
+            }
+        }
+        if (suggested.isNotEmpty()) {
+            item(key = "__suggested__") {
+                FapFolderSuggestedCommunitiesCard(
+                    communities = suggested,
+                    onCommunityClick = onOpenGroup,
+                )
+            }
+        }
+
         items(items, key = { it.stableKey }) { item ->
             when (item) {
                 is FapFolderFeedItem.Post -> {
@@ -350,25 +365,6 @@ private fun FeedList(
                             val slug = item.group.slug
                             if (slug.isNotBlank()) onOpenGroup(slug)
                         },
-                    )
-                }
-            }
-        }
-
-        if (items.size >= 5) {
-            if (trending.isNotEmpty()) {
-                item(key = "__trending__") {
-                    FapFolderTrendingCard(
-                        tags = trending,
-                        onTagClick = onOpenHashtag,
-                    )
-                }
-            }
-            if (suggested.isNotEmpty()) {
-                item(key = "__suggested__") {
-                    FapFolderSuggestedCommunitiesCard(
-                        communities = suggested,
-                        onCommunityClick = onOpenGroup,
                     )
                 }
             }

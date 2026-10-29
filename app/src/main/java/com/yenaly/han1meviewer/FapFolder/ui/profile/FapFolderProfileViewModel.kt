@@ -9,6 +9,7 @@ import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderFeedItem
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderGroupRow
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderLoadMoreRequest
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderPost
+import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderProfileTabStream
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderUserProfile
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderUserRow
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderProfileParser
@@ -30,7 +31,7 @@ data class FapFolderProfileTab(
     val url: String,
     val kind: Kind,
 ) {
-    enum class Kind { POSTS, PHOTOS, VIDEOS, GROUPS, FRIENDS, OTHER }
+    enum class Kind { POSTS, PHOTOS, VIDEOS, GROUPS, FRIENDS, ABOUT, OTHER }
 
     companion object {
         fun fromParam(value: String?): String {
@@ -40,6 +41,8 @@ data class FapFolderProfileTab(
                 v.contains("video") -> "videos"
                 v.contains("group") || v.contains("communit") -> "groups"
                 v.contains("friend") -> "friends"
+                v.contains("about") -> "about"
+                v.contains("post") -> "posts"
                 else -> "posts"
             }
         }
@@ -49,6 +52,7 @@ data class FapFolderProfileTab(
             "videos" -> Kind.VIDEOS
             "groups" -> Kind.GROUPS
             "friends" -> Kind.FRIENDS
+            "about" -> Kind.ABOUT
             "posts" -> Kind.POSTS
             else -> Kind.OTHER
         }
@@ -118,9 +122,14 @@ class FapFolderProfileViewModel(application: Application) : AndroidViewModel(app
         if (clean.isBlank()) return
         val tab = FapFolderProfileTab.fromParam(initialTab)
         val sameLoad = _uiState.value.username == clean &&
-                _uiState.value.activeTab == tab &&
                 _uiState.value.profile != null
-        if (sameLoad) return
+        if (sameLoad) {
+            if (_uiState.value.activeTab != tab) {
+                _uiState.update { it.copy(activeTab = tab) }
+                loadTabItems(tab)
+            }
+            return
+        }
 
         headerJob?.cancel()
         itemsJob?.cancel()
@@ -152,15 +161,17 @@ class FapFolderProfileViewModel(application: Application) : AndroidViewModel(app
                     is VideoLoadingState.Loading -> Unit
                     is VideoLoadingState.Success -> {
                         val profile = state.info
+                        val resolvedTabs = resolveTabs(profile)
                         _uiState.update {
                             it.copy(
                                 profile = profile,
                                 isLoading = false,
                                 headerError = null,
                                 following = profile.isFollowed,
+                                tabs = resolvedTabs,
                             )
                         }
-                        loadFirstItems(tab)
+                        loadTabItems(tab)
                     }
                     is VideoLoadingState.Error -> {
                         val msg = state.throwable.message
@@ -193,14 +204,19 @@ class FapFolderProfileViewModel(application: Application) : AndroidViewModel(app
             )
         }
         seenKeys.clear()
-        loadFirstItems(normalised)
+        loadTabItems(normalised)
     }
 
     fun refresh() {
         val username = _uiState.value.username
         if (username.isBlank()) return
-        _uiState.update { it.copy(username = "") }
-        load(username, _uiState.value.activeTab)
+        val currentTab = _uiState.value.activeTab
+        headerJob?.cancel()
+        itemsJob?.cancel()
+        followJob?.cancel()
+        seenKeys.clear()
+        _uiState.update { it.copy(profile = null, isLoading = true, headerError = null) }
+        load(username, currentTab)
     }
 
     fun loadMore() {
@@ -255,7 +271,7 @@ class FapFolderProfileViewModel(application: Application) : AndroidViewModel(app
     fun toggleFollow() {
         val state = _uiState.value
         val profile = state.profile ?: return
-        val uid = profile.uid ?: return
+        val uid = profile.followUid ?: profile.uid ?: return
         if (state.followPending) return
 
         val wasFollowing = state.following
@@ -293,24 +309,83 @@ class FapFolderProfileViewModel(application: Application) : AndroidViewModel(app
         }
     }
 
-    private fun loadFirstItems(tab: String) {
+    private fun resolveTabs(profile: FapFolderUserProfile): List<FapFolderProfileTab> {
+        if (profile.tabUrls.isEmpty()) {
+            return defaultTabs().filter { tab ->
+                when (tab.param) {
+                    "photos" -> (profile.photoCount ?: 0) > 0
+                    "videos" -> (profile.videoCount ?: 0) > 0
+                    "groups" -> true
+                    "friends" -> true
+                    else -> true
+                }
+            }
+        }
+        return profile.tabUrls.map { (param, url) ->
+            FapFolderProfileTab(
+                label = labelForParam(param),
+                param = param,
+                url = url,
+                kind = FapFolderProfileTab.kindOf(param),
+            )
+        }
+    }
+
+    private fun labelForParam(param: String): String = when (param) {
+        "photos" -> "Photos"
+        "videos" -> "Videos"
+        "groups" -> "Groups"
+        "friends" -> "Friends"
+        "about" -> "About"
+        else -> "Posts"
+    }
+
+    private fun loadTabItems(tab: String) {
         val state = _uiState.value
         val profile = state.profile ?: return
         val username = state.username
         if (username.isBlank()) return
 
-        val tabUrl = when (tab) {
-            "photos" -> FapFolderNetwork.baseUrl.trimEnd('/') + "/$username/photos"
-            "videos" -> FapFolderNetwork.baseUrl.trimEnd('/') + "/$username/videos"
-            "groups" -> FapFolderNetwork.baseUrl.trimEnd('/') + "/$username/groups"
-            "friends" -> FapFolderNetwork.baseUrl.trimEnd('/') + "/$username/friends"
-            else -> FapFolderNetwork.baseUrl.trimEnd('/') + "/$username"
+        val base = FapFolderNetwork.baseUrl.trimEnd('/')
+        val tabUrl = profile.tabUrls[tab]
+            ?: when (tab) {
+                "photos" -> "$base/$username/photos"
+                "videos" -> "$base/$username/videos"
+                "groups" -> "$base/$username/groups"
+                "friends" -> "$base/$username/friends"
+                "about" -> "$base/$username/about"
+                else -> "$base/$username"
+            }
+
+        if (tab == "about") {
+            _uiState.update { it.copy(items = emptyList(), isLoading = false, hasMore = false) }
+            return
         }
 
+        val stream = profile.tabStreams[tab]
+        if (stream != null && tab == "posts") {
+            applyStreamState(stream)
+            loadFirstPageFromUrl(tabUrl, tab, null, profile.uid?.toString())
+            return
+        }
+
+        loadFirstPageFromUrl(
+            tabUrl = tabUrl,
+            tab = tab,
+            fallbackFilter = tab.takeIf { it == "photos" || it == "videos" },
+            fallbackId = profile.uid?.toString() ?: profile.groupSlug,
+        )
+    }
+
+    private fun loadFirstPageFromUrl(
+        tabUrl: String,
+        tab: String,
+        fallbackFilter: String?,
+        fallbackId: String?,
+    ) {
         itemsJob?.cancel()
         itemsJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, itemsError = null) }
-
             try {
                 val response = FapFolderNetwork.service.getProfileUrl(tabUrl)
                 val rawBody = response.body()?.string().orEmpty()
@@ -319,6 +394,7 @@ class FapFolderProfileViewModel(application: Application) : AndroidViewModel(app
                         it.copy(
                             isLoading = false,
                             itemsError = "HTTP ${response.code()}",
+                            hasMore = false,
                         )
                     }
                     return@launch
@@ -327,9 +403,12 @@ class FapFolderProfileViewModel(application: Application) : AndroidViewModel(app
                 val snapshot = FapFolderNetworkRepo.parseFirstPageFromHtml(
                     html = rawBody,
                     pageUrl = tabUrl,
-                    filter = tab.takeIf { it != "posts" },
-                    fallbackId = profile.uid?.toString(),
+                    filter = fallbackFilter,
+                    fallbackId = fallbackId,
                 )
+
+                seenKeys.clear()
+                snapshot.items.forEach { seenKeys.add(it.stableKey) }
 
                 _uiState.update {
                     it.copy(
@@ -344,11 +423,11 @@ class FapFolderProfileViewModel(application: Application) : AndroidViewModel(app
                         streamUid = snapshot.uid,
                         streamSearch = snapshot.search,
                         streamHashtag = snapshot.hashtag,
+                        itemsError = null,
                     )
                 }
-                snapshot.items.forEach { seenKeys.add(it.stableKey) }
             } catch (e: Exception) {
-                Log.e(TAG, "loadFirstItems($tab) failed", e)
+                Log.e(TAG, "loadFirstPageFromUrl($tab) failed", e)
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -356,6 +435,22 @@ class FapFolderProfileViewModel(application: Application) : AndroidViewModel(app
                     )
                 }
             }
+        }
+    }
+
+    private fun applyStreamState(stream: FapFolderProfileTabStream) {
+        _uiState.update {
+            it.copy(
+                streamGet = stream.get,
+                streamFilter = stream.filter,
+                streamId = stream.id,
+                streamType = stream.type,
+                streamUid = stream.uid,
+                streamSearch = stream.search,
+                streamHashtag = stream.hashtag,
+                currentOffset = stream.offset.coerceAtLeast(2),
+                hasMore = !stream.done,
+            )
         }
     }
 
@@ -369,18 +464,21 @@ class FapFolderProfileViewModel(application: Application) : AndroidViewModel(app
             else -> FapFolderConstants.FILTER_ALL
         }
         val fallbackGet = when (state.activeTab) {
-            "groups" -> "profile_groups"
-            "friends" -> "friends"
-            else -> FapFolderConstants.FEED_GET_POSTS_PROFILE
+            "groups" -> FapFolderProfileParser.FALLBACK_GET_GROUPS
+            "friends" -> FapFolderProfileParser.FALLBACK_GET_FRIENDS
+            else -> FapFolderProfileParser.FALLBACK_GET_POSTS
         }
-        val id = state.streamId ?: state.profile?.uid?.toString()
+        val id = state.streamId
+            ?: state.profile?.uid?.toString()
+            ?: state.profile?.groupSlug
+        val uid = state.streamUid ?: id
 
         return FapFolderFeedPaging.fromStream(
             get = state.streamGet ?: fallbackGet,
             filter = state.streamFilter ?: fallbackFilter,
             id = id,
             type = state.streamType,
-            uid = state.streamUid ?: id,
+            uid = uid,
             search = state.streamSearch,
             hashtag = state.streamHashtag,
             offset = offset,
