@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -106,6 +107,10 @@ fun FapFolderVideoPlayerScreen(
     val playerKey = video.videoId?.toString() ?: video.playUrl
     val stored = remember(playerKey) { FapFolderProgressStore.get(playerKey) }
 
+    val initialAspect = (video.aspectRatio ?: (16.0 / 9.0)).toFloat()
+        .takeIf { it > 0f } ?: (16f / 9f)
+    val videoIsLandscape = initialAspect >= 1f
+
     var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
     var isPlaying by remember { mutableStateOf(false) }
     var isBuffering by remember { mutableStateOf(true) }
@@ -114,6 +119,7 @@ fun FapFolderVideoPlayerScreen(
     var duration by remember { mutableLongStateOf(stored?.second ?: 0L) }
     var showControls by remember { mutableStateOf(true) }
     var isFullscreen by remember { mutableStateOf(false) }
+    var fullscreenLandscape by remember { mutableStateOf(videoIsLandscape) }
     var reloadToken by remember { mutableIntStateOf(0) }
     var resumePrompted by remember { mutableStateOf(false) }
     var showResumeDialog by remember { mutableStateOf(false) }
@@ -373,9 +379,20 @@ fun FapFolderVideoPlayerScreen(
         }
     }
 
+    fun applyFullscreenOrientation(landscape: Boolean, force: Boolean) {
+        val requested = when {
+            force && landscape -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            force && !landscape -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            landscape -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            else -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+        }
+        activity?.requestedOrientation = requested
+        fullscreenLandscape = landscape
+    }
+
     fun enterFullscreen() {
         if (isFullscreen) return
-        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        applyFullscreenOrientation(videoIsLandscape, force = false)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             activity?.window?.insetsController?.hide(
                 android.view.WindowInsets.Type.statusBars() or
@@ -404,7 +421,23 @@ fun FapFolderVideoPlayerScreen(
         isFullscreen = false
     }
 
+    fun toggleFullscreenOrientation(landscape: Boolean) {
+        if (!isFullscreen) {
+            applyFullscreenOrientation(landscape, force = true)
+            enterFullscreen()
+        } else {
+            applyFullscreenOrientation(landscape, force = true)
+        }
+        showControls = true
+    }
+
     BackHandler(enabled = isFullscreen) { exitFullscreen() }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+    }
 
     val playerContent: @Composable () -> Unit = {
         Box(
@@ -554,6 +587,20 @@ fun FapFolderVideoPlayerScreen(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f),
+                        )
+                    }
+                    IconButton(onClick = { toggleFullscreenOrientation(false) }) {
+                        Icon(
+                            imageVector = Icons.Filled.ScreenRotation,
+                            contentDescription = "Force portrait",
+                            tint = Color.White,
+                        )
+                    }
+                    IconButton(onClick = { toggleFullscreenOrientation(true) }) {
+                        Icon(
+                            imageVector = Icons.Filled.ScreenRotation,
+                            contentDescription = "Force landscape",
+                            tint = Color.White,
                         )
                     }
                 }

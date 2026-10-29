@@ -1,7 +1,6 @@
 package com.yenaly.han1meviewer.FapFolder.ui.group
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,6 +40,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,11 +56,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderFeedItem
+import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderMedia
+import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderPost
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderUserRow
 import com.yenaly.han1meviewer.FapFolder.data.model.GroupMembership
 import com.yenaly.han1meviewer.FapFolder.data.model.GroupVisibility
+import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderImageLightboxDialog
 import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderPostCard
 import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderUserRowCard
+import com.yenaly.han1meviewer.FapFolder.ui.video.FapFolderVideoPlayerScreen
 import com.yenaly.han1meviewer.R
 import kotlinx.coroutines.flow.distinctUntilChanged
 
@@ -76,6 +82,12 @@ fun FapFolderGroupScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+
+    var videoToPlay by remember { mutableStateOf<FapFolderMedia.Video?>(null) }
+    var videoPost by remember { mutableStateOf<FapFolderPost?>(null) }
+    var lightboxPayload by remember {
+        mutableStateOf<Pair<List<FapFolderMedia.Image>, Int>?>(null)
+    }
 
     LaunchedEffect(slug, initialTab) {
         viewModel.load(slug, initialTab)
@@ -372,11 +384,15 @@ fun FapFolderGroupScreen(
                                                                 onOpenProfile(username)
                                                         }
                                                     },
-                                                    onClickVideo = { },
+                                                    onClickVideo = { video ->
+                                                        videoPost = post
+                                                        videoToPlay = video
+                                                    },
                                                     onClickImage = { img, all ->
-                                                        val albumId = img.photoId?.toString()
-                                                            ?: all.firstOrNull()?.photoId?.toString()
-                                                        if (albumId != null) onOpenAlbum(albumId)
+                                                        val idx = all.indexOfFirst {
+                                                            it.photoId == img.photoId
+                                                        }.coerceAtLeast(0)
+                                                        lightboxPayload = all to idx
                                                     },
                                                     onClickPoll = { },
                                                     onClickLink = { },
@@ -419,6 +435,38 @@ fun FapFolderGroupScreen(
                 }
             }
         }
+    }
+
+    videoToPlay?.let { video ->
+        FapFolderVideoPlayerScreen(
+            video = video,
+            title = videoPost?.bodyPlain?.take(60).orEmpty(),
+            onDismiss = {
+                videoToPlay = null
+                videoPost = null
+            },
+            postId = videoPost?.postId,
+            coverUrl = video.posterUrl,
+            postPermalinkForReferer = videoPost?.permalink
+                ?: "https://fapfolder.club/groups/${uiState.slug}",
+            onExpired = {
+                val post = videoPost
+                videoToPlay = null
+                videoPost = null
+                if (post != null) {
+                    val slug = post.slug ?: post.postId.toString()
+                    onOpenPost(slug)
+                }
+            },
+        )
+    }
+
+    lightboxPayload?.let { (images, startIndex) ->
+        FapFolderImageLightboxDialog(
+            images = images,
+            initialIndex = startIndex,
+            onDismiss = { lightboxPayload = null },
+        )
     }
 }
 

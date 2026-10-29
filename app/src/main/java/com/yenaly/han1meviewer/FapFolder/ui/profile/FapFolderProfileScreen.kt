@@ -87,6 +87,7 @@ fun FapFolderProfileScreen(
     onOpenAlbum: (String) -> Unit,
     onOpenHashtag: (String) -> Unit = {},
     onOpenProfile: (String) -> Unit = {},
+    onOpenVideoBySlug: (String) -> Unit = onOpenPost,
     viewModel: FapFolderProfileViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -203,7 +204,7 @@ fun FapFolderProfileScreen(
                                 videoPost = null
                                 videoToPlay = video
                             },
-                            onOpenPost = onOpenPost,
+                            onOpenVideoBySlug = onOpenVideoBySlug,
                             onRetry = { viewModel.refresh() },
                             onToggleFollow = { viewModel.toggleFollow() },
                         )
@@ -417,7 +418,7 @@ private fun ProfileGridTab(
     onSwitchTab: (FapFolderProfileTab) -> Unit,
     onOpenImage: (List<FapFolderMedia.Image>, Int) -> Unit,
     onOpenVideo: (FapFolderMedia.Video) -> Unit,
-    onOpenPost: (String) -> Unit,
+    onOpenVideoBySlug: (String) -> Unit,
     onRetry: () -> Unit,
     onToggleFollow: () -> Unit,
 ) {
@@ -612,7 +613,7 @@ private fun ProfileGridTab(
                                         val slugOrId = tile.postId?.toString()
                                             ?: tile.postUrl.trimEnd('/')
                                                 .substringAfterLast('/')
-                                        onOpenPost(slugOrId)
+                                        onOpenVideoBySlug(slugOrId)
                                     },
                             ) {
                                 val poster = tile.thumbnailUrl

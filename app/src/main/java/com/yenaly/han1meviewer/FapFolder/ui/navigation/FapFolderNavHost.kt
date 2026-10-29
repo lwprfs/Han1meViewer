@@ -280,6 +280,9 @@ fun FapFolderNavHost(
                 onOpenProfile = { username ->
                     navController.navigateSafely(FapFolderProfileRoute(username))
                 },
+                onOpenVideoBySlug = { slug ->
+                    navController.navigateSafely(FapFolderPostRoute(slug, autoPlay = true))
+                },
             )
         }
 
