@@ -21,6 +21,19 @@ class FapFolderCookieJar : CookieJar {
             FapFolderConstants.COOKIE_PHPSESSID,
             FapFolderConstants.COOKIE_C_USER,
             FapFolderConstants.COOKIE_XS,
+
+            "cf_clearance",
+            "__cf_bm",
+            "cf_chl_2",
+            "cf_chl_prog",
+            "cf_chl_rc_ni",
+        )
+
+        private val SEED_HOSTS = listOf(
+            "fapfolder.club",
+            "www.fapfolder.club",
+            "fap.onl",
+            "www.fap.onl",
         )
 
         private val cookieStore:
@@ -94,28 +107,32 @@ class FapFolderCookieJar : CookieJar {
     }
 
     fun seed(cookies: List<Cookie>) {
-        val host = "fapfolder.club"
-        val bucket = cookieStore.getOrPut(host) { ConcurrentHashMap() }
-        cookies.filter { it.name in PRESERVED_NAMES }.forEach { c ->
-            bucket[key(c)] = c
+        val filtered = cookies.filter { it.name in PRESERVED_NAMES }
+        if (filtered.isEmpty()) return
+        SEED_HOSTS.forEach { host ->
+            val bucket = cookieStore.getOrPut(host) { ConcurrentHashMap() }
+            filtered.forEach { c ->
+                bucket[key(c)] = c
+            }
         }
     }
 
     fun seedFromSnapshot(snapshot: Map<String, String>) {
         if (snapshot.isEmpty()) return
-        val host = "fapfolder.club"
-        val bucket = cookieStore.getOrPut(host) { ConcurrentHashMap() }
-        snapshot.forEach { (name, value) ->
-            if (name in PRESERVED_NAMES && value.isNotBlank()) {
-                val cookie = runCatching {
-                    Cookie.Builder()
-                        .domain(host)
-                        .path("/")
-                        .name(name)
-                        .value(value)
-                        .build()
-                }.getOrNull() ?: return@forEach
-                bucket[key(cookie)] = cookie
+        SEED_HOSTS.forEach { host ->
+            val bucket = cookieStore.getOrPut(host) { ConcurrentHashMap() }
+            snapshot.forEach { (name, value) ->
+                if (name in PRESERVED_NAMES && value.isNotBlank()) {
+                    val cookie = runCatching {
+                        Cookie.Builder()
+                            .domain(host)
+                            .path("/")
+                            .name(name)
+                            .value(value)
+                            .build()
+                    }.getOrNull() ?: return@forEach
+                    bucket[key(cookie)] = cookie
+                }
             }
         }
     }

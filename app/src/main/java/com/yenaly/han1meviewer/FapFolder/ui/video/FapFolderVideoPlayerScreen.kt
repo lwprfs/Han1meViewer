@@ -76,6 +76,7 @@ import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetwork
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 @Composable
 fun FapFolderVideoPlayerScreen(
@@ -84,6 +85,7 @@ fun FapFolderVideoPlayerScreen(
     onDismiss: () -> Unit,
     postId: Long? = null,
     coverUrl: String? = null,
+    postPermalinkForReferer: String? = null,
     onExpired: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
@@ -144,16 +146,40 @@ fun FapFolderVideoPlayerScreen(
         val player = ExoPlayer.Builder(context).build().apply {
             val cookieHeader = runCatching { FapFolderNetwork.snapshotCookies() }
                 .getOrDefault("")
+
+            val playHost = runCatching {
+                video.playUrl.toHttpUrlOrNull()?.host
+            }.getOrNull().orEmpty()
+            val isCdnHost = playHost.contains("fap.onl", ignoreCase = true)
+
+            val referer = if (isCdnHost) {
+                postPermalinkForReferer ?: FapFolderConstants.HEADER_REFERER
+            } else {
+                FapFolderConstants.HEADER_REFERER
+            }
+
             val requestHeaders = buildMap {
-                put("referer", FapFolderConstants.HEADER_REFERER)
+                put("referer", referer)
                 put("origin", FapFolderConstants.HEADER_ORIGIN)
                 put("user-agent", FapFolderConstants.USER_AGENT_FAPFOLDER)
                 put("accept", "*/*")
+                put("accept-language", FapFolderConstants.ACCEPT_LANGUAGE)
+
+                put("accept-encoding", "identity")
+
+                put("sec-fetch-dest", "video")
+                put("sec-fetch-mode", "no-cors")
+                put("sec-fetch-site", "same-site")
                 if (cookieHeader.isNotBlank()) put("cookie", cookieHeader)
             }
+
             val httpFactory = DefaultHttpDataSource.Factory()
                 .setDefaultRequestProperties(requestHeaders)
                 .setAllowCrossProtocolRedirects(true)
+                .setUserAgent(FapFolderConstants.USER_AGENT_FAPFOLDER)
+                .setConnectTimeoutMs(15_000)
+                .setReadTimeoutMs(20_000)
+
             val dataSourceFactory = DefaultDataSource.Factory(context, httpFactory)
             val mediaItem = MediaItem.Builder().setUri(video.playUrl).build()
             val mediaSource = ProgressiveMediaSource.Factory(dataSourceFactory)
@@ -196,6 +222,12 @@ fun FapFolderVideoPlayerScreen(
                     playbackError = "Video link expired. Refreshing…"
                     isBuffering = false
                     onExpired()
+                } else if (error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS) {
+
+                    playbackError =
+                        "This video link is no longer valid. " +
+                                "Re-open the post or paste fresh cookies."
+                    isBuffering = false
                 } else {
                     playbackError = error.message ?: "Playback error"
                     isBuffering = false

@@ -394,6 +394,7 @@ fun FapFolderPostDetailScreen(
             onDismiss = { videoToPlay = null },
             postId = uiState.post?.postId,
             coverUrl = coverUrlOf(uiState.post),
+            postPermalinkForReferer = uiState.post?.permalink,
             onExpired = {
                 val pid = video.videoId ?: video.onPlayId
                 videoToPlay = null
