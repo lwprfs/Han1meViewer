@@ -96,64 +96,16 @@ object FapFolderHistoryRepo {
         !existing.completed && existing.lastPosition > MIN_RESUME_THRESHOLD_MS
     }
 
-    suspend fun savePlaybackProgress(
-        postId: Long,
-        positionMs: Long,
-        durationMs: Long,
-        isPlaying: Boolean,
-        completed: Boolean = false,
-    ) = withContext(Dispatchers.IO) {
-        if (postId <= 0L) return@withContext
-        writeMutex.withLock {
-            val existing = dao.getByPostId(postId) ?: return@withLock
-
-            val clampedPosition = when {
-                positionMs <= 0L -> 0L
-                durationMs > 0L && positionMs > durationMs -> durationMs
-                else -> positionMs
-            }
-            val clampedDuration = if (durationMs > 0L) durationMs else existing.totalDuration
-
-            val rawDelta = clampedPosition - existing.lastPosition
-            val creditedDelta = if (isPlaying && rawDelta in MIN_WATCH_DELTA_MS..MAX_SANE_DELTA_MS) {
-                rawDelta
-            } else {
-                0L
-            }
-
-            val completedFlag = completed ||
-                    (clampedDuration > 0L &&
-                            clampedPosition >= clampedDuration - COMPLETE_GRACE_MS)
-
-            val watchCountBump = existing.completed.not() && completedFlag
-            val now = System.currentTimeMillis()
-            val shouldBumpDate = now - existing.watchDate >= MIN_WATCH_DATE_BUMP_MS ||
-                    creditedDelta > 0L ||
-                    completedFlag
-
-            dao.insertOrUpdate(
-                existing.copy(
-                    lastPosition = clampedPosition,
-                    totalDuration = clampedDuration,
-                    watchDate = if (shouldBumpDate) now else existing.watchDate,
-                    watchDuration = existing.watchDuration + creditedDelta,
-                    watchCount = existing.watchCount + if (watchCountBump) 1 else 0,
-                    completed = completedFlag,
-                )
-            )
-        }
-    }
-
     suspend fun saveProgress(
         postId: Long,
-        title: String,
-        coverUrl: String,
-        authorName: String?,
-        postSlug: String?,
-        isVideo: Boolean,
-        position: Long,
-        duration: Long,
-        isPlaying: Boolean,
+        title: String = "",
+        coverUrl: String = "",
+        authorName: String? = null,
+        postSlug: String? = null,
+        isVideo: Boolean = false,
+        positionMs: Long = 0L,
+        durationMs: Long = 0L,
+        isPlaying: Boolean = false,
         completed: Boolean = false,
     ) = withContext(Dispatchers.IO) {
         if (postId <= 0L) return@withContext
@@ -162,12 +114,20 @@ object FapFolderHistoryRepo {
             val now = System.currentTimeMillis()
 
             val entity = if (existing != null) {
-                val rawDelta = position - existing.lastPosition
+                val clampedPosition = when {
+                    positionMs <= 0L -> existing.lastPosition
+                    durationMs > 0L && positionMs > durationMs -> durationMs
+                    else -> positionMs
+                }
+                val clampedDuration = if (durationMs > 0L) durationMs else existing.totalDuration
+
+                val rawDelta = clampedPosition - existing.lastPosition
                 val creditedDelta =
                     if (isPlaying && rawDelta in 0L..MAX_SANE_DELTA_MS) rawDelta else 0L
 
                 val completedFlag = completed ||
-                        (duration > 0 && position >= duration - COMPLETE_GRACE_MS)
+                        (clampedDuration > 0L &&
+                                clampedPosition >= clampedDuration - COMPLETE_GRACE_MS)
 
                 val watchCountBump = existing.completed.not() && completedFlag
                 val shouldBumpDate = now - existing.watchDate >= MIN_WATCH_DATE_BUMP_MS ||
@@ -180,14 +140,16 @@ object FapFolderHistoryRepo {
                     authorName = authorName ?: existing.authorName,
                     postSlug = postSlug ?: existing.postSlug,
                     isVideo = isVideo || existing.isVideo,
-                    lastPosition = if (position > 0L) position else existing.lastPosition,
-                    totalDuration = if (duration > 0L) duration else existing.totalDuration,
+                    lastPosition = clampedPosition,
+                    totalDuration = clampedDuration,
                     watchDate = if (shouldBumpDate) now else existing.watchDate,
                     watchDuration = existing.watchDuration + creditedDelta,
                     watchCount = existing.watchCount + if (watchCountBump) 1 else 0,
                     completed = completedFlag,
                 )
             } else {
+                val completedFlag = completed ||
+                        (durationMs > 0L && positionMs >= durationMs - COMPLETE_GRACE_MS)
                 FapFolderHistoryEntity(
                     postId = postId,
                     title = title,
@@ -195,16 +157,29 @@ object FapFolderHistoryRepo {
                     authorName = authorName,
                     postSlug = postSlug,
                     isVideo = isVideo,
-                    lastPosition = position,
-                    totalDuration = duration,
+                    lastPosition = positionMs,
+                    totalDuration = durationMs,
                     watchDate = now,
                     watchDuration = 0L,
                     watchCount = 1,
-                    completed = completed ||
-                            (duration > 0L && position >= duration - COMPLETE_GRACE_MS),
+                    completed = completedFlag,
                 )
             }
             dao.insertOrUpdate(entity)
         }
     }
+
+    suspend fun savePlaybackProgress(
+        postId: Long,
+        positionMs: Long,
+        durationMs: Long,
+        isPlaying: Boolean,
+        completed: Boolean = false,
+    ) = saveProgress(
+        postId = postId,
+        positionMs = positionMs,
+        durationMs = durationMs,
+        isPlaying = isPlaying,
+        completed = completed,
+    )
 }

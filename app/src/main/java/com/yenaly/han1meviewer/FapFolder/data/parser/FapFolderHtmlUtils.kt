@@ -41,10 +41,8 @@ internal object FapFolderHtmlUtils {
 
     fun parseViewsCount(raw: String?): Int? = parseViews(raw)?.toInt()
 
-    /** Delegates to [FapFolderUrlUtils] — single source of truth for leading-int parsing. */
     fun parseLeadingInt(raw: String?): Int? = FapFolderUrlUtils.parseLeadingInt(raw)
 
-    /** Delegates to [FapFolderUrlUtils] — single source of truth for leading-long parsing. */
     fun parseLeadingLong(raw: String?): Long? = FapFolderUrlUtils.parseLeadingLong(raw)
 
     fun parseDurationSeconds(raw: String?): Long? {
