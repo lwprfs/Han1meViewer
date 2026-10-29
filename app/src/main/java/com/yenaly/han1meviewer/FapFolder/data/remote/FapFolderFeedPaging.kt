@@ -2,7 +2,6 @@ package com.yenaly.han1meviewer.FapFolder.data.remote
 
 import com.yenaly.han1meviewer.FapFolder.common.FapFolderConstants
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderLoadMoreRequest
-import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderSearchTab
 
 object FapFolderFeedPaging {
 
@@ -107,10 +106,4 @@ object FapFolderFeedPaging {
         search = search,
         hashtag = hashtag,
     )
-
-    fun tabGet(tab: FapFolderSearchTab): String = when (tab) {
-        FapFolderSearchTab.POSTS -> FapFolderConstants.FEED_GET_SEARCH
-        FapFolderSearchTab.USERS -> FapFolderConstants.FEED_GET_SEARCH
-        FapFolderSearchTab.COMMUNITIES -> FapFolderConstants.FEED_GET_SEARCH
-    }
 }

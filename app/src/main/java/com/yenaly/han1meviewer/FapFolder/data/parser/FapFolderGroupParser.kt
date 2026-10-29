@@ -61,12 +61,16 @@ object FapFolderGroupParser {
             return null
         }
 
-        val header = doc.selectFirst("div.profile-header") ?: return null
+        val header = doc.selectFirst("div.profile-header")
+            ?: doc.selectFirst("div.profile-header-cover")
+            ?: doc.selectFirst(".profile-header-wrapper")
+            ?: return null
 
         val slug = FapFolderUrlUtils.extractGroupSlug(pageUrl).orEmpty()
         val displayName = FapFolderHtmlUtils.cleanText(
             header.selectFirst("div.profile-name-wrapper a")?.text()
                 ?: header.selectFirst("div.profile-name-wrapper")?.text()
+                ?: header.selectFirst("h1")?.text()
         )
         if (displayName.isBlank()) return null
 

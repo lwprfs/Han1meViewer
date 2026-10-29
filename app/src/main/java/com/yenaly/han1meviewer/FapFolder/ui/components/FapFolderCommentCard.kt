@@ -291,6 +291,15 @@ private fun NestedReplyRow(
     reply: FapFolderComment,
     onOpenUser: ((String) -> Unit)?,
 ) {
+    val avatarClickModifier = if (onOpenUser != null && !reply.authorUrl.isNullOrBlank()) {
+        Modifier.combinedClickable(
+            onClick = { onOpenUser(reply.authorUrl!!) },
+            onLongClick = {},
+        )
+    } else {
+        Modifier
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -303,7 +312,10 @@ private fun NestedReplyRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Box(
-            modifier = Modifier.size(28.dp).clip(CircleShape),
+            modifier = Modifier
+                .size(28.dp)
+                .clip(CircleShape)
+                .then(avatarClickModifier),
         ) {
             val avatar = reply.authorAvatar
             if (!avatar.isNullOrBlank()) {
@@ -338,6 +350,17 @@ private fun NestedReplyRow(
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .then(
+                            if (onOpenUser != null && !reply.authorUrl.isNullOrBlank()) {
+                                Modifier.combinedClickable(
+                                    onClick = { onOpenUser(reply.authorUrl!!) },
+                                    onLongClick = {},
+                                )
+                            } else {
+                                Modifier
+                            }
+                        ),
                 )
                 if (reply.isGold) {
                     Spacer(Modifier.width(4.dp))

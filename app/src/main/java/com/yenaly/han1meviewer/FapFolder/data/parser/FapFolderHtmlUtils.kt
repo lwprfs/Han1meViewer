@@ -15,9 +15,6 @@ internal object FapFolderHtmlUtils {
     private val compactNumberRegex =
         Regex("""([\d.]+)\s*([KMB])\b""", RegexOption.IGNORE_CASE)
 
-    private val intLeadingRegex =
-        Regex("""^\s*([\d,]+)""")
-
     private val whitespaceRegex =
         Regex("""\s+""")
 
@@ -44,17 +41,11 @@ internal object FapFolderHtmlUtils {
 
     fun parseViewsCount(raw: String?): Int? = parseViews(raw)?.toInt()
 
-    fun parseLeadingInt(raw: String?): Int? {
-        if (raw.isNullOrBlank()) return null
-        val m = intLeadingRegex.find(raw) ?: return null
-        return m.groupValues[1].replace(",", "").toIntOrNull()
-    }
+    /** Delegates to [FapFolderUrlUtils] — single source of truth for leading-int parsing. */
+    fun parseLeadingInt(raw: String?): Int? = FapFolderUrlUtils.parseLeadingInt(raw)
 
-    fun parseLeadingLong(raw: String?): Long? {
-        if (raw.isNullOrBlank()) return null
-        val m = intLeadingRegex.find(raw) ?: return null
-        return m.groupValues[1].replace(",", "").toLongOrNull()
-    }
+    /** Delegates to [FapFolderUrlUtils] — single source of truth for leading-long parsing. */
+    fun parseLeadingLong(raw: String?): Long? = FapFolderUrlUtils.parseLeadingLong(raw)
 
     fun parseDurationSeconds(raw: String?): Long? {
         if (raw.isNullOrBlank()) return null

@@ -76,10 +76,10 @@ fun FapFolderHomeScreen(
     onOpenHistory: () -> Unit,
     onOpenSettings: () -> Unit,
     onSwitchSite: () -> Unit,
+    viewModel: FapFolderHomeViewModel,
     onSessionExpired: () -> Unit = {},
     onLoadFailure: (String) -> Unit = {},
     modifier: Modifier = Modifier,
-    viewModel: FapFolderHomeViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()

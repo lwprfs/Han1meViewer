@@ -7,11 +7,6 @@ import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderSearchTab
 
 object FapFolderSearchHelper {
 
-    data class HashtagRun(
-        val query: String,
-        val tab: FapFolderSearchTab,
-    )
-
     fun load(): List<FapFolderSearchHistoryEntry> = FapFolderSearchHistoryRepo.load()
 
     fun save(
@@ -45,19 +40,8 @@ object FapFolderSearchHelper {
                 FapFolderUrlUtils.extractHashtag(trimmed) != null
     }
 
-    fun normaliseQuery(rawQuery: String): String {
-        val trimmed = rawQuery.trim()
-        return if (detectHashtag(trimmed)) trimmed.removePrefix("#") else trimmed
-    }
-
     fun normaliseHashtag(tag: String): String =
         tag.trim().removePrefix("#").trim()
-
-    fun runHashtag(tag: String): HashtagRun? {
-        val clean = normaliseHashtag(tag)
-        if (clean.isEmpty()) return null
-        return HashtagRun(query = clean, tab = FapFolderSearchTab.POSTS)
-    }
 
     fun historyLabel(entry: FapFolderSearchHistoryEntry): String {
         return if (entry.isHashtag) "#${entry.query}" else entry.query
