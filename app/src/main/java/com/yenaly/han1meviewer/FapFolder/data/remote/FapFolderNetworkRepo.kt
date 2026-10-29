@@ -366,6 +366,15 @@ object FapFolderNetworkRepo {
                     tab = FapFolderSearchTab.POSTS,
                 )
 
+            get == "album_photos" -> {
+                val images = FapFolderAlbumParser.parseAlbumFromHtml(
+                    html = dataHtml,
+                    baseUrl = base,
+                    uploadsBase = uploads,
+                )
+                images.map { image -> wrapImageAsFeedItem(image) }
+            }
+
             get == FapFolderConstants.FEED_GET_POSTS_PROFILE ||
                 get == FapFolderConstants.FEED_GET_POSTS_GROUP -> {
                 val posts = FapFolderPostParser.parsePostsFromHtml(
@@ -409,6 +418,15 @@ object FapFolderNetworkRepo {
                 )
             }
 
+            get == "photos" && request.type == "group" -> {
+                val images = FapFolderAlbumParser.parseAlbumFromHtml(
+                    html = dataHtml,
+                    baseUrl = base,
+                    uploadsBase = uploads,
+                )
+                images.map { image -> wrapImageAsFeedItem(image) }
+            }
+
             else -> {
                 val posts = FapFolderPostParser.parsePostsFromHtml(
                     html = dataHtml,
@@ -419,6 +437,44 @@ object FapFolderNetworkRepo {
                 posts.map { FapFolderFeedItem.Post(it) }
             }
         }
+    }
+
+    private fun wrapImageAsFeedItem(
+        image: com.yenaly.han1meviewer.FapFolder.data.model.FapFolderMedia.Image,
+    ): FapFolderFeedItem.Post {
+        val post = com.yenaly.han1meviewer.FapFolder.data.model.FapFolderPost(
+            postId = image.photoId ?: 0L,
+            slug = null,
+            permalink = null,
+            author = com.yenaly.han1meviewer.FapFolder.data.model.FapFolderAuthor(
+                uid = null,
+                username = null,
+                groupSlug = null,
+                displayName = "",
+                profileUrl = null,
+                avatarUrl = null,
+                isGold = false,
+                isAnonymous = true,
+            ),
+            uploaderUsername = null,
+            uploaderUrl = null,
+            uploaderIsGold = false,
+            action = null,
+            postedAtIso = "",
+            bodyHtml = "",
+            bodyPlain = "",
+            hashtags = emptyList(),
+            media = listOf(image),
+            variants = setOf(
+                com.yenaly.han1meviewer.FapFolder.data.model.PostVariant.SINGLE_IMAGE
+            ),
+            isPremium = false,
+            reactions = com.yenaly.han1meviewer.FapFolder.data.model.ReactionCount.EMPTY,
+            commentCount = 0,
+            shareCount = 0,
+            viewCount = null,
+        )
+        return FapFolderFeedItem.Post(post)
     }
 
     fun getSearchPage(

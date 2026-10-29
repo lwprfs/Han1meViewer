@@ -266,15 +266,22 @@ class FapFolderProfileViewModel(application: Application) : AndroidViewModel(app
                 when (page) {
                     is PageLoadingState.Loading -> Unit
                     is PageLoadingState.Success -> {
+                        val beforeCount = _uiState.value.items.size +
+                                _uiState.value.photoTiles.size +
+                                _uiState.value.videoTiles.size
                         when (state.activeTab) {
                             FapFolderProfileTab.TIMELINE -> appendPostItems(page.info)
                             FapFolderProfileTab.PHOTOS -> appendPhotoItems(page.info)
                             FapFolderProfileTab.VIDEOS -> appendVideoItems(page.info)
                         }
+                        val afterCount = _uiState.value.items.size +
+                                _uiState.value.photoTiles.size +
+                                _uiState.value.videoTiles.size
+                        val grew = afterCount > beforeCount
                         _uiState.update {
                             it.copy(
                                 isLoadingMore = false,
-                                hasMore = page.info.isNotEmpty(),
+                                hasMore = page.info.isNotEmpty() && grew,
                                 itemsError = null,
                                 currentOffset = it.currentOffset + 1,
                             )
@@ -416,7 +423,7 @@ class FapFolderProfileViewModel(application: Application) : AndroidViewModel(app
             it.copy(
                 items = items,
                 isLoading = false,
-                hasMore = snapshot.hasMore && items.isNotEmpty(),
+                hasMore = snapshot.hasMore || items.isNotEmpty(),
                 currentOffset = 2,
                 streamGet = snapshot.get
                     ?: FapFolderProfileParser.FALLBACK_GET_POSTS_GROUP,
@@ -457,7 +464,7 @@ class FapFolderProfileViewModel(application: Application) : AndroidViewModel(app
             it.copy(
                 photoTiles = fresh,
                 isLoading = false,
-                hasMore = snapshot.hasMore && fresh.isNotEmpty(),
+                hasMore = fresh.isNotEmpty(),
                 currentOffset = 2,
                 streamGet = snapshot.streamGet
                     ?: FapFolderProfileParser.FALLBACK_GET_PHOTOS,
@@ -495,7 +502,7 @@ class FapFolderProfileViewModel(application: Application) : AndroidViewModel(app
             it.copy(
                 videoTiles = fresh,
                 isLoading = false,
-                hasMore = snapshot.hasMore && fresh.isNotEmpty(),
+                hasMore = fresh.isNotEmpty(),
                 currentOffset = 2,
                 streamGet = snapshot.streamGet
                     ?: FapFolderProfileParser.FALLBACK_GET_VIDEOS,

@@ -163,6 +163,7 @@ class FapFolderHomeViewModel(application: Application) : AndroidViewModel(applic
                 errorMessage = null,
                 trending = emptyList(),
                 suggested = emptyList(),
+                feedLoadedAt = 0L,
             )
         }
         seenKeys.clear()
@@ -177,7 +178,7 @@ class FapFolderHomeViewModel(application: Application) : AndroidViewModel(applic
     fun loadMore() {
         val state = _uiState.value
         if (state.isLoadingMore || state.isRefreshing || state.filterSwitching || !state.hasMore) return
-        if (state.nextTime > MAX_BATCHES) {
+        if (state.totalPagesLoaded >= MAX_BATCHES) {
             _uiState.update { it.copy(hasMore = false) }
             return
         }
@@ -188,14 +189,14 @@ class FapFolderHomeViewModel(application: Application) : AndroidViewModel(applic
 
             val tab = state.activeTab
             val request = FapFolderLoadMoreRequest(
-                get = tab.feedGet,
-                offset = 0,
-                filter = FapFolderConstants.FILTER_ALL,
+                get = state.feedGet.takeIf { it.isNotBlank() } ?: tab.feedGet,
+                offset = state.nextTime,
+                filter = state.feedFilter,
                 id = state.feedId,
                 type = state.feedType,
                 uid = state.feedUid,
                 premfeed = FapFolderConstants.PREMFEED_OFF,
-                time = state.nextTime,
+                time = FapFolderConstants.TIME_NO_FILTER,
             )
 
             FapFolderNetworkRepo.loadMore(request).collect { pageState ->
@@ -203,12 +204,14 @@ class FapFolderHomeViewModel(application: Application) : AndroidViewModel(applic
                     is PageLoadingState.Loading -> Unit
                     is PageLoadingState.Success -> {
                         val newItems = pageState.info
-                        val merged = mergeItems(_uiState.value.items, newItems)
+                        val currentItems = _uiState.value.items
+                        val merged = mergeItems(currentItems, newItems)
+                        val added = merged.size - currentItems.size
                         _uiState.update {
                             it.copy(
                                 items = merged,
                                 isLoadingMore = false,
-                                hasMore = newItems.isNotEmpty(),
+                                hasMore = newItems.isNotEmpty() && added > 0,
                                 errorMessage = null,
                                 nextTime = it.nextTime + 1,
                                 totalPagesLoaded = it.totalPagesLoaded + 1,
@@ -292,7 +295,7 @@ class FapFolderHomeViewModel(application: Application) : AndroidViewModel(applic
                             firstLoad = false,
                             isRefreshing = false,
                             isLoadingMore = false,
-                            hasMore = page.hasMore,
+                            hasMore = page.hasMore && page.items.isNotEmpty(),
                             errorMessage = null,
                             sessionExpired = false,
                             feedGet = page.feedGet,

@@ -8,7 +8,6 @@ import com.yenaly.han1meviewer.FapFolder.common.FapFolderConstants
 import com.yenaly.han1meviewer.FapFolder.common.FapFolderUrlUtils
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderLoadMoreRequest
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderMedia
-import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderFeedPaging
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetworkRepo
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderAlbumParser
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
@@ -101,7 +100,7 @@ class FapFolderAlbumViewModel(application: Application) : AndroidViewModel(appli
                                 photos = fresh,
                                 isLoading = false,
                                 headerError = null,
-                                hasMore = page.hasMore,
+                                hasMore = page.hasMore || fresh.isNotEmpty(),
                                 currentOffset = 2,
                                 totalCount = page.photos.size.takeIf { it > 0 }?.plus(
                                     if (page.hasMore) 1 else 0
@@ -147,7 +146,17 @@ class FapFolderAlbumViewModel(application: Application) : AndroidViewModel(appli
         itemsJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoadingMore = true, itemsError = null) }
 
-            val request = buildStreamRequest(state, state.currentOffset)
+            val request = FapFolderLoadMoreRequest(
+                get = state.streamGet ?: "album_photos",
+                offset = state.currentOffset,
+                filter = state.streamFilter,
+                id = state.streamId ?: state.albumId,
+                type = state.streamType,
+                uid = state.streamUid,
+                premfeed = FapFolderConstants.PREMFEED_OFF,
+                time = FapFolderConstants.TIME_NO_FILTER,
+            )
+
             FapFolderNetworkRepo.loadMore(request).collect { page ->
                 when (page) {
                     is PageLoadingState.Loading -> Unit
@@ -203,26 +212,6 @@ class FapFolderAlbumViewModel(application: Application) : AndroidViewModel(appli
             }
         }
         return result
-    }
-
-    private fun buildStreamRequest(
-        state: FapFolderAlbumUiState,
-        offset: Int,
-    ): FapFolderLoadMoreRequest {
-        val get = state.streamGet ?: "album_photos"
-        val id = state.streamId ?: state.albumId
-        return FapFolderFeedPaging.fromStream(
-            get = get,
-            filter = state.streamFilter,
-            id = id,
-            type = state.streamType,
-            uid = state.streamUid,
-            search = null,
-            hashtag = null,
-            offset = offset,
-            premfeed = FapFolderConstants.PREMFEED_OFF,
-            time = FapFolderConstants.TIME_NO_FILTER,
-        )
     }
 
     fun currentPhotoUrls(): List<String> = _uiState.value.photos.map { it.fullUrl }

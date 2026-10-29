@@ -53,7 +53,8 @@ import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderMedia
 import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderImageLightboxDialog
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
-import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.filter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,14 +74,21 @@ fun FapFolderAlbumScreen(
         viewModel.load(albumId)
     }
 
-    LaunchedEffect(gridState, uiState.hasMore, uiState.isLoadingMore, uiState.isLoading) {
+    LaunchedEffect(
+        gridState,
+        uiState.hasMore,
+        uiState.isLoadingMore,
+        uiState.isLoading,
+        uiState.photos.size,
+    ) {
         snapshotFlow {
             val info = gridState.layoutInfo
             val total = info.totalItemsCount
             val last = info.visibleItemsInfo.lastOrNull()?.index ?: -1
             total to last
         }
-            .distinctUntilChanged()
+            .filter { it.first > 0 && it.second >= 0 }
+            .conflate()
             .collect { (total, last) ->
                 if (total > 6 &&
                     last >= total - 6 &&
@@ -188,19 +196,6 @@ fun FapFolderAlbumScreen(
                                                 text = owner,
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.primary,
-                                                modifier = Modifier.clickable {
-                                                    val ownerUrl = uiState.ownerUrl
-                                                    if (!ownerUrl.isNullOrBlank()) {
-                                                        val username = runCatching {
-                                                            com.yenaly.han1meviewer.FapFolder
-                                                                .common.FapFolderUrlUtils
-                                                                .extractUsername(ownerUrl)
-                                                        }.getOrNull()
-                                                        if (!username.isNullOrBlank()) {
-                                                            onOpenPost("")
-                                                        }
-                                                    }
-                                                },
                                             )
                                         }
                                     }

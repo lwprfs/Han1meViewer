@@ -74,7 +74,9 @@ import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderPostCard
 import com.yenaly.han1meviewer.FapFolder.ui.video.FapFolderVideoPlayerScreen
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -116,24 +118,28 @@ fun FapFolderProfileScreen(
         uiState.hasMore,
         uiState.isLoadingMore,
         uiState.isLoading,
+        uiState.items.size,
+        uiState.photoTiles.size,
+        uiState.videoTiles.size,
     ) {
         snapshotFlow {
-            val (total, last) = if (
-                uiState.activeTab == FapFolderProfileTab.PHOTOS ||
-                uiState.activeTab == FapFolderProfileTab.VIDEOS
-            ) {
+            val isGrid = uiState.activeTab == FapFolderProfileTab.PHOTOS ||
+                    uiState.activeTab == FapFolderProfileTab.VIDEOS
+            val (total, last) = if (isGrid) {
                 val info = gridState.layoutInfo
                 info.totalItemsCount to (info.visibleItemsInfo.lastOrNull()?.index ?: -1)
             } else {
                 val info = listState.layoutInfo
                 info.totalItemsCount to (info.visibleItemsInfo.lastOrNull()?.index ?: -1)
             }
-            total to last
+            Triple(total, last, isGrid)
         }
-            .distinctUntilChanged()
-            .collect { (total, last) ->
-                if (total > 4 &&
-                    last >= total - 4 &&
+            .filter { it.first > 0 && it.second >= 0 }
+            .conflate()
+            .collect { (total, last, isGrid) ->
+                val threshold = if (isGrid) 6 else 4
+                if (total > threshold &&
+                    last >= total - threshold &&
                     uiState.hasMore &&
                     !uiState.isLoadingMore &&
                     !uiState.isLoading

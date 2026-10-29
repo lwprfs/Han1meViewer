@@ -58,7 +58,9 @@ import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderImageLightboxDia
 import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderPostCard
 import com.yenaly.han1meviewer.FapFolder.ui.video.FapFolderVideoPlayerScreen
 import com.yenaly.han1meviewer.R
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -102,14 +104,21 @@ fun FapFolderHomeScreen(
         if (uiState.sessionExpired) onSessionExpired()
     }
 
-    LaunchedEffect(listState, uiState.hasMore, uiState.isLoadingMore, uiState.firstLoad) {
+    LaunchedEffect(
+        listState,
+        uiState.hasMore,
+        uiState.isLoadingMore,
+        uiState.firstLoad,
+        uiState.items.size,
+    ) {
         snapshotFlow {
             val info = listState.layoutInfo
             val total = info.totalItemsCount
             val last = info.visibleItemsInfo.lastOrNull()?.index ?: -1
             total to last
         }
-            .distinctUntilChanged()
+            .filter { it.first > 0 && it.second >= 0 }
+            .conflate()
             .collect { (total, last) ->
                 if (total > 4 &&
                     last >= total - 4 &&

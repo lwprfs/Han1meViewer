@@ -22,7 +22,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.jsoup.Jsoup
 
 enum class FapFolderGroupTab(val label: String, val param: String) {
     POSTS("Posts", "posts"),
@@ -179,15 +178,16 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
     fun refresh() {
         val slug = _uiState.value.slug
         if (slug.isBlank()) return
+        val tab = _uiState.value.activeTab
         _uiState.update { it.copy(slug = "") }
-        load(slug, _uiState.value.activeTab.param)
+        load(slug, tab.param)
     }
 
     fun loadMoreItems() {
         val state = _uiState.value
         if (state.isLoadingMore || state.isLoading || !state.hasMore) return
         if (state.activeTab == FapFolderGroupTab.MEMBERS) {
-            loadMembers(reset = false)
+            loadMoreMembers()
             return
         }
         if (state.currentOffset >= MAX_PAGES) {
@@ -204,9 +204,11 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
                 when (page) {
                     is PageLoadingState.Loading -> Unit
                     is PageLoadingState.Success -> {
+                        val beforeCount = _uiState.value.items.size
                         val fresh = page.info.filter { item ->
                             when (item) {
-                                is FapFolderFeedItem.Post -> seenPostIds.add(item.post.postId)
+                                is FapFolderFeedItem.Post ->
+                                    seenPostIds.add(item.post.postId)
                                 else -> true
                             }
                         }
@@ -214,10 +216,14 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
                             it.copy(
                                 items = it.items + fresh,
                                 isLoadingMore = false,
-                                hasMore = page.info.isNotEmpty(),
+                                hasMore = page.info.isNotEmpty() && fresh.isNotEmpty(),
                                 itemsError = null,
                                 currentOffset = it.currentOffset + 1,
                             )
+                        }
+                        val afterCount = _uiState.value.items.size
+                        if (afterCount == beforeCount) {
+                            _uiState.update { it.copy(hasMore = false) }
                         }
                     }
                     is PageLoadingState.NoMoreData -> _uiState.update {
@@ -240,7 +246,12 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
     }
 
     fun loadMoreMembers() {
-        if (_uiState.value.membersLoading || !_uiState.value.membersHasMore) return
+        val state = _uiState.value
+        if (state.membersLoading || !state.membersHasMore) return
+        if (state.membersNextPage > MAX_PAGES) {
+            _uiState.update { it.copy(membersHasMore = false) }
+            return
+        }
         loadMembers(reset = false)
     }
 
@@ -320,25 +331,25 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
                         filter = tab.param,
                         fallbackId = groupId?.toString(),
                     ).let { snapshot ->
+                        snapshot.items.forEach { item ->
+                            if (item is FapFolderFeedItem.Post) {
+                                seenPostIds.add(item.post.postId)
+                            }
+                        }
                         _uiState.update {
                             it.copy(
                                 items = snapshot.items,
                                 isLoading = false,
-                                hasMore = snapshot.hasMore,
+                                hasMore = snapshot.hasMore || snapshot.items.isNotEmpty(),
                                 currentOffset = 2,
-                                streamGet = snapshot.get,
-                                streamFilter = snapshot.filter,
-                                streamId = snapshot.id,
+                                streamGet = snapshot.get ?: tab.param,
+                                streamFilter = snapshot.filter ?: tab.param,
+                                streamId = snapshot.id ?: groupId?.toString(),
                                 streamType = snapshot.type,
                                 streamUid = snapshot.uid,
                                 streamSearch = snapshot.search,
                                 streamHashtag = snapshot.hashtag,
                             )
-                        }
-                        snapshot.items.forEach { item ->
-                            if (item is FapFolderFeedItem.Post) {
-                                seenPostIds.add(item.post.postId)
-                            }
                         }
                     }
                 } catch (e: Exception) {
@@ -370,11 +381,16 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
                     filter = null,
                     fallbackId = groupId?.toString(),
                 ).let { snapshot ->
+                    snapshot.items.forEach { item ->
+                        if (item is FapFolderFeedItem.Post) {
+                            seenPostIds.add(item.post.postId)
+                        }
+                    }
                     _uiState.update {
                         it.copy(
                             items = snapshot.items,
                             isLoading = false,
-                            hasMore = snapshot.hasMore,
+                            hasMore = snapshot.hasMore || snapshot.items.isNotEmpty(),
                             currentOffset = 2,
                             streamGet = snapshot.get,
                             streamFilter = snapshot.filter,
@@ -384,11 +400,6 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
                             streamSearch = snapshot.search,
                             streamHashtag = snapshot.hashtag,
                         )
-                    }
-                    snapshot.items.forEach { item ->
-                        if (item is FapFolderFeedItem.Post) {
-                            seenPostIds.add(item.post.postId)
-                        }
                     }
                 }
             } catch (e: Exception) {
@@ -411,7 +422,6 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
                 it.copy(
                     membersLoading = true,
                     membersError = null,
-                    membersHasMore = if (reset) false else it.membersHasMore,
                 )
             }
 
@@ -422,17 +432,20 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
             ).collect { pageState ->
                 when (pageState) {
                     is PageLoadingState.Loading -> Unit
-                    is PageLoadingState.Success -> _uiState.update {
-                        val existing = if (reset) emptyList() else it.members
-                        val merged = (existing + pageState.info.members)
-                            .distinctBy { m -> m.uid ?: m.username }
-                        it.copy(
-                            members = merged,
-                            membersLoading = false,
-                            membersHasMore = pageState.info.hasMore,
-                            membersNextPage = page + 1,
-                            membersError = null,
-                        )
+                    is PageLoadingState.Success -> {
+                        val incoming = pageState.info.members
+                        _uiState.update {
+                            val existing = if (reset) emptyList() else it.members
+                            val merged = (existing + incoming)
+                                .distinctBy { m -> m.uid ?: m.username }
+                            it.copy(
+                                members = merged,
+                                membersLoading = false,
+                                membersHasMore = incoming.isNotEmpty(),
+                                membersNextPage = page + 1,
+                                membersError = null,
+                            )
+                        }
                     }
                     is PageLoadingState.NoMoreData -> _uiState.update {
                         it.copy(membersLoading = false, membersHasMore = false)
