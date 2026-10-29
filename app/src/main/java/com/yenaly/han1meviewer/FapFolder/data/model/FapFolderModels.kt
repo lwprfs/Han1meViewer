@@ -404,3 +404,37 @@ data class FapFolderHomeExtras(
     val suggested: List<FapFolderSuggestedCommunity> = emptyList(),
     val loadedAt: Long = System.currentTimeMillis(),
 )
+
+sealed interface FapFolderAutocompleteSuggestion {
+    val label: String
+    val href: String?
+
+    data class User(
+        override val label: String,
+        override val href: String?,
+        val username: String,
+        val avatarUrl: String?,
+        val bio: String?,
+    ) : FapFolderAutocompleteSuggestion
+
+    data class Community(
+        override val label: String,
+        override val href: String?,
+        val slug: String,
+        val avatarUrl: String?,
+        val followerCount: Int?,
+    ) : FapFolderAutocompleteSuggestion
+
+    data class Hashtag(
+        override val label: String,
+        override val href: String?,
+        val tag: String,
+    ) : FapFolderAutocompleteSuggestion
+
+    data class SearchFor(
+        override val label: String,
+        override val href: String?,
+        val query: String,
+        val isHashtag: Boolean,
+    ) : FapFolderAutocompleteSuggestion
+}
