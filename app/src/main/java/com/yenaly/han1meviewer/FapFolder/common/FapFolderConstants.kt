@@ -117,6 +117,17 @@ object FapFolderConstants {
     const val PREMFEED_OFF = 0
     const val PREMFEED_ON = 1
 
+    const val HOME_TAB_MY_FEED = "my_feed"
+    const val HOME_TAB_HOT = "hot"
+    const val HOME_TAB_DISCOVER = "discover"
+
+    const val RANGE_ALL_TIME = 0
+    const val RANGE_MONTH = 30
+    const val RANGE_WEEK = 7
+
+    const val PATH_DISCOVER_VIDEOS = "/videos"
+    const val PATH_DISCOVER_PHOTOS = "/photos"
+
     val AD_HOSTS_TO_SKIP = setOf(
         "vbuidencestures.com",
         "golovehub.com",

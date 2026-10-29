@@ -8,6 +8,7 @@ import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,6 +27,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Pause
@@ -56,6 +59,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -75,10 +79,15 @@ import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderMedia
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetwork
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetworkRepo
 import com.yenaly.han1meviewer.logic.state.WebsiteState
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+
+private data class DoubleTapSeek(val deltaMs: Long, val direction: Int)
+
+private const val SEEK_STEP_MS = 10_000L
 
 @Composable
 fun FapFolderVideoPlayerScreen(
@@ -112,6 +121,9 @@ fun FapFolderVideoPlayerScreen(
     var completionReported by remember { mutableStateOf(false) }
     var expiryHandled by remember { mutableStateOf(false) }
 
+    var doubleTapSeek by remember { mutableStateOf<DoubleTapSeek?>(null) }
+    var doubleTapJob by remember { mutableStateOf<Job?>(null) }
+
     var resolvedUrl by remember(reloadToken) { mutableStateOf<String?>(null) }
     var resolvingError by remember(reloadToken) { mutableStateOf<String?>(null) }
 
@@ -135,7 +147,6 @@ fun FapFolderVideoPlayerScreen(
 
         val looksLikePlayApi = video.playUrl.contains("/video/play")
         if (!looksLikePlayApi) {
-
             resolvedUrl = video.playUrl.replace("&amp;", "&")
             return@LaunchedEffect
         }
@@ -201,7 +212,6 @@ fun FapFolderVideoPlayerScreen(
                 put("accept-encoding", "identity")
                 put("range", "bytes=0-")
                 if (!isR2) {
-
                     val cookieHeader = runCatching { FapFolderNetwork.snapshotCookies() }
                         .getOrDefault("")
                     if (cookieHeader.isNotBlank()) put("cookie", cookieHeader)
@@ -261,7 +271,6 @@ fun FapFolderVideoPlayerScreen(
                     isBuffering = false
                     onExpired()
                 } else if (error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS) {
-
                     playbackError = "Video link expired. Refreshing…"
                     isBuffering = false
                     if (onExpired != null && !expiryHandled) {
@@ -278,6 +287,7 @@ fun FapFolderVideoPlayerScreen(
         })
 
         onDispose {
+            doubleTapJob?.cancel()
             val currentPosition = runCatching { player.currentPosition }.getOrDefault(0L)
             val currentDuration = runCatching { player.duration }.getOrDefault(0L)
             if (currentPosition > 0L) {
@@ -344,6 +354,25 @@ fun FapFolderVideoPlayerScreen(
         position = ms
     }
 
+    fun seekBy(deltaMs: Long) {
+        val player = exoPlayer ?: return
+        val dur = runCatching { player.duration }.getOrDefault(0L)
+        val target = (player.currentPosition + deltaMs)
+            .coerceIn(0L, if (dur > 0L) dur else Long.MAX_VALUE)
+        player.seekTo(target)
+        position = target
+        showControls = true
+    }
+
+    fun flashDoubleTapSeek(direction: Int) {
+        doubleTapSeek = DoubleTapSeek(SEEK_STEP_MS, direction)
+        doubleTapJob?.cancel()
+        doubleTapJob = scope.launch {
+            delay(700)
+            doubleTapSeek = null
+        }
+    }
+
     fun enterFullscreen() {
         if (isFullscreen) return
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
@@ -357,6 +386,7 @@ fun FapFolderVideoPlayerScreen(
             activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
         }
         isFullscreen = true
+        showControls = true
     }
 
     fun exitFullscreen() {
@@ -413,6 +443,54 @@ fun FapFolderVideoPlayerScreen(
                 },
             )
 
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onTap = {
+                                if (playbackError == null) {
+                                    showControls = !showControls
+                                }
+                            },
+                            onDoubleTap = { offset ->
+                                if (playbackError != null) return@detectTapGestures
+                                val forward = offset.x >= size.width / 2f
+                                seekBy(if (forward) SEEK_STEP_MS else -SEEK_STEP_MS)
+                                flashDoubleTapSeek(if (forward) 1 else -1)
+                            },
+                        )
+                    },
+            )
+
+            doubleTapSeek?.let { seek ->
+                val alignment = if (seek.direction > 0) Alignment.CenterEnd
+                else Alignment.CenterStart
+                Box(
+                    modifier = Modifier
+                        .align(alignment)
+                        .padding(horizontal = 32.dp)
+                        .background(Color.Black.copy(alpha = 0.55f), CircleShape)
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = if (seek.direction > 0) Icons.Filled.FastForward
+                            else Icons.Filled.FastRewind,
+                            contentDescription = null,
+                            tint = Color.White,
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "${if (seek.direction > 0) "+" else "-"}10s",
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelMedium,
+                        )
+                    }
+                }
+            }
+
             if (playbackError != null) {
                 Column(
                     modifier = Modifier
@@ -454,7 +532,8 @@ fun FapFolderVideoPlayerScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .statusBarsPadding()
-                        .padding(8.dp),
+                        .padding(8.dp)
+                        .align(Alignment.TopCenter),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     IconButton(onClick = {
@@ -479,19 +558,55 @@ fun FapFolderVideoPlayerScreen(
                     }
                 }
 
-                IconButton(
-                    onClick = { togglePlayPause() },
+                Row(
                     modifier = Modifier
-                        .size(72.dp)
                         .align(Alignment.Center)
-                        .background(Color.Black.copy(alpha = 0.5f), CircleShape),
+                        .padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(28.dp),
                 ) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                        contentDescription = "Play/Pause",
-                        tint = Color.White,
-                        modifier = Modifier.size(42.dp),
-                    )
+                    IconButton(
+                        onClick = { seekBy(-SEEK_STEP_MS) },
+                        modifier = Modifier
+                            .size(56.dp)
+                            .background(Color.Black.copy(alpha = 0.5f), CircleShape),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.FastRewind,
+                            contentDescription = "Rewind 10s",
+                            tint = Color.White,
+                            modifier = Modifier.size(28.dp),
+                        )
+                    }
+
+                    IconButton(
+                        onClick = { togglePlayPause() },
+                        modifier = Modifier
+                            .size(72.dp)
+                            .background(Color.Black.copy(alpha = 0.5f), CircleShape),
+                    ) {
+                        Icon(
+                            imageVector = if (isPlaying) Icons.Filled.Pause
+                            else Icons.Filled.PlayArrow,
+                            contentDescription = "Play/Pause",
+                            tint = Color.White,
+                            modifier = Modifier.size(42.dp),
+                        )
+                    }
+
+                    IconButton(
+                        onClick = { seekBy(SEEK_STEP_MS) },
+                        modifier = Modifier
+                            .size(56.dp)
+                            .background(Color.Black.copy(alpha = 0.5f), CircleShape),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.FastForward,
+                            contentDescription = "Forward 10s",
+                            tint = Color.White,
+                            modifier = Modifier.size(28.dp),
+                        )
+                    }
                 }
 
                 Column(

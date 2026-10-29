@@ -81,25 +81,40 @@ object FapFolderProfileParser {
             ?: aboutMap["joined date"]
             ?: aboutMap["created"]
 
-        val followerCount = FapFolderHtmlUtils.parseLeadingInt(
-            header.selectFirst("a[href$='/followers']")?.text()
-                ?: aboutMap["followers"]
+        val followerCount = firstIntFrom(
+            listOf(
+                header.selectFirst("a[href$='/followers']")?.text(),
+                header.selectFirst("a[href*='/followers']")?.text(),
+                aboutMap["followers"],
+            )
         )
-        val followingCount = FapFolderHtmlUtils.parseLeadingInt(
-            header.selectFirst("a[href$='/following']")?.text()
-                ?: aboutMap["following"]
+        val followingCount = firstIntFrom(
+            listOf(
+                header.selectFirst("a[href$='/following']")?.text(),
+                header.selectFirst("a[href*='/following']")?.text(),
+                aboutMap["following"],
+            )
         )
-        val postCount = FapFolderHtmlUtils.parseLeadingInt(
-            header.selectFirst("a[href$='/posts']")?.text()
-                ?: aboutMap["posts"]
+        val postCount = firstIntFrom(
+            listOf(
+                header.selectFirst("a[href$='/posts']")?.text(),
+                header.selectFirst("a[href*='/posts']")?.text(),
+                aboutMap["posts"],
+            )
         )
-        val photoCount = FapFolderHtmlUtils.parseLeadingInt(
-            header.selectFirst("a[href$='/photos']")?.text()
-                ?: aboutMap["photos"]
+        val photoCount = firstIntFrom(
+            listOf(
+                header.selectFirst("a[href$='/photos']")?.text(),
+                header.selectFirst("a[href*='/photos']")?.text(),
+                aboutMap["photos"],
+            )
         )
-        val videoCount = FapFolderHtmlUtils.parseLeadingInt(
-            header.selectFirst("a[href$='/videos']")?.text()
-                ?: aboutMap["videos"]
+        val videoCount = firstIntFrom(
+            listOf(
+                header.selectFirst("a[href$='/videos']")?.text(),
+                header.selectFirst("a[href*='/videos']")?.text(),
+                aboutMap["videos"],
+            )
         )
 
         val followButton = header.selectFirst("button.js_follow, button.js_unfollow")
@@ -184,7 +199,7 @@ object FapFolderProfileParser {
             v.contains("group") || v.contains("communit") -> "groups"
             v.contains("friend") -> "friends"
             v.contains("about") -> "about"
-            v.contains("post") -> "posts"
+            v.contains("post") || v.contains("timeline") -> "posts"
             else -> "posts"
         }
     }
@@ -278,5 +293,13 @@ object FapFolderProfileParser {
         result[activeParam] = stream
         result["posts"] = stream
         return result
+    }
+
+    private fun firstIntFrom(candidates: List<String?>): Int? {
+        candidates.forEach { candidate ->
+            val parsed = FapFolderHtmlUtils.parseLeadingInt(candidate)
+            if (parsed != null) return parsed
+        }
+        return null
     }
 }
