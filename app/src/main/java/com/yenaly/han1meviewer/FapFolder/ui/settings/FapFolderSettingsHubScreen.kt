@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Cookie
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Login
@@ -50,7 +51,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.FapFolder.data.local.FapFolderHistoryRepo
 import com.yenaly.han1meviewer.FapFolder.data.local.FapFolderSearchHistoryRepo
-import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetwork
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.GlobalToasts
 import kotlinx.coroutines.launch
@@ -72,13 +72,13 @@ fun FapFolderSettingsHubScreen(
     onOpenHistory: () -> Unit,
     onOpenSearch: () -> Unit,
     onOpenSearchHistory: () -> Unit = onOpenSearch,
+    onOpenFollowedCommunities: () -> Unit = {},
+    isLoggedIn: Boolean = false,
 ) {
     val scope = rememberCoroutineScope()
     var showClearHistoryDialog by remember { mutableStateOf(false) }
     var showClearSearchDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
-
-    val isLoggedIn = remember { FapFolderNetwork.hasAuthCookies() }
 
     val entries: List<FapFolderHubEntry> = buildList {
         add(
@@ -103,6 +103,18 @@ fun FapFolderSettingsHubScreen(
                     subtitle = "Log in with username & password",
                     icon = Icons.Filled.Login,
                     onClick = onOpenLogin,
+                )
+            )
+        }
+
+        if (isLoggedIn) {
+            add(
+                FapFolderHubEntry(
+                    key = "followed_communities",
+                    title = "Followed Communities",
+                    subtitle = "Communities you follow on FapFolder",
+                    icon = Icons.Filled.Groups,
+                    onClick = onOpenFollowedCommunities,
                 )
             )
         }

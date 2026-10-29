@@ -135,6 +135,38 @@ object FapFolderSessionParser {
         return candidate
     }
 
+    fun parseLoggedInUsername(html: String?): String? {
+        if (html.isNullOrBlank()) return null
+        val doc = runCatching { Jsoup.parse(html) }.getOrNull() ?: return null
+
+        val profileAnchor = doc.select("div.dropdown-menu a.dropdown-item[href]")
+            .firstOrNull { it.text().trim().equals("Profile", ignoreCase = true) }
+        if (profileAnchor != null) {
+            val href = profileAnchor.absUrl("href").takeIf { it.isNotBlank() }
+                ?: profileAnchor.attr("href").takeIf { it.isNotBlank() }
+            val slug = href?.trimEnd('/')?.substringAfterLast('/')
+            if (!slug.isNullOrBlank()) return slug
+        }
+
+        val sidebarAnchor = doc.selectFirst("ul.main-side-nav > li:first-child > a[href]")
+        if (sidebarAnchor != null) {
+            val href = sidebarAnchor.absUrl("href").takeIf { it.isNotBlank() }
+                ?: sidebarAnchor.attr("href").takeIf { it.isNotBlank() }
+            val slug = href?.trimEnd('/')?.substringAfterLast('/')
+            if (!slug.isNullOrBlank()) return slug
+        }
+
+        val headerAnchor = doc.selectFirst("div.profile-name-wrapper > a[href]")
+        if (headerAnchor != null) {
+            val href = headerAnchor.absUrl("href").takeIf { it.isNotBlank() }
+                ?: headerAnchor.attr("href").takeIf { it.isNotBlank() }
+            val slug = href?.trimEnd('/')?.substringAfterLast('/')
+            if (!slug.isNullOrBlank()) return slug
+        }
+
+        return null
+    }
+
     private fun parseSiteStats(
         doc: Document,
         html: String,

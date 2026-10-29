@@ -3,19 +3,12 @@ package com.yenaly.han1meviewer.FapFolder.ui.navigation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -37,6 +30,7 @@ import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderAuthRepo
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetwork
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderProbeFailure
 import com.yenaly.han1meviewer.FapFolder.ui.album.FapFolderAlbumScreen
+import com.yenaly.han1meviewer.FapFolder.ui.followed.FapFolderFollowedCommunitiesScreen
 import com.yenaly.han1meviewer.FapFolder.ui.gate.FapFolderGateState
 import com.yenaly.han1meviewer.FapFolder.ui.group.FapFolderGroupScreen
 import com.yenaly.han1meviewer.FapFolder.ui.hashtag.FapFolderHashtagScreen
@@ -314,6 +308,19 @@ fun FapFolderNavHost(
                 onOpenSearch = { navController.navigateSafely(FapFolderSearchRoute()) },
                 onOpenSearchHistory = {
                     navController.navigateSafely(FapFolderSearchHistoryRoute)
+                },
+                onOpenFollowedCommunities = {
+                    navController.navigateSafely(FapFolderFollowedCommunitiesRoute)
+                },
+                isLoggedIn = FapFolderNetwork.hasAuthCookies(),
+            )
+        }
+
+        composable<FapFolderFollowedCommunitiesRoute> {
+            FapFolderFollowedCommunitiesScreen(
+                onBack = { navController.popBackStack() },
+                onOpenGroup = { slug ->
+                    navController.navigateSafely(FapFolderGroupRoute(slug))
                 },
             )
         }

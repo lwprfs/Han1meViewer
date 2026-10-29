@@ -51,7 +51,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderFeedItem
+import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderMedia
+import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderSuggestedCommunity
+import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderTrendingTag
+import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderImageLightboxDialog
 import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderPostCard
+import com.yenaly.han1meviewer.FapFolder.ui.video.FapFolderVideoPlayerScreen
 import com.yenaly.han1meviewer.R
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -78,6 +83,12 @@ fun FapFolderHomeScreen(
     val refreshState = rememberPullToRefreshState()
     val scope = rememberCoroutineScope()
     var isRefreshing by remember { mutableStateOf(false) }
+
+    var videoToPlay by remember { mutableStateOf<FapFolderMedia.Video?>(null) }
+    var videoPost by remember { mutableStateOf<FapFolderFeedItem.Post?>(null) }
+    var lightboxPayload by remember {
+        mutableStateOf<Pair<List<FapFolderMedia.Image>, Int>?>(null)
+    }
 
     LaunchedEffect(Unit) {
         viewModel.refreshIfStale()
@@ -234,12 +245,50 @@ fun FapFolderHomeScreen(
                                 onOpenHashtag = onOpenHashtag,
                                 onOpenGroup = onOpenGroup,
                                 onOpenAlbum = onOpenAlbum,
+                                onOpenVideo = { post, video ->
+                                    videoPost = post
+                                    videoToPlay = video
+                                },
+                                onOpenImage = { images, index ->
+                                    lightboxPayload = images to index
+                                },
                             )
                         }
                     }
                 }
             }
         }
+    }
+
+    videoToPlay?.let { video ->
+        FapFolderVideoPlayerScreen(
+            video = video,
+            title = videoPost?.post?.bodyPlain?.take(60).orEmpty(),
+            onDismiss = {
+                videoToPlay = null
+                videoPost = null
+            },
+            postId = videoPost?.post?.postId,
+            coverUrl = videoPost?.post?.primaryVideo?.posterUrl,
+            postPermalinkForReferer = videoPost?.post?.permalink,
+            onExpired = {
+                val post = videoPost
+                videoToPlay = null
+                videoPost = null
+                if (post != null) {
+                    val slug = post.post.slug ?: post.post.postId.toString()
+                    onOpenPost(slug)
+                }
+            },
+        )
+    }
+
+    lightboxPayload?.let { (images, initialIndex) ->
+        FapFolderImageLightboxDialog(
+            images = images,
+            initialIndex = initialIndex,
+            onDismiss = { lightboxPayload = null },
+        )
     }
 }
 
@@ -297,13 +346,15 @@ private fun FeedList(
     items: List<FapFolderFeedItem>,
     listState: LazyListState,
     isLoadingMore: Boolean,
-    trending: List<com.yenaly.han1meviewer.FapFolder.data.model.FapFolderTrendingTag>,
-    suggested: List<com.yenaly.han1meviewer.FapFolder.data.model.FapFolderSuggestedCommunity>,
+    trending: List<FapFolderTrendingTag>,
+    suggested: List<FapFolderSuggestedCommunity>,
     onOpenPost: (String) -> Unit,
     onOpenUser: (String) -> Unit,
     onOpenHashtag: (String) -> Unit,
     onOpenGroup: (String) -> Unit,
     onOpenAlbum: (String) -> Unit,
+    onOpenVideo: (FapFolderFeedItem.Post, FapFolderMedia.Video) -> Unit,
+    onOpenImage: (List<FapFolderMedia.Image>, Int) -> Unit,
 ) {
     LazyColumn(
         state = listState,
@@ -351,10 +402,11 @@ private fun FeedList(
                                 !user.isNullOrBlank() -> onOpenUser(user)
                             }
                         },
-                        onClickVideo = { },
-                        onClickImage = { image, all ->
-                            val albumId = all.firstOrNull()?.photoId?.toString()
-                            if (albumId != null) onOpenAlbum(albumId)
+                        onClickVideo = { video -> onOpenVideo(item, video) },
+                        onClickImage = { clicked, all ->
+                            val idx = all.indexOfFirst { it.photoId == clicked.photoId }
+                                .coerceAtLeast(0)
+                            onOpenImage(all, idx)
                         },
                         onClickPoll = { },
                         onClickLink = { },

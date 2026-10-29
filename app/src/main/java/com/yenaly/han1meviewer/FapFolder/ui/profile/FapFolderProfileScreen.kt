@@ -67,6 +67,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderFeedItem
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderMedia
+import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderPost
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderUserProfile
 import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderImageLightboxDialog
 import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderPostCard
@@ -96,6 +97,7 @@ fun FapFolderProfileScreen(
         mutableStateOf<Pair<List<FapFolderMedia.Image>, Int>?>(null)
     }
     var videoToPlay by remember { mutableStateOf<FapFolderMedia.Video?>(null) }
+    var videoPost by remember { mutableStateOf<FapFolderPost?>(null) }
 
     LaunchedEffect(username, initialTab) {
         viewModel.load(username, initialTab)
@@ -197,7 +199,10 @@ fun FapFolderProfileScreen(
                             gridState = gridState,
                             onSwitchTab = { viewModel.switchTab(it.param) },
                             onOpenImage = { images, idx -> lightboxPayload = images to idx },
-                            onOpenVideo = { videoToPlay = it },
+                            onOpenVideo = { video ->
+                                videoPost = null
+                                videoToPlay = video
+                            },
                             onOpenPost = onOpenPost,
                             onRetry = { viewModel.refresh() },
                             onToggleFollow = { viewModel.toggleFollow() },
@@ -212,7 +217,10 @@ fun FapFolderProfileScreen(
                             onOpenGroup = onOpenGroup,
                             onOpenAlbum = onOpenAlbum,
                             onOpenProfile = onOpenProfile,
-                            onOpenVideo = { videoToPlay = it },
+                            onOpenVideo = { post, video ->
+                                videoPost = post
+                                videoToPlay = video
+                            },
                             onOpenImage = { images, idx -> lightboxPayload = images to idx },
                             onRetry = { viewModel.refresh() },
                             onToggleFollow = { viewModel.toggleFollow() },
@@ -234,12 +242,20 @@ fun FapFolderProfileScreen(
     videoToPlay?.let { video ->
         FapFolderVideoPlayerScreen(
             video = video,
-            title = uiState.profile?.displayName.orEmpty(),
-            onDismiss = { videoToPlay = null },
-            postId = null,
+            title = videoPost?.bodyPlain?.take(60)
+                ?: uiState.profile?.displayName.orEmpty(),
+            onDismiss = {
+                videoToPlay = null
+                videoPost = null
+            },
+            postId = videoPost?.postId,
             coverUrl = video.posterUrl,
-            postPermalinkForReferer = uiState.profile?.tabUrls?.get("posts")
-                ?: uiState.profile?.groupSlug?.let { "/groups/$it" },
+            postPermalinkForReferer = videoPost?.permalink
+                ?: uiState.profile?.tabUrls?.get("posts"),
+            onExpired = {
+                videoToPlay = null
+                videoPost = null
+            },
         )
     }
 }
@@ -254,7 +270,7 @@ private fun ProfileTimelineTab(
     onOpenGroup: (String) -> Unit,
     onOpenAlbum: (String) -> Unit,
     onOpenProfile: (String) -> Unit,
-    onOpenVideo: (FapFolderMedia.Video) -> Unit,
+    onOpenVideo: (FapFolderPost, FapFolderMedia.Video) -> Unit,
     onOpenImage: (List<FapFolderMedia.Image>, Int) -> Unit,
     onRetry: () -> Unit,
     onToggleFollow: () -> Unit,
@@ -338,7 +354,7 @@ private fun ProfileTimelineTab(
                                         !user.isNullOrBlank() -> onOpenProfile(user)
                                     }
                                 },
-                                onClickVideo = onOpenVideo,
+                                onClickVideo = { video -> onOpenVideo(post, video) },
                                 onClickImage = { img, all ->
                                     val idx = all.indexOfFirst {
                                         it.photoId == img.photoId

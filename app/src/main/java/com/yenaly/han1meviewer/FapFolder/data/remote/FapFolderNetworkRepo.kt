@@ -12,6 +12,7 @@ import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderCommentsPage
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderFeedItem
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderFeedPage
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderGroup
+import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderGroupRow
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderGroupMembersPage
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderHomeExtras
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderLightboxResponse
@@ -25,6 +26,7 @@ import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderUserProfile
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderAlbumParser
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderAutocompleteParser
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderCommentParser
+import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderFollowedCommunitiesParser
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderGroupParser
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderHomeExtrasParser
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderHtmlUtils
@@ -929,6 +931,98 @@ object FapFolderNetworkRepo {
             }
         } catch (e: Exception) {
             Log.e(TAG, "getGroupMembers failed", e)
+            emit(PageLoadingState.Error(e))
+        }
+    }.flowOn(Dispatchers.IO)
+
+    fun getFollowedCommunitiesFirstPage(
+        username: String,
+    ): Flow<VideoLoadingState<FapFolderFollowedCommunitiesParser.FirstPage>> = flow {
+        emit(VideoLoadingState.Loading)
+        val clean = username.trim('/')
+        if (clean.isBlank()) {
+            emit(VideoLoadingState.NoContent)
+            return@flow
+        }
+        val url = basePath() + "/$clean/groups"
+        try {
+            rateLimit()
+            val response = FapFolderNetwork.service.getByUrl(url)
+            val rawBody = response.body()?.string().orEmpty()
+            if (!response.isSuccessful || rawBody.isBlank()) {
+                emit(
+                    if (response.code() == 404) VideoLoadingState.NoContent
+                    else VideoLoadingState.Error(IllegalStateException("HTTP ${response.code()}"))
+                )
+                return@flow
+            }
+            if (FapFolderHtmlUtils.looksLikeCloudflareChallenge(rawBody)) {
+                emit(VideoLoadingState.Error(IllegalStateException("Cloudflare challenge.")))
+                return@flow
+            }
+            FapFolderSessionParser.parseAndCache(rawBody, url)
+            val parsed = FapFolderFollowedCommunitiesParser.parseFirstPage(rawBody, url)
+            emit(VideoLoadingState.Success(parsed))
+        } catch (e: Exception) {
+            Log.e(TAG, "getFollowedCommunitiesFirstPage failed", e)
+            emit(VideoLoadingState.Error(e))
+        }
+    }.flowOn(Dispatchers.IO)
+
+    fun loadMoreFollowedCommunities(
+        userId: Long,
+        offset: Int,
+    ): Flow<PageLoadingState<List<FapFolderGroupRow>>> = flow {
+        emit(PageLoadingState.Loading)
+        if (userId <= 0L || offset <= 0) {
+            emit(PageLoadingState.NoMoreData)
+            return@flow
+        }
+        try {
+            rateLimit()
+            val response = FapFolderNetwork.service.loadMore(
+                get = "profile_groups",
+                offset = offset,
+                filter = null,
+                id = null,
+                type = null,
+                uid = userId.toString(),
+                premfeed = 0,
+                time = -1,
+                search = null,
+                hashtag = null,
+            )
+            val rawBody = response.body()?.string().orEmpty()
+            if (!response.isSuccessful || rawBody.isBlank()) {
+                emit(PageLoadingState.Error(IllegalStateException("HTTP ${response.code()}")))
+                return@flow
+            }
+            val parsed = runCatching { org.json.JSONObject(rawBody) }.getOrNull()
+            if (parsed == null) {
+                emit(PageLoadingState.NoMoreData)
+                return@flow
+            }
+            if (parsed.has("callback") && !parsed.isNull("callback")) {
+                FapFolderSessionCache.clear()
+                emit(PageLoadingState.Error(IllegalStateException("Session expired.")))
+                return@flow
+            }
+            val dataHtml = parsed.optString("data").takeIf { it.isNotBlank() }
+            if (dataHtml == null) {
+                emit(PageLoadingState.NoMoreData)
+                return@flow
+            }
+            val items = FapFolderFollowedCommunitiesParser.parseAjaxFragment(
+                htmlFragment = dataHtml,
+                baseUrl = basePath(),
+            )
+            if (items.isEmpty()) {
+                emit(PageLoadingState.NoMoreData)
+            } else {
+                emit(PageLoadingState.Success(items))
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "loadMoreFollowedCommunities failed", e)
             emit(PageLoadingState.Error(e))
         }
     }.flowOn(Dispatchers.IO)
