@@ -71,6 +71,7 @@ import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import com.yenaly.han1meviewer.FapFolder.common.FapFolderConstants
 import com.yenaly.han1meviewer.FapFolder.data.local.FapFolderHistoryRepo
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderMedia
+import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetwork
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -82,6 +83,7 @@ fun FapFolderVideoPlayerScreen(
     onDismiss: () -> Unit,
     postId: Long? = null,
     coverUrl: String? = null,
+    onExpired: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
@@ -102,6 +104,16 @@ fun FapFolderVideoPlayerScreen(
     var showResumeDialog by remember { mutableStateOf(false) }
     var pendingResumeMs by remember { mutableLongStateOf(0L) }
     var completionReported by remember { mutableStateOf(false) }
+    var expiryHandled by remember { mutableStateOf(false) }
+
+    LaunchedEffect(video.playUrl, video.expirationEpoch) {
+        if (expiryHandled) return@LaunchedEffect
+        if (video.isExpired() && onExpired != null) {
+            expiryHandled = true
+            playbackError = "Video link expired. Refreshing…"
+            onExpired()
+        }
+    }
 
     LaunchedEffect(playerKey, postId) {
         if (resumePrompted) return@LaunchedEffect
@@ -128,14 +140,18 @@ fun FapFolderVideoPlayerScreen(
 
     DisposableEffect(playerKey, reloadToken) {
         val player = ExoPlayer.Builder(context).build().apply {
+            val cookieHeader = runCatching { FapFolderNetwork.snapshotCookies() }
+                .getOrDefault("")
+            val requestHeaders = buildMap {
+                put("referer", FapFolderConstants.HEADER_REFERER)
+                put("origin", FapFolderConstants.HEADER_ORIGIN)
+                put("user-agent", FapFolderConstants.USER_AGENT_FAPFOLDER)
+                put("accept", "*/*")
+                if (cookieHeader.isNotBlank()) put("cookie", cookieHeader)
+            }
             val httpFactory = DefaultHttpDataSource.Factory()
-                .setDefaultRequestProperties(
-                    mapOf(
-                        "referer" to FapFolderConstants.HEADER_REFERER,
-                        "origin" to FapFolderConstants.HEADER_ORIGIN,
-                        "user-agent" to FapFolderConstants.USER_AGENT_FAPFOLDER,
-                    )
-                )
+                .setDefaultRequestProperties(requestHeaders)
+                .setAllowCrossProtocolRedirects(true)
             val dataSourceFactory = DefaultDataSource.Factory(context, httpFactory)
             val mediaItem = MediaItem.Builder().setUri(video.playUrl).build()
             val mediaSource = ProgressiveMediaSource.Factory(dataSourceFactory)
@@ -171,8 +187,17 @@ fun FapFolderVideoPlayerScreen(
             }
 
             override fun onPlayerError(error: PlaybackException) {
-                playbackError = error.message ?: "Playback error"
-                isBuffering = false
+                val expired = video.isExpired() ||
+                        error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS
+                if (expired && onExpired != null && !expiryHandled) {
+                    expiryHandled = true
+                    playbackError = "Video link expired. Refreshing…"
+                    isBuffering = false
+                    onExpired()
+                } else {
+                    playbackError = error.message ?: "Playback error"
+                    isBuffering = false
+                }
             }
         })
 
@@ -299,6 +324,13 @@ fun FapFolderVideoPlayerScreen(
                     }
                 },
                 modifier = Modifier.fillMaxSize(),
+                update = { view ->
+                    val existingSurface = (view as? ViewGroup)
+                        ?.getChildAt(0) as? android.view.SurfaceView
+                    if (existingSurface != null) {
+                        exoPlayer?.setVideoSurfaceView(existingSurface)
+                    }
+                },
                 onRelease = { view ->
                     exoPlayer?.setVideoSurfaceView(null)
                     (view as? ViewGroup)?.removeAllViews()
@@ -326,6 +358,7 @@ fun FapFolderVideoPlayerScreen(
                     )
                     Button(onClick = {
                         playbackError = null
+                        expiryHandled = false
                         reloadToken++
                     }) {
                         Icon(Icons.Filled.Refresh, contentDescription = null)

@@ -17,6 +17,8 @@ object FapFolderPostParser {
 
     private val photoGridSelector = ".pg_wrapper a.js_lightbox, .pg_wrapper a.pg_photo"
     private val morePhotosRegex = Regex("""\+\s*(\d+)""")
+    private val styleAspectRegex =
+        Regex("""aspect-ratio\s*:\s*([\d.]+)""", RegexOption.IGNORE_CASE)
 
     fun parsePost(
         postEl: Element,
@@ -360,28 +362,27 @@ object FapFolderPostParser {
         baseUrl: String,
         uploadsBase: String?,
     ): FapFolderMedia.Video? {
-        val videoIdRaw = vidPlaceholder.attr("data-id")
-        val videoId = FapFolderHtmlUtils.extractVideoId(videoIdRaw)
-            ?.toLongOrNull()
-            ?: vidPlaceholder.attr("data-onplay-id").toLongOrNull()
-
-        val onPlayId = vidPlaceholder.attr("data-onplay-id").toLongOrNull()
-
-        val playUrl = vidPlaceholder.attr("data-src").takeIf { it.isNotBlank() }
+        val playUrl = vidPlaceholder.attr("data-src").trim().takeIf { it.isNotBlank() }
             ?: return null
+
+        val rawVideoId = FapFolderHtmlUtils.extractVideoId(vidPlaceholder.attr("data-id"))
+            ?.toLongOrNull()
+        val onPlayId = vidPlaceholder.attr("data-onplay-id").toLongOrNull()
+        val videoId = rawVideoId ?: onPlayId
 
         val posterUrl = vidPlaceholder.attr("data-poster").takeIf { it.isNotBlank() }
             ?: FapFolderHtmlUtils.extractBackgroundImageUrl(vidPlaceholder.attr("style"))
-                ?.let(FapFolderUrlUtils::normalizeMediaUrl)
+                ?.let { FapFolderUrlUtils.normalizeMediaUrl(it, uploadsBase) }
             ?: vidPlaceholder.selectFirst("img.sr-only[src]")
                 ?.absUrl("src")?.takeIf { it.isNotBlank() }
 
-        val durationSeconds = vidPlaceholder.attr("data-length").toDoubleOrNull()?.toInt()
-            ?: FapFolderHtmlUtils.parseDurationSeconds(
-                vidPlaceholder.attr("data-length")
-            )?.toInt()
+        val lengthRaw = vidPlaceholder.attr("data-length")
+        val durationSeconds = lengthRaw.toDoubleOrNull()?.toInt()
+            ?: FapFolderHtmlUtils.parseDurationSeconds(lengthRaw)?.toInt()
 
         val aspectRatio = vidPlaceholder.attr("data-aspect-ratio").toDoubleOrNull()
+            ?: styleAspectRegex.find(vidPlaceholder.attr("style"))
+                ?.groupValues?.getOrNull(1)?.toDoubleOrNull()
 
         val adEligible = vidPlaceholder.attr("data-ad-eligible") == "1"
 
@@ -393,7 +394,9 @@ object FapFolderPostParser {
             durationSeconds = durationSeconds,
             aspectRatio = aspectRatio,
             adEligible = adEligible,
-            fileExtension = FapFolderUrlUtils.extractVideoExtension(playUrl),
+            fileExtension = FapFolderUrlUtils.extractVideoExtension(playUrl) ?: "mp4",
+            expirationEpoch = FapFolderUrlUtils.videoExpirationEpoch(playUrl),
+            signature = FapFolderUrlUtils.videoSignature(playUrl),
         )
     }
 

@@ -139,7 +139,12 @@ sealed interface FapFolderMedia {
         val aspectRatio: Double?,
         val adEligible: Boolean,
         val fileExtension: String?,
-    ) : FapFolderMedia
+        val expirationEpoch: Long? = null,
+        val signature: String? = null,
+    ) : FapFolderMedia {
+        fun isExpired(nowEpochSeconds: Long = System.currentTimeMillis() / 1000L): Boolean =
+            expirationEpoch != null && expirationEpoch <= nowEpochSeconds + 30L
+    }
 
     data class Embed(
         val iframeUrl: String,

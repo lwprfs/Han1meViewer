@@ -43,6 +43,7 @@ data class FapFolderPostDetailUiState(
     val commentPostError: String? = null,
     val expandedReplies: Set<Long> = emptySet(),
     val repliesLoadingFor: Long? = null,
+    val refreshToken: Long = 0L,
 )
 
 class FapFolderPostDetailViewModel(application: Application) : AndroidViewModel(application) {
@@ -69,6 +70,8 @@ class FapFolderPostDetailViewModel(application: Application) : AndroidViewModel(
     private var voteJob: Job? = null
     private var commentJob: Job? = null
     private var repliesJob: Job? = null
+
+    private var pendingAutoPlayVideoId: Long? = null
 
     fun load(slugOrId: String) {
         if (slugOrId.isBlank()) return
@@ -132,9 +135,24 @@ class FapFolderPostDetailViewModel(application: Application) : AndroidViewModel(
     fun refresh() {
         val currentSlug = _uiState.value.slugOrId
         if (currentSlug.isNotBlank()) {
-            _uiState.update { it.copy(slugOrId = "") }
+            _uiState.update {
+                it.copy(
+                    slugOrId = "",
+                    refreshToken = it.refreshToken + 1,
+                )
+            }
             load(currentSlug)
         }
+    }
+
+    fun requestAutoPlayAfterRefresh(videoId: Long) {
+        pendingAutoPlayVideoId = videoId
+    }
+
+    fun pendingAutoPlayVideoId(): Long? = pendingAutoPlayVideoId
+
+    fun clearPendingAutoPlay() {
+        pendingAutoPlayVideoId = null
     }
 
     fun loadMoreComments() {

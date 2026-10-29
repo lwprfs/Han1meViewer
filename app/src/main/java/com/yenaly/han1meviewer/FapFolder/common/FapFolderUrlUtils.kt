@@ -14,6 +14,7 @@ object FapFolderUrlUtils {
     private val BG_IMAGE_REGEX =
         Regex("""background-image\s*:\s*url\(['"]?([^'")]+)['"]?\)""", RegexOption.IGNORE_CASE)
     private val INT_PREFIX_REGEX = Regex("([\\d,]+)")
+    private val QUERY_REGEX = Regex("""[?&]([^=&]+)=([^&]*)""")
 
     fun normalizePath(input: String?): String {
         if (input.isNullOrBlank()) return ""
@@ -205,6 +206,21 @@ object FapFolderUrlUtils {
     }
 
     fun withUploadsPrefix(fileName: String?): String? = resolveLightboxSource(fileName)
+
+    fun parseQueryParams(url: String?): Map<String, String> {
+        if (url.isNullOrBlank()) return emptyMap()
+        val q = url.substringAfter('?', "")
+        if (q.isEmpty()) return emptyMap()
+        return QUERY_REGEX.findAll(q).associate { m ->
+            m.groupValues[1] to m.groupValues[2]
+        }
+    }
+
+    fun videoExpirationEpoch(url: String?): Long? =
+        parseQueryParams(url)["exp"]?.toLongOrNull()
+
+    fun videoSignature(url: String?): String? =
+        parseQueryParams(url)["sig"]
 
     private val RESERVED_SEGMENTS = setOf(
         "groups", "posts", "search", "photos", "settings", "signin", "signout",

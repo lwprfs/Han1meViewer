@@ -82,8 +82,19 @@ fun FapFolderPostDetailScreen(
 
     LaunchedEffect(autoPlay, uiState.post) {
         if (!autoPlay) return@LaunchedEffect
+        if (videoToPlay != null) return@LaunchedEffect
         val post = uiState.post ?: return@LaunchedEffect
         val video = post.primaryVideo ?: return@LaunchedEffect
+        videoToPlay = video
+    }
+
+    LaunchedEffect(uiState.refreshToken, uiState.post) {
+        val pendingId = viewModel.pendingAutoPlayVideoId() ?: return@LaunchedEffect
+        val post = uiState.post ?: return@LaunchedEffect
+        val video = post.media.filterIsInstance<FapFolderMedia.Video>()
+            .firstOrNull { it.videoId == pendingId || it.onPlayId == pendingId }
+            ?: return@LaunchedEffect
+        viewModel.clearPendingAutoPlay()
         videoToPlay = video
     }
 
@@ -383,6 +394,12 @@ fun FapFolderPostDetailScreen(
             onDismiss = { videoToPlay = null },
             postId = uiState.post?.postId,
             coverUrl = coverUrlOf(uiState.post),
+            onExpired = {
+                val pid = video.videoId ?: video.onPlayId
+                videoToPlay = null
+                if (pid != null) viewModel.requestAutoPlayAfterRefresh(pid)
+                viewModel.refresh()
+            },
         )
     }
 
