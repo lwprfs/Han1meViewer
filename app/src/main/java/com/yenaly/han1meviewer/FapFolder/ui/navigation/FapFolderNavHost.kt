@@ -32,6 +32,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import com.yenaly.han1meviewer.FapFolder.data.local.FapFolderHistoryRepo
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderAuthRepo
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetwork
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderProbeFailure
@@ -72,6 +73,7 @@ fun FapFolderNavHost(
 
     LaunchedEffect(Unit) {
         FapFolderNetwork.init(activity.applicationContext)
+        FapFolderHistoryRepo.init(activity.applicationContext)
         NavigationManager.initialize(navController, SiteType.FAPFOLDER)
     }
 

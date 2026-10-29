@@ -391,6 +391,41 @@ object FapFolderNetworkRepo {
         }
     }.flowOn(Dispatchers.IO)
 
+    fun loadDedicatedFeed(path: String): Flow<PageLoadingState<List<FapFolderFeedItem>>> = flow {
+        emit(PageLoadingState.Loading)
+        val url = basePath().trimEnd('/') + path
+        try {
+            rateLimit()
+            val response = FapFolderNetwork.service.getByUrl(url)
+            val rawBody = response.body()?.string().orEmpty()
+            if (!response.isSuccessful || rawBody.isBlank()) {
+                emit(PageLoadingState.Error(IllegalStateException("HTTP ${response.code()}")))
+                return@flow
+            }
+            if (FapFolderHtmlUtils.looksLikeCloudflareChallenge(rawBody)) {
+                emit(PageLoadingState.Error(IllegalStateException("Cloudflare challenge.")))
+                return@flow
+            }
+            FapFolderSessionParser.parseAndCache(rawBody, url)
+            val doc = Jsoup.parse(rawBody, url)
+            val streamRoot = doc.selectFirst("div.js_posts_stream") ?: doc.body()
+            val posts = FapFolderPostParser.parsePostsFromList(
+                root = streamRoot,
+                baseUrl = url,
+                uploadsBase = uploadsBase(),
+                includeComments = false,
+            )
+            if (posts.isEmpty()) {
+                emit(PageLoadingState.NoMoreData)
+            } else {
+                emit(PageLoadingState.Success(posts.map { FapFolderFeedItem.Post(it) }))
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "loadDedicatedFeed failed", e)
+            emit(PageLoadingState.Error(e))
+        }
+    }.flowOn(Dispatchers.IO)
+
     private fun parseLoadMoreItems(
         dataHtml: String,
         request: FapFolderLoadMoreRequest,
@@ -604,19 +639,21 @@ object FapFolderNetworkRepo {
             val isVideo = post.variants.contains(
                 com.yenaly.han1meviewer.FapFolder.data.model.PostVariant.VIDEO
             )
-            FapFolderHistoryRepo.saveProgress(
-                postId = post.postId,
-                title = post.bodyPlain.take(120).ifBlank { "FapFolder post" },
-                coverUrl = post.primaryImage?.fullUrl
-                    ?: post.primaryVideo?.posterUrl
-                    ?: post.firstGallery?.photos?.firstOrNull()?.fullUrl.orEmpty(),
-                authorName = post.author.displayName,
-                postSlug = post.slug,
-                isVideo = isVideo,
-                position = 0L,
-                duration = 0L,
-                isPlaying = false,
-            )
+            runCatching {
+                FapFolderHistoryRepo.saveProgress(
+                    postId = post.postId,
+                    title = post.bodyPlain.take(120).ifBlank { "FapFolder post" },
+                    coverUrl = post.primaryImage?.fullUrl
+                        ?: post.primaryVideo?.posterUrl
+                        ?: post.firstGallery?.photos?.firstOrNull()?.fullUrl.orEmpty(),
+                    authorName = post.author.displayName,
+                    postSlug = post.slug,
+                    isVideo = isVideo,
+                    position = 0L,
+                    duration = 0L,
+                    isPlaying = false,
+                )
+            }.onFailure { Log.w(TAG, "saveProgress failed: ${it.message}") }
 
             emit(VideoLoadingState.Success(post))
         } catch (e: Exception) {
@@ -956,6 +993,43 @@ object FapFolderNetworkRepo {
             emit(WebsiteState.Success(Unit))
         } catch (e: Exception) {
             Log.e(TAG, "reactToPost failed", e)
+            emit(WebsiteState.Error(e))
+        }
+    }.flowOn(Dispatchers.IO)
+
+    fun reactToComment(
+        commentId: Long,
+        action: String,
+        reaction: String? = null,
+    ): Flow<WebsiteState<Unit>> = flow {
+        emit(WebsiteState.Loading)
+        try {
+            val response = FapFolderNetwork.service.react(
+                action = action,
+                id = commentId.toString(),
+                reaction = reaction,
+            )
+            val rawBody = response.body()?.string().orEmpty()
+            if (!response.isSuccessful) {
+                emit(WebsiteState.Error(IllegalStateException("HTTP ${response.code()}")))
+                return@flow
+            }
+            val parsed = runCatching { org.json.JSONObject(rawBody) }.getOrNull()
+            if (parsed != null && parsed.has("callback") && !parsed.isNull("callback")) {
+                emit(WebsiteState.Error(IllegalStateException("Session expired.")))
+                return@flow
+            }
+            if (parsed?.optBoolean("error", false) == true) {
+                emit(
+                    WebsiteState.Error(
+                        IllegalStateException(parsed.optString("message", "Action failed."))
+                    )
+                )
+                return@flow
+            }
+            emit(WebsiteState.Success(Unit))
+        } catch (e: Exception) {
+            Log.e(TAG, "reactToComment failed", e)
             emit(WebsiteState.Error(e))
         }
     }.flowOn(Dispatchers.IO)

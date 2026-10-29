@@ -200,16 +200,16 @@ class FapFolderHomeViewModel(application: Application) : AndroidViewModel(applic
         }
 
         filterJob = viewModelScope.launch {
-            FapFolderNetworkRepo.filterPosts(
-                filter = filter,
-                id = state.feedId,
-                offset = 1,
-            ).collect { pageState ->
+            val path = when (filter) {
+                FapFolderConstants.FILTER_PHOTOS -> "/photos"
+                FapFolderConstants.FILTER_VIDEOS -> "/videos"
+                else -> "/"
+            }
+            FapFolderNetworkRepo.loadDedicatedFeed(path).collect { pageState ->
                 when (pageState) {
                     is PageLoadingState.Loading -> Unit
                     is PageLoadingState.Success -> {
                         val merged = mergeItems(emptyList(), pageState.info)
-                        val now = System.currentTimeMillis()
                         _uiState.update {
                             it.copy(
                                 items = merged,
@@ -219,27 +219,19 @@ class FapFolderHomeViewModel(application: Application) : AndroidViewModel(applic
                                 currentOffset = 2,
                                 lastPageCount = pageState.info.size,
                                 totalPagesLoaded = 1,
-                                feedLoadedAt = now,
+                                feedLoadedAt = System.currentTimeMillis(),
                             )
                         }
                     }
                     is PageLoadingState.NoMoreData -> _uiState.update {
+                        it.copy(firstLoad = false, filterSwitching = false, hasMore = false)
+                    }
+                    is PageLoadingState.Error -> _uiState.update {
                         it.copy(
                             firstLoad = false,
                             filterSwitching = false,
-                            hasMore = false,
+                            errorMessage = pageState.throwable.message,
                         )
-                    }
-                    is PageLoadingState.Error -> {
-                        val msg = pageState.throwable.message
-                        _uiState.update {
-                            it.copy(
-                                firstLoad = false,
-                                filterSwitching = false,
-                                errorMessage = msg,
-                                sessionExpired = msg?.contains("session", true) == true,
-                            )
-                        }
                     }
                 }
             }

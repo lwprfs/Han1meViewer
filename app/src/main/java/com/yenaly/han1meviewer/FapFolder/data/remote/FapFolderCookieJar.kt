@@ -73,11 +73,6 @@ class FapFolderCookieJar : CookieJar {
                     )
         }
 
-        Log.d(
-            TAG,
-            "loadForRequest: $host path=$requestPath cookies=${applicable.size} " +
-                    "names=${applicable.map { "${it.name}@${it.path}" }}"
-        )
         return applicable
     }
 
@@ -95,10 +90,6 @@ class FapFolderCookieJar : CookieJar {
         val bucket = cookieStore.getOrPut(host) { ConcurrentHashMap() }
         filtered.forEach { c ->
             bucket[key(c)] = c
-            Log.d(
-                TAG,
-                "saveFromResponse: $host <- ${c.name}@${c.path} value=${c.value.take(8)}…"
-            )
         }
     }
 
@@ -108,7 +99,6 @@ class FapFolderCookieJar : CookieJar {
         cookies.filter { it.name in PRESERVED_NAMES }.forEach { c ->
             bucket[key(c)] = c
         }
-        Log.d(TAG, "seed: ${cookies.size} cookies")
     }
 
     fun seedFromSnapshot(snapshot: Map<String, String>) {
@@ -132,12 +122,10 @@ class FapFolderCookieJar : CookieJar {
 
     fun clearCookies() {
         cookieStore.clear()
-        Log.d(TAG, "Cleared all FapFolder cookies")
     }
 
     fun persistToPreferences() {
         val snapshot = snapshot()
-        if (snapshot.isEmpty()) return
         val serialized = HJson.encodeToString(
             snapshot.map { (k, v) -> CookieEntry(k, v) }
         )
@@ -175,7 +163,10 @@ class FapFolderCookieJar : CookieJar {
             val name = trimmed.substringBefore('=').trim()
             val value = trimmed.substringAfter('=', "").trim()
             if (name.isBlank()) return@forEach
-            if (name.lowercase() in setOf("path", "domain", "expires", "max-age", "secure", "httponly", "samesite")) {
+            if (name.lowercase() in setOf(
+                    "path", "domain", "expires", "max-age", "secure", "httponly", "samesite"
+                )
+            ) {
                 return@forEach
             }
             if (name in PRESERVED_NAMES) {

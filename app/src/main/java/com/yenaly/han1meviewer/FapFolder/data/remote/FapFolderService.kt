@@ -94,7 +94,7 @@ interface FapFolderService {
     @POST("includes/ajax/posts/filter.php")
     suspend fun filterPosts(
         @Query("handle") handle: String = "posts",
-        @Field("get") get: String,
+        @Query("get") get: String,
         @Field("filter") filter: String? = null,
         @Field("id") id: String? = null,
         @Field("offset") offset: Int? = null,

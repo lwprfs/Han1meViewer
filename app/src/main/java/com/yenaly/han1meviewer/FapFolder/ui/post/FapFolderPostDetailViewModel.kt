@@ -433,8 +433,8 @@ class FapFolderPostDetailViewModel(application: Application) : AndroidViewModel(
     fun toggleLiked(commentId: Long) {
         val state = _uiState.value
         val comment = state.comments.firstOrNull { it.commentId == commentId } ?: return
-        val target = comment.liked
-        val optimistic = comment.withLiked(!target)
+        val wasLiked = comment.liked
+        val optimistic = comment.withLiked(!wasLiked)
         _uiState.update { current ->
             current.copy(
                 comments = current.comments.map {
@@ -443,13 +443,13 @@ class FapFolderPostDetailViewModel(application: Application) : AndroidViewModel(
             )
         }
         viewModelScope.launch {
-            val action = if (target) ACTION_UNREACT_POST else ACTION_REACT_POST
-            FapFolderNetworkRepo.reactToPost(
-                postId = state.post?.postId ?: return@launch,
-                action = action,
-                reaction = if (target) null else REACTION_LIKE,
+            FapFolderNetworkRepo.reactToComment(
+                commentId = commentId,
+                action = if (wasLiked) ACTION_UNREACT_POST else ACTION_REACT_POST,
+                reaction = if (wasLiked) null else REACTION_LIKE,
             ).collect { result ->
                 if (result is WebsiteState.Error) {
+                    Log.w(TAG, "toggleLiked failed: ${result.throwable.message}")
                     _uiState.update { current ->
                         current.copy(
                             comments = current.comments.map {
@@ -526,17 +526,19 @@ class FapFolderPostDetailViewModel(application: Application) : AndroidViewModel(
             ?: post.firstGallery?.photos?.firstOrNull()?.fullUrl
             ?: ""
         val isVideo = post.primaryVideo != null
-        FapFolderHistoryRepo.saveProgress(
-            postId = post.postId,
-            title = post.bodyPlain.take(120).ifBlank { "FapFolder post ${post.postId}" },
-            coverUrl = cover,
-            authorName = post.author.displayName,
-            postSlug = post.slug,
-            isVideo = isVideo,
-            position = 0L,
-            duration = 0L,
-            isPlaying = false,
-        )
+        runCatching {
+            FapFolderHistoryRepo.saveProgress(
+                postId = post.postId,
+                title = post.bodyPlain.take(120).ifBlank { "FapFolder post ${post.postId}" },
+                coverUrl = cover,
+                authorName = post.author.displayName,
+                postSlug = post.slug,
+                isVideo = isVideo,
+                position = 0L,
+                duration = 0L,
+                isPlaying = false,
+            )
+        }.onFailure { Log.w(TAG, "persistInitialHistory failed: ${it.message}") }
     }
 
     override fun onCleared() {

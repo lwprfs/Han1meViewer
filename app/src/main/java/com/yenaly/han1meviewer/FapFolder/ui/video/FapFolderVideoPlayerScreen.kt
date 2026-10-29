@@ -51,6 +51,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -87,6 +88,7 @@ fun FapFolderVideoPlayerScreen(
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
+    val scope = rememberCoroutineScope()
 
     val playerKey = video.videoId?.toString() ?: video.playUrl
     val stored = remember(playerKey) { FapFolderProgressStore.get(playerKey) }
@@ -182,7 +184,7 @@ fun FapFolderVideoPlayerScreen(
                 }
                 if (state == Player.STATE_ENDED && !completionReported) {
                     completionReported = true
-                    reportCompletion(postId, player)
+                    reportCompletion(postId, player, scope)
                 }
             }
 
@@ -218,6 +220,7 @@ fun FapFolderVideoPlayerScreen(
         var lastReportedPosition = -1L
         while (isActive) {
             delay(500)
+
             if (player.isPlaying) {
                 val currentPos = runCatching { player.currentPosition }.getOrDefault(0L)
                 val currentDur = runCatching { player.duration }.getOrDefault(0L)
@@ -565,11 +568,15 @@ fun FapFolderVideoPlayerScreen(
     }
 }
 
-private fun reportCompletion(postId: Long?, player: ExoPlayer) {
+private fun reportCompletion(
+    postId: Long?,
+    player: ExoPlayer,
+    scope: kotlinx.coroutines.CoroutineScope,
+) {
     if (postId == null || postId <= 0L) return
     val position = runCatching { player.currentPosition }.getOrDefault(0L)
     val duration = runCatching { player.duration }.getOrDefault(0L)
-    kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+    scope.launch(kotlinx.coroutines.Dispatchers.IO) {
         runCatching {
             FapFolderHistoryRepo.savePlaybackProgress(
                 postId = postId,
