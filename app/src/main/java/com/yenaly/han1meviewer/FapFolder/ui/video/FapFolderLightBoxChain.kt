@@ -8,6 +8,7 @@ import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetworkRepo
 import com.yenaly.han1meviewer.logic.state.WebsiteState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withTimeoutOrNull
@@ -35,8 +36,9 @@ object FapFolderLightboxChain {
         while (currentId > 0L && step < MAX_STEPS) {
             if (!seen.add(currentId)) break
 
-            val result = FapFolderNetworkRepo.openLightbox(currentId, context)
-                .firstTerminalState() ?: break
+            val result = firstTerminalState(
+                FapFolderNetworkRepo.openLightbox(currentId, context)
+            ) ?: break
 
             when (result) {
                 is WebsiteState.Loading -> continue
@@ -58,7 +60,6 @@ object FapFolderLightboxChain {
                         )
                     )
                     step++
-
                     val nextId = lb.nextPhotoId
                     if (nextId == null || nextId <= 0L || nextId == currentId) break
                     currentId = nextId
@@ -71,15 +72,15 @@ object FapFolderLightboxChain {
         startPhotoId: Long,
         context: String,
     ): Flow<WebsiteState<FapFolderLightboxChainStep>> = flow {
-
         val backwards = mutableListOf<FapFolderLightboxResponse>()
         var cursor = startPhotoId
         val backSeen = mutableSetOf<Long>()
         var guard = 0
         while (cursor > 0L && guard < MAX_STEPS) {
             if (!backSeen.add(cursor)) break
-            val result = FapFolderNetworkRepo.openLightbox(cursor, context)
-                .firstTerminalState() ?: break
+            val result = firstTerminalState(
+                FapFolderNetworkRepo.openLightbox(cursor, context)
+            ) ?: break
             if (result !is WebsiteState.Success) break
             backwards.add(result.info)
             val prev = result.info.prevPhotoId
@@ -96,8 +97,9 @@ object FapFolderLightboxChain {
 
         while (forwardCursor > 0L && step < MAX_STEPS) {
             if (!forwardSeen.add(forwardCursor)) break
-            val result = FapFolderNetworkRepo.openLightbox(forwardCursor, context)
-                .firstTerminalState() ?: break
+            val result = firstTerminalState(
+                FapFolderNetworkRepo.openLightbox(forwardCursor, context)
+            ) ?: break
             when (result) {
                 is WebsiteState.Loading -> continue
                 is WebsiteState.Error -> {
@@ -127,9 +129,7 @@ object FapFolderLightboxChain {
         }
     }.flowOn(Dispatchers.IO)
 
-    fun toImageList(
-        steps: List<FapFolderLightboxChainStep>,
-    ): List<FapFolderMedia.Image> =
+    fun toImageList(steps: List<FapFolderLightboxChainStep>): List<FapFolderMedia.Image> =
         steps.mapNotNull { step ->
             val url = step.imageUrl ?: return@mapNotNull null
             FapFolderMedia.Image(
@@ -154,7 +154,9 @@ object FapFolderLightboxChain {
         while (currentId > 0L && collected.size < limit) {
             if (!seen.add(currentId)) break
             val result = withTimeoutOrNull(15_000L) {
-                FapFolderNetworkRepo.openLightbox(currentId, context).firstTerminalState()
+                firstTerminalState(
+                    FapFolderNetworkRepo.openLightbox(currentId, context)
+                )
             } ?: break
 
             when (result) {
@@ -178,7 +180,6 @@ object FapFolderLightboxChain {
                 }
             }
         }
-
         return collected
     }
 
@@ -188,17 +189,8 @@ object FapFolderLightboxChain {
             ?: lb.post?.primaryVideo?.posterUrl
 }
 
-private suspend fun <T> Flow<T>.firstTerminalState(): T? {
-    var value: T? = null
-    try {
-        collect { v ->
-            value = v
-            if (v !is WebsiteState.Loading) throw StopCollect()
-        }
-    } catch (_: StopCollect) {
-
-    }
-    return value
+private suspend fun <T> firstTerminalState(flow: Flow<T>): T? {
+    return runCatching {
+        flow.first { it !is WebsiteState.Loading }
+    }.getOrNull()
 }
-
-private class StopCollect : Throwable()

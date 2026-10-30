@@ -1,13 +1,19 @@
 package com.yenaly.han1meviewer.FapFolder.ui.video
 
 import android.app.Activity
+import android.content.Context
 import android.content.pm.ActivityInfo
+import android.media.AudioManager
 import android.os.Build
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,14 +37,21 @@ import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.ScreenRotation
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.VolumeOff
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -51,8 +64,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -61,7 +72,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -79,16 +92,35 @@ import com.yenaly.han1meviewer.FapFolder.data.local.FapFolderHistoryRepo
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderMedia
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetwork
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetworkRepo
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.state.WebsiteState
+import com.yenaly.han1meviewer.ui.screen.RetryableImage
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import kotlin.math.abs
 
 private data class DoubleTapSeek(val deltaMs: Long, val direction: Int)
 
 private const val SEEK_STEP_MS = 10_000L
+private const val MAX_RELOAD_ATTEMPTS = 3
+private val PLAYBACK_SPEEDS = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
+
+private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+private fun isTrustedMediaHost(host: String?): Boolean {
+    if (host.isNullOrBlank()) return false
+    val h = host.lowercase()
+    return h == "fapfolder.club" ||
+            h.endsWith(".fapfolder.club") ||
+            h == "fap.onl" ||
+            h.endsWith(".fap.onl")
+}
 
 @Composable
 fun FapFolderVideoPlayerScreen(
@@ -107,31 +139,65 @@ fun FapFolderVideoPlayerScreen(
     val playerKey = video.videoId?.toString() ?: video.playUrl
     val stored = remember(playerKey) { FapFolderProgressStore.get(playerKey) }
 
-    val initialAspect = (video.aspectRatio ?: (16.0 / 9.0)).toFloat()
-        .takeIf { it > 0f } ?: (16f / 9f)
+    val initialAspect = (video.aspectRatio ?: (16.0 / 9.0))
+        .toFloat().takeIf { it.isFinite() && it > 0f } ?: (16f / 9f)
     val videoIsLandscape = initialAspect >= 1f
 
     var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
     var isPlaying by remember { mutableStateOf(false) }
     var isBuffering by remember { mutableStateOf(true) }
+    var isReady by remember { mutableStateOf(false) }
     var playbackError by remember { mutableStateOf<String?>(null) }
-    var position by remember { mutableLongStateOf(stored?.first ?: 0L) }
-    var duration by remember { mutableLongStateOf(stored?.second ?: 0L) }
+
+    var positionMs by remember(playerKey) {
+        mutableStateOf<Long>(stored?.first ?: 0L)
+    }
+    var durationMs by remember(playerKey) {
+        mutableStateOf<Long>(stored?.second ?: 0L)
+    }
+
     var showControls by remember { mutableStateOf(true) }
+    var controlsLocked by remember { mutableStateOf(false) }
     var isFullscreen by remember { mutableStateOf(false) }
     var fullscreenLandscape by remember { mutableStateOf(videoIsLandscape) }
-    var reloadToken by remember { mutableIntStateOf(0) }
-    var resumePrompted by remember { mutableStateOf(false) }
-    var showResumeDialog by remember { mutableStateOf(false) }
-    var pendingResumeMs by remember { mutableLongStateOf(0L) }
+    var reloadToken by remember { mutableStateOf(0) }
+    var reloadAttempts by remember { mutableStateOf(0) }
+    var resumeDialogForPostId by remember { mutableStateOf<Long?>(null) }
+    var pendingResumeMs by remember { mutableStateOf<Long>(0L) }
     var completionReported by remember { mutableStateOf(false) }
     var expiryHandled by remember { mutableStateOf(false) }
+
+    var muted by remember { mutableStateOf(false) }
+    var playbackSpeed by remember { mutableStateOf(1.0f) }
+    var speedMenuOpen by remember { mutableStateOf(false) }
+    var sliderDragging by remember { mutableStateOf(false) }
+    var sliderValue by remember { mutableStateOf(0f) }
 
     var doubleTapSeek by remember { mutableStateOf<DoubleTapSeek?>(null) }
     var doubleTapJob by remember { mutableStateOf<Job?>(null) }
 
-    var resolvedUrl by remember(reloadToken) { mutableStateOf<String?>(null) }
-    var resolvingError by remember(reloadToken) { mutableStateOf<String?>(null) }
+    var brightnessOverlay by remember { mutableStateOf(-1f) }
+    var volumeOverlay by remember { mutableStateOf(-1f) }
+    var overlayJob by remember { mutableStateOf<Job?>(null) }
+
+    var resolvedUrl by remember { mutableStateOf<String?>(null) }
+    var resolvingError by remember { mutableStateOf<String?>(null) }
+
+    val audioManager = remember {
+        context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+    }
+    val maxVolume = remember {
+        audioManager?.getStreamMaxVolume(AudioManager.STREAM_MUSIC) ?: 15
+    }
+
+    DisposableEffect(isPlaying) {
+        if (isPlaying) {
+            activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+        onDispose {
+            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
 
     LaunchedEffect(video.playUrl, video.expirationEpoch) {
         if (expiryHandled) return@LaunchedEffect
@@ -161,12 +227,8 @@ fun FapFolderVideoPlayerScreen(
         FapFolderNetworkRepo.resolveVideoPlayUrl(video.playUrl).collect { state ->
             when (state) {
                 is WebsiteState.Loading -> Unit
-                is WebsiteState.Success -> {
-                    resolvedUrl = state.info
-                }
-                is WebsiteState.Error -> {
-                    lastError = state.throwable.message
-                }
+                is WebsiteState.Success -> resolvedUrl = state.info
+                is WebsiteState.Error -> lastError = state.throwable.message
             }
         }
         if (resolvedUrl == null) {
@@ -177,9 +239,8 @@ fun FapFolderVideoPlayerScreen(
     }
 
     LaunchedEffect(playerKey, postId) {
-        if (resumePrompted) return@LaunchedEffect
-        resumePrompted = true
         if (postId == null || postId <= 0L) return@LaunchedEffect
+        if (resumeDialogForPostId != null) return@LaunchedEffect
 
         val shouldOffer = runCatching {
             FapFolderHistoryRepo.shouldOfferResume(postId)
@@ -188,119 +249,142 @@ fun FapFolderVideoPlayerScreen(
             FapFolderHistoryRepo.getByPostId(postId)
         }.getOrNull()
 
-        val resumeMs = when {
-            shouldOffer -> existing?.lastPosition ?: 0L
-            else -> 0L
+        val resumeMs: Long = if (shouldOffer) {
+            val raw = existing?.lastPosition ?: 0L
+            if (raw > 0L) raw else 0L
+        } else {
+            0L
         }
 
         if (resumeMs > 0L) {
             pendingResumeMs = resumeMs
-            showResumeDialog = true
+            resumeDialogForPostId = postId
+            exoPlayer?.pause()
         }
     }
 
     DisposableEffect(resolvedUrl, reloadToken) {
-        val playableUrl = resolvedUrl ?: return@DisposableEffect onDispose { }
-        val player = ExoPlayer.Builder(context).build().apply {
+        val playableUrl: String? = resolvedUrl
+        if (playableUrl.isNullOrBlank()) {
+            return@DisposableEffect onDispose { }
+        }
 
-            val playHost = runCatching { playableUrl.toHttpUrlOrNull()?.host }
-                .getOrNull().orEmpty()
-            val isR2 = playHost.contains("cloudflarestorage.com", ignoreCase = true)
+        val playHost = runCatching { playableUrl.toHttpUrlOrNull()?.host }.getOrNull()
+        val referer = postPermalinkForReferer ?: FapFolderConstants.HEADER_REFERER
 
-            val referer = postPermalinkForReferer ?: FapFolderConstants.HEADER_REFERER
-
-            val requestHeaders = buildMap {
-                put("referer", referer)
-                put("origin", FapFolderConstants.HEADER_ORIGIN)
-                put("user-agent", FapFolderConstants.USER_AGENT_FAPFOLDER)
-                put("accept", "*/*")
-                put("accept-language", FapFolderConstants.ACCEPT_LANGUAGE)
-                put("accept-encoding", "identity")
-                put("range", "bytes=0-")
-                if (!isR2) {
-                    val cookieHeader = runCatching { FapFolderNetwork.snapshotCookies() }
-                        .getOrDefault("")
-                    if (cookieHeader.isNotBlank()) put("cookie", cookieHeader)
-                }
+        val requestHeaders = buildMap {
+            put("referer", referer)
+            put("origin", FapFolderConstants.HEADER_ORIGIN)
+            put("user-agent", FapFolderConstants.USER_AGENT_FAPFOLDER)
+            put("accept", "*/*")
+            put("accept-language", FapFolderConstants.ACCEPT_LANGUAGE)
+            put("accept-encoding", "identity")
+            put("range", "bytes=0-")
+            if (isTrustedMediaHost(playHost)) {
+                val cookieHeader = runCatching { FapFolderNetwork.snapshotCookies() }
+                    .getOrDefault("")
+                if (cookieHeader.isNotBlank()) put("cookie", cookieHeader)
             }
+        }
 
-            val httpFactory = DefaultHttpDataSource.Factory()
-                .setDefaultRequestProperties(requestHeaders)
-                .setAllowCrossProtocolRedirects(true)
-                .setUserAgent(FapFolderConstants.USER_AGENT_FAPFOLDER)
-                .setConnectTimeoutMs(15_000)
-                .setReadTimeoutMs(20_000)
+        val httpFactory = DefaultHttpDataSource.Factory()
+            .setDefaultRequestProperties(requestHeaders)
+            .setAllowCrossProtocolRedirects(true)
+            .setUserAgent(FapFolderConstants.USER_AGENT_FAPFOLDER)
+            .setConnectTimeoutMs(15_000)
+            .setReadTimeoutMs(20_000)
 
-            val dataSourceFactory = DefaultDataSource.Factory(context, httpFactory)
-            val mediaItem = MediaItem.Builder()
-                .setUri(playableUrl)
-                .setMimeType("video/mp4")
-                .build()
-            val mediaSource = ProgressiveMediaSource.Factory(dataSourceFactory)
-                .createMediaSource(mediaItem)
+        val dataSourceFactory = DefaultDataSource.Factory(context, httpFactory)
+        val mediaItem = MediaItem.Builder()
+            .setUri(playableUrl)
+            .setMimeType("video/mp4")
+            .build()
+        val mediaSource = ProgressiveMediaSource.Factory(dataSourceFactory)
+            .createMediaSource(mediaItem)
+
+        val player = ExoPlayer.Builder(context).build().apply {
             setMediaSource(mediaSource)
             prepare()
-            playWhenReady = true
+            playWhenReady = false
         }
         exoPlayer = player
         isBuffering = true
+        isReady = false
         playbackError = null
 
-        val resumeAt = if (showResumeDialog) 0L else pendingResumeMs
-        if (resumeAt > 0L) {
-            player.seekTo(resumeAt)
+        if (resumeDialogForPostId == null && pendingResumeMs > 0L) {
+            player.seekTo(pendingResumeMs)
         }
 
         player.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(playing: Boolean) {
                 isPlaying = playing
+                if (!playing) {
+                    val pos: Long = safePosition(player)
+                    val dur: Long = safeDuration(player)
+                    positionMs = pos
+                    if (dur > 0L) durationMs = dur
+                    FapFolderProgressStore.put(playerKey, pos, dur)
+                }
             }
 
             override fun onPlaybackStateChanged(state: Int) {
                 isBuffering = state == Player.STATE_BUFFERING
                 if (state == Player.STATE_READY) {
-                    val d = player.duration
-                    if (d > 0) duration = d
+                    isReady = true
+                    val d: Long = safeDuration(player)
+                    if (d > 0L) durationMs = d
                 }
                 if (state == Player.STATE_ENDED && !completionReported) {
                     completionReported = true
-                    reportCompletion(postId, player, scope)
+                    reportCompletion(postId, player)
                 }
             }
 
             override fun onPlayerError(error: PlaybackException) {
-                val expired = video.isExpired() ||
-                        error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS
+                val badStatus =
+                    error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS
+                val expired = video.isExpired() || badStatus
+
                 if (expired && onExpired != null && !expiryHandled) {
                     expiryHandled = true
                     playbackError = "Video link expired. Refreshing…"
                     isBuffering = false
+                    isReady = false
                     onExpired()
-                } else if (error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS) {
-                    playbackError = "Video link expired. Refreshing…"
-                    isBuffering = false
-                    if (onExpired != null && !expiryHandled) {
-                        expiryHandled = true
-                        onExpired()
-                    } else {
-                        reloadToken++
-                    }
-                } else {
-                    playbackError = error.message ?: "Playback error"
-                    isBuffering = false
+                    return
                 }
+
+                if (badStatus && reloadAttempts < MAX_RELOAD_ATTEMPTS) {
+                    reloadAttempts++
+                    playbackError =
+                        "Stream error. Retrying ($reloadAttempts/$MAX_RELOAD_ATTEMPTS)…"
+                    isBuffering = false
+                    isReady = false
+                    reloadToken++
+                    return
+                }
+
+                playbackError = if (badStatus) {
+                    "Stream error. Please try again later."
+                } else {
+                    error.message ?: "Playback error"
+                }
+                isBuffering = false
+                isReady = false
             }
         })
 
         onDispose {
             doubleTapJob?.cancel()
-            val currentPosition = runCatching { player.currentPosition }.getOrDefault(0L)
-            val currentDuration = runCatching { player.duration }.getOrDefault(0L)
+            val currentPosition: Long = safePosition(player)
+            val currentDuration: Long = safeDuration(player)
             if (currentPosition > 0L) {
                 FapFolderProgressStore.put(playerKey, currentPosition, currentDuration)
             }
             runCatching { player.release() }
             exoPlayer = null
+            isPlaying = false
         }
     }
 
@@ -311,19 +395,17 @@ fun FapFolderVideoPlayerScreen(
         while (isActive) {
             delay(500)
             if (player.isPlaying) {
-                val currentPos = runCatching { player.currentPosition }.getOrDefault(0L)
-                val currentDur = runCatching { player.duration }.getOrDefault(0L)
-                position = currentPos
-                if (currentDur > 0) duration = currentDur
+                val currentPos: Long = safePosition(player)
+                val currentDur: Long = safeDuration(player)
+                positionMs = currentPos
+                if (currentDur > 0L) durationMs = currentDur
                 FapFolderProgressStore.put(playerKey, currentPos, currentDur)
 
                 val now = System.currentTimeMillis()
-                val progressedEnough =
-                    currentPos - lastReportedPosition >= 1000L ||
-                            lastReportedPosition < 0L
+                val progressedEnough = currentPos - lastReportedPosition >= 1000L ||
+                        lastReportedPosition < 0L
                 if (postId != null && postId > 0L &&
-                    now - lastSavedAt >= 1000L &&
-                    progressedEnough
+                    now - lastSavedAt >= 1000L && progressedEnough
                 ) {
                     lastSavedAt = now
                     lastReportedPosition = currentPos
@@ -341,8 +423,8 @@ fun FapFolderVideoPlayerScreen(
         }
     }
 
-    LaunchedEffect(showControls, isPlaying) {
-        if (showControls && isPlaying) {
+    LaunchedEffect(showControls, isPlaying, controlsLocked) {
+        if (showControls && isPlaying && !controlsLocked) {
             delay(3000)
             showControls = false
         }
@@ -356,18 +438,38 @@ fun FapFolderVideoPlayerScreen(
     }
 
     fun seekTo(ms: Long) {
-        exoPlayer?.seekTo(ms)
-        position = ms
+        val safe: Long = if (ms < 0L) 0L else ms
+        exoPlayer?.seekTo(safe)
+        positionMs = safe
     }
 
     fun seekBy(deltaMs: Long) {
         val player = exoPlayer ?: return
-        val dur = runCatching { player.duration }.getOrDefault(0L)
-        val target = (player.currentPosition + deltaMs)
-            .coerceIn(0L, if (dur > 0L) dur else Long.MAX_VALUE)
+        val dur: Long = safeDuration(player)
+        val current: Long = safePosition(player)
+        val upper: Long = if (dur > 0L) dur else Long.MAX_VALUE
+        var target: Long = current + deltaMs
+        if (target < 0L) target = 0L
+        if (target > upper) target = upper
         player.seekTo(target)
-        position = target
+        positionMs = target
         showControls = true
+    }
+
+    fun seekToStart() {
+        seekTo(0L)
+        exoPlayer?.play()
+    }
+
+    fun seekToEnd() {
+        val dur: Long = safeDuration(exoPlayer)
+        if (dur > 0L) seekTo(dur)
+    }
+
+    fun toggleMute() {
+        val player = exoPlayer ?: return
+        muted = !muted
+        player.volume = if (muted) 0f else 1f
     }
 
     fun flashDoubleTapSeek(direction: Int) {
@@ -376,6 +478,15 @@ fun FapFolderVideoPlayerScreen(
         doubleTapJob = scope.launch {
             delay(700)
             doubleTapSeek = null
+        }
+    }
+
+    fun flashOverlay(value: Float, isVolume: Boolean) {
+        if (isVolume) volumeOverlay = value else brightnessOverlay = value
+        overlayJob?.cancel()
+        overlayJob = scope.launch {
+            delay(800)
+            if (isVolume) volumeOverlay = -1f else brightnessOverlay = -1f
         }
     }
 
@@ -419,15 +530,12 @@ fun FapFolderVideoPlayerScreen(
             activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
         }
         isFullscreen = false
+        fullscreenLandscape = videoIsLandscape
     }
 
     fun toggleFullscreenOrientation(landscape: Boolean) {
-        if (!isFullscreen) {
-            applyFullscreenOrientation(landscape, force = true)
-            enterFullscreen()
-        } else {
-            applyFullscreenOrientation(landscape, force = true)
-        }
+        applyFullscreenOrientation(landscape, force = true)
+        if (!isFullscreen) enterFullscreen()
         showControls = true
     }
 
@@ -435,7 +543,11 @@ fun FapFolderVideoPlayerScreen(
 
     DisposableEffect(Unit) {
         onDispose {
-            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            if (isFullscreen) {
+                activity?.requestedOrientation =
+                    ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            }
+            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
     }
 
@@ -445,6 +557,20 @@ fun FapFolderVideoPlayerScreen(
                 .fillMaxSize()
                 .background(Color.Black),
         ) {
+            if (!isReady || (playbackError == null && isBuffering)) {
+                val poster: String? = video.posterUrl ?: coverUrl
+                if (!poster.isNullOrBlank()) {
+                    RetryableImage(
+                        model = poster,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        placeholder = painterResource(R.drawable.h_chan_loading),
+                        error = painterResource(R.drawable.h_chan_load_failed),
+                        contentScale = ContentScale.Crop,
+                    )
+                }
+            }
+
             AndroidView(
                 factory = { ctx ->
                     FrameLayout(ctx).apply {
@@ -459,16 +585,15 @@ fun FapFolderVideoPlayerScreen(
                             )
                         }
                         addView(surfaceView)
-                        exoPlayer?.setVideoSurfaceView(surfaceView)
                     }
                 },
                 modifier = Modifier.fillMaxSize(),
                 update = { view ->
-                    val existingSurface = (view as? ViewGroup)
-                        ?.getChildAt(0) as? android.view.SurfaceView
-                    if (existingSurface != null) {
-                        exoPlayer?.setVideoSurfaceView(existingSurface)
-                    }
+                    val container = view as? ViewGroup ?: return@AndroidView
+                    val surfaceView =
+                        container.getChildAt(0) as? android.view.SurfaceView
+                            ?: return@AndroidView
+                    exoPlayer?.setVideoSurfaceView(surfaceView)
                 },
                 onRelease = { view ->
                     exoPlayer?.setVideoSurfaceView(null)
@@ -479,7 +604,8 @@ fun FapFolderVideoPlayerScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .pointerInput(Unit) {
+                    .pointerInput(controlsLocked) {
+                        if (controlsLocked) return@pointerInput
                         detectTapGestures(
                             onTap = {
                                 if (playbackError == null) {
@@ -487,11 +613,84 @@ fun FapFolderVideoPlayerScreen(
                                 }
                             },
                             onDoubleTap = { offset ->
-                                if (playbackError != null) return@detectTapGestures
+                                if (playbackError != null) {
+                                    return@detectTapGestures
+                                }
                                 val forward = offset.x >= size.width / 2f
-                                seekBy(if (forward) SEEK_STEP_MS else -SEEK_STEP_MS)
+                                seekBy(
+                                    if (forward) SEEK_STEP_MS else -SEEK_STEP_MS
+                                )
                                 flashDoubleTapSeek(if (forward) 1 else -1)
                             },
+                        )
+                    },
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(controlsLocked) {
+                        if (controlsLocked) return@pointerInput
+                        var mode = 0
+                        var isVolume = false
+                        detectDragGestures(
+                            onDragStart = { offset ->
+                                mode = 0
+                                isVolume = offset.x >= size.width / 2f
+                            },
+                            onDrag = { _, dragAmount ->
+                                if (mode == 0) {
+                                    mode =
+                                        if (abs(dragAmount.x) > abs(dragAmount.y)) 2
+                                        else 1
+                                }
+                                if (mode == 1) {
+                                    if (isVolume) {
+                                        val cur: Int =
+                                            audioManager?.getStreamVolume(
+                                                AudioManager.STREAM_MUSIC
+                                            ) ?: 0
+                                        val delta: Int = (-dragAmount.y /
+                                                size.height * maxVolume * 2f).toInt()
+                                        var newVol: Int = cur + delta
+                                        if (newVol < 0) newVol = 0
+                                        if (newVol > maxVolume) newVol = maxVolume
+                                        audioManager?.setStreamVolume(
+                                            AudioManager.STREAM_MUSIC, newVol, 0
+                                        )
+                                        val fraction: Float =
+                                            if (maxVolume > 0)
+                                                newVol.toFloat() / maxVolume.toFloat()
+                                            else 0f
+                                        flashOverlay(fraction, true)
+                                    } else {
+                                        val window = activity?.window
+                                        if (window != null) {
+                                            val attrs = window.attributes
+                                            val cur: Float =
+                                                if (attrs.screenBrightness < 0f)
+                                                    0.5f
+                                                else attrs.screenBrightness
+                                            var newB: Float =
+                                                cur - dragAmount.y / size.height
+                                            if (newB < 0.05f) newB = 0.05f
+                                            if (newB > 1f) newB = 1f
+                                            attrs.screenBrightness = newB
+                                            window.attributes = attrs
+                                            flashOverlay(newB, false)
+                                        }
+                                    }
+                                } else {
+                                    val dur: Long = safeDuration(exoPlayer)
+                                    if (dur > 0L) {
+                                        val delta: Long =
+                                            (dragAmount.x / size.width *
+                                                    dur.toFloat()).toLong()
+                                        seekBy(delta)
+                                    }
+                                }
+                            },
+                            onDragEnd = { showControls = true },
                         )
                     },
             )
@@ -503,13 +702,16 @@ fun FapFolderVideoPlayerScreen(
                     modifier = Modifier
                         .align(alignment)
                         .padding(horizontal = 32.dp)
-                        .background(Color.Black.copy(alpha = 0.55f), CircleShape)
+                        .background(
+                            Color.Black.copy(alpha = 0.55f), CircleShape
+                        )
                         .padding(horizontal = 16.dp, vertical = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            imageVector = if (seek.direction > 0) Icons.Filled.FastForward
+                            imageVector = if (seek.direction > 0)
+                                Icons.Filled.FastForward
                             else Icons.Filled.FastRewind,
                             contentDescription = null,
                             tint = Color.White,
@@ -519,6 +721,55 @@ fun FapFolderVideoPlayerScreen(
                             text = "${if (seek.direction > 0) "+" else "-"}10s",
                             color = Color.White,
                             style = MaterialTheme.typography.labelMedium,
+                        )
+                    }
+                }
+            }
+
+            if (brightnessOverlay >= 0f) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(16.dp)
+                        .background(
+                            Color.Black.copy(alpha = 0.6f),
+                            RoundedCornerShape(8.dp),
+                        )
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                ) {
+                    Text(
+                        text = "Brightness ${(brightnessOverlay * 100).toInt()}%",
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
+            }
+
+            if (volumeOverlay >= 0f) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(16.dp)
+                        .background(
+                            Color.Black.copy(alpha = 0.6f),
+                            RoundedCornerShape(8.dp),
+                        )
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = if (volumeOverlay == 0f)
+                                Icons.Filled.VolumeOff
+                            else Icons.Filled.VolumeUp,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "${(volumeOverlay * 100).toInt()}%",
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelSmall,
                         )
                     }
                 }
@@ -539,13 +790,14 @@ fun FapFolderVideoPlayerScreen(
                         modifier = Modifier.size(48.dp),
                     )
                     Text(
-                        text = playbackError!!,
+                        text = playbackError ?: "",
                         color = Color.White,
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Button(onClick = {
                         playbackError = null
                         expiryHandled = false
+                        reloadAttempts = 0
                         reloadToken++
                     }) {
                         Icon(Icons.Filled.Refresh, contentDescription = null)
@@ -560,147 +812,304 @@ fun FapFolderVideoPlayerScreen(
                 )
             }
 
-            if (showControls && playbackError == null) {
-                Row(
+            if (controlsLocked) {
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(8.dp)
-                        .align(Alignment.TopCenter),
-                    verticalAlignment = Alignment.CenterVertically,
+                        .align(Alignment.CenterEnd)
+                        .padding(16.dp)
+                        .background(Color.Black.copy(alpha = 0.6f), CircleShape)
+                        .padding(8.dp),
                 ) {
-                    IconButton(onClick = {
-                        exitFullscreen()
-                        onDismiss()
-                    }) {
+                    IconButton(onClick = { controlsLocked = false }) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Close",
-                            tint = Color.White,
-                        )
-                    }
-                    if (title.isNotBlank()) {
-                        Text(
-                            text = title,
-                            color = Color.White,
-                            style = MaterialTheme.typography.titleSmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-                    IconButton(onClick = { toggleFullscreenOrientation(false) }) {
-                        Icon(
-                            imageVector = Icons.Filled.ScreenRotation,
-                            contentDescription = "Force portrait",
-                            tint = Color.White,
-                        )
-                    }
-                    IconButton(onClick = { toggleFullscreenOrientation(true) }) {
-                        Icon(
-                            imageVector = Icons.Filled.ScreenRotation,
-                            contentDescription = "Force landscape",
+                            imageVector = Icons.Filled.Lock,
+                            contentDescription = "Unlock controls",
                             tint = Color.White,
                         )
                     }
                 }
+            }
 
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .padding(horizontal = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(28.dp),
-                ) {
-                    IconButton(
-                        onClick = { seekBy(-SEEK_STEP_MS) },
-                        modifier = Modifier
-                            .size(56.dp)
-                            .background(Color.Black.copy(alpha = 0.5f), CircleShape),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.FastRewind,
-                            contentDescription = "Rewind 10s",
-                            tint = Color.White,
-                            modifier = Modifier.size(28.dp),
-                        )
-                    }
-
-                    IconButton(
-                        onClick = { togglePlayPause() },
-                        modifier = Modifier
-                            .size(72.dp)
-                            .background(Color.Black.copy(alpha = 0.5f), CircleShape),
-                    ) {
-                        Icon(
-                            imageVector = if (isPlaying) Icons.Filled.Pause
-                            else Icons.Filled.PlayArrow,
-                            contentDescription = "Play/Pause",
-                            tint = Color.White,
-                            modifier = Modifier.size(42.dp),
-                        )
-                    }
-
-                    IconButton(
-                        onClick = { seekBy(SEEK_STEP_MS) },
-                        modifier = Modifier
-                            .size(56.dp)
-                            .background(Color.Black.copy(alpha = 0.5f), CircleShape),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.FastForward,
-                            contentDescription = "Forward 10s",
-                            tint = Color.White,
-                            modifier = Modifier.size(28.dp),
-                        )
-                    }
-                }
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.BottomCenter)
-                        .then(
-                            if (isFullscreen) Modifier.navigationBarsPadding() else Modifier
-                        )
-                        .background(Color.Black.copy(alpha = 0.6f))
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                ) {
+            AnimatedVisibility(
+                visible = showControls && playbackError == null && !controlsLocked,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                Box(modifier = Modifier.fillMaxSize()) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.TopCenter)
+                            .statusBarsPadding()
+                            .padding(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
-                            text = formatTime(position),
-                            color = Color.White,
-                            style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier.width(52.dp),
-                        )
-                        Slider(
-                            value = if (duration > 0) position.toFloat() / duration else 0f,
-                            onValueChange = { v -> seekTo((v * duration).toLong()) },
-                            modifier = Modifier.weight(1f),
-                            colors = SliderDefaults.colors(
-                                thumbColor = Color.White,
-                                activeTrackColor = MaterialTheme.colorScheme.primary,
-                                inactiveTrackColor = Color.White.copy(alpha = 0.3f),
-                            ),
-                        )
-                        Text(
-                            text = formatTime(duration),
-                            color = Color.White,
-                            style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier.width(52.dp),
-                        )
                         IconButton(onClick = {
-                            if (isFullscreen) exitFullscreen() else enterFullscreen()
+                            exitFullscreen()
+                            onDismiss()
                         }) {
                             Icon(
-                                imageVector = if (isFullscreen) Icons.Filled.FullscreenExit
-                                else Icons.Filled.Fullscreen,
-                                contentDescription = "Fullscreen",
+                                imageVector =
+                                    Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Close",
                                 tint = Color.White,
                             )
+                        }
+                        if (title.isNotBlank()) {
+                            Text(
+                                text = title,
+                                color = Color.White,
+                                style = MaterialTheme.typography.titleSmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                        IconButton(onClick = { toggleMute() }) {
+                            Icon(
+                                imageVector = if (muted) Icons.Filled.VolumeOff
+                                else Icons.Filled.VolumeUp,
+                                contentDescription =
+                                    if (muted) "Unmute" else "Mute",
+                                tint = Color.White,
+                            )
+                        }
+                        Box {
+                            IconButton(onClick = { speedMenuOpen = true }) {
+                                Text(
+                                    text = formatSpeed(playbackSpeed),
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.labelSmall,
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = speedMenuOpen,
+                                onDismissRequest = { speedMenuOpen = false },
+                            ) {
+                                PLAYBACK_SPEEDS.forEach { speed ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text = formatSpeed(speed) +
+                                                        if (speed == playbackSpeed)
+                                                            " ✓" else ""
+                                            )
+                                        },
+                                        onClick = {
+                                            playbackSpeed = speed
+                                            exoPlayer?.setPlaybackSpeed(speed)
+                                            speedMenuOpen = false
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                        IconButton(onClick = { controlsLocked = true }) {
+                            Icon(
+                                imageVector = Icons.Filled.Lock,
+                                contentDescription = "Lock controls",
+                                tint = Color.White,
+                            )
+                        }
+                        IconButton(onClick = {
+                            toggleFullscreenOrientation(false)
+                        }) {
+                            Icon(
+                                imageVector = Icons.Filled.ScreenRotation,
+                                contentDescription = "Force portrait",
+                                tint = Color.White,
+                            )
+                        }
+                        IconButton(onClick = {
+                            toggleFullscreenOrientation(true)
+                        }) {
+                            Icon(
+                                imageVector = Icons.Filled.ScreenRotation,
+                                contentDescription = "Force landscape",
+                                tint = Color.White,
+                            )
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .padding(horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(20.dp),
+                    ) {
+                        IconButton(
+                            onClick = { seekToStart() },
+                            modifier = Modifier
+                                .size(48.dp)
+                                .background(
+                                    Color.Black.copy(alpha = 0.5f),
+                                    CircleShape,
+                                ),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.SkipPrevious,
+                                contentDescription = "Back to start",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp),
+                            )
+                        }
+                        IconButton(
+                            onClick = { seekBy(-SEEK_STEP_MS) },
+                            modifier = Modifier
+                                .size(56.dp)
+                                .background(
+                                    Color.Black.copy(alpha = 0.5f),
+                                    CircleShape,
+                                ),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.FastRewind,
+                                contentDescription = "Rewind 10s",
+                                tint = Color.White,
+                                modifier = Modifier.size(28.dp),
+                            )
+                        }
+                        IconButton(
+                            onClick = { togglePlayPause() },
+                            modifier = Modifier
+                                .size(72.dp)
+                                .background(
+                                    Color.Black.copy(alpha = 0.5f),
+                                    CircleShape,
+                                ),
+                        ) {
+                            Icon(
+                                imageVector = if (isPlaying) Icons.Filled.Pause
+                                else Icons.Filled.PlayArrow,
+                                contentDescription = "Play/Pause",
+                                tint = Color.White,
+                                modifier = Modifier.size(42.dp),
+                            )
+                        }
+                        IconButton(
+                            onClick = { seekBy(SEEK_STEP_MS) },
+                            modifier = Modifier
+                                .size(56.dp)
+                                .background(
+                                    Color.Black.copy(alpha = 0.5f),
+                                    CircleShape,
+                                ),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.FastForward,
+                                contentDescription = "Forward 10s",
+                                tint = Color.White,
+                                modifier = Modifier.size(28.dp),
+                            )
+                        }
+                        IconButton(
+                            onClick = { seekToEnd() },
+                            modifier = Modifier
+                                .size(48.dp)
+                                .background(
+                                    Color.Black.copy(alpha = 0.5f),
+                                    CircleShape,
+                                ),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.SkipNext,
+                                contentDescription = "Skip to end",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp),
+                            )
+                        }
+                    }
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.BottomCenter)
+                            .then(
+                                if (isFullscreen) Modifier.navigationBarsPadding()
+                                else Modifier
+                            )
+                            .background(Color.Black.copy(alpha = 0.6f))
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            val safeDuration: Long =
+                                if (durationMs > 0L) durationMs else 0L
+                            val safePosition: Long =
+                                if (positionMs > 0L) positionMs else 0L
+
+                            val displayPosition: Long = if (sliderDragging) {
+                                val ratio = sliderValue.toDouble()
+                                (ratio * safeDuration.toDouble()).toLong()
+                            } else {
+                                safePosition
+                            }
+
+                            Text(
+                                text = formatTime(displayPosition),
+                                color = Color.White,
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier.width(52.dp),
+                            )
+
+                            val sliderFraction: Float = when {
+                                sliderDragging -> sliderValue
+                                safeDuration > 0L -> {
+                                    val ratio = safePosition.toFloat() /
+                                            safeDuration.toFloat()
+                                    if (ratio < 0f) 0f
+                                    else if (ratio > 1f) 1f
+                                    else ratio
+                                }
+                                else -> 0f
+                            }
+
+                            Slider(
+                                value = sliderFraction,
+                                onValueChange = {
+                                    sliderDragging = true
+                                    sliderValue = it
+                                },
+                                onValueChangeFinished = {
+                                    val ratio = sliderValue.toDouble()
+                                    val target =
+                                        (ratio * safeDuration.toDouble()).toLong()
+                                    seekTo(target)
+                                    sliderDragging = false
+                                },
+                                modifier = Modifier.weight(1f),
+                                colors = SliderDefaults.colors(
+                                    thumbColor = Color.White,
+                                    activeTrackColor =
+                                        MaterialTheme.colorScheme.primary,
+                                    inactiveTrackColor =
+                                        Color.White.copy(alpha = 0.3f),
+                                ),
+                            )
+
+                            Text(
+                                text = formatTime(safeDuration),
+                                color = Color.White,
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier.width(52.dp),
+                            )
+
+                            IconButton(onClick = {
+                                if (isFullscreen) exitFullscreen()
+                                else enterFullscreen()
+                            }) {
+                                Icon(
+                                    imageVector = if (isFullscreen)
+                                        Icons.Filled.FullscreenExit
+                                    else Icons.Filled.Fullscreen,
+                                    contentDescription = "Fullscreen",
+                                    tint = Color.White,
+                                )
+                            }
                         }
                     }
                 }
@@ -724,10 +1133,7 @@ fun FapFolderVideoPlayerScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .aspectRatio(
-                            (video.aspectRatio ?: (16.0 / 9.0)).toFloat()
-                                .takeIf { it > 0f } ?: (16f / 9f)
-                        ),
+                        .aspectRatio(initialAspect),
                 ) {
                     playerContent()
                 }
@@ -745,8 +1151,13 @@ fun FapFolderVideoPlayerScreen(
                         )
                     }
                     val meta = buildList {
-                        video.durationSeconds?.let { add(formatTime(it * 1000L)) }
-                        video.fileExtension?.let { add(it.uppercase()) }
+                        val secs: Int? = video.durationSeconds
+                        if (secs != null) {
+                            add(formatTime(secs.toLong() * 1000L))
+                        }
+                        video.fileExtension?.let { ext -> add(ext.uppercase()) }
+                        if (playbackSpeed != 1f) add(formatSpeed(playbackSpeed))
+                        if (muted) add("Muted")
                     }.joinToString(" · ")
                     if (meta.isNotBlank()) {
                         Text(
@@ -774,49 +1185,56 @@ fun FapFolderVideoPlayerScreen(
         }
     }
 
-    if (showResumeDialog) {
+    if (resumeDialogForPostId != null) {
         AlertDialog(
             onDismissRequest = {
-                showResumeDialog = false
+                resumeDialogForPostId = null
                 pendingResumeMs = 0L
+                runCatching { exoPlayer?.seekTo(0L) }
+                runCatching { exoPlayer?.play() }
             },
             title = { Text("Resume playback?") },
             text = {
-                Text("Resume from ${formatTime(pendingResumeMs)} or start from the beginning?")
+                Text(
+                    "Resume from ${formatTime(pendingResumeMs)} " +
+                            "or start from the beginning?"
+                )
             },
             confirmButton = {
                 TextButton(onClick = {
-                    showResumeDialog = false
-                    val target = pendingResumeMs
+                    val target: Long = pendingResumeMs
+                    resumeDialogForPostId = null
                     pendingResumeMs = 0L
-                    runCatching { exoPlayer?.seekTo(target) }
+                    runCatching {
+                        exoPlayer?.seekTo(target)
+                        exoPlayer?.play()
+                    }
                 }) { Text("Resume") }
             },
             dismissButton = {
                 TextButton(onClick = {
-                    showResumeDialog = false
+                    resumeDialogForPostId = null
                     pendingResumeMs = 0L
-                    runCatching { exoPlayer?.seekTo(0L) }
+                    runCatching {
+                        exoPlayer?.seekTo(0L)
+                        exoPlayer?.play()
+                    }
                 }) { Text("Start over") }
             },
         )
     }
 }
 
-private fun reportCompletion(
-    postId: Long?,
-    player: ExoPlayer,
-    scope: kotlinx.coroutines.CoroutineScope,
-) {
+private fun reportCompletion(postId: Long?, player: ExoPlayer) {
     if (postId == null || postId <= 0L) return
-    val position = runCatching { player.currentPosition }.getOrDefault(0L)
-    val duration = runCatching { player.duration }.getOrDefault(0L)
-    scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+    val pos: Long = safePosition(player)
+    val dur: Long = safeDuration(player)
+    ioScope.launch {
         runCatching {
             FapFolderHistoryRepo.savePlaybackProgress(
                 postId = postId,
-                positionMs = position,
-                durationMs = duration,
+                positionMs = pos,
+                durationMs = dur,
                 isPlaying = false,
                 completed = true,
             )
@@ -831,3 +1249,27 @@ private fun formatTime(ms: Long): String {
     val s = total % 60
     return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
 }
+
+private fun safeDuration(player: ExoPlayer?): Long {
+    if (player == null) return 0L
+    return try {
+        val d = player.duration
+        if (d > 0L) d else 0L
+    } catch (_: Throwable) {
+        0L
+    }
+}
+
+private fun safePosition(player: ExoPlayer?): Long {
+    if (player == null) return 0L
+    return try {
+        val p = player.currentPosition
+        if (p > 0L) p else 0L
+    } catch (_: Throwable) {
+        0L
+    }
+}
+
+private fun formatSpeed(speed: Float): String =
+    if (speed == speed.toInt().toFloat()) "${speed.toInt()}.0x"
+    else "${speed}x"

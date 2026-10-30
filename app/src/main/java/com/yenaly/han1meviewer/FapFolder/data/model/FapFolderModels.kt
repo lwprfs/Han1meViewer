@@ -132,7 +132,7 @@ sealed interface FapFolderMedia {
 
     data class Video(
         val videoId: Long?,
-        val onPlayId: Long?,
+       val onPlayId: Long?,
         val playUrl: String,
         val posterUrl: String?,
         val durationSeconds: Int?,
@@ -144,6 +144,13 @@ sealed interface FapFolderMedia {
     ) : FapFolderMedia {
         fun isExpired(nowEpochSeconds: Long = System.currentTimeMillis() / 1000L): Boolean =
             expirationEpoch != null && expirationEpoch <= nowEpochSeconds + 30L
+
+        val safeAspectRatio: Double
+            get() {
+                val raw = aspectRatio ?: return 16.0 / 9.0
+                if (raw.isNaN() || raw.isInfinite() || raw <= 0.0) return 16.0 / 9.0
+                return raw.coerceIn(0.3, 4.0)
+            }
     }
 
     data class Embed(

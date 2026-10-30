@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderMedia
+import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderPost
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderCommentParser
 import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderCommentCard
 import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderImageLightboxDialog
@@ -80,11 +81,12 @@ fun FapFolderPostDetailScreen(
         viewModel.load(slugOrId)
     }
 
+    var autoPlayConsumed by remember(slugOrId) { mutableStateOf(false) }
     LaunchedEffect(autoPlay, uiState.post) {
-        if (!autoPlay) return@LaunchedEffect
-        if (videoToPlay != null) return@LaunchedEffect
+        if (!autoPlay || autoPlayConsumed) return@LaunchedEffect
         val post = uiState.post ?: return@LaunchedEffect
         val video = post.primaryVideo ?: return@LaunchedEffect
+        autoPlayConsumed = true
         videoToPlay = video
     }
 
@@ -413,7 +415,7 @@ fun FapFolderPostDetailScreen(
     }
 }
 
-private fun coverUrlOf(post: com.yenaly.han1meviewer.FapFolder.data.model.FapFolderPost?): String? {
+private fun coverUrlOf(post: FapFolderPost?): String? {
     if (post == null) return null
     return post.primaryImage?.fullUrl
         ?: post.primaryVideo?.posterUrl
