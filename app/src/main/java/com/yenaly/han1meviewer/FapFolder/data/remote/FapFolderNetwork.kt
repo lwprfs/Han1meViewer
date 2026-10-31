@@ -148,7 +148,7 @@ object FapFolderNetwork {
 
         val proxyType = runCatching { Preferences.proxyType }
             .getOrDefault(HProxySelector.TYPE_SYSTEM)
-        if (proxyType != HProxySelector.TYPE_NONE &&
+        if (proxyType != HProxySelector.TYPE_DIRECT &&
             proxyType != HProxySelector.TYPE_SYSTEM
         ) {
             builder.proxySelector(HProxySelector())

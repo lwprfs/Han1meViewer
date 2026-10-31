@@ -166,7 +166,7 @@ fun FapFolderNavHost(
                 onOpenHistory = { navController.navigateSafely(FapFolderHistoryRoute) },
                 onOpenSettings = { navController.navigateSafely(FapFolderSettingsRoute) },
                 onSwitchSite = {
-                    activity.onBackPressedDispatcher.onBackPressed()
+                    activity.requestSiteSwitch()
                 },
                 onSessionExpired = {
                     retryTick = System.currentTimeMillis()
