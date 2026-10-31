@@ -17,6 +17,7 @@ import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderGroupMembersPage
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderHomeExtras
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderLightboxResponse
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderLoadMoreRequest
+import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderMedia
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderPost
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderSearchResult
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderSearchTab
@@ -43,13 +44,61 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.jsoup.Jsoup
+import org.json.JSONObject
 import okhttp3.Request
 import okhttp3.OkHttpClient
 
 object FapFolderNetworkRepo {
 
     private const val TAG = "FapFolderNetworkRepo"
+
+    private object AjaxThrottle {
+        private val mutex = Mutex()
+        private var lastAt: Long = 0L
+
+        suspend fun await() = mutex.withLock {
+            val now = System.currentTimeMillis()
+            val elapsed = now - lastAt
+            if (elapsed in 0 until FapFolderConstants.MIN_GAP_BETWEEN_PAGES_MS) {
+                val wait = FapFolderConstants.MIN_GAP_BETWEEN_PAGES_MS - elapsed
+                delay(wait)
+            }
+            lastAt = System.currentTimeMillis()
+        }
+    }
+
+    private object PageGetThrottle {
+        private val mutex = Mutex()
+        private var lastAt: Long = 0L
+
+        suspend fun await() = mutex.withLock {
+            val now = System.currentTimeMillis()
+            val elapsed = now - lastAt
+            if (elapsed in 0 until FapFolderConstants.MIN_GAP_BETWEEN_PAGE_GETS_MS) {
+                val wait = FapFolderConstants.MIN_GAP_BETWEEN_PAGE_GETS_MS - elapsed
+                delay(wait)
+            }
+            lastAt = System.currentTimeMillis()
+        }
+    }
+
+    private object LightboxThrottle {
+        private val mutex = Mutex()
+        private var lastAt: Long = 0L
+
+        suspend fun await() = mutex.withLock {
+            val now = System.currentTimeMillis()
+            val elapsed = now - lastAt
+            if (elapsed in 0 until FapFolderConstants.MIN_GAP_BETWEEN_LIGHTBOX_MS) {
+                val wait = FapFolderConstants.MIN_GAP_BETWEEN_LIGHTBOX_MS - elapsed
+                delay(wait)
+            }
+            lastAt = System.currentTimeMillis()
+        }
+    }
 
     data class FirstPageSnapshot(
         val items: List<FapFolderFeedItem>,
@@ -109,26 +158,17 @@ object FapFolderNetworkRepo {
         )
     }
 
-    private suspend fun rateLimit() {
-        delay(FapFolderConstants.MIN_GAP_BETWEEN_PAGES_MS)
-    }
+    private fun basePath(): String = FapFolderConstants.BASE_URL.trimEnd('/')
 
-    private suspend fun rateLimitLightbox() {
-        delay(FapFolderConstants.MIN_GAP_BETWEEN_LIGHTBOX_MS)
-    }
-
-    private fun basePath(): String =
-        FapFolderConstants.BASE_URL.trimEnd('/')
-
-    private fun uploadsBase(): String =
-        FapFolderSessionCache.uploadsBase()
+    private fun uploadsBase(): String = FapFolderSessionCache.uploadsBase()
 
     fun getPageWithExtras(
         path: String,
     ): Flow<WebsiteState<HomePageBundle>> = flow {
         emit(WebsiteState.Loading)
-        val url = basePath().trimEnd('/') + path
+        val url = basePath() + path
         try {
+            PageGetThrottle.await()
             val response = FapFolderNetwork.service.getByUrl(url)
             val rawBody = response.body()?.string()
             val code = response.code()
@@ -201,7 +241,7 @@ object FapFolderNetworkRepo {
     ): Flow<PageLoadingState<List<FapFolderFeedItem>>> = flow {
         emit(PageLoadingState.Loading)
         try {
-            rateLimit()
+            AjaxThrottle.await()
             val response = FapFolderNetwork.service.loadMore(
                 get = request.get,
                 offset = request.offset,
@@ -225,7 +265,7 @@ object FapFolderNetworkRepo {
                 return@flow
             }
 
-            val parsed = runCatching { org.json.JSONObject(rawBody) }.getOrNull()
+            val parsed = runCatching { JSONObject(rawBody) }.getOrNull()
             if (parsed == null) {
                 emit(PageLoadingState.NoMoreData)
                 return@flow
@@ -247,10 +287,7 @@ object FapFolderNetworkRepo {
                 return@flow
             }
 
-            val items: List<FapFolderFeedItem> = parseLoadMoreItems(
-                dataHtml = dataHtml,
-                request = request,
-            )
+            val items = parseLoadMoreItems(dataHtml = dataHtml, request = request)
 
             if (items.isEmpty()) {
                 emit(PageLoadingState.NoMoreData)
@@ -270,7 +307,7 @@ object FapFolderNetworkRepo {
     ): Flow<PageLoadingState<List<FapFolderFeedItem>>> = flow {
         emit(PageLoadingState.Loading)
         try {
-            rateLimit()
+            AjaxThrottle.await()
             val response = FapFolderNetwork.service.filterPosts(
                 get = FapFolderConstants.FEED_GET_NEWSFEED,
                 filter = filter,
@@ -282,7 +319,7 @@ object FapFolderNetworkRepo {
                 emit(PageLoadingState.Error(IllegalStateException("HTTP ${response.code()}")))
                 return@flow
             }
-            val parsed = runCatching { org.json.JSONObject(rawBody) }.getOrNull()
+            val parsed = runCatching { JSONObject(rawBody) }.getOrNull()
             if (parsed == null) {
                 emit(PageLoadingState.NoMoreData)
                 return@flow
@@ -317,9 +354,9 @@ object FapFolderNetworkRepo {
 
     fun loadDedicatedFeed(path: String): Flow<PageLoadingState<List<FapFolderFeedItem>>> = flow {
         emit(PageLoadingState.Loading)
-        val url = basePath().trimEnd('/') + path
+        val url = basePath() + path
         try {
-            rateLimit()
+            PageGetThrottle.await()
             val response = FapFolderNetwork.service.getByUrl(url)
             val rawBody = response.body()?.string().orEmpty()
             if (!response.isSuccessful || rawBody.isBlank()) {
@@ -418,13 +455,40 @@ object FapFolderNetworkRepo {
                 )
             }
 
-            get == "photos" && request.type == "group" -> {
+            get == FapFolderConstants.FEED_GET_PHOTOS_TAB && request.type == "group" -> {
                 val images = FapFolderAlbumParser.parseAlbumFromHtml(
                     html = dataHtml,
                     baseUrl = base,
                     uploadsBase = uploads,
                 )
-                images.map { image -> wrapImageAsFeedItem(image) }
+                if (images.isNotEmpty()) {
+                    images.map { image -> wrapImageAsFeedItem(image) }
+                } else {
+                    val doc = Jsoup.parseBodyFragment(dataHtml, base)
+                    val panel = doc.selectFirst("div.panel-photos") ?: doc.body()
+                    FapFolderProfileParser.parsePhotoTiles(panel)
+                        .map { tile ->
+                            wrapImageAsFeedItem(
+                                FapFolderMedia.Image(
+                                    photoId = tile.photoId,
+                                    fullUrl = tile.fullUrl,
+                                    previewUrl = tile.previewUrl,
+                                    context = "photos",
+                                    alt = tile.alt,
+                                )
+                            )
+                        }
+                }
+            }
+
+            get == FapFolderConstants.FEED_GET_VIDEOS_TAB && request.type == "group" -> {
+                val posts = FapFolderPostParser.parsePostsFromHtml(
+                    html = dataHtml,
+                    baseUrl = base,
+                    uploadsBase = uploads,
+                    includeComments = false,
+                )
+                posts.map { FapFolderFeedItem.Post(it) }
             }
 
             else -> {
@@ -439,10 +503,8 @@ object FapFolderNetworkRepo {
         }
     }
 
-    private fun wrapImageAsFeedItem(
-        image: com.yenaly.han1meviewer.FapFolder.data.model.FapFolderMedia.Image,
-    ): FapFolderFeedItem.Post {
-        val post = com.yenaly.han1meviewer.FapFolder.data.model.FapFolderPost(
+    private fun wrapImageAsFeedItem(image: FapFolderMedia.Image): FapFolderFeedItem.Post {
+        val post = FapFolderPost(
             postId = image.photoId ?: 0L,
             slug = null,
             permalink = null,
@@ -491,19 +553,17 @@ object FapFolderNetworkRepo {
         }
         val url = basePath() + path
         try {
-            rateLimit()
+            PageGetThrottle.await()
             val response = FapFolderNetwork.service.getByUrl(url)
             val rawBody = response.body()?.string().orEmpty()
             if (!response.isSuccessful || rawBody.isBlank()) {
                 emit(errorState(response.code(), rawBody))
                 return@flow
             }
-
             if (FapFolderHtmlUtils.looksLikeCloudflareChallenge(rawBody)) {
                 emit(WebsiteState.Error(IllegalStateException("Cloudflare challenge.")))
                 return@flow
             }
-
             FapFolderSessionParser.parseAndCache(rawBody, url)
 
             val result = FapFolderSearchParser.parseSearchPage(
@@ -529,7 +589,7 @@ object FapFolderNetworkRepo {
                 emit(WebsiteState.Error(IllegalStateException("HTTP ${response.code()}")))
                 return@flow
             }
-            val parsed = runCatching { org.json.JSONObject(rawBody) }.getOrNull()
+            val parsed = runCatching { JSONObject(rawBody) }.getOrNull()
             if (parsed == null) {
                 emit(WebsiteState.Error(IllegalStateException("Malformed autocomplete response.")))
                 return@flow
@@ -550,7 +610,9 @@ object FapFolderNetworkRepo {
         }
     }.flowOn(Dispatchers.IO)
 
-    fun autocompleteRows(query: String): Flow<WebsiteState<List<FapFolderAutocompleteSuggestion>>> = flow {
+    fun autocompleteRows(
+        query: String,
+    ): Flow<WebsiteState<List<FapFolderAutocompleteSuggestion>>> = flow {
         emit(WebsiteState.Loading)
         val base = basePath()
         try {
@@ -560,7 +622,7 @@ object FapFolderNetworkRepo {
                 emit(errorState(response.code(), rawBody))
                 return@flow
             }
-            val parsed = runCatching { org.json.JSONObject(rawBody) }.getOrNull()
+            val parsed = runCatching { JSONObject(rawBody) }.getOrNull()
             if (parsed == null) {
                 emit(WebsiteState.Error(IllegalStateException("Malformed autocomplete response.")))
                 return@flow
@@ -587,7 +649,9 @@ object FapFolderNetworkRepo {
         val slug = slugOrId.trim()
         val url = if (slug.startsWith("http")) slug else basePath() + "/posts/$slug"
         try {
+            PageGetThrottle.await()
             val response = FapFolderNetwork.service.getPostUrl(url)
+
             val rawBody = response.body()?.string().orEmpty()
             if (!response.isSuccessful || rawBody.isBlank()) {
                 emit(
@@ -654,7 +718,7 @@ object FapFolderNetworkRepo {
             return@flow
         }
         try {
-            val request = okhttp3.Request.Builder()
+            val request = Request.Builder()
                 .url(cleaned)
                 .get()
                 .header("referer", FapFolderConstants.HEADER_REFERER)
@@ -697,6 +761,7 @@ object FapFolderNetworkRepo {
         emit(VideoLoadingState.Loading)
         val url = basePath() + "/groups/${slug.trim('/')}"
         try {
+            PageGetThrottle.await()
             val response = FapFolderNetwork.service.getGroupUrl(url)
             val rawBody = response.body()?.string().orEmpty()
             if (!response.isSuccessful || rawBody.isBlank()) {
@@ -723,7 +788,9 @@ object FapFolderNetworkRepo {
         }
     }.flowOn(Dispatchers.IO)
 
-    fun getProfilePage(pathOrUsername: String): Flow<VideoLoadingState<FapFolderUserProfile>> = flow {
+    fun getProfilePage(
+        pathOrUsername: String,
+    ): Flow<VideoLoadingState<FapFolderUserProfile>> = flow {
         emit(VideoLoadingState.Loading)
         val clean = pathOrUsername.trim('/')
         val url = if (clean.startsWith("http")) {
@@ -734,6 +801,7 @@ object FapFolderNetworkRepo {
             basePath() + "/$clean"
         }
         try {
+            PageGetThrottle.await()
             val response = FapFolderNetwork.service.getProfileUrl(url)
             val rawBody = response.body()?.string().orEmpty()
             if (!response.isSuccessful || rawBody.isBlank()) {
@@ -760,10 +828,13 @@ object FapFolderNetworkRepo {
         }
     }.flowOn(Dispatchers.IO)
 
-    fun getAlbumPage(albumId: String): Flow<VideoLoadingState<FapFolderAlbumPage>> = flow {
+    fun getAlbumPage(
+        albumId: String,
+    ): Flow<VideoLoadingState<FapFolderAlbumPage>> = flow {
         emit(VideoLoadingState.Loading)
         val url = basePath() + "/photos/${albumId.trim('/')}"
         try {
+            PageGetThrottle.await()
             val response = FapFolderNetwork.service.getAlbumUrl(url)
             val rawBody = response.body()?.string().orEmpty()
             if (!response.isSuccessful || rawBody.isBlank()) {
@@ -796,7 +867,7 @@ object FapFolderNetworkRepo {
     ): Flow<WebsiteState<FapFolderLightboxResponse>> = flow {
         emit(WebsiteState.Loading)
         try {
-            rateLimitLightbox()
+            LightboxThrottle.await()
             val response = FapFolderNetwork.service.lightbox(
                 photoId = photoId.toString(),
                 context = context,
@@ -855,7 +926,7 @@ object FapFolderNetworkRepo {
     ): Flow<PageLoadingState<FapFolderCommentsPage>> = flow {
         emit(PageLoadingState.Loading)
         try {
-            rateLimit()
+            AjaxThrottle.await()
             val response = FapFolderNetwork.service.filterComments(
                 get = filter,
                 id = postId.toString(),
@@ -866,7 +937,7 @@ object FapFolderNetworkRepo {
                 emit(PageLoadingState.Error(IllegalStateException("HTTP ${response.code()}")))
                 return@flow
             }
-            val parsed = runCatching { org.json.JSONObject(rawBody) }.getOrNull()
+            val parsed = runCatching { JSONObject(rawBody) }.getOrNull()
             if (parsed == null) {
                 emit(PageLoadingState.NoMoreData)
                 return@flow
@@ -912,7 +983,7 @@ object FapFolderNetworkRepo {
     ): Flow<PageLoadingState<List<FapFolderComment>>> = flow {
         emit(PageLoadingState.Loading)
         try {
-            rateLimit()
+            AjaxThrottle.await()
             val response = FapFolderNetwork.service.filterComments(
                 get = FapFolderCommentParser.FILTER_MOST_RECENT,
                 id = commentId.toString(),
@@ -923,7 +994,7 @@ object FapFolderNetworkRepo {
                 emit(PageLoadingState.Error(IllegalStateException("HTTP ${response.code()}")))
                 return@flow
             }
-            val parsed = runCatching { org.json.JSONObject(rawBody) }.getOrNull()
+            val parsed = runCatching { JSONObject(rawBody) }.getOrNull()
             if (parsed == null) {
                 emit(PageLoadingState.NoMoreData)
                 return@flow
@@ -961,7 +1032,7 @@ object FapFolderNetworkRepo {
         val url = basePath() + "/groups/${slug.trim('/')}/members" +
                 if (page > 1) "/page/$page/" else ""
         try {
-            rateLimit()
+            PageGetThrottle.await()
             val response = FapFolderNetwork.service.getByUrl(url)
             val rawBody = response.body()?.string().orEmpty()
             if (!response.isSuccessful || rawBody.isBlank()) {
@@ -1002,7 +1073,7 @@ object FapFolderNetworkRepo {
         }
         val url = basePath() + "/$clean/groups"
         try {
-            rateLimit()
+            PageGetThrottle.await()
             val response = FapFolderNetwork.service.getByUrl(url)
             val rawBody = response.body()?.string().orEmpty()
             if (!response.isSuccessful || rawBody.isBlank()) {
@@ -1035,7 +1106,7 @@ object FapFolderNetworkRepo {
             return@flow
         }
         try {
-            rateLimit()
+            AjaxThrottle.await()
             val response = FapFolderNetwork.service.loadMore(
                 get = "profile_groups",
                 offset = offset,
@@ -1053,7 +1124,7 @@ object FapFolderNetworkRepo {
                 emit(PageLoadingState.Error(IllegalStateException("HTTP ${response.code()}")))
                 return@flow
             }
-            val parsed = runCatching { org.json.JSONObject(rawBody) }.getOrNull()
+            val parsed = runCatching { JSONObject(rawBody) }.getOrNull()
             if (parsed == null) {
                 emit(PageLoadingState.NoMoreData)
                 return@flow
@@ -1100,7 +1171,7 @@ object FapFolderNetworkRepo {
                 emit(WebsiteState.Error(IllegalStateException("HTTP ${response.code()}")))
                 return@flow
             }
-            val parsed = runCatching { org.json.JSONObject(rawBody) }.getOrNull()
+            val parsed = runCatching { JSONObject(rawBody) }.getOrNull()
             if (parsed != null && parsed.has("callback") && !parsed.isNull("callback")) {
                 emit(WebsiteState.Error(IllegalStateException("Session expired.")))
                 return@flow
@@ -1137,7 +1208,7 @@ object FapFolderNetworkRepo {
                 emit(WebsiteState.Error(IllegalStateException("HTTP ${response.code()}")))
                 return@flow
             }
-            val parsed = runCatching { org.json.JSONObject(rawBody) }.getOrNull()
+            val parsed = runCatching { JSONObject(rawBody) }.getOrNull()
             if (parsed != null && parsed.has("callback") && !parsed.isNull("callback")) {
                 emit(WebsiteState.Error(IllegalStateException("Session expired.")))
                 return@flow
@@ -1169,7 +1240,7 @@ object FapFolderNetworkRepo {
                 emit(WebsiteState.Error(IllegalStateException("HTTP ${response.code()}")))
                 return@flow
             }
-            val parsed = runCatching { org.json.JSONObject(rawBody) }.getOrNull()
+            val parsed = runCatching { JSONObject(rawBody) }.getOrNull()
             if (parsed?.optBoolean("error", false) == true) {
                 emit(
                     WebsiteState.Error(
@@ -1258,7 +1329,7 @@ object FapFolderNetworkRepo {
                 emit(WebsiteState.Error(IllegalStateException("HTTP ${response.code()}")))
                 return@flow
             }
-            val parsed = runCatching { org.json.JSONObject(rawBody) }.getOrNull()
+            val parsed = runCatching { JSONObject(rawBody) }.getOrNull()
             if (parsed != null && parsed.has("callback") && !parsed.isNull("callback")) {
                 FapFolderSessionCache.clear()
                 emit(WebsiteState.Error(IllegalStateException("Session expired.")))

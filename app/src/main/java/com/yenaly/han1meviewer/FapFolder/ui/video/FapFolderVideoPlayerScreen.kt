@@ -70,6 +70,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -77,6 +78,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -88,6 +90,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.common.PlaybackException
 import androidx.media3.datasource.DefaultDataSource
@@ -116,6 +119,8 @@ private data class DoubleTapSeek(val deltaMs: Long, val direction: Int)
 
 private const val SEEK_STEP_MS = 10_000L
 private const val MAX_RELOAD_ATTEMPTS = 3
+private const val TAP_SLOP_PX = 24f
+private const val DOUBLE_TAP_TIMEOUT_MS = 260L
 private val PLAYBACK_SPEEDS = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
 
 private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -159,20 +164,21 @@ fun FapFolderVideoPlayerScreen(
     var playbackError by remember { mutableStateOf<String?>(null) }
 
     var positionMs by remember(playerKey) {
-        mutableStateOf<Long>(stored?.first ?: 0L)
+        mutableLongStateOf(stored?.first ?: 0L)
     }
     var durationMs by remember(playerKey) {
-        mutableStateOf<Long>(stored?.second ?: 0L)
+        mutableLongStateOf(stored?.second ?: 0L)
     }
 
     var showControls by remember { mutableStateOf(true) }
     var controlsLocked by remember { mutableStateOf(false) }
+    var controlsInteractionTick by remember { mutableLongStateOf(0L) }
     var isFullscreen by remember { mutableStateOf(false) }
     var fullscreenLandscape by remember { mutableStateOf(videoIsLandscape) }
     var reloadToken by remember { mutableStateOf(0) }
     var reloadAttempts by remember { mutableStateOf(0) }
     var resumeDialogForPostId by remember { mutableStateOf<Long?>(null) }
-    var pendingResumeMs by remember { mutableStateOf<Long>(0L) }
+    var pendingResumeMs by remember { mutableLongStateOf(0L) }
     var completionReported by remember { mutableStateOf(false) }
     var expiryHandled by remember { mutableStateOf(false) }
 
@@ -304,9 +310,15 @@ fun FapFolderVideoPlayerScreen(
             .setReadTimeoutMs(20_000)
 
         val dataSourceFactory = DefaultDataSource.Factory(context, httpFactory)
+
+        val mimeType = video.fileExtension
+            ?.takeIf { it.isNotBlank() }
+            ?.let { MimeTypes.getMimeTypeFromExtension(it) }
+            ?: MimeTypes.VIDEO_MP4
+
         val mediaItem = MediaItem.Builder()
             .setUri(playableUrl)
-            .setMimeType("video/mp4")
+            .setMimeType(mimeType)
             .build()
         val mediaSource = ProgressiveMediaSource.Factory(dataSourceFactory)
             .createMediaSource(mediaItem)
@@ -315,6 +327,8 @@ fun FapFolderVideoPlayerScreen(
             setMediaSource(mediaSource)
             prepare()
             playWhenReady = false
+            setPlaybackSpeed(playbackSpeed)
+            volume = if (muted) 0f else 1f
         }
         exoPlayer = player
         isBuffering = true
@@ -331,8 +345,8 @@ fun FapFolderVideoPlayerScreen(
             override fun onIsPlayingChanged(playing: Boolean) {
                 isPlaying = playing
                 if (!playing) {
-                    val pos: Long = safePosition(player)
-                    val dur: Long = safeDuration(player)
+                    val pos = safePosition(player)
+                    val dur = safeDuration(player)
                     positionMs = pos
                     if (dur > 0L) durationMs = dur
                     FapFolderProgressStore.put(playerKey, pos, dur)
@@ -343,7 +357,7 @@ fun FapFolderVideoPlayerScreen(
                 isBuffering = state == Player.STATE_BUFFERING
                 if (state == Player.STATE_READY) {
                     isReady = true
-                    val d: Long = safeDuration(player)
+                    val d = safeDuration(player)
                     if (d > 0L) durationMs = d
                     surfaceRef.value?.let { player.setVideoSurfaceView(it) }
                 }
@@ -389,8 +403,8 @@ fun FapFolderVideoPlayerScreen(
 
         onDispose {
             doubleTapJob?.cancel()
-            val currentPosition: Long = safePosition(player)
-            val currentDuration: Long = safeDuration(player)
+            val currentPosition = safePosition(player)
+            val currentDuration = safeDuration(player)
             if (currentPosition > 0L) {
                 FapFolderProgressStore.put(playerKey, currentPosition, currentDuration)
             }
@@ -407,8 +421,8 @@ fun FapFolderVideoPlayerScreen(
         while (isActive) {
             delay(500)
             if (player.isPlaying) {
-                val currentPos: Long = safePosition(player)
-                val currentDur: Long = safeDuration(player)
+                val currentPos = safePosition(player)
+                val currentDur = safeDuration(player)
                 positionMs = currentPos
                 if (currentDur > 0L) durationMs = currentDur
                 FapFolderProgressStore.put(playerKey, currentPos, currentDur)
@@ -435,43 +449,49 @@ fun FapFolderVideoPlayerScreen(
         }
     }
 
-    LaunchedEffect(showControls, isPlaying, controlsLocked) {
+    LaunchedEffect(showControls, isPlaying, controlsLocked, controlsInteractionTick) {
         if (showControls && isPlaying && !controlsLocked) {
-            delay(3000)
+            delay(3500)
             showControls = false
         }
+    }
+
+    fun revealControls() {
+        if (!showControls) showControls = true
+        controlsInteractionTick = System.currentTimeMillis()
     }
 
     fun togglePlayPause() {
         exoPlayer?.let { player ->
             if (player.isPlaying) player.pause() else player.play()
-            showControls = true
+            revealControls()
         }
     }
 
     fun seekTo(ms: Long) {
-        val safe: Long = if (ms < 0L) 0L else ms
+        val safe = if (ms < 0L) 0L else ms
         exoPlayer?.seekTo(safe)
         positionMs = safe
     }
 
     fun seekBy(deltaMs: Long) {
         val player = exoPlayer ?: return
-        val dur: Long = safeDuration(player)
-        val current: Long = safePosition(player)
-        val upper: Long = if (dur > 0L) dur else Long.MAX_VALUE
-        var target: Long = current + deltaMs
+        val dur = safeDuration(player)
+        val current = safePosition(player)
+        val upper = if (dur > 0L) dur else Long.MAX_VALUE
+        var target = current + deltaMs
         if (target < 0L) target = 0L
         if (target > upper) target = upper
         player.seekTo(target)
         positionMs = target
-        showControls = true
+        revealControls()
     }
 
     fun toggleMute() {
         val player = exoPlayer ?: return
         muted = !muted
         player.volume = if (muted) 0f else 1f
+        revealControls()
     }
 
     fun flashDoubleTapSeek(direction: Int) {
@@ -532,7 +552,7 @@ fun FapFolderVideoPlayerScreen(
         applyFullscreenOrientation(videoIsLandscape, force = false)
         hideSystemBars()
         isFullscreen = true
-        showControls = true
+        revealControls()
         exoPlayer?.let { p -> surfaceRef.value?.let { p.setVideoSurfaceView(it) } }
     }
 
@@ -551,7 +571,7 @@ fun FapFolderVideoPlayerScreen(
             hideSystemBars()
             isFullscreen = true
         }
-        showControls = true
+        revealControls()
         exoPlayer?.let { p -> surfaceRef.value?.let { p.setVideoSurfaceView(it) } }
     }
 
@@ -627,7 +647,7 @@ fun FapFolderVideoPlayerScreen(
                         exoPlayer?.clearVideoSurfaceView(sv)
                     }
                     if (surfaceRef.value === sv) surfaceRef.value = null
-                    (view as? ViewGroup)?.removeAllViews()
+                    (view as? ViewGroup)?.removeAllChildren()
                 },
             )
 
@@ -636,73 +656,59 @@ fun FapFolderVideoPlayerScreen(
                     .fillMaxSize()
                     .pointerInput(controlsLocked) {
                         if (controlsLocked) return@pointerInput
-                        detectTapGestures(
-                            onTap = {
-                                if (playbackError == null) {
-                                    showControls = !showControls
-                                }
-                            },
-                            onDoubleTap = { offset ->
-                                if (playbackError != null) {
-                                    return@detectTapGestures
-                                }
-                                val forward = offset.x >= size.width / 2f
-                                seekBy(
-                                    if (forward) SEEK_STEP_MS else -SEEK_STEP_MS
-                                )
-                                flashDoubleTapSeek(if (forward) 1 else -1)
-                            },
-                        )
-                    },
-            )
 
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .pointerInput(controlsLocked) {
-                        if (controlsLocked) return@pointerInput
-                        var mode = 0
-                        var isVolume = false
+                        var lastTapTime = 0L
+                        var dragMode = 0
+                        var dragIsVolume = false
+                        var dragged = false
+                        var downTime = 0L
+                        var downPos = Offset.Zero
+                        var pendingTapJob: Job? = null
+
                         detectDragGestures(
                             onDragStart = { offset ->
-                                mode = 0
-                                isVolume = offset.x >= size.width / 2f
+                                dragged = false
+                                dragMode = 0
+                                dragIsVolume = offset.x >= size.width / 2f
                             },
-                            onDrag = { _, dragAmount ->
-                                if (mode == 0) {
-                                    mode =
-                                        if (abs(dragAmount.x) > abs(dragAmount.y)) 2
-                                        else 1
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                if (!dragged) {
+                                    if (abs(dragAmount.x) < TAP_SLOP_PX &&
+                                        abs(dragAmount.y) < TAP_SLOP_PX
+                                    ) {
+                                        return@detectDragGestures
+                                    }
+                                    dragged = true
+                                    revealControls()
                                 }
-                                if (mode == 1) {
-                                    if (isVolume) {
-                                        val cur: Int =
-                                            audioManager?.getStreamVolume(
-                                                AudioManager.STREAM_MUSIC
-                                            ) ?: 0
-                                        val delta: Int = (-dragAmount.y /
+                                if (dragMode == 0) {
+                                    dragMode =
+                                        if (abs(dragAmount.x) > abs(dragAmount.y)) 2 else 1
+                                }
+                                if (dragMode == 1) {
+                                    if (dragIsVolume) {
+                                        val cur = audioManager
+                                            ?.getStreamVolume(AudioManager.STREAM_MUSIC)
+                                            ?: 0
+                                        val delta = (-dragAmount.y /
                                                 size.height * maxVolume * 2f).toInt()
-                                        var newVol: Int = cur + delta
+                                        var newVol = cur + delta
                                         if (newVol < 0) newVol = 0
                                         if (newVol > maxVolume) newVol = maxVolume
                                         audioManager?.setStreamVolume(
                                             AudioManager.STREAM_MUSIC, newVol, 0
                                         )
-                                        val fraction: Float =
-                                            if (maxVolume > 0)
-                                                newVol.toFloat() / maxVolume.toFloat()
-                                            else 0f
+                                        val fraction = if (maxVolume > 0)
+                                            newVol.toFloat() / maxVolume.toFloat() else 0f
                                         flashOverlay(fraction, true)
                                     } else {
                                         val window = activity?.window
                                         if (window != null) {
                                             val attrs = window.attributes
-                                            val cur: Float =
-                                                if (attrs.screenBrightness < 0f)
-                                                    0.5f
-                                                else attrs.screenBrightness
-                                            var newB: Float =
-                                                cur - dragAmount.y / size.height
+                                            val cur = if (attrs.screenBrightness < 0f)
+                                                0.5f else attrs.screenBrightness
+                                            var newB = cur - dragAmount.y / size.height
                                             if (newB < 0.05f) newB = 0.05f
                                             if (newB > 1f) newB = 1f
                                             attrs.screenBrightness = newB
@@ -710,17 +716,45 @@ fun FapFolderVideoPlayerScreen(
                                             flashOverlay(newB, false)
                                         }
                                     }
-                                } else {
-                                    val dur: Long = safeDuration(exoPlayer)
+                                } else if (dragMode == 2) {
+                                    val dur = safeDuration(exoPlayer)
                                     if (dur > 0L) {
-                                        val delta: Long =
+                                        val delta =
                                             (dragAmount.x / size.width *
                                                     dur.toFloat()).toLong()
                                         seekBy(delta)
                                     }
                                 }
                             },
-                            onDragEnd = { showControls = true },
+                            onDragEnd = {
+                                if (dragged) revealControls()
+                                dragMode = 0
+                                dragged = false
+                            },
+                            onDragCancel = {
+                                dragMode = 0
+                                dragged = false
+                            },
+                        )
+                    }
+                    .pointerInput(controlsLocked) {
+                        if (controlsLocked) return@pointerInput
+                        detectTapGestures(
+                            onTap = { offset ->
+                                if (playbackError != null) return@detectTapGestures
+                                if (showControls) {
+                                    showControls = false
+                                } else {
+                                    revealControls()
+                                }
+                            },
+                            onDoubleTap = { offset ->
+                                if (playbackError != null) return@detectTapGestures
+                                val forward = offset.x >= size.width / 2f
+                                seekBy(if (forward) SEEK_STEP_MS else -SEEK_STEP_MS)
+                                flashDoubleTapSeek(if (forward) 1 else -1)
+                                revealControls()
+                            },
                         )
                     },
             )
@@ -732,9 +766,7 @@ fun FapFolderVideoPlayerScreen(
                     modifier = Modifier
                         .align(alignment)
                         .padding(horizontal = 32.dp)
-                        .background(
-                            Color.Black.copy(alpha = 0.55f), CircleShape
-                        )
+                        .background(Color.Black.copy(alpha = 0.55f), CircleShape)
                         .padding(horizontal = 16.dp, vertical = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -850,7 +882,10 @@ fun FapFolderVideoPlayerScreen(
                         .background(Color.Black.copy(alpha = 0.6f), CircleShape)
                         .padding(8.dp),
                 ) {
-                    IconButton(onClick = { controlsLocked = false }) {
+                    IconButton(onClick = {
+                        controlsLocked = false
+                        revealControls()
+                    }) {
                         Icon(
                             imageVector = Icons.Filled.Lock,
                             contentDescription = "Unlock controls",
@@ -906,7 +941,10 @@ fun FapFolderVideoPlayerScreen(
                             )
                         }
                         Box {
-                            IconButton(onClick = { speedMenuOpen = true }) {
+                            IconButton(onClick = {
+                                speedMenuOpen = true
+                                revealControls()
+                            }) {
                                 Text(
                                     text = formatSpeed(playbackSpeed),
                                     color = Color.White,
@@ -930,12 +968,16 @@ fun FapFolderVideoPlayerScreen(
                                             playbackSpeed = speed
                                             exoPlayer?.setPlaybackSpeed(speed)
                                             speedMenuOpen = false
+                                            revealControls()
                                         },
                                     )
                                 }
                             }
                         }
-                        IconButton(onClick = { controlsLocked = true }) {
+                        IconButton(onClick = {
+                            controlsLocked = true
+                            revealControls()
+                        }) {
                             Icon(
                                 imageVector = Icons.Filled.Lock,
                                 contentDescription = "Lock controls",
@@ -1029,16 +1071,14 @@ fun FapFolderVideoPlayerScreen(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            val safeDuration: Long =
-                                if (durationMs > 0L) durationMs else 0L
-                            val safePosition: Long =
-                                if (positionMs > 0L) positionMs else 0L
+                            val safeDur = if (durationMs > 0L) durationMs else 0L
+                            val safePos = if (positionMs > 0L) positionMs else 0L
 
-                            val displayPosition: Long = if (sliderDragging) {
+                            val displayPosition = if (sliderDragging) {
                                 val ratio = sliderValue.toDouble()
-                                (ratio * safeDuration.toDouble()).toLong()
+                                (ratio * safeDur.toDouble()).toLong()
                             } else {
-                                safePosition
+                                safePos
                             }
 
                             Text(
@@ -1048,11 +1088,11 @@ fun FapFolderVideoPlayerScreen(
                                 modifier = Modifier.width(52.dp),
                             )
 
-                            val sliderFraction: Float = when {
+                            val sliderFraction = when {
                                 sliderDragging -> sliderValue
-                                safeDuration > 0L -> {
-                                    val ratio = safePosition.toFloat() /
-                                            safeDuration.toFloat()
+                                safeDur > 0L -> {
+                                    val ratio = safePos.toFloat() /
+                                            safeDur.toFloat()
                                     if (ratio < 0f) 0f
                                     else if (ratio > 1f) 1f
                                     else ratio
@@ -1065,13 +1105,15 @@ fun FapFolderVideoPlayerScreen(
                                 onValueChange = {
                                     sliderDragging = true
                                     sliderValue = it
+                                    revealControls()
                                 },
                                 onValueChangeFinished = {
                                     val ratio = sliderValue.toDouble()
                                     val target =
-                                        (ratio * safeDuration.toDouble()).toLong()
+                                        (ratio * safeDur.toDouble()).toLong()
                                     seekTo(target)
                                     sliderDragging = false
+                                    revealControls()
                                 },
                                 modifier = Modifier.weight(1f),
                                 colors = SliderDefaults.colors(
@@ -1084,7 +1126,7 @@ fun FapFolderVideoPlayerScreen(
                             )
 
                             Text(
-                                text = formatTime(safeDuration),
+                                text = formatTime(safeDur),
                                 color = Color.White,
                                 style = MaterialTheme.typography.labelSmall,
                                 modifier = Modifier.width(52.dp),
@@ -1164,7 +1206,7 @@ fun FapFolderVideoPlayerScreen(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    val target: Long = pendingResumeMs
+                    val target = pendingResumeMs
                     resumeDialogForPostId = null
                     pendingResumeMs = 0L
                     runCatching {
@@ -1210,7 +1252,7 @@ private fun TitleBlock(
             overflow = TextOverflow.Ellipsis,
         )
         val meta = buildList {
-            val secs: Int? = video.durationSeconds
+            val secs = video.durationSeconds
             if (secs != null) add(formatTime(secs.toLong() * 1000L))
             video.fileExtension?.let { ext -> add(ext.uppercase()) }
             if (playbackSpeed != 1f) add(formatSpeed(playbackSpeed))
@@ -1287,8 +1329,8 @@ private fun StreamUrlRow(
 
 private fun reportCompletion(postId: Long?, player: ExoPlayer) {
     if (postId == null || postId <= 0L) return
-    val pos: Long = safePosition(player)
-    val dur: Long = safeDuration(player)
+    val pos = safePosition(player)
+    val dur = safeDuration(player)
     ioScope.launch {
         runCatching {
             FapFolderHistoryRepo.savePlaybackProgress(

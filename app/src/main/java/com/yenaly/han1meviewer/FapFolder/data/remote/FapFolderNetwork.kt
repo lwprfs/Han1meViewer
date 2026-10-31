@@ -2,6 +2,7 @@ package com.yenaly.han1meviewer.FapFolder.data.remote
 
 import android.content.Context
 import android.util.Log
+import com.yenaly.han1meviewer.BuildConfig
 import com.yenaly.han1meviewer.FapFolder.common.FapFolderConstants
 import com.yenaly.han1meviewer.FapFolder.common.FapFolderHeaders
 import com.yenaly.han1meviewer.logic.network.HDns
@@ -120,7 +121,7 @@ object FapFolderNetwork {
     }
 
     private fun buildClient(): OkHttpClient {
-        return OkHttpClient.Builder()
+        val builder = OkHttpClient.Builder()
             .connectTimeout(FapFolderConstants.CONNECT_TIMEOUT_S, TimeUnit.SECONDS)
             .readTimeout(FapFolderConstants.READ_TIMEOUT_S, TimeUnit.SECONDS)
             .writeTimeout(FapFolderConstants.CALL_TIMEOUT_S, TimeUnit.SECONDS)
@@ -132,7 +133,6 @@ object FapFolderNetwork {
             .dns(HDns())
             .proxySelector(HProxySelector())
             .addInterceptor(BrotliInterceptor)
-            .addInterceptor(UrlLoggingInterceptor())
             .addInterceptor { chain ->
                 val original = chain.request()
                 val builder = original.newBuilder()
@@ -152,7 +152,12 @@ object FapFolderNetwork {
                 }
                 chain.proceed(builder.build())
             }
-            .build()
+
+        if (BuildConfig.DEBUG) {
+            builder.addInterceptor(UrlLoggingInterceptor())
+        }
+
+        return builder.build()
     }
 
     fun normalizeUrl(path: String): String {
@@ -160,11 +165,7 @@ object FapFolderNetwork {
     }
 
     fun rebuildNetwork() {
-        Log.d(TAG, "Rebuilding FapFolder network")
-        synchronized(this) {
-            _client = null
-            _service = null
-        }
+        Log.d(TAG, "Refreshing cookie jar (client preserved)")
         val jar = getOrCreateCookieJar()
         jar.restoreFromPreferences()
     }
