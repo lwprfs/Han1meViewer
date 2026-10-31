@@ -1,5 +1,10 @@
 package com.yenaly.han1meviewer.HentaiMama.ui.upcoming
 
+import com.yenaly.han1meviewer.ui.component.SiteBackButton
+import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
+import com.yenaly.han1meviewer.ui.component.SiteEmptyContent
+import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
+import com.yenaly.han1meviewer.ui.component.SiteErrorContent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -41,7 +46,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -64,9 +68,6 @@ import com.yenaly.han1meviewer.HentaiMama.data.model.UpcomingCard
 import com.yenaly.han1meviewer.HentaiMama.data.model.UpcomingMonthOption
 import com.yenaly.han1meviewer.HentaiMama.settings.HentaiMamaCardSettings
 import com.yenaly.han1meviewer.R
-import com.yenaly.han1meviewer.ui.component.content.EmptyContent
-import com.yenaly.han1meviewer.ui.component.content.ErrorContent
-import com.yenaly.han1meviewer.ui.component.content.LoadingContent
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
 import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
@@ -113,7 +114,7 @@ fun HentaiMamaUpcomingScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            SiteTopAppBar(
                 title = {
                     Column {
                         Text(
@@ -129,14 +130,7 @@ fun HentaiMamaUpcomingScreen(
                         )
                     }
                 },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                        )
-                    }
-                },
+                navigationIcon = { SiteBackButton(onClick = onBack) },
                 actions = {
                     IconButton(
                         onClick = { showMonthPicker = true },
@@ -171,11 +165,11 @@ fun HentaiMamaUpcomingScreen(
             val selected = uiState.selectedMonth
             when {
                 uiState.isLoadingMonths && selected == null -> {
-                    LoadingContent(message = "Loading upcoming months…")
+                    SiteLoadingContent(message = "Loading upcoming months…")
                 }
 
                 selected == null && uiState.error != null -> {
-                    ErrorContent(
+                    SiteErrorContent(
                         title = "Failed to load upcoming",
                         message = uiState.error?.message,
                         onRetry = { viewModel.refresh() },
@@ -183,18 +177,18 @@ fun HentaiMamaUpcomingScreen(
                 }
 
                 selected == null -> {
-                    EmptyContent(
+                    SiteEmptyContent(
                         hint = "No upcoming months",
                         subHint = "",
                     )
                 }
 
                 uiState.isLoading && uiState.cards.isEmpty() -> {
-                    LoadingContent(message = "Loading ${selected.displayName}…")
+                    SiteLoadingContent(message = "Loading ${selected.displayName}…")
                 }
 
                 uiState.error != null && uiState.cards.isEmpty() -> {
-                    ErrorContent(
+                    SiteErrorContent(
                         title = "Failed to load upcoming",
                         message = uiState.error?.message,
                         onRetry = { viewModel.refresh() },
@@ -202,7 +196,7 @@ fun HentaiMamaUpcomingScreen(
                 }
 
                 uiState.cards.isEmpty() -> {
-                    EmptyContent(
+                    SiteEmptyContent(
                         hint = "No upcoming episodes",
                         subHint = "${selected.displayName} has nothing scheduled yet.",
                     )

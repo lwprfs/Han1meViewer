@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.OnAir.ui.home
 
+import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
+import com.yenaly.han1meviewer.ui.component.SiteErrorContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -66,8 +68,6 @@ import com.yenaly.han1meviewer.ui.component.SiteOverflowMenu
 import com.yenaly.han1meviewer.ui.component.SiteSearchTopBar
 import com.yenaly.han1meviewer.ui.component.SiteSwitchButton
 import com.yenaly.han1meviewer.logic.state.WebsiteState
-import com.yenaly.han1meviewer.ui.component.content.ErrorContent
-import com.yenaly.han1meviewer.ui.component.content.LoadingContent
 import com.yenaly.han1meviewer.ui.component.lazy.LazyVerticalGrid
 import com.yenaly.han1meviewer.ui.screen.rememberVideoGridColumns
 import com.yenaly.han1meviewer.ui.theme.SpacingNormal
@@ -173,7 +173,7 @@ fun OnAirHomeScreen(
             ) {
                 when (val state = homeState) {
                     is WebsiteState.Loading -> {
-                        if (cards.isEmpty()) LoadingContent() else HomeGrid(
+                        if (cards.isEmpty()) SiteLoadingContent() else HomeGrid(
                             cards, gridState, columns, isLoadingMore, onOpenVideo
                         ) {
                             HomeHeader(
@@ -186,7 +186,7 @@ fun OnAirHomeScreen(
 
                     is WebsiteState.Error -> {
                         if (cards.isEmpty()) {
-                            ErrorContent(
+                            SiteErrorContent(
                                 message = state.throwable.message ?: "Failed to load",
                                 onRetry = { viewModel.refresh() },
                             )

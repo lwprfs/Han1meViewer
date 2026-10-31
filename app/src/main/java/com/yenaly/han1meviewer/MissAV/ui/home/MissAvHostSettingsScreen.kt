@@ -1,4 +1,6 @@
 package com.yenaly.han1meviewer.MissAV.ui.home
+import com.yenaly.han1meviewer.ui.component.SiteBackButton
+import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import android.content.Context
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -24,7 +26,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -89,13 +90,9 @@ fun MissAvHostSettingsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            SiteTopAppBar(
                 title = { Text("Host / Mirror") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
+                navigationIcon = { SiteBackButton(onClick = onBack) },
             )
         },
     ) { paddingValues ->

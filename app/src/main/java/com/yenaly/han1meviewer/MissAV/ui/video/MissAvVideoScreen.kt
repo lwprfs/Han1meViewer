@@ -1,4 +1,8 @@
 package com.yenaly.han1meviewer.MissAV.ui.video
+import com.yenaly.han1meviewer.ui.component.SiteBackButton
+import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
+import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
+import com.yenaly.han1meviewer.ui.component.SiteErrorContent
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
@@ -29,7 +33,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -51,8 +54,6 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.hls.HlsMediaSource
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
-import com.yenaly.han1meviewer.ui.component.content.ErrorContent
-import com.yenaly.han1meviewer.ui.component.content.LoadingContent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import java.io.File
@@ -528,13 +529,9 @@ fun MissAvVideoScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            SiteTopAppBar(
                 title = { Text("Video", maxLines = 1) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
+                navigationIcon = { SiteBackButton(onClick = onBack) },
                 actions = {
                     IconButton(onClick = {
                         if (hasSubtitle) clearSubtitle() else openSubtitlePicker()
@@ -550,7 +547,7 @@ fun MissAvVideoScreen(
         }
     ) { paddingValues ->
         when (val state = videoState) {
-            is VideoLoadingState.Loading -> LoadingContent(modifier = Modifier.padding(paddingValues))
+            is VideoLoadingState.Loading -> SiteLoadingContent(modifier = Modifier.padding(paddingValues))
 
             is VideoLoadingState.Success -> {
                 val info = state.info
@@ -730,13 +727,13 @@ fun MissAvVideoScreen(
                 }
             }
 
-            is VideoLoadingState.Error -> ErrorContent(
+            is VideoLoadingState.Error -> SiteErrorContent(
                 message = state.throwable.message ?: "Failed",
                 onRetry = { viewModel.getVideoDetail(normalizedPath) },
                 modifier = Modifier.padding(paddingValues)
             )
 
-            is VideoLoadingState.NoContent -> ErrorContent(
+            is VideoLoadingState.NoContent -> SiteErrorContent(
                 message = "No content",
                 onRetry = { viewModel.getVideoDetail(normalizedPath) },
                 modifier = Modifier.padding(paddingValues)

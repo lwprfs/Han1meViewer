@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.HentaiMama.ui.search
 
+import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
+import com.yenaly.han1meviewer.ui.component.SiteErrorContent
 import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -87,8 +89,6 @@ import com.yenaly.han1meviewer.HentaiMama.ui.home.HentaiMamaHomeCategoryRepo
 import com.yenaly.han1meviewer.HentaiMama.ui.home.HentaiMamaViewModel
 import com.yenaly.han1meviewer.logic.model.HanimeInfo
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
-import com.yenaly.han1meviewer.ui.component.content.ErrorContent
-import com.yenaly.han1meviewer.ui.component.content.LoadingContent
 import com.yenaly.han1meviewer.ui.theme.SpacingLarge
 import com.yenaly.han1meviewer.ui.theme.SpacingNormal
 import kotlinx.coroutines.Dispatchers
@@ -645,8 +645,8 @@ private fun SearchResultsArea(
 ) {
     val empty = videos.isEmpty() && series.isEmpty() && cards.isEmpty()
     when {
-        state is PageLoadingState.Loading && empty -> LoadingContent()
-        state is PageLoadingState.Error && empty -> ErrorContent(
+        state is PageLoadingState.Loading && empty -> SiteLoadingContent()
+        state is PageLoadingState.Error && empty -> SiteErrorContent(
             message = state.throwable.message ?: "Failed to load results",
             onRetry = onRetry,
         )

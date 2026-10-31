@@ -1,5 +1,9 @@
 package com.yenaly.han1meviewer.OnAir.ui.tag
 
+import com.yenaly.han1meviewer.ui.component.SiteBackButton
+import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
+import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
+import com.yenaly.han1meviewer.ui.component.SiteErrorContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,7 +33,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -50,8 +53,6 @@ import com.yenaly.han1meviewer.OnAir.data.model.OnAirTag
 import com.yenaly.han1meviewer.OnAir.data.remote.OnAirNetworkRepo
 import com.yenaly.han1meviewer.OnAir.ui.home.InfiniteScrollFooter
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
-import com.yenaly.han1meviewer.ui.component.content.ErrorContent
-import com.yenaly.han1meviewer.ui.component.content.LoadingContent
 import com.yenaly.han1meviewer.ui.component.lazy.LazyVerticalGrid
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -125,13 +126,9 @@ fun OnAirTagsIndexScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            SiteTopAppBar(
                 title = { Text("Tags") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
+                navigationIcon = { SiteBackButton(onClick = onBack) },
             )
         },
     ) { paddingValues ->
@@ -222,10 +219,10 @@ fun OnAirTagsIndexScreen(
             }
 
             when {
-                state is PageLoadingState.Loading && tags.isEmpty() -> LoadingContent()
+                state is PageLoadingState.Loading && tags.isEmpty() -> SiteLoadingContent()
                 state is PageLoadingState.Error && tags.isEmpty() -> {
                     val err = state as PageLoadingState.Error
-                    ErrorContent(
+                    SiteErrorContent(
                         message = err.throwable.message ?: "Failed",
                         onRetry = { load(1, replace = true) },
                     )

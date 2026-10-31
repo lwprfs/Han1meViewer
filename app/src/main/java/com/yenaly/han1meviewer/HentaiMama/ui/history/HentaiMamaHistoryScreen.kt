@@ -1,5 +1,9 @@
 package com.yenaly.han1meviewer.HentaiMama.ui.history
 
+import com.yenaly.han1meviewer.ui.component.SiteBackButton
+import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
+import com.yenaly.han1meviewer.ui.component.SiteEmptyContent
+import com.yenaly.han1meviewer.ui.component.SiteErrorContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -39,7 +43,6 @@ import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -64,8 +67,6 @@ import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaImageLoader
 import com.yenaly.han1meviewer.HentaiMama.data.local.HentaiMamaHistoryEntity
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
 import com.yenaly.han1meviewer.R
-import com.yenaly.han1meviewer.ui.component.content.EmptyContent
-import com.yenaly.han1meviewer.ui.component.content.ErrorContent
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
 import com.yenaly.han1meviewer.util.formatRelativeTime
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -113,13 +114,9 @@ fun HentaiMamaHistoryScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            SiteTopAppBar(
                 title = { Text("History") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
+                navigationIcon = { SiteBackButton(onClick = onBack) },
                 actions = {
                     if (uiState.items.isNotEmpty()) {
                         IconButton(onClick = { showDeleteAllDialog = true }) {
@@ -147,7 +144,7 @@ fun HentaiMamaHistoryScreen(
                 }
 
                 uiState.error != null && uiState.items.isEmpty() -> {
-                    ErrorContent(
+                    SiteErrorContent(
                         message = uiState.error?.message ?: "Failed to load history",
                         onRetry = { viewModel.refresh() },
                     )
@@ -159,7 +156,7 @@ fun HentaiMamaHistoryScreen(
                         contentAlignment = Alignment.Center,
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            EmptyContent(
+                            SiteEmptyContent(
                                 hint = "No watch history yet",
                                 subHint = "Videos you watch will show up here.",
                             )

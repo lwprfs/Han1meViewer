@@ -1,5 +1,10 @@
 package com.yenaly.han1meviewer.HentaiMama.ui.recent
 
+import com.yenaly.han1meviewer.ui.component.SiteBackButton
+import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
+import com.yenaly.han1meviewer.ui.component.SiteEmptyContent
+import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
+import com.yenaly.han1meviewer.ui.component.SiteErrorContent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,7 +42,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -61,9 +65,6 @@ import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaImageLoader
 import com.yenaly.han1meviewer.HentaiMama.data.model.RecentEpisode
 import com.yenaly.han1meviewer.HentaiMama.settings.HentaiMamaCardSettings
 import com.yenaly.han1meviewer.R
-import com.yenaly.han1meviewer.ui.component.content.EmptyContent
-import com.yenaly.han1meviewer.ui.component.content.ErrorContent
-import com.yenaly.han1meviewer.ui.component.content.LoadingContent
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -124,7 +125,7 @@ fun HentaiMamaRecentEpisodesScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            SiteTopAppBar(
                 title = {
                     Column {
                         Text(
@@ -142,14 +143,7 @@ fun HentaiMamaRecentEpisodesScreen(
                         }
                     }
                 },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                        )
-                    }
-                },
+                navigationIcon = { SiteBackButton(onClick = onBack) },
                 actions = {
                     IconButton(onClick = onNavigateToCardSettings) {
                         Icon(
@@ -188,11 +182,11 @@ fun HentaiMamaRecentEpisodesScreen(
         ) {
             when {
                 uiState.isLoadingFirst && uiState.items.isEmpty() -> {
-                    LoadingContent(message = "Loading recent episodes…")
+                    SiteLoadingContent(message = "Loading recent episodes…")
                 }
 
                 uiState.error != null && uiState.items.isEmpty() -> {
-                    ErrorContent(
+                    SiteErrorContent(
                         title = "Failed to load recent episodes",
                         message = uiState.error?.message,
                         onRetry = { viewModel.refresh() },
@@ -200,7 +194,7 @@ fun HentaiMamaRecentEpisodesScreen(
                 }
 
                 uiState.items.isEmpty() -> {
-                    EmptyContent(
+                    SiteEmptyContent(
                         hint = "No recent episodes",
                         subHint = "Check back later.",
                     )

@@ -1,5 +1,10 @@
 package com.yenaly.han1meviewer.OnAir.ui.chat
 
+import com.yenaly.han1meviewer.ui.component.SiteBackButton
+import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
+import com.yenaly.han1meviewer.ui.component.SiteEmptyContent
+import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
+import com.yenaly.han1meviewer.ui.component.SiteErrorContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -37,7 +42,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -56,9 +60,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.yenaly.han1meviewer.OnAir.data.model.OnAirChatMessage
-import com.yenaly.han1meviewer.ui.component.content.EmptyContent
-import com.yenaly.han1meviewer.ui.component.content.ErrorContent
-import com.yenaly.han1meviewer.ui.component.content.LoadingContent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,13 +80,9 @@ fun OnAirChatScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            SiteTopAppBar(
                 title = { Text("Chat") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
+                navigationIcon = { SiteBackButton(onClick = onBack) },
                 actions = {
                     if (uiState.isRefreshing) {
                         CircularProgressIndicator(
@@ -113,12 +110,12 @@ fun OnAirChatScreen(
                 .imePadding(),
         ) {
             when {
-                uiState.isLoading && uiState.messages.isEmpty() -> LoadingContent()
-                uiState.loadError != null && uiState.messages.isEmpty() -> ErrorContent(
+                uiState.isLoading && uiState.messages.isEmpty() -> SiteLoadingContent()
+                uiState.loadError != null && uiState.messages.isEmpty() -> SiteErrorContent(
                     message = uiState.loadError ?: "Failed",
                     onRetry = { viewModel.refresh(initial = true) },
                 )
-                uiState.messages.isEmpty() -> EmptyContent(hint = "No chat messages yet")
+                uiState.messages.isEmpty() -> SiteEmptyContent(hint = "No chat messages yet")
                 else -> {
                     LazyColumn(
                         state = listState,

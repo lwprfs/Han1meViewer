@@ -1,5 +1,9 @@
 package com.yenaly.han1meviewer.OnAir.ui.user
 
+import com.yenaly.han1meviewer.ui.component.SiteBackButton
+import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
+import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
+import com.yenaly.han1meviewer.ui.component.SiteErrorContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,7 +30,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -50,8 +53,6 @@ import com.yenaly.han1meviewer.OnAir.data.remote.OnAirNetworkRepo
 import com.yenaly.han1meviewer.OnAir.ui.components.OnAirVideoCardItem
 import com.yenaly.han1meviewer.OnAir.ui.home.InfiniteScrollFooter
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
-import com.yenaly.han1meviewer.ui.component.content.ErrorContent
-import com.yenaly.han1meviewer.ui.component.content.LoadingContent
 import com.yenaly.han1meviewer.ui.component.lazy.LazyVerticalGrid
 import com.yenaly.han1meviewer.ui.screen.rememberVideoGridColumns
 import com.yenaly.han1meviewer.ui.theme.SpacingNormal
@@ -151,16 +152,9 @@ fun OnAirUserScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            SiteTopAppBar(
                 title = { Text("@$username", maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                        )
-                    }
-                },
+                navigationIcon = { SiteBackButton(onClick = onBack) },
             )
         },
     ) { paddingValues ->
@@ -170,12 +164,12 @@ fun OnAirUserScreen(
                 .padding(paddingValues),
         ) {
             when (val s = state) {
-                is VideoLoadingState.Loading -> LoadingContent()
-                is VideoLoadingState.Error -> ErrorContent(
+                is VideoLoadingState.Loading -> SiteLoadingContent()
+                is VideoLoadingState.Error -> SiteErrorContent(
                     message = s.throwable.message ?: "Failed",
                     onRetry = { reloadTick++ },
                 )
-                is VideoLoadingState.NoContent -> ErrorContent(
+                is VideoLoadingState.NoContent -> SiteErrorContent(
                     message = "User not found",
                     onRetry = { reloadTick++ },
                 )

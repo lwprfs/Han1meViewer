@@ -1,4 +1,6 @@
 package com.yenaly.han1meviewer.MissAV.ui.home
+import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
+import com.yenaly.han1meviewer.ui.component.SiteErrorContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -50,10 +52,10 @@ import com.yenaly.han1meviewer.logic.state.WebsiteState
 import com.yenaly.han1meviewer.ui.component.SiteBarIconButton
 import com.yenaly.han1meviewer.ui.component.SiteSearchTopBar
 import com.yenaly.han1meviewer.ui.component.SiteSectionHeader
+import com.yenaly.han1meviewer.ui.component.SiteSkeletonBox
+import com.yenaly.han1meviewer.ui.component.SiteEmptyContent
 import com.yenaly.han1meviewer.ui.component.SiteSwitchButton
 import com.yenaly.han1meviewer.ui.component.VideoCardItem
-import com.yenaly.han1meviewer.ui.component.content.ErrorContent
-import com.yenaly.han1meviewer.ui.component.content.LoadingContent
 import com.yenaly.han1meviewer.ui.screen.rememberCardResponsiveWidth
 import com.yenaly.han1meviewer.ui.theme.SpacingLarge
 import com.yenaly.han1meviewer.ui.theme.SpacingNormal
@@ -115,9 +117,9 @@ fun MissAvHomeScreen(
                 homeState is WebsiteState.Error && categoryRows.isEmpty()
 
             when {
-                isLoadingEverything -> LoadingContent()
+                isLoadingEverything -> SiteLoadingContent()
 
-                isErrorEverything -> ErrorContent(
+                isErrorEverything -> SiteErrorContent(
                     message = (homeState as WebsiteState.Error).throwable.message
                         ?: "Failed to load home page",
                     onRetry = {
@@ -152,15 +154,13 @@ private fun HomeContent(
     if (popular.isEmpty() && categoryRows.all { it.videos.isEmpty() && !it.isLoading }) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = "No content available",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.height(8.dp))
-                TextButton(onClick = { onNavigateToSearch(null) }) {
-                    Text("Try searching")
-                }
+                SiteEmptyContent(hint = "No content available")
+            }
+            TextButton(
+                onClick = { onNavigateToSearch(null) },
+                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 48.dp),
+            ) {
+                Text("Try searching")
             }
         }
         return
@@ -253,12 +253,10 @@ private fun CategorySkeletonRow(cardWidth: Dp) {
         userScrollEnabled = false,
     ) {
         items(4) {
-            Box(
+            SiteSkeletonBox(
                 modifier = Modifier
                     .width(cardWidth)
-                    .height(cardWidth * 9f / 16f + 64.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+                    .height(cardWidth * 9f / 16f + 64.dp),
             )
         }
     }

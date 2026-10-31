@@ -1,5 +1,9 @@
 package com.yenaly.han1meviewer.HentaiMama.ui.series
 
+import com.yenaly.han1meviewer.ui.component.SiteBackButton
+import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
+import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
+import com.yenaly.han1meviewer.ui.component.SiteErrorContent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,7 +38,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -57,8 +60,6 @@ import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
 import com.yenaly.han1meviewer.HentaiMama.ui.home.HentaiMamaViewModel
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
-import com.yenaly.han1meviewer.ui.component.content.ErrorContent
-import com.yenaly.han1meviewer.ui.component.content.LoadingContent
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -84,7 +85,7 @@ fun HentaiMamaSeriesScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            SiteTopAppBar(
                 title = {
                     val title: String = (seriesState as? VideoLoadingState.Success)
                         ?.info
@@ -97,11 +98,7 @@ fun HentaiMamaSeriesScreen(
                         overflow = TextOverflow.Ellipsis,
                     )
                 },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
+                navigationIcon = { SiteBackButton(onClick = onBack) },
             )
         },
     ) { paddingValues ->
@@ -112,14 +109,14 @@ fun HentaiMamaSeriesScreen(
         ) {
             val state = seriesState
             when (state) {
-                is VideoLoadingState.Loading -> LoadingContent()
+                is VideoLoadingState.Loading -> SiteLoadingContent()
 
-                is VideoLoadingState.Error -> ErrorContent(
+                is VideoLoadingState.Error -> SiteErrorContent(
                     message = state.throwable.message ?: "Failed to load series",
                     onRetry = { viewModel.getSeriesDetail(seriesUrl) },
                 )
 
-                is VideoLoadingState.NoContent -> ErrorContent(
+                is VideoLoadingState.NoContent -> SiteErrorContent(
                     message = "Series not found",
                     onRetry = { viewModel.getSeriesDetail(seriesUrl) },
                 )

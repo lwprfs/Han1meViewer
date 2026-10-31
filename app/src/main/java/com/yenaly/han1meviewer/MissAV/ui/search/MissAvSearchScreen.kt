@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.MissAV.ui.search
 
+import com.yenaly.han1meviewer.ui.component.SiteErrorContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -91,7 +92,6 @@ import com.yenaly.han1meviewer.MissAV.viewmodel.MissAvViewModel
 import com.yenaly.han1meviewer.logic.model.HanimeInfo
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.ui.component.VideoCardItem
-import com.yenaly.han1meviewer.ui.component.content.ErrorContent
 import kotlinx.coroutines.launch
 
 private data class ActiveChip(
@@ -413,7 +413,7 @@ fun MissAvSearchScreen(
 
                                 is PageLoadingState.Error -> {
                                     if (allVideos.isEmpty()) {
-                                        ErrorContent(
+                                        SiteErrorContent(
                                             message = state.throwable.message
                                                 ?: "Failed to load results",
                                             onRetry = { viewModel.performSearch(resetPage = true) },

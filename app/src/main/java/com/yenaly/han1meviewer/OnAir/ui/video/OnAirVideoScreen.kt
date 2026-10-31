@@ -1,5 +1,8 @@
 package com.yenaly.han1meviewer.OnAir.ui.video
 
+import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
+import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
+import com.yenaly.han1meviewer.ui.component.SiteErrorContent
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -26,7 +29,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -45,8 +47,6 @@ import coil3.compose.AsyncImage
 import com.yenaly.han1meviewer.OnAir.data.model.OnAirVideoDetail
 import com.yenaly.han1meviewer.OnAir.data.model.OnAirVideoTag
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
-import com.yenaly.han1meviewer.ui.component.content.ErrorContent
-import com.yenaly.han1meviewer.ui.component.content.LoadingContent
 import com.yenaly.han1meviewer.ui.screen.rememberRandomLoadingHint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -147,7 +147,7 @@ fun OnAirVideoScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            SiteTopAppBar(
                 title = {
                     val title = (state as? VideoLoadingState.Success)?.info?.title ?: "Video"
                     Text(text = title, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -167,18 +167,18 @@ fun OnAirVideoScreen(
         },
     ) { paddingValues ->
         when (val s = state) {
-            is VideoLoadingState.Loading -> LoadingContent(
+            is VideoLoadingState.Loading -> SiteLoadingContent(
                 modifier = Modifier.padding(paddingValues),
                 message = rememberRandomLoadingHint(),
             )
 
-            is VideoLoadingState.Error -> ErrorContent(
+            is VideoLoadingState.Error -> SiteErrorContent(
                 message = s.throwable.message ?: "Failed to load",
                 onRetry = { viewModel.loadVideo(videoId, preferredQuality) },
                 modifier = Modifier.padding(paddingValues),
             )
 
-            is VideoLoadingState.NoContent -> ErrorContent(
+            is VideoLoadingState.NoContent -> SiteErrorContent(
                 message = "Video not found",
                 onRetry = { viewModel.loadVideo(videoId, preferredQuality) },
                 modifier = Modifier.padding(paddingValues),

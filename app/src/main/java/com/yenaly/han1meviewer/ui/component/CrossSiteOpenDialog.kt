@@ -3,6 +3,18 @@ package com.yenaly.han1meviewer.ui.component
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import com.yenaly.han1meviewer.R
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -60,23 +72,62 @@ fun CrossSiteOpenDialog(
         onDismiss()
     }
 
+    val dialogShape = RoundedCornerShape(28.dp)
+    val dialogColor = MaterialTheme.colorScheme.surfaceContainerHigh
+
     when (val current = phase) {
         CrossSitePhase.Confirm -> AlertDialog(
             onDismissRequest = ::cancel,
-            title = { Text("Switch to $siteName?") },
-            text = {
-                val name = request.title.ifBlank { request.videoCode }
-                Text(
-                    "\"$name\" belongs to $siteName. " +
-                            if (isTor) {
-                                "The app will check your Tor connection, switch site and open the video page."
-                            } else {
-                                "The app will check the connection, switch site and open the video page."
-                            }
+            containerColor = dialogColor,
+            shape = dialogShape,
+            icon = {
+                Icon(
+                    painter = painterResource(R.drawable.ic_baseline_switch_24),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(32.dp),
                 )
             },
+            title = {
+                Text(
+                    text = "Switch to $siteName?",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                )
+            },
+            text = {
+                val name = request.title.ifBlank { request.videoCode }
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    ) {
+                        Text(
+                            text = name,
+                            style = MaterialTheme.typography.titleSmall,
+                            maxLines = 3,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                        )
+                    }
+                    Text(
+                        text = "This video belongs to $siteName. " +
+                                if (isTor) {
+                                    "The app will check your Tor connection, switch site and open the video page."
+                                } else {
+                                    "The app will check the connection, switch site and open the video page."
+                                },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            },
             confirmButton = {
-                TextButton(onClick = ::startValidation) { Text("Switch & open") }
+                Button(onClick = ::startValidation, shape = RoundedCornerShape(14.dp)) {
+                    Text("Switch & open", fontWeight = FontWeight.SemiBold)
+                }
             },
             dismissButton = {
                 TextButton(onClick = ::cancel) { Text("Cancel") }
@@ -85,7 +136,15 @@ fun CrossSiteOpenDialog(
 
         CrossSitePhase.Validating -> AlertDialog(
             onDismissRequest = ::cancel,
-            title = { Text(if (isTor) "Checking Tor connection" else "Checking connection") },
+            containerColor = dialogColor,
+            shape = dialogShape,
+            title = {
+                Text(
+                    text = if (isTor) "Checking Tor connection" else "Checking connection",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                )
+            },
             text = {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -96,6 +155,7 @@ fun CrossSiteOpenDialog(
                         if (isTor) "Verifying that this device exits through Tor…"
                         else "Verifying that $siteName can be reached…",
                         style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             },
@@ -107,14 +167,36 @@ fun CrossSiteOpenDialog(
 
         is CrossSitePhase.Failed -> AlertDialog(
             onDismissRequest = ::cancel,
-            title = { Text(current.title) },
+            containerColor = dialogColor,
+            shape = dialogShape,
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(32.dp),
+                )
+            },
+            title = {
+                Text(
+                    text = current.title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                )
+            },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(current.message, style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        current.message,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             },
             confirmButton = {
-                TextButton(onClick = ::startValidation) { Text("Retry") }
+                Button(onClick = ::startValidation, shape = RoundedCornerShape(14.dp)) {
+                    Text("Retry", fontWeight = FontWeight.SemiBold)
+                }
             },
             dismissButton = {
                 TextButton(onClick = ::cancel) { Text("Cancel") }

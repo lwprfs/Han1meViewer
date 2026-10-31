@@ -1,5 +1,10 @@
 package com.yenaly.han1meviewer.OnAir.ui.announcement
 
+import com.yenaly.han1meviewer.ui.component.SiteBackButton
+import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
+import com.yenaly.han1meviewer.ui.component.SiteEmptyContent
+import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
+import com.yenaly.han1meviewer.ui.component.SiteErrorContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,7 +28,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -36,9 +40,6 @@ import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.OnAir.data.model.OnAirAnnouncementEntry
 import com.yenaly.han1meviewer.OnAir.data.remote.OnAirNetworkRepo
 import com.yenaly.han1meviewer.logic.state.WebsiteState
-import com.yenaly.han1meviewer.ui.component.content.EmptyContent
-import com.yenaly.han1meviewer.ui.component.content.ErrorContent
-import com.yenaly.han1meviewer.ui.component.content.LoadingContent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,13 +54,9 @@ fun OnAirAnnouncementsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            SiteTopAppBar(
                 title = { Text("Announcements") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
+                navigationIcon = { SiteBackButton(onClick = onBack) },
             )
         },
     ) { paddingValues ->
@@ -69,14 +66,14 @@ fun OnAirAnnouncementsScreen(
                 .padding(paddingValues),
         ) {
             when (val s = state) {
-                is WebsiteState.Loading -> LoadingContent()
-                is WebsiteState.Error -> ErrorContent(
+                is WebsiteState.Loading -> SiteLoadingContent()
+                is WebsiteState.Error -> SiteErrorContent(
                     message = s.throwable.message ?: "Failed",
                     onRetry = { },
                 )
                 is WebsiteState.Success -> {
                     if (s.info.isEmpty()) {
-                        EmptyContent(hint = "No announcements")
+                        SiteEmptyContent(hint = "No announcements")
                     } else {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),

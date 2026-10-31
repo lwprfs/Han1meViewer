@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.OnAir.ui.search
 
+import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
+import com.yenaly.han1meviewer.ui.component.SiteErrorContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -71,8 +73,6 @@ import com.yenaly.han1meviewer.OnAir.data.model.OnAirSelectOption
 import com.yenaly.han1meviewer.OnAir.ui.components.OnAirVideoCardItem
 import com.yenaly.han1meviewer.OnAir.ui.home.InfiniteScrollFooter
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
-import com.yenaly.han1meviewer.ui.component.content.ErrorContent
-import com.yenaly.han1meviewer.ui.component.content.LoadingContent
 import com.yenaly.han1meviewer.ui.component.lazy.LazyVerticalGrid
 import com.yenaly.han1meviewer.ui.screen.rememberVideoGridColumns
 import com.yenaly.han1meviewer.ui.theme.SpacingNormal
@@ -294,11 +294,11 @@ fun OnAirSearchScreen(
             }
 
             state == null || (state is PageLoadingState.Loading && results.isEmpty()) -> {
-                LoadingContent()
+                SiteLoadingContent()
             }
 
             state is PageLoadingState.Error && results.isEmpty() -> {
-                ErrorContent(
+                SiteErrorContent(
                     message = (state as PageLoadingState.Error).throwable.message ?: "Failed",
                     onRetry = { runSearch() },
                 )

@@ -1,4 +1,8 @@
 package com.yenaly.han1meviewer.MissAV.ui.history
+import com.yenaly.han1meviewer.ui.component.SiteBackButton
+import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
+import com.yenaly.han1meviewer.ui.component.SiteEmptyContent
+import com.yenaly.han1meviewer.ui.component.SiteErrorContent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,7 +34,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -51,8 +54,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
-import com.yenaly.han1meviewer.ui.component.content.EmptyContent
-import com.yenaly.han1meviewer.ui.component.content.ErrorContent
 import com.yenaly.han1meviewer.ui.theme.SpacingNormal
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -94,16 +95,9 @@ fun MissAvHistoryScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            SiteTopAppBar(
                 title = { Text(stringResource(R.string.watch_history)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back)
-                        )
-                    }
-                },
+                navigationIcon = { SiteBackButton(onClick = onBack) },
                 actions = {
                     if (historyItems.isNotEmpty()) {
                         IconButton(onClick = { showDeleteAllDialog = true }) {
@@ -141,7 +135,7 @@ fun MissAvHistoryScreen(
 
                 historyState is PageLoadingState.Error && historyItems.isEmpty() -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        ErrorContent(
+                        SiteErrorContent(
                             title = stringResource(R.string.load_failed_retry),
                             onRetry = { viewModel.refresh() },
                         )
@@ -150,7 +144,7 @@ fun MissAvHistoryScreen(
 
                 historyItems.isEmpty() -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        EmptyContent(
+                        SiteEmptyContent(
                             hint = stringResource(R.string.watch_history_empty_title),
                             subHint = stringResource(R.string.watch_history_empty_description),
                         )

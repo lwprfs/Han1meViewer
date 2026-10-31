@@ -1,5 +1,10 @@
 package com.yenaly.han1meviewer.HentaiMama.ui.playlist
 
+import com.yenaly.han1meviewer.ui.component.SiteBackButton
+import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
+import com.yenaly.han1meviewer.ui.component.SiteEmptyContent
+import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
+import com.yenaly.han1meviewer.ui.component.SiteErrorContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -34,7 +39,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -55,9 +59,6 @@ import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaImageLoader
 import com.yenaly.han1meviewer.HentaiMama.data.model.PlaylistCard
 import com.yenaly.han1meviewer.HentaiMama.data.model.PlaylistSortOption
 import com.yenaly.han1meviewer.R
-import com.yenaly.han1meviewer.ui.component.content.EmptyContent
-import com.yenaly.han1meviewer.ui.component.content.ErrorContent
-import com.yenaly.han1meviewer.ui.component.content.LoadingContent
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -102,7 +103,7 @@ fun HentaiMamaPlaylistsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            SiteTopAppBar(
                 title = {
                     Column {
                         Text("Playlists", maxLines = 1)
@@ -116,11 +117,7 @@ fun HentaiMamaPlaylistsScreen(
                         }
                     }
                 },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
+                navigationIcon = { SiteBackButton(onClick = onBack) },
                 actions = {
                     IconButton(onClick = { viewModel.loadIndex(uiState.sortKey) }) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh")
@@ -136,18 +133,18 @@ fun HentaiMamaPlaylistsScreen(
         ) {
             when {
                 uiState.isInitialLoading && uiState.items.isEmpty() -> {
-                    LoadingContent(message = "Loading playlists…")
+                    SiteLoadingContent(message = "Loading playlists…")
                 }
 
                 uiState.error != null && uiState.items.isEmpty() -> {
-                    ErrorContent(
+                    SiteErrorContent(
                         message = uiState.error?.message ?: "Failed to load playlists",
                         onRetry = { viewModel.loadIndex(uiState.sortKey) },
                     )
                 }
 
                 uiState.items.isEmpty() -> {
-                    EmptyContent(hint = "No playlists")
+                    SiteEmptyContent(hint = "No playlists")
                 }
 
                 else -> {

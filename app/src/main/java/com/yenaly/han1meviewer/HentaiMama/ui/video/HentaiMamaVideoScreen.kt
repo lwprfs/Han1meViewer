@@ -1,5 +1,9 @@
 package com.yenaly.han1meviewer.HentaiMama.ui.video
 
+import com.yenaly.han1meviewer.ui.component.SiteBackButton
+import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
+import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
+import com.yenaly.han1meviewer.ui.component.SiteErrorContent
 import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.os.Build
@@ -36,7 +40,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -72,8 +75,6 @@ import com.yenaly.han1meviewer.HentaiMama.data.model.HentaiMamaEpisode
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
-import com.yenaly.han1meviewer.ui.component.content.ErrorContent
-import com.yenaly.han1meviewer.ui.component.content.LoadingContent
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -341,29 +342,25 @@ fun HentaiMamaVideoScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            SiteTopAppBar(
                 title = {
                     val videoInfo = (pageState as? VideoLoadingState.Success)?.info
                     val title = videoInfo?.page?.info?.title ?: videoInfo?.title ?: "Video"
                     Text(text = title, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
+                navigationIcon = { SiteBackButton(onClick = onBack) },
             )
         },
     ) { paddingValues ->
         val state = pageState
         when (state) {
-            is VideoLoadingState.Loading -> LoadingContent(modifier = Modifier.padding(paddingValues))
-            is VideoLoadingState.Error -> ErrorContent(
+            is VideoLoadingState.Loading -> SiteLoadingContent(modifier = Modifier.padding(paddingValues))
+            is VideoLoadingState.Error -> SiteErrorContent(
                 message = state.throwable.message ?: "Failed",
                 onRetry = { viewModel.loadEpisodePage(normalizedUrl, force = true) },
                 modifier = Modifier.padding(paddingValues),
             )
-            is VideoLoadingState.NoContent -> ErrorContent(
+            is VideoLoadingState.NoContent -> SiteErrorContent(
                 message = "No content",
                 onRetry = { viewModel.loadEpisodePage(normalizedUrl, force = true) },
                 modifier = Modifier.padding(paddingValues),
@@ -373,7 +370,7 @@ fun HentaiMamaVideoScreen(
                 val videoInfo = state.info
                 val page = videoInfo.page
                 if (page == null) {
-                    ErrorContent(
+                    SiteErrorContent(
                         message = "Episode page data missing",
                         onRetry = { viewModel.loadEpisodePage(normalizedUrl, force = true) },
                         modifier = Modifier.padding(paddingValues),

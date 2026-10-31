@@ -61,6 +61,8 @@ import com.yenaly.han1meviewer.logic.model.HanimeInfo
 import com.yenaly.han1meviewer.ui.component.SiteBarIconButton
 import com.yenaly.han1meviewer.ui.component.SiteSearchTopBar
 import com.yenaly.han1meviewer.ui.component.SiteSectionHeader
+import com.yenaly.han1meviewer.ui.component.SiteSkeletonBox
+import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
 import com.yenaly.han1meviewer.ui.component.SiteSwitchButton
 import com.yenaly.han1meviewer.ui.theme.SpacingLarge
 import com.yenaly.han1meviewer.ui.theme.SpacingNormal
@@ -298,12 +300,10 @@ private fun CategorySkeletonRowContent(
             userScrollEnabled = false,
         ) {
             items(4) {
-                Box(
+                SiteSkeletonBox(
                     modifier = Modifier
                         .width(cardWidth)
-                        .height(cardWidth / aspectRatio)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                        .height(cardWidth / aspectRatio),
                 )
             }
         }
@@ -318,16 +318,14 @@ private fun HomeLoadingState(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = "Loading…",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(8.dp))
-            TextButton(onClick = onRetry) {
-                Text("Tap to retry")
-            }
+        SiteLoadingContent()
+        TextButton(
+            onClick = onRetry,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 48.dp),
+        ) {
+            Text("Tap to retry")
         }
     }
 }

@@ -31,6 +31,7 @@ import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.logic.exception.CloudFlareBlockedException
 import com.yenaly.han1meviewer.logic.model.github.Latest
 import com.yenaly.han1meviewer.logic.state.PageState
+import com.yenaly.han1meviewer.ui.component.SiteSwitchConfirmDialog
 import com.yenaly.han1meviewer.ui.activity.MainActivity
 import com.yenaly.han1meviewer.ui.component.CrossSiteOpenDialog
 import com.yenaly.han1meviewer.ui.component.UpdateDialog
@@ -244,19 +245,12 @@ fun MainActivityContent(
         }
 
         if (activity.showSiteSwitchConfirm) {
-            AlertDialog(
-                onDismissRequest = { activity.dismissSiteSwitch() },
-                title = { Text(stringResource(R.string.confirm_switch_site)) },
-                confirmButton = {
-                    TextButton(onClick = { activity.confirmSiteSwitch() }) {
-                        Text(stringResource(R.string.sure))
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { activity.dismissSiteSwitch() }) {
-                        Text(stringResource(R.string.no))
-                    }
-                },
+            SiteSwitchConfirmDialog(
+                title = stringResource(R.string.confirm_switch_site),
+                confirmText = stringResource(R.string.sure),
+                dismissText = stringResource(R.string.no),
+                onConfirm = { activity.confirmSiteSwitch() },
+                onDismiss = { activity.dismissSiteSwitch() },
             )
         }
 
