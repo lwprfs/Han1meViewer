@@ -7,6 +7,8 @@ import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderSessionParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.FormBody
 import okhttp3.Request
@@ -49,6 +51,8 @@ sealed interface FapFolderAuthResult {
 object FapFolderAuthRepo {
 
     private const val TAG = "FapFolderAuthRepo"
+
+    private val loginMutex = Mutex()
 
     fun probe(context: android.content.Context) = flow {
         try {
@@ -207,85 +211,87 @@ object FapFolderAuthRepo {
         password: String,
         remember: Boolean = true,
     ) = flow {
-        try {
-            val trimmedUser = usernameOrEmail.trim()
-            if (trimmedUser.isEmpty() || password.isEmpty()) {
-                emit(FapFolderAuthResult.FormError("Username and password cannot be empty."))
-                return@flow
-            }
-
-            val priming = Request.Builder()
-                .url(FapFolderConstants.BASE_URL.trimEnd('/') + "/signin")
-                .get()
-                .build()
-            runCatching {
-                FapFolderNetwork.sharedOkHttpClient.newCall(priming).execute().use { resp ->
-                    Log.d(TAG, "login priming /signin: ${resp.code}")
-                }
-            }
-
-            val form = FormBody.Builder()
-                .add("username_email", trimmedUser)
-                .add("password", password)
-                .add("remember", if (remember) "on" else "off")
-                .build()
-
-            val request = Request.Builder()
-                .url(FapFolderConstants.BASE_URL + FapFolderConstants.ENDPOINT_SIGNIN)
-                .post(form)
-                .header("x-requested-with", "XMLHttpRequest")
-                .header("origin", FapFolderConstants.HEADER_ORIGIN)
-                .header("referer", FapFolderConstants.HEADER_REFERER_SIGNIN)
-                .header("content-type", FapFolderConstants.CONTENT_TYPE_FORM)
-                .header("accept", "application/json, text/javascript, */*; q=0.01")
-                .build()
-
-            FapFolderNetwork.sharedOkHttpClient.newCall(request).execute().use { resp ->
-                val code = resp.code
-                val body = resp.body.string().orEmpty()
-                val setCookies = resp.headers("Set-Cookie").toList()
-
-                Log.d(
-                    TAG,
-                    "login response: code=$code bodyLen=${body.length} cookies=${setCookies.size}"
-                )
-
-                if (FapFolderNetwork.isChallengeResponse(body)) {
-                    emit(FapFolderAuthResult.CloudflareChallenge)
-                    return@use
+        loginMutex.withLock {
+            try {
+                val trimmedUser = usernameOrEmail.trim()
+                if (trimmedUser.isEmpty() || password.isEmpty()) {
+                    emit(FapFolderAuthResult.FormError("Username and password cannot be empty."))
+                    return@withLock
                 }
 
-                val hasCUser = setCookies.any { it.startsWith("c_user=", ignoreCase = true) }
-                val hasXs = setCookies.any { it.startsWith("xs=", ignoreCase = true) }
-
-                if (code in 200..399 && hasCUser && hasXs) {
-                    FapFolderNetwork.persistCookies()
-                    emit(FapFolderAuthResult.Success)
-                    return@use
+                val priming = Request.Builder()
+                    .url(FapFolderConstants.BASE_URL.trimEnd('/') + "/signin")
+                    .get()
+                    .build()
+                runCatching {
+                    FapFolderNetwork.sharedOkHttpClient.newCall(priming).execute().use { resp ->
+                        Log.d(TAG, "login priming /signin: ${resp.code}")
+                    }
                 }
 
-                if (code == 401 || code == 403) {
+                val form = FormBody.Builder()
+                    .add("username_email", trimmedUser)
+                    .add("password", password)
+                    .add("remember", if (remember) "on" else "off")
+                    .build()
+
+                val request = Request.Builder()
+                    .url(FapFolderConstants.BASE_URL + FapFolderConstants.ENDPOINT_SIGNIN)
+                    .post(form)
+                    .header("x-requested-with", "XMLHttpRequest")
+                    .header("origin", FapFolderConstants.HEADER_ORIGIN)
+                    .header("referer", FapFolderConstants.HEADER_REFERER_SIGNIN)
+                    .header("content-type", FapFolderConstants.CONTENT_TYPE_FORM)
+                    .header("accept", "application/json, text/javascript, */*; q=0.01")
+                    .build()
+
+                FapFolderNetwork.sharedOkHttpClient.newCall(request).execute().use { resp ->
+                    val code = resp.code
+                    val body = resp.body.string().orEmpty()
+                    val setCookies = resp.headers("Set-Cookie").toList()
+
+                    Log.d(
+                        TAG,
+                        "login response: code=$code bodyLen=${body.length} cookies=${setCookies.size}"
+                    )
+
+                    if (FapFolderNetwork.isChallengeResponse(body)) {
+                        emit(FapFolderAuthResult.CloudflareChallenge)
+                        return@use
+                    }
+
+                    val hasCUser = setCookies.any { it.startsWith("c_user=", ignoreCase = true) }
+                    val hasXs = setCookies.any { it.startsWith("xs=", ignoreCase = true) }
+
+                    if (code in 200..399 && hasCUser && hasXs) {
+                        FapFolderNetwork.persistCookies()
+                        emit(FapFolderAuthResult.Success)
+                        return@use
+                    }
+
+                    if (code == 401 || code == 403) {
+                        emit(FapFolderAuthResult.InvalidCredentials)
+                        return@use
+                    }
+
+                    if (body.contains("\"error\"", ignoreCase = true)) {
+                        val errorMsg = extractErrorMessage(body)
+                        emit(FapFolderAuthResult.FormError(errorMsg ?: "Incorrect credentials."))
+                        return@use
+                    }
+
+                    if (body.contains("callback", ignoreCase = true)) {
+                        FapFolderNetwork.persistCookies()
+                        emit(FapFolderAuthResult.Success)
+                        return@use
+                    }
+
                     emit(FapFolderAuthResult.InvalidCredentials)
-                    return@use
                 }
-
-                if (body.contains("\"error\"", ignoreCase = true)) {
-                    val errorMsg = extractErrorMessage(body)
-                    emit(FapFolderAuthResult.FormError(errorMsg ?: "Incorrect credentials."))
-                    return@use
-                }
-
-                if (body.contains("callback", ignoreCase = true)) {
-                    FapFolderNetwork.persistCookies()
-                    emit(FapFolderAuthResult.Success)
-                    return@use
-                }
-
-                emit(FapFolderAuthResult.InvalidCredentials)
+            } catch (e: Exception) {
+                Log.e(TAG, "login failed", e)
+                emit(FapFolderAuthResult.NetworkError(e))
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "login failed", e)
-            emit(FapFolderAuthResult.NetworkError(e))
         }
     }.flowOn(Dispatchers.IO)
 

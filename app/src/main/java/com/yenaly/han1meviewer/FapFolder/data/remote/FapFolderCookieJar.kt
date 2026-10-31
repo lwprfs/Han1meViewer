@@ -3,6 +3,7 @@ package com.yenaly.han1meviewer.FapFolder.data.remote
 import android.util.Log
 import androidx.core.content.edit
 import com.yenaly.han1meviewer.FapFolder.common.FapFolderConstants
+import com.yenaly.han1meviewer.FapFolder.common.FapFolderSecurePrefs
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderHtmlUtils
 import com.yenaly.han1meviewer.HJson
 import com.yenaly.han1meviewer.Preferences
@@ -32,9 +33,25 @@ class FapFolderCookieJar : CookieJar {
         private val SEED_HOSTS = listOf(
             "fapfolder.club",
             "www.fapfolder.club",
+        )
+
+        private val FORBIDDEN_HOSTS = setOf(
             "fap.onl",
             "www.fap.onl",
         )
+
+        private fun isForbiddenHost(host: String?): Boolean {
+            if (host.isNullOrBlank()) return true
+            val h = host.lowercase()
+            if (h in FORBIDDEN_HOSTS) return true
+            return h.endsWith(".r2.cloudflarestorage.com") ||
+                    h == "r2.cloudflarestorage.com" ||
+                    h.endsWith("mc.yandex.ru") ||
+                    h.endsWith("yandex.ru") ||
+                    h.endsWith("yandex.net") ||
+                    h.endsWith("google-analytics.com") ||
+                    h.endsWith("googletagmanager.com")
+        }
 
         private val cookieStore:
                 MutableMap<String, MutableMap<String, Cookie>> = ConcurrentHashMap()
@@ -69,6 +86,9 @@ class FapFolderCookieJar : CookieJar {
 
     override fun loadForRequest(url: HttpUrl): List<Cookie> {
         val host = url.host
+        if (isForbiddenHost(host)) return emptyList()
+        if (!url.isHttps) return emptyList()
+
         val now = System.currentTimeMillis()
         val bucket = cookieStore[host] ?: return emptyList()
 
@@ -77,7 +97,7 @@ class FapFolderCookieJar : CookieJar {
         }
 
         val requestPath = url.encodedPath.ifBlank { "/" }
-        val applicable = bucket.values.filter { c ->
+        return bucket.values.filter { c ->
             val cookiePath = c.path.ifBlank { "/" }
             cookiePath == "/" ||
                     requestPath == cookiePath ||
@@ -85,29 +105,31 @@ class FapFolderCookieJar : CookieJar {
                         if (cookiePath.endsWith("/")) cookiePath else "$cookiePath/"
                     )
         }
-
-        return applicable
     }
 
     override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
         if (cookies.isEmpty()) return
         val host = url.host
+        if (isForbiddenHost(host)) return
+
         val now = System.currentTimeMillis()
-
-        val filtered = cookies.filter { c ->
-            c.name in PRESERVED_NAMES &&
-                    (c.expiresAt == Long.MAX_VALUE || c.expiresAt > now)
-        }
-        if (filtered.isEmpty()) return
-
         val bucket = cookieStore.getOrPut(host) { ConcurrentHashMap() }
-        filtered.forEach { c ->
-            bucket[key(c)] = c
+
+        cookies.forEach { c ->
+            if (c.name !in PRESERVED_NAMES) return@forEach
+            val k = key(c)
+            val expired = c.expiresAt != Long.MAX_VALUE && c.expiresAt <= now
+            if (expired || c.value.isBlank()) {
+                bucket.remove(k)
+            } else {
+                bucket[k] = c
+            }
         }
+        if (bucket.isEmpty()) cookieStore.remove(host)
     }
 
     fun seed(cookies: List<Cookie>) {
-        val filtered = cookies.filter { it.name in PRESERVED_NAMES }
+        val filtered = cookies.filter { it.name in PRESERVED_NAMES && it.value.isNotBlank() }
         if (filtered.isEmpty()) return
         SEED_HOSTS.forEach { host ->
             val bucket = cookieStore.getOrPut(host) { ConcurrentHashMap() }
@@ -129,6 +151,7 @@ class FapFolderCookieJar : CookieJar {
                             .path("/")
                             .name(name)
                             .value(value)
+                            .secure()
                             .build()
                     }.getOrNull() ?: return@forEach
                     bucket[key(cookie)] = cookie
@@ -146,23 +169,44 @@ class FapFolderCookieJar : CookieJar {
         val serialized = HJson.encodeToString(
             snapshot.map { (k, v) -> CookieEntry(k, v) }
         )
-        Preferences.preferenceSp.edit(commit = true) {
+        FapFolderSecurePrefs.instance.edit(commit = true) {
             putString(FapFolderConstants.PREF_FAPFOLDER_COOKIES_RAW, serialized)
         }
     }
 
     fun restoreFromPreferences() {
-        val raw = Preferences.preferenceSp.getString(
+        val encryptedRaw = FapFolderSecurePrefs.instance.getString(
             FapFolderConstants.PREF_FAPFOLDER_COOKIES_RAW, null
-        ) ?: return
+        )
+        val legacyRaw = if (encryptedRaw == null) {
+            Preferences.preferenceSp.getString(
+                FapFolderConstants.PREF_FAPFOLDER_COOKIES_RAW, null
+            )
+        } else null
+
+        val raw = encryptedRaw ?: legacyRaw ?: return
         val entries = runCatching {
             HJson.decodeFromString<List<CookieEntry>>(raw)
         }.getOrNull() ?: return
         seedFromSnapshot(entries.associate { it.name to it.value })
+
+        if (encryptedRaw == null && legacyRaw != null) {
+            FapFolderSecurePrefs.instance.edit {
+                putString(FapFolderConstants.PREF_FAPFOLDER_COOKIES_RAW, legacyRaw)
+            }
+            Preferences.preferenceSp.edit {
+                remove(FapFolderConstants.PREF_FAPFOLDER_COOKIES_RAW)
+            }
+        }
     }
 
     fun clearPersistedPreferences() {
-        Preferences.preferenceSp.edit { remove(FapFolderConstants.PREF_FAPFOLDER_COOKIES_RAW) }
+        FapFolderSecurePrefs.instance.edit {
+            remove(FapFolderConstants.PREF_FAPFOLDER_COOKIES_RAW)
+        }
+        Preferences.preferenceSp.edit {
+            remove(FapFolderConstants.PREF_FAPFOLDER_COOKIES_RAW)
+        }
     }
 
     @Serializable

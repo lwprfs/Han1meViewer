@@ -188,6 +188,7 @@ dependencies {
     implementation(libs.jiaozi.video.player)
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.exoplayer.hls)
+    implementation(libs.media3.datasource.okhttp)
     implementation(libs.mpv.lib)
 
     // view
@@ -221,6 +222,7 @@ dependencies {
     implementation(libs.crashx)
     // debugImplementation(libs.leak.canary)
     implementation("com.squareup.okhttp3:okhttp-brotli:4.12.0")
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
 }
 
 /**

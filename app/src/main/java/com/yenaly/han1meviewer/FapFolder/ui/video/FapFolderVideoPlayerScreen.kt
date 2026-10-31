@@ -95,6 +95,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.PlaybackException
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import com.yenaly.han1meviewer.FapFolder.common.FapFolderConstants
@@ -127,10 +128,8 @@ private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 private fun isTrustedMediaHost(host: String?): Boolean {
     if (host.isNullOrBlank()) return false
     val h = host.lowercase()
-    return h == "fapfolder.club" ||
-            h.endsWith(".fapfolder.club") ||
-            h == "fap.onl" ||
-            h.endsWith(".fap.onl")
+
+    return h == "fapfolder.club" || h.endsWith(".fapfolder.club")
 }
 
 @Composable
@@ -285,28 +284,27 @@ fun FapFolderVideoPlayerScreen(
 
         val playHost = runCatching { playableUrl.toHttpUrlOrNull()?.host }.getOrNull()
         val referer = postPermalinkForReferer ?: FapFolderConstants.HEADER_REFERER
-        val trusted = isTrustedMediaHost(playHost)
+        val isPlayApi = playableUrl.contains("/video/play")
 
         val requestHeaders = buildMap {
             put("accept", "*/*")
             put("accept-encoding", "identity")
-            if (trusted) {
+            if (isPlayApi && isTrustedMediaHost(playHost)) {
                 put("referer", referer)
                 put("origin", FapFolderConstants.HEADER_ORIGIN)
                 put("user-agent", FapFolderConstants.USER_AGENT_FAPFOLDER)
                 put("accept-language", FapFolderConstants.ACCEPT_LANGUAGE)
-                val cookieHeader = runCatching { FapFolderNetwork.snapshotCookies() }
-                    .getOrDefault("")
-                if (cookieHeader.isNotBlank()) put("cookie", cookieHeader)
+
+            } else {
+
+                put("referer", FapFolderConstants.HEADER_REFERER)
+                put("user-agent", FapFolderConstants.USER_AGENT_FAPFOLDER)
             }
         }
 
-        val httpFactory = DefaultHttpDataSource.Factory()
+        val httpFactory = OkHttpDataSource.Factory(FapFolderNetwork.sharedOkHttpClient)
             .setDefaultRequestProperties(requestHeaders)
-            .setAllowCrossProtocolRedirects(true)
             .setUserAgent(FapFolderConstants.USER_AGENT_FAPFOLDER)
-            .setConnectTimeoutMs(15_000)
-            .setReadTimeoutMs(20_000)
 
         val dataSourceFactory = DefaultDataSource.Factory(context, httpFactory)
 
@@ -638,7 +636,7 @@ fun FapFolderVideoPlayerScreen(
                 onRelease = { view ->
                     exoPlayer?.clearVideoSurfaceView(view)
                     if (surfaceRef.value === view) surfaceRef.value = null
-                    // SurfaceView is not a ViewGroup — nothing to remove
+
                 },
             )
 

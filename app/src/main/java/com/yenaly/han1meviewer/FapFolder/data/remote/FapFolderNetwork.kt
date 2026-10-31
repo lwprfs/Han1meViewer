@@ -120,6 +120,12 @@ object FapFolderNetwork {
             .create(FapFolderService::class.java)
     }
 
+    private fun isFirstPartyHost(host: String?): Boolean {
+        if (host.isNullOrBlank()) return false
+        val h = host.lowercase()
+        return h == FapFolderConstants.SITE_HOST || h.endsWith(".${FapFolderConstants.SITE_HOST}")
+    }
+
     private fun buildClient(): OkHttpClient {
         val builder = OkHttpClient.Builder()
             .connectTimeout(FapFolderConstants.CONNECT_TIMEOUT_S, TimeUnit.SECONDS)
@@ -135,8 +141,13 @@ object FapFolderNetwork {
             .addInterceptor(BrotliInterceptor)
             .addInterceptor { chain ->
                 val original = chain.request()
-                val builder = original.newBuilder()
+                val host = original.url.host
 
+                if (!isFirstPartyHost(host)) {
+                    return@addInterceptor chain.proceed(original)
+                }
+
+                val builder = original.newBuilder()
                 val isAjax = original.url.encodedPath.contains("/includes/ajax/")
                 val hasExplicitHeaders = original.header("x-requested-with") != null ||
                         original.header("X-Requested-With") != null

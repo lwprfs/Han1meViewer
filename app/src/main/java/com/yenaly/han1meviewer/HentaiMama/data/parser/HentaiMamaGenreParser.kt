@@ -85,7 +85,7 @@ object HentaiMamaGenreParser {
         val crumb: GenreBreadcrumb? = HentaiMamaSeriesCardParser.parseGenreBreadcrumb(doc)
         val name: String = crumb?.currentName?.takeIf { it.isNotBlank() }
             ?: doc.selectFirst(CRUMB_NAME_SELECTOR)?.text()?.trim().orEmpty()
-            
+
         val parentAnchor: Element? = doc.selectFirst(CRUMB_PARENT_SELECTOR)
         val parentLabel: String? = parentAnchor?.text()?.trim()?.takeIf { it.isNotBlank() }
             ?: crumb?.parentName?.takeIf { it.isNotBlank() }

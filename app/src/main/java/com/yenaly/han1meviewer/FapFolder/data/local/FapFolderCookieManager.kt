@@ -3,6 +3,7 @@ package com.yenaly.han1meviewer.FapFolder.data.local
 import android.util.Log
 import androidx.core.content.edit
 import com.yenaly.han1meviewer.Preferences
+import com.yenaly.han1meviewer.FapFolder.common.FapFolderSecurePrefs
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderCookieJar
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetwork
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -67,7 +68,6 @@ object FapFolderCookieManager {
     }
 
     fun persistOnly(raw: String) {
-
         val jar = FapFolderCookieJar()
         val parsed = parseToCookies(raw, FapFolderNetwork.baseUrl)
         if (parsed.isNotEmpty()) {
@@ -87,6 +87,7 @@ object FapFolderCookieManager {
     }
 
     fun clearCookies() {
+        FapFolderSecurePrefs.instance.edit { remove(PREF_FAPFOLDER_COOKIES) }
         Preferences.preferenceSp.edit { remove(PREF_FAPFOLDER_COOKIES) }
         FapFolderCookieJar().clearCookies()
         FapFolderCookieJar().clearPersistedPreferences()
@@ -107,26 +108,12 @@ object FapFolderCookieManager {
     }
 
     fun validate(raw: String): FapFolderCookieValidationResult {
-        if (raw.isBlank()) {
-            return FapFolderCookieValidationResult(false, 0, "No cookies provided")
-        }
-        val cookies = parseToCookies(raw, FapFolderNetwork.baseUrl)
-        if (cookies.isEmpty()) {
-            return FapFolderCookieValidationResult(
-                false, 0, "Could not parse any cookies from the input",
-            )
-        }
-        val names = cookies.map { it.name }.toSet()
-        val hasAll = requiredCookieNames.all { it in names }
-        if (!hasAll) {
-            val missing = requiredCookieNames.filterNot { it in names }
-            return FapFolderCookieValidationResult(
-                false,
-                cookies.size,
-                "Missing required cookies: ${missing.joinToString(", ")}",
-            )
-        }
-        return FapFolderCookieValidationResult(true, cookies.size, "OK")
+        val jarResult = FapFolderCookieJar().validateRawCookies(raw)
+        return FapFolderCookieValidationResult(
+            valid = jarResult.valid,
+            cookieCount = jarResult.cookieCount,
+            message = jarResult.message,
+        )
     }
 
     fun parseToCookies(raw: String, baseUrl: String): List<Cookie> {
@@ -142,10 +129,11 @@ object FapFolderCookieManager {
     }
 
     private fun readPersistedSnapshot(): String {
-
-        val snapshot = FapFolderCookieJar.snapshot()
-        if (snapshot.isEmpty()) return ""
-        return snapshot.entries.joinToString("; ") { "${it.key}=${it.value}" }
+        val jar = FapFolderCookieJar()
+        jar.restoreFromPreferences()
+        return FapFolderCookieJar.snapshot()
+            .entries
+            .joinToString("; ") { "${it.key}=${it.value}" }
     }
 
     private fun parseJsonCookies(raw: String, host: String): List<Cookie> {
@@ -164,7 +152,7 @@ object FapFolderCookieManager {
                 val value = obj.optString("value")
                 val domain = obj.optString("domain").takeIf { it.isNotBlank() } ?: host
                 val path = obj.optString("path").takeIf { it.isNotBlank() } ?: "/"
-                val secure = obj.optBoolean("secure", false)
+                val secure = obj.optBoolean("secure", true)
                 val httpOnly = obj.optBoolean("httpOnly", false)
 
                 val expiry = when {
@@ -253,6 +241,7 @@ object FapFolderCookieManager {
                     .path("/")
                     .name(name)
                     .value(value)
+                    .secure()
                     .build()
             }.onSuccess { result.add(it) }
                 .onFailure { Log.w(TAG, "parseRawCookieString skip $name: ${it.message}") }

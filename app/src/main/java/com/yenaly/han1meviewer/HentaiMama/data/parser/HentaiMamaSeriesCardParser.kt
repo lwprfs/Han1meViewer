@@ -68,7 +68,7 @@ object HentaiMamaSeriesCardParser {
             ?: img?.attr("data-savepage-src")?.takeIf { it.isNotBlank() }
             ?: img?.attr("data-lazy-src")?.takeIf { it.isNotBlank() }
             ?: img?.absUrl("src").orEmpty()
-            
+
         val posterAlt: String = img?.attr("alt").orEmpty()
 
         val rating: Double? = el.selectFirst(".sc-btn-rating")
