@@ -175,9 +175,13 @@ class FapFolderHomeViewModel(application: Application) : AndroidViewModel(applic
         refresh()
     }
 
-    fun loadMore() {
+    fun loadMore() = loadMoreInternal(forceAfterError = false)
+
+    private fun loadMoreInternal(forceAfterError: Boolean) {
         val state = _uiState.value
-        if (state.isLoadingMore || state.isRefreshing || state.filterSwitching || !state.hasMore) return
+
+        val canRetryAfterError = forceAfterError && state.errorMessage != null
+        if (state.isLoadingMore || state.isRefreshing || state.filterSwitching || (!state.hasMore && !canRetryAfterError)) return
         if (state.totalPagesLoaded >= MAX_BATCHES) {
             _uiState.update { it.copy(hasMore = false) }
             return
@@ -246,7 +250,7 @@ class FapFolderHomeViewModel(application: Application) : AndroidViewModel(applic
     }
 
     fun retry() {
-        if (_uiState.value.items.isEmpty()) refresh() else loadMore()
+        if (_uiState.value.items.isEmpty()) refresh() else loadMoreInternal(forceAfterError = true)
     }
 
     fun handleEvent(event: FapFolderHomeEvent) {

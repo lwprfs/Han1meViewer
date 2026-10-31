@@ -42,7 +42,7 @@ interface FapFolderService {
     @GET
     suspend fun getAlbumUrl(@Url url: String): Response<ResponseBody>
 
-    @GET
+    @GET("settings")
     suspend fun getSettingsPage(): Response<ResponseBody>
 
     @FormUrlEncoded

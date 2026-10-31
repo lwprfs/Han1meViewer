@@ -5,6 +5,7 @@ import com.yenaly.han1meviewer.FapFolder.common.FapFolderConstants
 import com.yenaly.han1meviewer.FapFolder.data.local.FapFolderSessionCache
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderSessionParser
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.sync.Mutex
@@ -54,6 +55,117 @@ object FapFolderAuthRepo {
 
     private val loginMutex = Mutex()
 
+    private const val PROBE_CONFIRM_ATTEMPTS = 2
+
+    private class ProbeFetch(val code: Int, val body: String)
+
+    private fun looksSignedOut(result: FapFolderProbeResult): Boolean {
+        val code = result.httpCode ?: return false
+        return result.failure == FapFolderProbeFailure.SessionExpired && code in 200..299
+    }
+
+    private fun fetchHomeForProbe(url: String): ProbeFetch {
+        val request = Request.Builder()
+            .url(url)
+            .get()
+            .build()
+        FapFolderNetwork.sharedOkHttpClient.newCall(request).execute().use { resp ->
+            val body = resp.body.string().orEmpty()
+            Log.d(TAG, "probe /: code=${resp.code} bodyLen=${body.length}")
+            return ProbeFetch(resp.code, body)
+        }
+    }
+
+    private fun evaluateProbe(fetch: ProbeFetch, url: String): FapFolderProbeResult {
+        val code = fetch.code
+        val body = fetch.body
+
+        if (FapFolderNetwork.isChallengeResponse(body)) {
+            return FapFolderProbeResult(
+                ok = false,
+                failure = FapFolderProbeFailure.CloudflareChallenge,
+                userMessage = "Cloudflare challenge. Wait a moment and try again.",
+                httpCode = code,
+                suggestWait = true,
+            )
+        }
+
+        return when {
+            code == 429 -> FapFolderProbeResult(
+                ok = false,
+                failure = FapFolderProbeFailure.RateLimited,
+                userMessage = "FapFolder is rate limiting (HTTP 429). Wait a minute.",
+                httpCode = code,
+                suggestWait = true,
+            )
+
+            code == 403 -> FapFolderProbeResult(
+                ok = false,
+                failure = FapFolderProbeFailure.CloudflareChallenge,
+                userMessage = "Request blocked (HTTP 403). Wait a moment and try again.",
+                httpCode = code,
+                suggestWait = true,
+            )
+
+            code == 401 -> {
+                FapFolderSessionCache.clear()
+                FapFolderProbeResult(
+                    ok = false,
+                    failure = FapFolderProbeFailure.SessionExpired,
+                    userMessage = "Session rejected (HTTP 401). Sign in again.",
+                    httpCode = code,
+                    suggestRelogin = true,
+                )
+            }
+
+            code in 500..599 -> FapFolderProbeResult(
+                ok = false,
+                failure = FapFolderProbeFailure.ServerError,
+                userMessage = "FapFolder server error (HTTP $code). Try later.",
+                httpCode = code,
+                suggestWait = true,
+            )
+
+            code == 404 -> FapFolderProbeResult(
+                ok = false,
+                failure = FapFolderProbeFailure.SiteDown,
+                userMessage = "FapFolder returned 404. Site may be down.",
+                httpCode = code,
+                suggestSwitchCookies = true,
+            )
+
+            code in 200..299 -> {
+                val session = FapFolderSessionParser.parse(body, url)
+                if (session.loggedIn) {
+                    FapFolderSessionCache.update(session)
+                    FapFolderProbeResult(
+                        ok = true,
+                        httpCode = code,
+                        viewerUsername = session.viewer.username,
+                        viewerAvatarUrl = session.viewer.avatarUrl,
+                        viewerUserId = session.viewer.userId,
+                    )
+                } else {
+                    FapFolderSessionCache.clear()
+                    FapFolderProbeResult(
+                        ok = false,
+                        failure = FapFolderProbeFailure.SessionExpired,
+                        userMessage = "Cookies are not signed in on this site. Sign in again.",
+                        httpCode = code,
+                        suggestRelogin = true,
+                    )
+                }
+            }
+
+            else -> FapFolderProbeResult(
+                ok = false,
+                failure = FapFolderProbeFailure.Unknown,
+                userMessage = "Unexpected response (HTTP $code).",
+                httpCode = code,
+            )
+        }
+    }
+
     fun probe(context: android.content.Context) = flow {
         try {
             if (!FapFolderNetwork.hasAuthCookies()) {
@@ -69,112 +181,15 @@ object FapFolderAuthRepo {
             }
 
             val url = FapFolderConstants.BASE_URL.trimEnd('/') + "/"
-            val request = Request.Builder()
-                .url(url)
-                .get()
-                .build()
+            var attempt = 1
+            var result = evaluateProbe(fetchHomeForProbe(url), url)
 
-            FapFolderNetwork.sharedOkHttpClient.newCall(request).execute().use { resp ->
-                val code = resp.code
-                val body = resp.body.string().orEmpty()
-                Log.d(TAG, "probe /: code=$code bodyLen=${body.length}")
-
-                if (FapFolderNetwork.isChallengeResponse(body)) {
-                    emit(
-                        FapFolderProbeResult(
-                            ok = false,
-                            failure = FapFolderProbeFailure.CloudflareChallenge,
-                            userMessage = "Cloudflare challenge. Wait a moment and try again.",
-                            httpCode = code,
-                            suggestWait = true,
-                        )
-                    )
-                    return@use
-                }
-
-                when {
-                    code == 429 -> emit(
-                        FapFolderProbeResult(
-                            ok = false,
-                            failure = FapFolderProbeFailure.RateLimited,
-                            userMessage = "FapFolder is rate limiting (HTTP 429). Wait a minute.",
-                            httpCode = code,
-                            suggestWait = true,
-                        )
-                    )
-
-                    code == 401 || code == 403 -> {
-                        FapFolderNetwork.clearCookies()
-                        FapFolderSessionCache.clear()
-                        emit(
-                            FapFolderProbeResult(
-                                ok = false,
-                                failure = FapFolderProbeFailure.SessionExpired,
-                                userMessage = "Session rejected (HTTP $code). Paste fresh cookies.",
-                                httpCode = code,
-                                suggestRelogin = true,
-                            )
-                        )
-                    }
-
-                    code in 500..599 -> emit(
-                        FapFolderProbeResult(
-                            ok = false,
-                            failure = FapFolderProbeFailure.ServerError,
-                            userMessage = "FapFolder server error (HTTP $code). Try later.",
-                            httpCode = code,
-                            suggestWait = true,
-                        )
-                    )
-
-                    code == 404 -> emit(
-                        FapFolderProbeResult(
-                            ok = false,
-                            failure = FapFolderProbeFailure.SiteDown,
-                            userMessage = "FapFolder returned 404. Site may be down.",
-                            httpCode = code,
-                            suggestSwitchCookies = true,
-                        )
-                    )
-
-                    code in 200..299 -> {
-                        val session = FapFolderSessionParser.parse(body, url)
-                        FapFolderSessionCache.update(session)
-                        if (session.loggedIn) {
-                            emit(
-                                FapFolderProbeResult(
-                                    ok = true,
-                                    httpCode = code,
-                                    viewerUsername = session.viewer.username,
-                                    viewerAvatarUrl = session.viewer.avatarUrl,
-                                    viewerUserId = session.viewer.userId,
-                                )
-                            )
-                        } else {
-                            FapFolderNetwork.clearCookies()
-                            FapFolderSessionCache.clear()
-                            emit(
-                                FapFolderProbeResult(
-                                    ok = false,
-                                    failure = FapFolderProbeFailure.SessionExpired,
-                                    userMessage = "Cookies are not signed in on this site. Sign in again.",
-                                    httpCode = code,
-                                    suggestRelogin = true,
-                                )
-                            )
-                        }
-                    }
-
-                    else -> emit(
-                        FapFolderProbeResult(
-                            ok = false,
-                            failure = FapFolderProbeFailure.Unknown,
-                            userMessage = "Unexpected response (HTTP $code).",
-                            httpCode = code,
-                        )
-                    )
-                }
+            while (attempt < PROBE_CONFIRM_ATTEMPTS && looksSignedOut(result)) {
+                delay(FapFolderConstants.SESSION_RECHECK_DELAY_MS)
+                result = evaluateProbe(fetchHomeForProbe(url), url)
+                attempt++
             }
+            emit(result)
         } catch (e: SocketTimeoutException) {
             Log.e(TAG, "probe timeout", e)
             emit(

@@ -12,6 +12,9 @@ import okhttp3.Cookie
 import okhttp3.CookieJar
 import okhttp3.HttpUrl
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 
 class FapFolderCookieJar : CookieJar {
 
@@ -55,6 +58,10 @@ class FapFolderCookieJar : CookieJar {
 
         private val cookieStore:
                 MutableMap<String, MutableMap<String, Cookie>> = ConcurrentHashMap()
+
+        private val persistExecutor = Executors.newSingleThreadScheduledExecutor { runnable ->
+            Thread(runnable, "fapfolder-cookie-persist").apply { isDaemon = true }
+        }
 
         private fun key(c: Cookie): String =
             "${c.name}@${c.path.ifBlank { "/" }}"
@@ -114,18 +121,40 @@ class FapFolderCookieJar : CookieJar {
 
         val now = System.currentTimeMillis()
         val bucket = cookieStore.getOrPut(host) { ConcurrentHashMap() }
+        var changed = false
 
         cookies.forEach { c ->
             if (c.name !in PRESERVED_NAMES) return@forEach
             val k = key(c)
             val expired = c.expiresAt != Long.MAX_VALUE && c.expiresAt <= now
             if (expired || c.value.isBlank()) {
-                bucket.remove(k)
+                if (bucket.remove(k) != null) changed = true
             } else {
+                val old = bucket[k]
+                if (old == null || old.value != c.value) changed = true
                 bucket[k] = c
             }
         }
         if (bucket.isEmpty()) cookieStore.remove(host)
+
+        if (changed) schedulePersist()
+    }
+
+    private var pendingPersist: ScheduledFuture<*>? = null
+
+    @Synchronized
+    private fun schedulePersist() {
+        pendingPersist?.cancel(false)
+        pendingPersist = persistExecutor.schedule(
+            Runnable {
+                runCatching {
+
+                    if (hasRequiredAuthCookie()) persistToPreferences()
+                }.onFailure { Log.w(TAG, "debounced cookie save failed: ${it.message}") }
+            },
+            FapFolderConstants.COOKIE_PERSIST_DEBOUNCE_MS,
+            TimeUnit.MILLISECONDS,
+        )
     }
 
     fun seed(cookies: List<Cookie>) {
@@ -139,7 +168,10 @@ class FapFolderCookieJar : CookieJar {
         }
     }
 
-    fun seedFromSnapshot(snapshot: Map<String, String>) {
+    fun seedFromSnapshot(
+        snapshot: Map<String, String>,
+        overwriteExisting: Boolean = true,
+    ) {
         if (snapshot.isEmpty()) return
         SEED_HOSTS.forEach { host ->
             val bucket = cookieStore.getOrPut(host) { ConcurrentHashMap() }
@@ -154,6 +186,7 @@ class FapFolderCookieJar : CookieJar {
                             .secure()
                             .build()
                     }.getOrNull() ?: return@forEach
+                    if (!overwriteExisting && bucket.containsKey(key(cookie))) return@forEach
                     bucket[key(cookie)] = cookie
                 }
             }
@@ -175,28 +208,41 @@ class FapFolderCookieJar : CookieJar {
     }
 
     fun restoreFromPreferences() {
-        val encryptedRaw = FapFolderSecurePrefs.instance.getString(
-            FapFolderConstants.PREF_FAPFOLDER_COOKIES_RAW, null
-        )
-        val legacyRaw = if (encryptedRaw == null) {
-            Preferences.preferenceSp.getString(
+        try {
+            val encryptedRaw = FapFolderSecurePrefs.instance.getString(
                 FapFolderConstants.PREF_FAPFOLDER_COOKIES_RAW, null
             )
-        } else null
+            val fallbackRaw = if (encryptedRaw == null) {
+                FapFolderSecurePrefs.readFallback(FapFolderConstants.PREF_FAPFOLDER_COOKIES_RAW)
+            } else null
+            val legacyRaw = if (encryptedRaw == null && fallbackRaw == null) {
+                Preferences.preferenceSp.getString(
+                    FapFolderConstants.PREF_FAPFOLDER_COOKIES_RAW, null
+                )
+            } else null
 
-        val raw = encryptedRaw ?: legacyRaw ?: return
-        val entries = runCatching {
-            HJson.decodeFromString<List<CookieEntry>>(raw)
-        }.getOrNull() ?: return
-        seedFromSnapshot(entries.associate { it.name to it.value })
+            val raw = encryptedRaw ?: fallbackRaw ?: legacyRaw ?: return
+            val entries = runCatching {
+                HJson.decodeFromString<List<CookieEntry>>(raw)
+            }.getOrNull() ?: return
 
-        if (encryptedRaw == null && legacyRaw != null) {
-            FapFolderSecurePrefs.instance.edit {
-                putString(FapFolderConstants.PREF_FAPFOLDER_COOKIES_RAW, legacyRaw)
+            seedFromSnapshot(
+                entries.associate { it.name to it.value },
+                overwriteExisting = false,
+            )
+
+            if (encryptedRaw == null) {
+                FapFolderSecurePrefs.instance.edit {
+                    putString(FapFolderConstants.PREF_FAPFOLDER_COOKIES_RAW, raw)
+                }
+                if (legacyRaw != null) {
+                    Preferences.preferenceSp.edit {
+                        remove(FapFolderConstants.PREF_FAPFOLDER_COOKIES_RAW)
+                    }
+                }
             }
-            Preferences.preferenceSp.edit {
-                remove(FapFolderConstants.PREF_FAPFOLDER_COOKIES_RAW)
-            }
+        } catch (e: Exception) {
+            Log.e(TAG, "restoreFromPreferences failed", e)
         }
     }
 

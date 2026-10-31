@@ -187,7 +187,7 @@ fun FapFolderGroupScreen(
                             onOpenImage = { images, idx -> lightboxPayload = images to idx },
                             onOpenVideoBySlug = onOpenPost,
                             onLoadMore = { viewModel.loadMoreItems() },
-                            onRetry = { viewModel.loadMoreItems() },
+                            onRetry = { viewModel.retryLoadMoreItems() },
                         )
 
                         FapFolderGroupTab.MEMBERS -> GroupMembersTab(
@@ -212,7 +212,7 @@ fun FapFolderGroupScreen(
                             },
                             onOpenImage = { images, idx -> lightboxPayload = images to idx },
                             onLoadMore = { viewModel.loadMoreItems() },
-                            onRetry = { viewModel.loadMoreItems() },
+                            onRetry = { viewModel.retryLoadMoreItems() },
                         )
                     }
                 }

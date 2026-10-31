@@ -128,9 +128,24 @@ object FapFolderConstants {
     const val MIN_GAP_BETWEEN_PAGE_GETS_MS = 500L
     const val MAX_PAGES_PER_QUERY = 50
     const val BACKOFF_403_MS = 60_000L
-    const val CONNECT_TIMEOUT_S = 8L
-    const val READ_TIMEOUT_S = 12L
-    const val CALL_TIMEOUT_S = 15L
+
+    const val CONNECT_TIMEOUT_S = 15L
+    const val READ_TIMEOUT_S = 45L
+    const val WRITE_TIMEOUT_S = 30L
+    const val CALL_TIMEOUT_S = 180L
+
+    const val PLAYBACK_READ_TIMEOUT_S = 60L
+
+    const val MAX_RETRY_ATTEMPTS = 3
+    const val RETRY_BASE_DELAY_MS = 800L
+    const val RETRY_AFTER_MAX_MS = 8_000L
+
+    const val LOAD_MORE_MAX_ATTEMPTS = 3
+    const val LOAD_MORE_RETRY_DELAY_MS = 1_200L
+
+    const val SESSION_RECHECK_DELAY_MS = 1_200L
+
+    const val COOKIE_PERSIST_DEBOUNCE_MS = 1_500L
 
     const val TIME_NO_FILTER = -1
     const val PREMFEED_OFF = 0

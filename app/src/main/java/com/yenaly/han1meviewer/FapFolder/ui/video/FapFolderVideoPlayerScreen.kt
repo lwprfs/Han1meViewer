@@ -302,7 +302,7 @@ fun FapFolderVideoPlayerScreen(
             }
         }
 
-        val httpFactory = OkHttpDataSource.Factory(FapFolderNetwork.sharedOkHttpClient)
+        val httpFactory = OkHttpDataSource.Factory(FapFolderNetwork.playbackOkHttpClient)
             .setDefaultRequestProperties(requestHeaders)
             .setUserAgent(FapFolderConstants.USER_AGENT_FAPFOLDER)
 

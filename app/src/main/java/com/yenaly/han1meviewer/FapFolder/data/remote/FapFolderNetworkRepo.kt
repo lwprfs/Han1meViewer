@@ -48,7 +48,10 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONObject
 import org.jsoup.Jsoup
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Request
+import okhttp3.ResponseBody
+import retrofit2.Response
 
 object FapFolderNetworkRepo {
 
@@ -62,6 +65,27 @@ object FapFolderNetworkRepo {
         if (session.loggedIn) return false
         if (session.viewer.username != null) return false
         return FapFolderNetwork.hasAuthCookies()
+    }
+
+    private fun readText(response: Response<ResponseBody>): String {
+        return if (response.isSuccessful) {
+            readText(response)
+        } else {
+            response.errorBody()?.string().orEmpty()
+        }
+    }
+
+    private suspend fun recheckPage(
+        url: String,
+    ): Pair<String, com.yenaly.han1meviewer.FapFolder.data.model.FapFolderSessionContext>? {
+        delay(FapFolderConstants.SESSION_RECHECK_DELAY_MS)
+        PageGetThrottle.await()
+        val response = FapFolderNetwork.service.getByUrl(url)
+        val body = readText(response)
+        if (!response.isSuccessful || body.isBlank()) return null
+        if (FapFolderHtmlUtils.looksLikeCloudflareChallenge(body)) return null
+        val session = FapFolderSessionParser.parseAndCache(body, url)
+        return body to session
     }
 
     private object AjaxThrottle {
@@ -170,7 +194,7 @@ object FapFolderNetworkRepo {
         try {
             PageGetThrottle.await()
             val response = FapFolderNetwork.service.getByUrl(url)
-            val rawBody = response.body()?.string()
+            var rawBody = readText(response)
             val code = response.code()
             if (!response.isSuccessful || rawBody.isNullOrBlank()) {
                 emit(errorState(code, rawBody))
@@ -180,7 +204,14 @@ object FapFolderNetworkRepo {
                 emit(WebsiteState.Error(IllegalStateException("Cloudflare challenge.")))
                 return@flow
             }
-            val session = FapFolderSessionParser.parseAndCache(rawBody, url)
+            var session = FapFolderSessionParser.parseAndCache(rawBody, url)
+            if (sessionLooksDead(session)) {
+                val recheck = recheckPage(url)
+                if (recheck != null) {
+                    rawBody = recheck.first
+                    session = recheck.second
+                }
+            }
             if (sessionLooksDead(session)) {
                 FapFolderSessionCache.clear()
                 emit(WebsiteState.Error(SessionExpiredException()))
@@ -232,7 +263,7 @@ object FapFolderNetworkRepo {
         try {
             PageGetThrottle.await()
             val response = FapFolderNetwork.service.getByUrl(url)
-            val rawBody = response.body()?.string()
+            var rawBody = readText(response)
             val code = response.code()
             if (!response.isSuccessful || rawBody.isNullOrBlank()) {
                 emit(errorState(code, rawBody))
@@ -242,7 +273,14 @@ object FapFolderNetworkRepo {
                 emit(WebsiteState.Error(IllegalStateException("Cloudflare challenge.")))
                 return@flow
             }
-            val session = FapFolderSessionParser.parseAndCache(rawBody, url)
+            var session = FapFolderSessionParser.parseAndCache(rawBody, url)
+            if (sessionLooksDead(session)) {
+                val recheck = recheckPage(url)
+                if (recheck != null) {
+                    rawBody = recheck.first
+                    session = recheck.second
+                }
+            }
             if (sessionLooksDead(session)) {
                 FapFolderSessionCache.clear()
                 emit(WebsiteState.Error(SessionExpiredException()))
@@ -301,46 +339,65 @@ object FapFolderNetworkRepo {
     ): Flow<PageLoadingState<List<FapFolderFeedItem>>> = flow {
         emit(PageLoadingState.Loading)
         try {
-            AjaxThrottle.await()
-            val response = FapFolderNetwork.service.loadMore(
-                get = request.get,
-                offset = request.offset,
-                filter = request.filter,
-                id = request.id,
-                type = request.type,
-                uid = request.uid,
-                premfeed = request.premfeed,
-                time = request.time,
-                search = request.search,
-                hashtag = request.hashtag,
-            )
-            val rawBody = response.body()?.string().orEmpty()
-            if (!response.isSuccessful) {
-                emit(PageLoadingState.Error(IllegalStateException("HTTP ${response.code()}")))
+            var attempt = 0
+            while (true) {
+                attempt++
+                AjaxThrottle.await()
+                val response = FapFolderNetwork.service.loadMore(
+                    get = request.get,
+                    offset = request.offset,
+                    filter = request.filter,
+                    id = request.id,
+                    type = request.type,
+                    uid = request.uid,
+                    premfeed = request.premfeed,
+                    time = request.time,
+                    search = request.search,
+                    hashtag = request.hashtag,
+                )
+                val rawBody = readText(response)
+                if (!response.isSuccessful) {
+                    val message = when {
+                        FapFolderHtmlUtils.looksLikeCloudflareChallenge(rawBody) ->
+                            "Cloudflare challenge."
+                        else -> "HTTP ${response.code()}"
+                    }
+                    emit(PageLoadingState.Error(IllegalStateException(message)))
+                    return@flow
+                }
+                if (rawBody.isBlank()) {
+                    emit(PageLoadingState.NoMoreData)
+                    return@flow
+                }
+                val parsed = runCatching { JSONObject(rawBody) }.getOrNull()
+                if (parsed == null) {
+
+                    if (attempt < FapFolderConstants.LOAD_MORE_MAX_ATTEMPTS) {
+                        delay(FapFolderConstants.LOAD_MORE_RETRY_DELAY_MS * attempt)
+                        continue
+                    }
+                    val message =
+                        if (FapFolderHtmlUtils.looksLikeCloudflareChallenge(rawBody))
+                            "Cloudflare challenge."
+                        else "Unexpected response from FapFolder."
+                    emit(PageLoadingState.Error(IllegalStateException(message)))
+                    return@flow
+                }
+                if (parsed.has("callback") && !parsed.isNull("callback")) {
+                    FapFolderSessionCache.clear()
+                    emit(PageLoadingState.Error(IllegalStateException("Session expired. Sign in again.")))
+                    return@flow
+                }
+                val dataHtml = parsed.optString("data").takeIf { it.isNotBlank() }
+                if (dataHtml == null) {
+                    emit(PageLoadingState.NoMoreData)
+                    return@flow
+                }
+                val items = parseLoadMoreItems(dataHtml = dataHtml, request = request)
+                if (items.isEmpty()) emit(PageLoadingState.NoMoreData)
+                else emit(PageLoadingState.Success(items))
                 return@flow
             }
-            if (rawBody.isBlank()) {
-                emit(PageLoadingState.NoMoreData)
-                return@flow
-            }
-            val parsed = runCatching { JSONObject(rawBody) }.getOrNull()
-            if (parsed == null) {
-                emit(PageLoadingState.NoMoreData)
-                return@flow
-            }
-            if (parsed.has("callback") && !parsed.isNull("callback")) {
-                FapFolderSessionCache.clear()
-                emit(PageLoadingState.Error(IllegalStateException("Session expired. Sign in again.")))
-                return@flow
-            }
-            val dataHtml = parsed.optString("data").takeIf { it.isNotBlank() }
-            if (dataHtml == null) {
-                emit(PageLoadingState.NoMoreData)
-                return@flow
-            }
-            val items = parseLoadMoreItems(dataHtml = dataHtml, request = request)
-            if (items.isEmpty()) emit(PageLoadingState.NoMoreData)
-            else emit(PageLoadingState.Success(items))
         } catch (e: Exception) {
             Log.e(TAG, "loadMore failed", e)
             emit(PageLoadingState.Error(e))
@@ -361,7 +418,7 @@ object FapFolderNetworkRepo {
                 id = id,
                 offset = offset.takeIf { it > 1 },
             )
-            val rawBody = response.body()?.string().orEmpty()
+            val rawBody = readText(response)
             if (!response.isSuccessful || rawBody.isBlank()) {
                 emit(PageLoadingState.Error(IllegalStateException("HTTP ${response.code()}")))
                 return@flow
@@ -400,7 +457,7 @@ object FapFolderNetworkRepo {
         try {
             PageGetThrottle.await()
             val response = FapFolderNetwork.service.getByUrl(url)
-            val rawBody = response.body()?.string().orEmpty()
+            var rawBody = readText(response)
             if (!response.isSuccessful || rawBody.isBlank()) {
                 emit(PageLoadingState.Error(IllegalStateException("HTTP ${response.code()}")))
                 return@flow
@@ -409,7 +466,14 @@ object FapFolderNetworkRepo {
                 emit(PageLoadingState.Error(IllegalStateException("Cloudflare challenge.")))
                 return@flow
             }
-            val session = FapFolderSessionParser.parseAndCache(rawBody, url)
+            var session = FapFolderSessionParser.parseAndCache(rawBody, url)
+            if (sessionLooksDead(session)) {
+                val recheck = recheckPage(url)
+                if (recheck != null) {
+                    rawBody = recheck.first
+                    session = recheck.second
+                }
+            }
             if (sessionLooksDead(session)) {
                 FapFolderSessionCache.clear()
                 emit(PageLoadingState.Error(SessionExpiredException()))
@@ -536,7 +600,7 @@ object FapFolderNetworkRepo {
         try {
             PageGetThrottle.await()
             val response = FapFolderNetwork.service.getByUrl(url)
-            val rawBody = response.body()?.string().orEmpty()
+            var rawBody = readText(response)
             if (!response.isSuccessful || rawBody.isBlank()) {
                 emit(errorState(response.code(), rawBody))
                 return@flow
@@ -545,7 +609,14 @@ object FapFolderNetworkRepo {
                 emit(WebsiteState.Error(IllegalStateException("Cloudflare challenge.")))
                 return@flow
             }
-            val session = FapFolderSessionParser.parseAndCache(rawBody, url)
+            var session = FapFolderSessionParser.parseAndCache(rawBody, url)
+            if (sessionLooksDead(session)) {
+                val recheck = recheckPage(url)
+                if (recheck != null) {
+                    rawBody = recheck.first
+                    session = recheck.second
+                }
+            }
             if (sessionLooksDead(session)) {
                 FapFolderSessionCache.clear()
                 emit(WebsiteState.Error(SessionExpiredException()))
@@ -566,7 +637,7 @@ object FapFolderNetworkRepo {
         emit(WebsiteState.Loading)
         try {
             val response = FapFolderNetwork.service.autocompleteSearch(query)
-            val rawBody = response.body()?.string().orEmpty()
+            val rawBody = readText(response)
             if (!response.isSuccessful || rawBody.isBlank()) {
                 emit(WebsiteState.Error(IllegalStateException("HTTP ${response.code()}")))
                 return@flow
@@ -599,7 +670,7 @@ object FapFolderNetworkRepo {
         val base = basePath()
         try {
             val response = FapFolderNetwork.service.autocompleteSearch(query)
-            val rawBody = response.body()?.string().orEmpty()
+            val rawBody = readText(response)
             if (!response.isSuccessful || rawBody.isBlank()) {
                 emit(errorState(response.code(), rawBody))
                 return@flow
@@ -634,7 +705,7 @@ object FapFolderNetworkRepo {
             PageGetThrottle.await()
             val response = FapFolderNetwork.service.getPostUrl(url)
 
-            val rawBody = response.body()?.string().orEmpty()
+            var rawBody = readText(response)
             if (!response.isSuccessful || rawBody.isBlank()) {
                 emit(
                     if (response.code() == 404) VideoLoadingState.NoContent
@@ -647,7 +718,14 @@ object FapFolderNetworkRepo {
                 return@flow
             }
 
-            val session = FapFolderSessionParser.parseAndCache(rawBody, url)
+            var session = FapFolderSessionParser.parseAndCache(rawBody, url)
+            if (sessionLooksDead(session)) {
+                val recheck = recheckPage(url)
+                if (recheck != null) {
+                    rawBody = recheck.first
+                    session = recheck.second
+                }
+            }
             if (sessionLooksDead(session)) {
                 FapFolderSessionCache.clear()
                 emit(VideoLoadingState.Error(SessionExpiredException()))
@@ -706,6 +784,16 @@ object FapFolderNetworkRepo {
             return@flow
         }
         try {
+
+            val expEpoch = cleaned.toHttpUrlOrNull()?.queryParameter("exp")?.toLongOrNull()
+            if (expEpoch != null && expEpoch * 1000L <= System.currentTimeMillis()) {
+                emit(
+                    WebsiteState.Error(
+                        IllegalStateException("Video link expired. Reload the post to refresh it.")
+                    )
+                )
+                return@flow
+            }
             val request = Request.Builder()
                 .url(cleaned)
                 .get()
@@ -729,12 +817,22 @@ object FapFolderNetworkRepo {
                     val location = resp.header("Location")
                     if (code !in 300..399 || location.isNullOrBlank()) {
                         val message = "No redirect from /video/play (HTTP $code)"
-                        val isSessionExpired = FapFolderNetwork.hasAuthCookies() &&
-                                (code == 401 || code == 403 || code == 200)
+                        val errBody = if (code == 403 || code == 503 || code == 200) {
+                            runCatching { resp.body.string() }.getOrDefault("")
+                        } else ""
+                        val isChallenge = errBody.isNotBlank() &&
+                                FapFolderHtmlUtils.looksLikeCloudflareChallenge(errBody)
+
+                        val isSessionExpired = !isChallenge &&
+                                FapFolderNetwork.hasAuthCookies() &&
+                                (code == 401 || code == 200)
                         emit(
                             WebsiteState.Error(
-                                if (isSessionExpired) SessionExpiredException()
-                                else IllegalStateException(message)
+                                when {
+                                    isChallenge -> IllegalStateException("Cloudflare challenge.")
+                                    isSessionExpired -> SessionExpiredException()
+                                    else -> IllegalStateException(message)
+                                }
                             )
                         )
                         return@use
@@ -753,7 +851,7 @@ object FapFolderNetworkRepo {
         try {
             PageGetThrottle.await()
             val response = FapFolderNetwork.service.getGroupUrl(url)
-            val rawBody = response.body()?.string().orEmpty()
+            var rawBody = readText(response)
             if (!response.isSuccessful || rawBody.isBlank()) {
                 emit(
                     if (response.code() == 404) VideoLoadingState.NoContent
@@ -765,7 +863,14 @@ object FapFolderNetworkRepo {
                 emit(VideoLoadingState.Error(IllegalStateException("Cloudflare challenge.")))
                 return@flow
             }
-            val session = FapFolderSessionParser.parseAndCache(rawBody, url)
+            var session = FapFolderSessionParser.parseAndCache(rawBody, url)
+            if (sessionLooksDead(session)) {
+                val recheck = recheckPage(url)
+                if (recheck != null) {
+                    rawBody = recheck.first
+                    session = recheck.second
+                }
+            }
             if (sessionLooksDead(session)) {
                 FapFolderSessionCache.clear()
                 emit(VideoLoadingState.Error(SessionExpiredException()))
@@ -789,7 +894,7 @@ object FapFolderNetworkRepo {
         try {
             PageGetThrottle.await()
             val response = FapFolderNetwork.service.getProfileUrl(url)
-            val rawBody = response.body()?.string().orEmpty()
+            var rawBody = readText(response)
             if (!response.isSuccessful || rawBody.isBlank()) {
                 emit(
                     if (response.code() == 404) VideoLoadingState.NoContent
@@ -801,7 +906,14 @@ object FapFolderNetworkRepo {
                 emit(VideoLoadingState.Error(IllegalStateException("Cloudflare challenge.")))
                 return@flow
             }
-            val session = FapFolderSessionParser.parseAndCache(rawBody, url)
+            var session = FapFolderSessionParser.parseAndCache(rawBody, url)
+            if (sessionLooksDead(session)) {
+                val recheck = recheckPage(url)
+                if (recheck != null) {
+                    rawBody = recheck.first
+                    session = recheck.second
+                }
+            }
             if (sessionLooksDead(session)) {
                 FapFolderSessionCache.clear()
                 emit(VideoLoadingState.Error(SessionExpiredException()))
@@ -824,7 +936,7 @@ object FapFolderNetworkRepo {
         try {
             PageGetThrottle.await()
             val response = FapFolderNetwork.service.getAlbumUrl(url)
-            val rawBody = response.body()?.string().orEmpty()
+            var rawBody = readText(response)
             if (!response.isSuccessful || rawBody.isBlank()) {
                 emit(
                     if (response.code() == 404) VideoLoadingState.NoContent
@@ -836,7 +948,14 @@ object FapFolderNetworkRepo {
                 emit(VideoLoadingState.Error(IllegalStateException("Cloudflare challenge.")))
                 return@flow
             }
-            val session = FapFolderSessionParser.parseAndCache(rawBody, url)
+            var session = FapFolderSessionParser.parseAndCache(rawBody, url)
+            if (sessionLooksDead(session)) {
+                val recheck = recheckPage(url)
+                if (recheck != null) {
+                    rawBody = recheck.first
+                    session = recheck.second
+                }
+            }
             if (sessionLooksDead(session)) {
                 FapFolderSessionCache.clear()
                 emit(VideoLoadingState.Error(SessionExpiredException()))
@@ -862,7 +981,7 @@ object FapFolderNetworkRepo {
                 photoId = photoId.toString(),
                 context = context,
             )
-            val rawBody = response.body()?.string().orEmpty()
+            val rawBody = readText(response)
             if (!response.isSuccessful || rawBody.isBlank()) {
                 emit(WebsiteState.Error(IllegalStateException("HTTP ${response.code()}")))
                 return@flow
@@ -916,7 +1035,7 @@ object FapFolderNetworkRepo {
                 id = postId.toString(),
                 offset = page.takeIf { it > 1 },
             )
-            val rawBody = response.body()?.string().orEmpty()
+            val rawBody = readText(response)
             if (!response.isSuccessful || rawBody.isBlank()) {
                 emit(PageLoadingState.Error(IllegalStateException("HTTP ${response.code()}")))
                 return@flow
@@ -973,7 +1092,7 @@ object FapFolderNetworkRepo {
                 id = commentId.toString(),
                 offset = offset.takeIf { it > 1 },
             )
-            val rawBody = response.body()?.string().orEmpty()
+            val rawBody = readText(response)
             if (!response.isSuccessful || rawBody.isBlank()) {
                 emit(PageLoadingState.Error(IllegalStateException("HTTP ${response.code()}")))
                 return@flow
@@ -1018,12 +1137,19 @@ object FapFolderNetworkRepo {
         try {
             PageGetThrottle.await()
             val response = FapFolderNetwork.service.getByUrl(url)
-            val rawBody = response.body()?.string().orEmpty()
+            var rawBody = readText(response)
             if (!response.isSuccessful || rawBody.isBlank()) {
                 emit(PageLoadingState.Error(IllegalStateException("HTTP ${response.code()}")))
                 return@flow
             }
-            val session = FapFolderSessionParser.parseAndCache(rawBody, url)
+            var session = FapFolderSessionParser.parseAndCache(rawBody, url)
+            if (sessionLooksDead(session)) {
+                val recheck = recheckPage(url)
+                if (recheck != null) {
+                    rawBody = recheck.first
+                    session = recheck.second
+                }
+            }
             if (sessionLooksDead(session)) {
                 FapFolderSessionCache.clear()
                 emit(PageLoadingState.Error(SessionExpiredException()))
@@ -1064,7 +1190,7 @@ object FapFolderNetworkRepo {
         try {
             PageGetThrottle.await()
             val response = FapFolderNetwork.service.getByUrl(url)
-            val rawBody = response.body()?.string().orEmpty()
+            var rawBody = readText(response)
             if (!response.isSuccessful || rawBody.isBlank()) {
                 emit(
                     if (response.code() == 404) VideoLoadingState.NoContent
@@ -1076,7 +1202,14 @@ object FapFolderNetworkRepo {
                 emit(VideoLoadingState.Error(IllegalStateException("Cloudflare challenge.")))
                 return@flow
             }
-            val session = FapFolderSessionParser.parseAndCache(rawBody, url)
+            var session = FapFolderSessionParser.parseAndCache(rawBody, url)
+            if (sessionLooksDead(session)) {
+                val recheck = recheckPage(url)
+                if (recheck != null) {
+                    rawBody = recheck.first
+                    session = recheck.second
+                }
+            }
             if (sessionLooksDead(session)) {
                 FapFolderSessionCache.clear()
                 emit(VideoLoadingState.Error(SessionExpiredException()))
@@ -1113,7 +1246,7 @@ object FapFolderNetworkRepo {
                 search = null,
                 hashtag = null,
             )
-            val rawBody = response.body()?.string().orEmpty()
+            val rawBody = readText(response)
             if (!response.isSuccessful || rawBody.isBlank()) {
                 emit(PageLoadingState.Error(IllegalStateException("HTTP ${response.code()}")))
                 return@flow
@@ -1159,7 +1292,7 @@ object FapFolderNetworkRepo {
                 id = postId.toString(),
                 reaction = reaction,
             )
-            val rawBody = response.body()?.string().orEmpty()
+            val rawBody = readText(response)
             if (!response.isSuccessful) {
                 emit(WebsiteState.Error(IllegalStateException("HTTP ${response.code()}")))
                 return@flow
@@ -1196,7 +1329,7 @@ object FapFolderNetworkRepo {
                 id = commentId.toString(),
                 reaction = reaction,
             )
-            val rawBody = response.body()?.string().orEmpty()
+            val rawBody = readText(response)
             if (!response.isSuccessful) {
                 emit(WebsiteState.Error(IllegalStateException("HTTP ${response.code()}")))
                 return@flow
@@ -1228,7 +1361,7 @@ object FapFolderNetworkRepo {
                 action = FapFolderConstants.GROUP_ACTION_JOIN,
                 id = groupId.toString(),
             )
-            val rawBody = response.body()?.string().orEmpty()
+            val rawBody = readText(response)
             if (!response.isSuccessful) {
                 emit(WebsiteState.Error(IllegalStateException("HTTP ${response.code()}")))
                 return@flow
@@ -1256,7 +1389,7 @@ object FapFolderNetworkRepo {
                 action = FapFolderConstants.GROUP_ACTION_LEAVE,
                 id = groupId.toString(),
             )
-            val rawBody = response.body()?.string().orEmpty()
+            val rawBody = readText(response)
             if (!response.isSuccessful) {
                 emit(WebsiteState.Error(IllegalStateException("HTTP ${response.code()}")))
                 return@flow
@@ -1275,7 +1408,7 @@ object FapFolderNetworkRepo {
                 action = FapFolderConstants.FOLLOW_ACTION_FOLLOW,
                 id = uid.toString(),
             )
-            val rawBody = response.body()?.string().orEmpty()
+            val rawBody = readText(response)
             if (!response.isSuccessful) {
                 emit(WebsiteState.Error(IllegalStateException("HTTP ${response.code()}")))
                 return@flow
@@ -1294,7 +1427,7 @@ object FapFolderNetworkRepo {
                 action = FapFolderConstants.FOLLOW_ACTION_UNFOLLOW,
                 id = uid.toString(),
             )
-            val rawBody = response.body()?.string().orEmpty()
+            val rawBody = readText(response)
             if (!response.isSuccessful) {
                 emit(WebsiteState.Error(IllegalStateException("HTTP ${response.code()}")))
                 return@flow
@@ -1317,7 +1450,7 @@ object FapFolderNetworkRepo {
                 id = postId.toString(),
                 message = message,
             )
-            val rawBody = response.body()?.string().orEmpty()
+            val rawBody = readText(response)
             if (!response.isSuccessful) {
                 emit(WebsiteState.Error(IllegalStateException("HTTP ${response.code()}")))
                 return@flow
@@ -1349,7 +1482,8 @@ object FapFolderNetworkRepo {
 
     private fun errorState(code: Int, body: String?): WebsiteState<Nothing> {
         return when {
-            code == 403 && FapFolderHtmlUtils.looksLikeCloudflareChallenge(body) ->
+            (code == 403 || code == 503 || code == 429) &&
+                    FapFolderHtmlUtils.looksLikeCloudflareChallenge(body) ->
                 WebsiteState.Error(IllegalStateException("Cloudflare challenge."))
             code == 403 ->
                 WebsiteState.Error(IllegalStateException("Forbidden (HTTP 403)."))

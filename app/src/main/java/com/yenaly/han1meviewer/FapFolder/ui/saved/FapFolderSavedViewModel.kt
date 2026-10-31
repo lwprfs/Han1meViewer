@@ -101,9 +101,13 @@ class FapFolderSavedViewModel(application: Application) : AndroidViewModel(appli
         }
     }
 
-    fun loadMore() {
+    fun loadMore() = loadMoreInternal(forceAfterError = false)
+
+    private fun loadMoreInternal(forceAfterError: Boolean) {
         val state = _uiState.value
-        if (state.isLoading || state.isLoadingMore || !state.hasMore) return
+
+        val canRetryAfterError = forceAfterError && state.errorMessage != null
+        if (state.isLoading || state.isLoadingMore || (!state.hasMore && !canRetryAfterError)) return
         if (state.totalPagesLoaded >= MAX_PAGES) {
             _uiState.update { it.copy(hasMore = false) }
             return
@@ -158,7 +162,7 @@ class FapFolderSavedViewModel(application: Application) : AndroidViewModel(appli
     }
 
     fun retry() {
-        if (_uiState.value.items.isEmpty()) refresh() else loadMore()
+        if (_uiState.value.items.isEmpty()) refresh() else loadMoreInternal(forceAfterError = true)
     }
 
     private fun mergeItems(

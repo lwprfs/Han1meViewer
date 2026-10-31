@@ -173,9 +173,13 @@ class FapFolderSearchViewModel(application: Application) : AndroidViewModel(appl
         }
     }
 
-    fun loadMore() {
+    fun loadMore() = loadMoreInternal(forceAfterError = false)
+
+    private fun loadMoreInternal(forceAfterError: Boolean) {
         val state = _uiState.value
-        if (state.isLoadingMore || state.isLoading || !state.hasMore) return
+
+        val canRetryAfterError = forceAfterError && state.errorMessage != null
+        if (state.isLoadingMore || state.isLoading || (!state.hasMore && !canRetryAfterError)) return
         if (state.totalPagesLoaded >= MAX_PAGES) {
             _uiState.update { it.copy(hasMore = false) }
             return
@@ -227,7 +231,7 @@ class FapFolderSearchViewModel(application: Application) : AndroidViewModel(appl
     }
 
     fun retry() {
-        if (_uiState.value.items.isEmpty()) submit() else loadMore()
+        if (_uiState.value.items.isEmpty()) submit() else loadMoreInternal(forceAfterError = true)
     }
 
     fun saveHistory() {

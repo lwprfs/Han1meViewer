@@ -322,9 +322,16 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
         load(slug, tab.param)
     }
 
-    fun loadMoreItems() {
+    fun loadMoreItems() = loadMoreItemsInternal(forceAfterError = false)
+
+    fun retryLoadMoreItems() = loadMoreItemsInternal(forceAfterError = true)
+
+    private fun loadMoreItemsInternal(forceAfterError: Boolean) {
         val state = _uiState.value
-        if (state.isLoadingMore || state.isLoading || !state.hasMore) return
+
+        val canRetryAfterError = forceAfterError && state.itemsError != null
+        if (state.isLoadingMore || state.isLoading ||
+            (!state.hasMore && !canRetryAfterError)) return
         if (state.activeTab == FapFolderGroupTab.MEMBERS) {
             loadMoreMembers()
             return
