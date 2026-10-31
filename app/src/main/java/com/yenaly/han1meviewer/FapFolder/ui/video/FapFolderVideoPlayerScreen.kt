@@ -90,7 +90,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
-import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.common.PlaybackException
 import androidx.media3.datasource.DefaultDataSource
@@ -120,7 +119,6 @@ private data class DoubleTapSeek(val deltaMs: Long, val direction: Int)
 private const val SEEK_STEP_MS = 10_000L
 private const val MAX_RELOAD_ATTEMPTS = 3
 private const val TAP_SLOP_PX = 24f
-private const val DOUBLE_TAP_TIMEOUT_MS = 260L
 private val PLAYBACK_SPEEDS = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
 
 private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -286,16 +284,16 @@ fun FapFolderVideoPlayerScreen(
 
         val playHost = runCatching { playableUrl.toHttpUrlOrNull()?.host }.getOrNull()
         val referer = postPermalinkForReferer ?: FapFolderConstants.HEADER_REFERER
+        val trusted = isTrustedMediaHost(playHost)
 
         val requestHeaders = buildMap {
-            put("referer", referer)
-            put("origin", FapFolderConstants.HEADER_ORIGIN)
-            put("user-agent", FapFolderConstants.USER_AGENT_FAPFOLDER)
             put("accept", "*/*")
-            put("accept-language", FapFolderConstants.ACCEPT_LANGUAGE)
             put("accept-encoding", "identity")
-            put("range", "bytes=0-")
-            if (isTrustedMediaHost(playHost)) {
+            if (trusted) {
+                put("referer", referer)
+                put("origin", FapFolderConstants.HEADER_ORIGIN)
+                put("user-agent", FapFolderConstants.USER_AGENT_FAPFOLDER)
+                put("accept-language", FapFolderConstants.ACCEPT_LANGUAGE)
                 val cookieHeader = runCatching { FapFolderNetwork.snapshotCookies() }
                     .getOrDefault("")
                 if (cookieHeader.isNotBlank()) put("cookie", cookieHeader)
@@ -311,13 +309,8 @@ fun FapFolderVideoPlayerScreen(
 
         val dataSourceFactory = DefaultDataSource.Factory(context, httpFactory)
 
-        val mimeType = MimeTypes.getMimeTypeFromUrl(playableUrl)
-            ?.takeIf { it.startsWith("video/") || it.startsWith("audio/") }
-            ?: MimeTypes.VIDEO_MP4
-
         val mediaItem = MediaItem.Builder()
             .setUri(playableUrl)
-            .setMimeType(mimeType)
             .build()
         val mediaSource = ProgressiveMediaSource.Factory(dataSourceFactory)
             .createMediaSource(mediaItem)
@@ -574,7 +567,9 @@ fun FapFolderVideoPlayerScreen(
         exoPlayer?.let { p -> surfaceRef.value?.let { p.setVideoSurfaceView(it) } }
     }
 
-    BackHandler(enabled = isFullscreen) { exitFullscreen() }
+    BackHandler(enabled = true) {
+        if (isFullscreen) exitFullscreen() else onDismiss()
+    }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -656,13 +651,9 @@ fun FapFolderVideoPlayerScreen(
                     .pointerInput(controlsLocked) {
                         if (controlsLocked) return@pointerInput
 
-                        var lastTapTime = 0L
                         var dragMode = 0
                         var dragIsVolume = false
                         var dragged = false
-                        var downTime = 0L
-                        var downPos = Offset.Zero
-                        var pendingTapJob: Job? = null
 
                         detectDragGestures(
                             onDragStart = { offset ->
@@ -739,7 +730,7 @@ fun FapFolderVideoPlayerScreen(
                     .pointerInput(controlsLocked) {
                         if (controlsLocked) return@pointerInput
                         detectTapGestures(
-                            onTap = { offset ->
+                            onTap = {
                                 if (playbackError != null) return@detectTapGestures
                                 if (showControls) {
                                     showControls = false
@@ -910,26 +901,21 @@ fun FapFolderVideoPlayerScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         IconButton(onClick = {
-                            if (isFullscreen) exitFullscreen()
-                            onDismiss()
+                            if (isFullscreen) {
+                                exitFullscreen()
+                            } else {
+                                onDismiss()
+                            }
                         }) {
                             Icon(
-                                imageVector =
-                                    Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Close",
+                                imageVector = if (isFullscreen)
+                                    Icons.Filled.FullscreenExit
+                                else Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = if (isFullscreen) "Exit fullscreen" else "Close",
                                 tint = Color.White,
                             )
                         }
-                        if (title.isNotBlank()) {
-                            Text(
-                                text = title,
-                                color = Color.White,
-                                style = MaterialTheme.typography.titleSmall,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
+                        Spacer(Modifier.weight(1f))
                         IconButton(onClick = { toggleMute() }) {
                             Icon(
                                 imageVector = if (muted) Icons.Filled.VolumeOff
@@ -1158,12 +1144,35 @@ fun FapFolderVideoPlayerScreen(
                 }
             } else {
                 Column(modifier = Modifier.fillMaxSize()) {
-                    TitleBlock(
-                        title = title,
-                        video = video,
-                        playbackSpeed = playbackSpeed,
-                        muted = muted,
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .statusBarsPadding()
+                            .padding(horizontal = 4.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        IconButton(onClick = onDismiss) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Close",
+                                tint = Color.White,
+                            )
+                        }
+                        if (title.isNotBlank()) {
+                            Text(
+                                text = title,
+                                color = Color.White,
+                                style = MaterialTheme.typography.titleMedium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(end = 8.dp),
+                            )
+                        } else {
+                            Spacer(Modifier.weight(1f))
+                        }
+                    }
 
                     Box(
                         modifier = Modifier
@@ -1225,45 +1234,6 @@ fun FapFolderVideoPlayerScreen(
                 }) { Text("Start over") }
             },
         )
-    }
-}
-
-@Composable
-private fun TitleBlock(
-    title: String,
-    video: FapFolderMedia.Video,
-    playbackSpeed: Float,
-    muted: Boolean,
-) {
-    if (title.isBlank()) return
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .statusBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            color = Color.White,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
-        val meta = buildList {
-            val secs = video.durationSeconds
-            if (secs != null) add(formatTime(secs.toLong() * 1000L))
-            video.fileExtension?.let { ext -> add(ext.uppercase()) }
-            if (playbackSpeed != 1f) add(formatSpeed(playbackSpeed))
-            if (muted) add("Muted")
-        }.joinToString(" · ")
-        if (meta.isNotBlank()) {
-            Text(
-                text = meta,
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.7f),
-            )
-        }
     }
 }
 
