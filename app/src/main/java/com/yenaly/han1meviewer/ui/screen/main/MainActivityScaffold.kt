@@ -56,7 +56,7 @@ fun MainActivityScaffold(
 ) {
     val scope = rememberCoroutineScope()
     val drawerFraction by animateFloatAsState(
-        targetValue = if (drawerState.currentValue == DrawerValue.Open || drawerState.targetValue == DrawerValue.Open) 1f else 0f,
+        targetValue = if (drawerEnabled && (drawerState.currentValue == DrawerValue.Open || drawerState.targetValue == DrawerValue.Open)) 1f else 0f,
         label = "drawer_fraction",
     )
 
@@ -245,3 +245,5 @@ private fun MainActivityScaffoldPreview() {
         }
     }
 }
+
+

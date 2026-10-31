@@ -110,6 +110,18 @@ fun MainActivityContent(
         val isHanimeFamilySite = Preferences.siteType == SiteType.HANIME ||
                 Preferences.siteType == SiteType.JAVCHU
 
+        // Close the drawer whenever the site changes or the drawer becomes unavailable
+        // (non-Hanime sites). Otherwise it stays "open" while gestures are disabled,
+        // leaving the content dimmed/scaled until Back is pressed.
+        val drawerEnabledNow = currentMainDestination.drawerEnabled && isHanimeFamilySite
+        LaunchedEffect(siteChangeKey, Preferences.siteType, drawerEnabledNow) {
+            if (drawerState.currentValue == DrawerValue.Open ||
+                drawerState.targetValue == DrawerValue.Open
+            ) {
+                drawerState.snapTo(DrawerValue.Closed)
+            }
+        }
+
         LaunchedEffect(Unit) {
             pendingNavigationRequests.collect { intent ->
                 composeNavController.handleMainIntent(intent)
@@ -162,7 +174,10 @@ fun MainActivityContent(
             onAvatarLongClick = {
                 onLogoutClick()
             },
-            onSwitchSiteClick = onSwitchSiteClick,
+            onSwitchSiteClick = {
+                scope.launch { drawerState.close() }
+                onSwitchSiteClick()
+            },
             onDrawerItemSelected = { destination ->
                 val handled = composeNavController.navigateDrawerDestination(
                     destination = destination,
@@ -277,3 +292,5 @@ fun MainActivityContent(
         GlobalToastHost()
     }
 }
+
+
