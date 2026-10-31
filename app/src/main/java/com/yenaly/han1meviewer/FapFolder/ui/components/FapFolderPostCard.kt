@@ -42,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -66,6 +67,7 @@ fun FapFolderPostCard(
     isSaved: Boolean = false,
     isReactionPending: Boolean = false,
     isPollPending: Boolean = false,
+    interactive: Boolean = true,
     onClickPost: () -> Unit = {},
     onClickHashtag: (String) -> Unit = {},
     onClickAuthor: (FapFolderAuthor) -> Unit = {},
@@ -134,23 +136,39 @@ fun FapFolderPostCard(
                 )
             }
 
-            PostStatsRow(
-                reactions = post.reactions.total,
-                comments = post.commentCount,
-                shares = post.shareCount,
-                views = post.viewCount,
-            )
+            if (interactive) {
+                PostStatsRow(
+                    reactions = post.reactions.total,
+                    comments = post.commentCount,
+                    shares = post.shareCount,
+                    views = post.viewCount,
+                )
 
-            PostActionsRow(
-                reactions = post.reactions,
-                saved = isSaved,
-                reactionPending = isReactionPending,
-                onClickLike = onClickLike,
-                onClickDislike = onClickDislike,
-                onClickComment = onClickComment,
-                onClickShare = onClickShare,
-                onClickSave = onClickSave,
-            )
+                PostActionsRow(
+                    reactions = post.reactions,
+                    saved = isSaved,
+                    reactionPending = isReactionPending,
+                    onClickLike = onClickLike,
+                    onClickDislike = onClickDislike,
+                    onClickComment = onClickComment,
+                    onClickShare = onClickShare,
+                    onClickSave = onClickSave,
+                )
+            } else if (post.viewCount != null && post.viewCount > 0) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    StatItem(
+                        icon = Icons.Filled.Visibility,
+                        text = post.viewCount.toString(),
+                    )
+                    Spacer(Modifier.weight(1f))
+                }
+            }
         }
     }
 }
@@ -934,7 +952,7 @@ private fun PostActionsRow(
 
 @Composable
 private fun PostActionButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     label: String,
     tint: Color,
     enabled: Boolean,
@@ -964,7 +982,7 @@ private fun PostActionButton(
 
 @Composable
 private fun StatItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     text: String,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {

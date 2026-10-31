@@ -183,6 +183,7 @@ class FapFolderPostDetailViewModel(application: Application) : AndroidViewModel(
         val currentByKind = post.reactions.byKind.orEmpty()
         val currentLike = currentByKind[REACTION_LIKE] ?: 0
         val currentAngry = currentByKind[REACTION_ANGRY] ?: 0
+        val currentTotal = post.reactions.total
 
         val alreadyLiked = currentLike > 0
         val alreadyAngry = currentAngry > 0
@@ -197,7 +198,16 @@ class FapFolderPostDetailViewModel(application: Application) : AndroidViewModel(
             targetReaction == REACTION_ANGRY -> currentAngry + 1
             else -> 0
         }
-        val newTotal = (newLike + newAngry).coerceAtLeast(0)
+
+        val removedCount =
+            (if (targetReaction == REACTION_LIKE && alreadyLiked) 1 else 0) +
+                    (if (targetReaction == REACTION_ANGRY && alreadyAngry) 1 else 0)
+        val addedCount =
+            (if (targetReaction == REACTION_LIKE && !alreadyLiked) 1 else 0) +
+                    (if (targetReaction == REACTION_ANGRY && !alreadyAngry) 1 else 0)
+
+        val newTotal = (currentTotal + addedCount - removedCount).coerceAtLeast(0)
+
         val optimistic = ReactionCount(
             total = newTotal,
             byKind = buildMap {

@@ -1,18 +1,24 @@
 package com.yenaly.han1meviewer.FapFolder.ui.video
 
 import android.app.Activity
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.pm.ActivityInfo
 import android.media.AudioManager
 import android.os.Build
+import android.view.SurfaceHolder
+import android.view.SurfaceView
 import android.view.ViewGroup
 import android.view.WindowManager
-import android.widget.FrameLayout
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -41,9 +47,8 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.ScreenRotation
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.ScreenLockLandscape
+import androidx.compose.material.icons.filled.ScreenLockPortrait
 import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Warning
@@ -64,22 +69,24 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.PlaybackException
@@ -144,6 +151,8 @@ fun FapFolderVideoPlayerScreen(
     val videoIsLandscape = initialAspect >= 1f
 
     var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
+    val surfaceRef = remember { mutableStateOf<SurfaceView?>(null) }
+
     var isPlaying by remember { mutableStateOf(false) }
     var isBuffering by remember { mutableStateOf(true) }
     var isReady by remember { mutableStateOf(false) }
@@ -171,7 +180,7 @@ fun FapFolderVideoPlayerScreen(
     var playbackSpeed by remember { mutableStateOf(1.0f) }
     var speedMenuOpen by remember { mutableStateOf(false) }
     var sliderDragging by remember { mutableStateOf(false) }
-    var sliderValue by remember { mutableStateOf(0f) }
+    var sliderValue by remember { mutableFloatStateOf(0f) }
 
     var doubleTapSeek by remember { mutableStateOf<DoubleTapSeek?>(null) }
     var doubleTapJob by remember { mutableStateOf<Job?>(null) }
@@ -312,6 +321,8 @@ fun FapFolderVideoPlayerScreen(
         isReady = false
         playbackError = null
 
+        surfaceRef.value?.let { player.setVideoSurfaceView(it) }
+
         if (resumeDialogForPostId == null && pendingResumeMs > 0L) {
             player.seekTo(pendingResumeMs)
         }
@@ -334,6 +345,7 @@ fun FapFolderVideoPlayerScreen(
                     isReady = true
                     val d: Long = safeDuration(player)
                     if (d > 0L) durationMs = d
+                    surfaceRef.value?.let { player.setVideoSurfaceView(it) }
                 }
                 if (state == Player.STATE_ENDED && !completionReported) {
                     completionReported = true
@@ -456,16 +468,6 @@ fun FapFolderVideoPlayerScreen(
         showControls = true
     }
 
-    fun seekToStart() {
-        seekTo(0L)
-        exoPlayer?.play()
-    }
-
-    fun seekToEnd() {
-        val dur: Long = safeDuration(exoPlayer)
-        if (dur > 0L) seekTo(dur)
-    }
-
     fun toggleMute() {
         val player = exoPlayer ?: return
         muted = !muted
@@ -501,9 +503,7 @@ fun FapFolderVideoPlayerScreen(
         fullscreenLandscape = landscape
     }
 
-    fun enterFullscreen() {
-        if (isFullscreen) return
-        applyFullscreenOrientation(videoIsLandscape, force = false)
+    fun hideSystemBars() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             activity?.window?.insetsController?.hide(
                 android.view.WindowInsets.Type.statusBars() or
@@ -513,13 +513,9 @@ fun FapFolderVideoPlayerScreen(
             @Suppress("DEPRECATION")
             activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
         }
-        isFullscreen = true
-        showControls = true
     }
 
-    fun exitFullscreen() {
-        if (!isFullscreen) return
-        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+    fun showSystemBars() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             activity?.window?.insetsController?.show(
                 android.view.WindowInsets.Type.statusBars() or
@@ -529,14 +525,34 @@ fun FapFolderVideoPlayerScreen(
             @Suppress("DEPRECATION")
             activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
         }
+    }
+
+    fun enterFullscreen() {
+        if (isFullscreen) return
+        applyFullscreenOrientation(videoIsLandscape, force = false)
+        hideSystemBars()
+        isFullscreen = true
+        showControls = true
+        exoPlayer?.let { p -> surfaceRef.value?.let { p.setVideoSurfaceView(it) } }
+    }
+
+    fun exitFullscreen() {
+        if (!isFullscreen) return
+        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        showSystemBars()
         isFullscreen = false
         fullscreenLandscape = videoIsLandscape
+        exoPlayer?.let { p -> surfaceRef.value?.let { p.setVideoSurfaceView(it) } }
     }
 
     fun toggleFullscreenOrientation(landscape: Boolean) {
         applyFullscreenOrientation(landscape, force = true)
-        if (!isFullscreen) enterFullscreen()
+        if (!isFullscreen) {
+            hideSystemBars()
+            isFullscreen = true
+        }
         showControls = true
+        exoPlayer?.let { p -> surfaceRef.value?.let { p.setVideoSurfaceView(it) } }
     }
 
     BackHandler(enabled = isFullscreen) { exitFullscreen() }
@@ -573,30 +589,44 @@ fun FapFolderVideoPlayerScreen(
 
             AndroidView(
                 factory = { ctx ->
-                    FrameLayout(ctx).apply {
+                    SurfaceView(ctx).apply {
                         layoutParams = ViewGroup.LayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT,
                             ViewGroup.LayoutParams.MATCH_PARENT,
                         )
-                        val surfaceView = android.view.SurfaceView(ctx).apply {
-                            layoutParams = ViewGroup.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                            )
-                        }
-                        addView(surfaceView)
+                        surfaceRef.value = this
+                        holder.addCallback(object : SurfaceHolder.Callback {
+                            override fun surfaceCreated(h: SurfaceHolder) {
+                                exoPlayer?.setVideoSurfaceView(this@apply)
+                            }
+
+                            override fun surfaceChanged(
+                                h: SurfaceHolder,
+                                format: Int,
+                                width: Int,
+                                height: Int,
+                            ) {
+                                exoPlayer?.setVideoSurfaceView(this@apply)
+                            }
+
+                            override fun surfaceDestroyed(h: SurfaceHolder) {
+                                exoPlayer?.clearVideoSurfaceView(this@apply)
+                            }
+                        })
                     }
                 },
                 modifier = Modifier.fillMaxSize(),
                 update = { view ->
-                    val container = view as? ViewGroup ?: return@AndroidView
-                    val surfaceView =
-                        container.getChildAt(0) as? android.view.SurfaceView
-                            ?: return@AndroidView
-                    exoPlayer?.setVideoSurfaceView(surfaceView)
+                    val sv = view as? SurfaceView ?: return@AndroidView
+                    surfaceRef.value = sv
+                    exoPlayer?.setVideoSurfaceView(sv)
                 },
                 onRelease = { view ->
-                    exoPlayer?.setVideoSurfaceView(null)
+                    val sv = view as? SurfaceView
+                    if (sv != null) {
+                        exoPlayer?.clearVideoSurfaceView(sv)
+                    }
+                    if (surfaceRef.value === sv) surfaceRef.value = null
                     (view as? ViewGroup)?.removeAllViews()
                 },
             )
@@ -846,7 +876,7 @@ fun FapFolderVideoPlayerScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         IconButton(onClick = {
-                            exitFullscreen()
+                            if (isFullscreen) exitFullscreen()
                             onDismiss()
                         }) {
                             Icon(
@@ -913,20 +943,14 @@ fun FapFolderVideoPlayerScreen(
                             )
                         }
                         IconButton(onClick = {
-                            toggleFullscreenOrientation(false)
+                            toggleFullscreenOrientation(!fullscreenLandscape)
                         }) {
                             Icon(
-                                imageVector = Icons.Filled.ScreenRotation,
-                                contentDescription = "Force portrait",
-                                tint = Color.White,
-                            )
-                        }
-                        IconButton(onClick = {
-                            toggleFullscreenOrientation(true)
-                        }) {
-                            Icon(
-                                imageVector = Icons.Filled.ScreenRotation,
-                                contentDescription = "Force landscape",
+                                imageVector = if (fullscreenLandscape)
+                                    Icons.Filled.ScreenLockPortrait
+                                else Icons.Filled.ScreenLockLandscape,
+                                contentDescription = if (fullscreenLandscape)
+                                    "Rotate to portrait" else "Rotate to landscape",
                                 tint = Color.White,
                             )
                         }
@@ -939,22 +963,6 @@ fun FapFolderVideoPlayerScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(20.dp),
                     ) {
-                        IconButton(
-                            onClick = { seekToStart() },
-                            modifier = Modifier
-                                .size(48.dp)
-                                .background(
-                                    Color.Black.copy(alpha = 0.5f),
-                                    CircleShape,
-                                ),
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.SkipPrevious,
-                                contentDescription = "Back to start",
-                                tint = Color.White,
-                                modifier = Modifier.size(24.dp),
-                            )
-                        }
                         IconButton(
                             onClick = { seekBy(-SEEK_STEP_MS) },
                             modifier = Modifier
@@ -1002,22 +1010,6 @@ fun FapFolderVideoPlayerScreen(
                                 contentDescription = "Forward 10s",
                                 tint = Color.White,
                                 modifier = Modifier.size(28.dp),
-                            )
-                        }
-                        IconButton(
-                            onClick = { seekToEnd() },
-                            modifier = Modifier
-                                .size(48.dp)
-                                .background(
-                                    Color.Black.copy(alpha = 0.5f),
-                                    CircleShape,
-                                ),
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.SkipNext,
-                                contentDescription = "Skip to end",
-                                tint = Color.White,
-                                modifier = Modifier.size(24.dp),
                             )
                         }
                     }
@@ -1117,69 +1109,39 @@ fun FapFolderVideoPlayerScreen(
         }
     }
 
-    if (isFullscreen) {
-        Dialog(
-            onDismissRequest = { exitFullscreen() },
-            properties = DialogProperties(
-                usePlatformDefaultWidth = false,
-                decorFitsSystemWindows = false,
-            ),
-        ) {
-            playerContent()
-        }
-    } else {
-        Surface(color = Color.Black) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(initialAspect),
-                ) {
+    Surface(color = Color.Black) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (isFullscreen) {
+                Box(modifier = Modifier.fillMaxSize()) {
                     playerContent()
                 }
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    if (title.isNotBlank()) {
-                        Text(
-                            text = title,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Color.White,
-                        )
-                    }
-                    val meta = buildList {
-                        val secs: Int? = video.durationSeconds
-                        if (secs != null) {
-                            add(formatTime(secs.toLong() * 1000L))
-                        }
-                        video.fileExtension?.let { ext -> add(ext.uppercase()) }
-                        if (playbackSpeed != 1f) add(formatSpeed(playbackSpeed))
-                        if (muted) add("Muted")
-                    }.joinToString(" · ")
-                    if (meta.isNotBlank()) {
-                        Text(
-                            text = meta,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.7f),
-                        )
-                    }
-                    Spacer(Modifier.height(4.dp))
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = Color.White.copy(alpha = 0.08f),
+            } else {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    TitleBlock(
+                        title = title,
+                        video = video,
+                        playbackSpeed = playbackSpeed,
+                        muted = muted,
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(initialAspect),
                     ) {
-                        Text(
-                            text = resolvedUrl ?: video.playUrl,
-                            color = Color.White.copy(alpha = 0.55f),
-                            style = MaterialTheme.typography.labelSmall,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(8.dp),
-                        )
+                        playerContent()
                     }
+
+                    StreamUrlRow(
+                        url = resolvedUrl ?: video.playUrl,
+                        modifier = Modifier.padding(
+                            start = 16.dp,
+                            end = 16.dp,
+                            top = 12.dp,
+                        ),
+                    )
+
+                    Spacer(Modifier.height(8.dp))
                 }
             }
         }
@@ -1222,6 +1184,104 @@ fun FapFolderVideoPlayerScreen(
                 }) { Text("Start over") }
             },
         )
+    }
+}
+
+@Composable
+private fun TitleBlock(
+    title: String,
+    video: FapFolderMedia.Video,
+    playbackSpeed: Float,
+    muted: Boolean,
+) {
+    if (title.isBlank()) return
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            color = Color.White,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        val meta = buildList {
+            val secs: Int? = video.durationSeconds
+            if (secs != null) add(formatTime(secs.toLong() * 1000L))
+            video.fileExtension?.let { ext -> add(ext.uppercase()) }
+            if (playbackSpeed != 1f) add(formatSpeed(playbackSpeed))
+            if (muted) add("Muted")
+        }.joinToString(" · ")
+        if (meta.isNotBlank()) {
+            Text(
+                text = meta,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.7f),
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun StreamUrlRow(
+    url: String,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val haptics = LocalHapticFeedback.current
+    var copied by remember { mutableStateOf(false) }
+
+    LaunchedEffect(copied) {
+        if (copied) {
+            delay(1500)
+            copied = false
+        }
+    }
+
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .combinedClickable(
+                onClick = { },
+                onLongClick = {
+                    val cm = context.getSystemService(Context.CLIPBOARD_SERVICE)
+                        as? ClipboardManager
+                    cm?.setPrimaryClip(ClipData.newPlainText("stream_url", url))
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    Toast.makeText(context, "Stream URL copied", Toast.LENGTH_SHORT)
+                        .show()
+                    copied = true
+                },
+            ),
+        color = Color.White.copy(alpha = 0.08f),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = url,
+                color = Color.White.copy(alpha = 0.55f),
+                style = MaterialTheme.typography.labelSmall,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = if (copied) "Copied" else "Hold to copy",
+                color = Color.White.copy(alpha = 0.4f),
+                style = MaterialTheme.typography.labelSmall,
+            )
+        }
     }
 }
 

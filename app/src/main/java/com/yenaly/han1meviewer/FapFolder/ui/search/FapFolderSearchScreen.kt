@@ -301,9 +301,9 @@ fun FapFolderSearchScreen(
                                         val post = item.post
                                         FapFolderPostCard(
                                             post = post,
+                                            interactive = false,
                                             onClickPost = {
-                                                val slug = post.slug
-                                                    ?: post.postId.toString()
+                                                val slug = post.slug ?: post.postId.toString()
                                                 onOpenPost(slug)
                                             },
                                             onClickHashtag = onOpenHashtag,
