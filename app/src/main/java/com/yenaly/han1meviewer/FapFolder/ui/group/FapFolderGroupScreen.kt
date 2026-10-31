@@ -20,12 +20,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -181,25 +183,26 @@ fun FapFolderGroupScreen(
                         -> GroupMediaTab(
                             uiState = uiState,
                             onSwitchTab = { viewModel.switchTab(it) },
+                            onToggleMembership = { viewModel.joinGroup() },
                             onOpenImage = { images, idx -> lightboxPayload = images to idx },
                             onOpenVideoBySlug = onOpenPost,
                             onLoadMore = { viewModel.loadMoreItems() },
                             onRetry = { viewModel.loadMoreItems() },
-                            onRefresh = { viewModel.refresh() },
                         )
 
                         FapFolderGroupTab.MEMBERS -> GroupMembersTab(
                             uiState = uiState,
                             onSwitchTab = { viewModel.switchTab(it) },
+                            onToggleMembership = { viewModel.joinGroup() },
                             onOpenProfile = onOpenProfile,
                             onLoadMore = { viewModel.loadMoreMembers() },
                             onRetry = { viewModel.loadMoreMembers() },
-                            onRefresh = { viewModel.refresh() },
                         )
 
                         FapFolderGroupTab.POSTS -> GroupPostsTab(
                             uiState = uiState,
                             onSwitchTab = { viewModel.switchTab(it) },
+                            onToggleMembership = { viewModel.joinGroup() },
                             onOpenPost = onOpenPost,
                             onOpenHashtag = onOpenHashtag,
                             onOpenProfile = onOpenProfile,
@@ -210,7 +213,6 @@ fun FapFolderGroupScreen(
                             onOpenImage = { images, idx -> lightboxPayload = images to idx },
                             onLoadMore = { viewModel.loadMoreItems() },
                             onRetry = { viewModel.loadMoreItems() },
-                            onRefresh = { viewModel.refresh() },
                         )
                     }
                 }
@@ -468,6 +470,7 @@ private fun LazyGridScope.groupHeaderItems(
 private fun GroupPostsTab(
     uiState: FapFolderGroupUiState,
     onSwitchTab: (FapFolderGroupTab) -> Unit,
+    onToggleMembership: () -> Unit,
     onOpenPost: (String) -> Unit,
     onOpenHashtag: (String) -> Unit,
     onOpenProfile: (String) -> Unit,
@@ -475,9 +478,8 @@ private fun GroupPostsTab(
     onOpenImage: (List<FapFolderMedia.Image>, Int) -> Unit,
     onLoadMore: () -> Unit,
     onRetry: () -> Unit,
-    onRefresh: () -> Unit,
 ) {
-    val listState = rememberLazyListStateCompat()
+    val listState: LazyListState = rememberLazyListState()
 
     LaunchedEffect(listState, uiState.hasMore, uiState.isLoadingMore, uiState.isLoading) {
         snapshotFlow {
@@ -505,7 +507,7 @@ private fun GroupPostsTab(
         groupHeaderItems(
             uiState = uiState,
             onSwitchTab = onSwitchTab,
-            onRefresh = onRefresh,
+            onToggleMembership = onToggleMembership,
         )
 
         when {
@@ -625,12 +627,12 @@ private fun GroupPostsTab(
 private fun GroupMembersTab(
     uiState: FapFolderGroupUiState,
     onSwitchTab: (FapFolderGroupTab) -> Unit,
+    onToggleMembership: () -> Unit,
     onOpenProfile: (String) -> Unit,
     onLoadMore: () -> Unit,
     onRetry: () -> Unit,
-    onRefresh: () -> Unit,
 ) {
-    val listState = rememberLazyListStateCompat()
+    val listState: LazyListState = rememberLazyListState()
 
     LaunchedEffect(listState, uiState.membersHasMore, uiState.membersLoading) {
         snapshotFlow {
@@ -657,7 +659,7 @@ private fun GroupMembersTab(
         groupHeaderItems(
             uiState = uiState,
             onSwitchTab = onSwitchTab,
-            onRefresh = onRefresh,
+            onToggleMembership = onToggleMembership,
         )
 
         when {
@@ -740,14 +742,14 @@ private fun GroupMembersTab(
 private fun GroupMediaTab(
     uiState: FapFolderGroupUiState,
     onSwitchTab: (FapFolderGroupTab) -> Unit,
+    onToggleMembership: () -> Unit,
     onOpenImage: (List<FapFolderMedia.Image>, Int) -> Unit,
     onOpenVideoBySlug: (String) -> Unit,
     onLoadMore: () -> Unit,
     onRetry: () -> Unit,
-    onRefresh: () -> Unit,
 ) {
     val isPhotos = uiState.activeTab == FapFolderGroupTab.PHOTOS
-    val gridState = rememberLazyGridStateCompat()
+    val gridState: LazyGridState = rememberLazyGridState()
     val columns = if (isPhotos) 3 else 2
 
     LaunchedEffect(
@@ -792,6 +794,7 @@ private fun GroupMediaTab(
         groupHeaderItems(
             uiState = uiState,
             onSwitchTab = onSwitchTab,
+            onToggleMembership = onToggleMembership,
         )
 
         if (isPhotos) {
