@@ -681,16 +681,6 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
     }
 }
 
-/**
- * Collects the first non-Loading emission of a [VideoLoadingState] flow.
- *
- * Why [firstOrNull] instead of [kotlinx.coroutines.flow.first]:
- * `first { it !is VideoLoadingState.Loading }` triggers
- * "Cannot infer type for type parameter 'R'" because `Loading` is a generic
- * `data object` on a sealed interface — the compiler can't unify the predicate
- * return type through the generic `T` without an explicit witness.
- * `firstOrNull(predicate)` pins `T` from the receiver type, avoiding that.
- */
 private suspend fun <T> Flow<VideoLoadingState<T>>.firstTerminalGroupState()
         : VideoLoadingState<T>? =
     firstOrNull { it !is VideoLoadingState.Loading }

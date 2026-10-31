@@ -896,7 +896,7 @@ fun FapFolderVideoPlayerScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .align(Alignment.TopCenter)
-                            .statusBarsPadding()
+                            .then(if (isFullscreen) Modifier.systemBarsPadding() else Modifier)
                             .padding(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -911,7 +911,8 @@ fun FapFolderVideoPlayerScreen(
                                 imageVector = if (isFullscreen)
                                     Icons.Filled.FullscreenExit
                                 else Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = if (isFullscreen) "Exit fullscreen" else "Close",
+                                contentDescription = if (isFullscreen)
+                                    "Exit fullscreen" else "Close",
                                 tint = Color.White,
                             )
                         }
