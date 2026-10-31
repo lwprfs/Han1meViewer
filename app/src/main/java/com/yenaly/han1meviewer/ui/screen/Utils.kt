@@ -114,7 +114,7 @@ fun rememberVideoGridColumns(): Int {
 
     val isPreview = LocalInspectionMode.current
 
-    return if (!isPreview && Preferences.tabletMode) {
+    return if (!isPreview) {
         Preferences.searchGridColumnsConfig.columnsForWidthDp(screenWidthDp.value.toInt())
     } else {
         maxOf(2, ((screenWidthDp + SpacingNormal) / (VideoNormalCardMinWidth + SpacingNormal)).toInt())

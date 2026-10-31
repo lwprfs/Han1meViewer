@@ -37,6 +37,7 @@ fun OnAirGateScreen(
     onSwitchSite: () -> Unit,
     onOpenCookies: () -> Unit,
     onRetry: () -> Unit,
+    onOpenSettings: (() -> Unit)? = null,
 ) {
     val title = "OnAir"
     val subtitle = when (state) {
@@ -139,6 +140,11 @@ fun OnAirGateScreen(
                     TextButton(onClick = onOpenCookies) {
                         Text("Open cookies")
                     }
+                    onOpenSettings?.let { openSettings ->
+                        TextButton(onClick = openSettings) {
+                            Text("App settings")
+                        }
+                    }
                 }
 
                 is OnAirGateState.ContentError -> {
@@ -204,6 +210,11 @@ fun OnAirGateScreen(
                                 "Open cookies"
                             }
                         )
+                    }
+                    onOpenSettings?.let { openSettings ->
+                        TextButton(onClick = openSettings) {
+                            Text("App settings")
+                        }
                     }
                 }
 

@@ -2,6 +2,10 @@ package com.yenaly.han1meviewer.MissAV.ui.navigation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.Dns
+import androidx.compose.material.icons.filled.History
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
@@ -14,11 +18,18 @@ import androidx.navigation.toRoute
 import com.yenaly.han1meviewer.ui.activity.MainActivity
 import com.yenaly.han1meviewer.ui.navigation.NavigationManager
 import com.yenaly.han1meviewer.ui.navigation.navigateSafely
+import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.ui.navigation.main.MainDestinationSpec
+import com.yenaly.han1meviewer.ui.navigation.settings.HomeSettingsRoute
+import com.yenaly.han1meviewer.ui.navigation.settings.NetworkSettingsRoute
+import com.yenaly.han1meviewer.ui.navigation.settings.PlayerSettingsRoute
+import com.yenaly.han1meviewer.ui.navigation.settings.UnifiedHistoryRoute
+import com.yenaly.han1meviewer.ui.navigation.settings.registerGlobalSettingsRoutes
+import com.yenaly.han1meviewer.ui.screen.settings.SiteSettingsEntry
+import com.yenaly.han1meviewer.ui.screen.settings.SiteSettingsHubScreen
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import com.yenaly.han1meviewer.MissAV.ui.home.MissAvHomeScreen
-import com.yenaly.han1meviewer.MissAV.ui.home.MissAvSettingsHubScreen
 import com.yenaly.han1meviewer.MissAV.ui.home.MissAvHomeSettingsScreen
 import com.yenaly.han1meviewer.MissAV.ui.home.MissAvHostSettingsScreen
 import com.yenaly.han1meviewer.MissAV.ui.search.MissAvSearchScreen
@@ -60,7 +71,7 @@ fun MissAvNavHost(
 ) {
     LaunchedEffect(Unit) {
         delay(50)
-        NavigationManager.initialize(navController, com.yenaly.han1meviewer.SiteType.MISSAV)
+        NavigationManager.initialize(navController, SiteType.MISSAV)
     }
 
     val sharedMissAvViewModel: MissAvViewModel = viewModel()
@@ -96,14 +107,37 @@ fun MissAvNavHost(
         }
 
         composable<MissAvSettingsHubRoute> {
-            MissAvSettingsHubScreen(
+            SiteSettingsHubScreen(
+                activity = activity,
+                site = SiteType.MISSAV,
+                siteEntries = listOf(
+                    SiteSettingsEntry(
+                        key = "home_categories",
+                        title = "Home Categories",
+                        subtitle = "Reorder, hide, edit, add or delete home sections",
+                        icon = Icons.Default.Category,
+                        onClick = { navController.navigateSafely(MissAvHomeCategoriesRoute) },
+                    ),
+                    SiteSettingsEntry(
+                        key = "host",
+                        title = "Host / Mirror",
+                        subtitle = "Choose which MissAV hostname to load",
+                        icon = Icons.Default.Dns,
+                        onClick = { navController.navigateSafely(MissAvHostSettingsRoute) },
+                    ),
+                    SiteSettingsEntry(
+                        key = "history",
+                        title = "MissAV history",
+                        subtitle = "Videos you've watched on MissAV",
+                        icon = Icons.Default.History,
+                        onClick = { navController.navigateSafely(MissAvHistoryRoute) },
+                    ),
+                ),
                 onBack = { navController.popBackStack() },
-                onNavigateToHomeCategories = {
-                    navController.navigateSafely(MissAvHomeCategoriesRoute)
-                },
-                onNavigateToHost = {
-                    navController.navigateSafely(MissAvHostSettingsRoute)
-                },
+                onOpenAppSettings = { navController.navigateSafely(HomeSettingsRoute) },
+                onOpenPlayerSettings = { navController.navigateSafely(PlayerSettingsRoute) },
+                onOpenNetworkSettings = { navController.navigateSafely(NetworkSettingsRoute) },
+                onOpenUnifiedHistory = { navController.navigateSafely(UnifiedHistoryRoute) },
             )
         }
 
@@ -159,5 +193,11 @@ fun MissAvNavHost(
                 onBack = { navController.popBackStack() },
             )
         }
+
+        registerGlobalSettingsRoutes(
+            activity = activity,
+            navController = navController,
+            homeFallback = MissAvSettingsHubRoute,
+        )
     }
 }

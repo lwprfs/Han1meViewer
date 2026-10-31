@@ -1366,9 +1366,10 @@ private fun DisplayResults(
     onNavigateToVideo: (String, String) -> Unit,
 ) {
     val uniqueVideos = allVideos.distinctBy { it.videoCode }
+    val gridColumns = com.yenaly.han1meviewer.ui.screen.rememberVideoGridColumns()
 
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 150.dp),
+        columns = GridCells.Fixed(gridColumns),
         state = gridState,
         modifier = Modifier
             .fillMaxSize()

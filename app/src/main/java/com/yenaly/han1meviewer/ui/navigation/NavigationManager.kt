@@ -3,6 +3,8 @@ package com.yenaly.han1meviewer.ui.navigation
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import androidx.lifecycle.Lifecycle
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
 import com.yenaly.han1meviewer.HentaiMama.ui.navigation.HentaiMamaHomeRoute
 import com.yenaly.han1meviewer.HentaiMama.ui.navigation.HentaiMamaSearchRoute
@@ -10,9 +12,6 @@ import com.yenaly.han1meviewer.HentaiMama.ui.navigation.HentaiMamaVideoRoute
 import com.yenaly.han1meviewer.OnAir.ui.navigation.OnAirHomeRoute
 import com.yenaly.han1meviewer.OnAir.ui.navigation.OnAirSearchRoute
 import com.yenaly.han1meviewer.OnAir.ui.navigation.OnAirVideoRoute
-import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderHomeRoute
-import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderPostRoute
-import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderSearchRoute
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.ui.navigation.main.HomeRoute
@@ -26,8 +25,16 @@ object NavigationManager {
 
     private const val TAG = "NavigationManager"
 
+    private const val SWITCH_HOME_DELAY_MS = 300L
+    private const val PENDING_OPEN_POLL_MS = 150L
+    private const val PENDING_OPEN_MAX_ATTEMPTS = 240
+
+    private val mainHandler = Handler(Looper.getMainLooper())
+
     private var currentNavController: NavHostController? = null
     private var currentSiteType: SiteType? = null
+
+    private var pendingToken = 0L
 
     fun initialize(navController: NavHostController, siteType: SiteType) {
         currentNavController = navController
@@ -39,7 +46,7 @@ object NavigationManager {
 
     fun getNavController(): NavHostController? = currentNavController
 
-    fun navigateToVideo(videoCode: String, path: String? = null) {
+    fun navigateToVideo(videoCode: String, path: String? = null, resumePosition: Long = 0L) {
         currentNavController?.let { navController ->
             try {
                 when (getCurrentSiteType()) {
@@ -50,13 +57,16 @@ object NavigationManager {
                         navController.navigate(MissAvVideoRoute(videoCode, path ?: "/en/$videoCode"))
                     }
                     SiteType.HENTAIMAMA -> {
-                        navController.navigate(HentaiMamaVideoRoute(videoCode, path ?: "/$videoCode"))
+                        navController.navigate(
+                            HentaiMamaVideoRoute(
+                                videoCode = videoCode,
+                                path = path ?: "/$videoCode",
+                                resumePosition = resumePosition,
+                            )
+                        )
                     }
                     SiteType.ONAIR -> {
                         navController.navigate(OnAirVideoRoute(videoId = videoCode))
-                    }
-                    SiteType.FAPFOLDER -> {
-                        navController.navigate(FapFolderPostRoute(slugOrId = videoCode))
                     }
                 }
             } catch (e: Exception) {
@@ -81,9 +91,6 @@ object NavigationManager {
                     SiteType.ONAIR -> {
                         navController.navigate(OnAirSearchRoute(query = query))
                     }
-                    SiteType.FAPFOLDER -> {
-                        navController.navigate(FapFolderSearchRoute(query = query))
-                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "navigateToSearch failed: ${e.message}")
@@ -94,8 +101,11 @@ object NavigationManager {
     fun navigateToHome() {
         currentNavController?.let { navController ->
             try {
-                Log.d(TAG, "navigateToHome called for site: ${getCurrentSiteType()}")
-                when (getCurrentSiteType()) {
+                val site = getCurrentSiteType()
+                Log.d(TAG, "navigateToHome called for site: $site")
+
+                if (isAtHome(site)) return
+                when (site) {
                     SiteType.HANIME, SiteType.JAVCHU -> {
                         navController.popBackStack(0, false)
                         navController.navigate(HomeRoute)
@@ -111,10 +121,6 @@ object NavigationManager {
                     SiteType.ONAIR -> {
                         navController.popBackStack(0, false)
                         navController.navigate(OnAirHomeRoute)
-                    }
-                    SiteType.FAPFOLDER -> {
-                        navController.popBackStack(0, false)
-                        navController.navigate(FapFolderHomeRoute)
                     }
                 }
             } catch (e: Exception) {
@@ -132,13 +138,59 @@ object NavigationManager {
         currentNavController?.popBackStack(0, false)
     }
 
-    fun switchSite(newSiteType: SiteType) {
-        Log.d(TAG, "switchSite called: $newSiteType")
+    fun switchSite(newSiteType: SiteType, thenOpen: PendingVideoOpen? = null) {
+        Log.d(TAG, "switchSite called: $newSiteType (pending open: ${thenOpen?.videoCode})")
         currentSiteType = newSiteType
         Preferences.siteType = newSiteType
+        pendingToken++
         currentNavController?.popBackStack(0, false)
-        Handler(Looper.getMainLooper()).postDelayed({
+        mainHandler.postDelayed({
             navigateToHome()
-        }, 300)
+            if (thenOpen != null) schedulePendingOpen(thenOpen)
+        }, SWITCH_HOME_DELAY_MS)
+    }
+
+    private fun schedulePendingOpen(request: PendingVideoOpen) {
+        val token = ++pendingToken
+        var attempts = 0
+        val poll = object : Runnable {
+            override fun run() {
+                if (token != pendingToken) return
+                if (getCurrentSiteType() != request.site) {
+                    Log.d(TAG, "Pending open dropped: site changed again")
+                    return
+                }
+                if (isAtHome(request.site) && isNavigationReady()) {
+                    pendingToken++
+                    navigateToVideo(request.videoCode, request.path, request.resumePosition)
+                    return
+                }
+                if (++attempts >= PENDING_OPEN_MAX_ATTEMPTS) {
+                    Log.w(TAG, "Pending open timed out for ${request.videoCode}")
+                    return
+                }
+                mainHandler.postDelayed(this, PENDING_OPEN_POLL_MS)
+            }
+        }
+        mainHandler.postDelayed(poll, PENDING_OPEN_POLL_MS)
+    }
+
+    private fun isNavigationReady(): Boolean {
+        val entry = currentNavController?.currentBackStackEntry ?: return false
+        return entry.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
+    }
+
+    private fun isAtHome(site: SiteType): Boolean {
+        val destination = currentNavController?.currentDestination ?: return false
+        return try {
+            when (site) {
+                SiteType.HANIME, SiteType.JAVCHU -> destination.hasRoute(HomeRoute::class)
+                SiteType.MISSAV -> destination.hasRoute(MissAvHomeRoute::class)
+                SiteType.HENTAIMAMA -> destination.hasRoute(HentaiMamaHomeRoute::class)
+                SiteType.ONAIR -> destination.hasRoute(OnAirHomeRoute::class)
+            }
+        } catch (e: Exception) {
+            false
+        }
     }
 }

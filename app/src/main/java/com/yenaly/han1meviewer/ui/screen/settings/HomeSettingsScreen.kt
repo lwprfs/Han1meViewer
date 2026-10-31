@@ -74,6 +74,7 @@ fun HomeSettingsScreen(
     onOpenHKeyframeSettings: () -> Unit,
     onOpenDownloadSettings: () -> Unit,
     onOpenNetworkSettings: () -> Unit,
+    onOpenUnifiedHistory: () -> Unit = {},
     onOpenAppLanguageSettings: (String) -> Unit,
     onCheckUpdate: () -> Unit,
     onUpdatePopupIntervalDaysChange: (Int) -> Unit,
@@ -327,6 +328,14 @@ fun HomeSettingsScreen(
                 title = stringResource(R.string.network_settings),
                 iconRes = R.drawable.ic_baseline_language_24,
                 onClick = onOpenNetworkSettings,
+            )
+        }
+        item { SettingsGroupTitle("History") }
+        item {
+            SettingNavigationItem(
+                title = "Watch history · all sites",
+                summary = "Hanime, MissAV, HentaiMama and OnAir. Touch an item to switch site, check the connection (Tor for OnAir) and open its video page",
+                onClick = onOpenUnifiedHistory,
             )
         }
         item {

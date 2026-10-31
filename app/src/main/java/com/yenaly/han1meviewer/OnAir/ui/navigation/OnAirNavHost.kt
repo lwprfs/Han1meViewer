@@ -2,6 +2,13 @@ package com.yenaly.han1meviewer.OnAir.ui.navigation
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Campaign
+import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Label
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -46,6 +53,13 @@ import com.yenaly.han1meviewer.ui.activity.MainActivity
 import com.yenaly.han1meviewer.ui.navigation.NavigationManager
 import com.yenaly.han1meviewer.ui.navigation.navigateSafely
 import com.yenaly.han1meviewer.ui.navigation.main.MainDestinationSpec
+import com.yenaly.han1meviewer.ui.navigation.settings.HomeSettingsRoute
+import com.yenaly.han1meviewer.ui.navigation.settings.NetworkSettingsRoute
+import com.yenaly.han1meviewer.ui.navigation.settings.PlayerSettingsRoute
+import com.yenaly.han1meviewer.ui.navigation.settings.UnifiedHistoryRoute
+import com.yenaly.han1meviewer.ui.navigation.settings.registerGlobalSettingsRoutes
+import com.yenaly.han1meviewer.ui.screen.settings.SiteSettingsEntry
+import com.yenaly.han1meviewer.ui.screen.settings.SiteSettingsHubScreen
 import kotlinx.coroutines.delay
 
 @Composable
@@ -256,6 +270,19 @@ fun OnAirNavHost(
             }
 
             composable<OnAirSettingsRoute> {
+                SiteSettingsHubScreen(
+                    activity = activity,
+                    site = SiteType.ONAIR,
+                    siteEntries = onAirHubEntries(navController, signedInContent = true),
+                    onBack = { navController.popBackStack() },
+                    onOpenAppSettings = { navController.navigateSafely(HomeSettingsRoute) },
+                    onOpenPlayerSettings = { navController.navigateSafely(PlayerSettingsRoute) },
+                    onOpenNetworkSettings = { navController.navigateSafely(NetworkSettingsRoute) },
+                    onOpenUnifiedHistory = { navController.navigateSafely(UnifiedHistoryRoute) },
+                )
+            }
+
+            composable<OnAirAccountSettingsRoute> {
                 OnAirSettingsScreen(
                     onBack = { navController.popBackStack() },
                     onOpenCookies = { navController.navigateSafely(OnAirCookieRoute) },
@@ -330,6 +357,12 @@ fun OnAirNavHost(
                     onLoadFailure = recoverableError,
                 )
             }
+
+            registerGlobalSettingsRoutes(
+                activity = activity,
+                navController = navController,
+                homeFallback = OnAirSettingsRoute,
+            )
         }
     } else {
         val activeState = gateState
@@ -345,8 +378,28 @@ fun OnAirNavHost(
                         navController.navigate(OnAirCookieRoute) { launchSingleTop = true }
                     },
                     onRetry = { retryTick = System.currentTimeMillis() },
+                    onOpenSettings = {
+                        navController.navigate(OnAirSettingsRoute) { launchSingleTop = true }
+                    },
                 )
             }
+            composable<OnAirSettingsRoute> {
+                SiteSettingsHubScreen(
+                    activity = activity,
+                    site = SiteType.ONAIR,
+                    siteEntries = onAirHubEntries(navController, signedInContent = false),
+                    onBack = { navController.popBackStack() },
+                    onOpenAppSettings = { navController.navigateSafely(HomeSettingsRoute) },
+                    onOpenPlayerSettings = { navController.navigateSafely(PlayerSettingsRoute) },
+                    onOpenNetworkSettings = { navController.navigateSafely(NetworkSettingsRoute) },
+                    onOpenUnifiedHistory = { navController.navigateSafely(UnifiedHistoryRoute) },
+                )
+            }
+            registerGlobalSettingsRoutes(
+                activity = activity,
+                navController = navController,
+                homeFallback = OnAirSettingsRoute,
+            )
             composable<OnAirCookieRoute> {
                 OnAirCookieSettingsScreen(
                     onBack = { navController.popBackStack() },
@@ -381,5 +434,69 @@ fun OnAirNavHost(
                 )
             }
         }
+    }
+}
+
+private fun onAirHubEntries(
+    navController: NavHostController,
+    signedInContent: Boolean,
+): List<SiteSettingsEntry> = buildList {
+    if (signedInContent) {
+        add(
+            SiteSettingsEntry(
+                key = "account",
+                title = "Account, host & session",
+                subtitle = "Profile, OnAir host, sign out and clear OnAir history",
+                icon = Icons.Default.Person,
+                onClick = { navController.navigateSafely(OnAirAccountSettingsRoute) },
+            )
+        )
+    }
+    add(
+        SiteSettingsEntry(
+            key = "cookies",
+            title = "Cookies & sign in",
+            subtitle = "Manage the OnAir session cookies, log in or register",
+            icon = Icons.Default.Lock,
+            onClick = { navController.navigateSafely(OnAirCookieRoute) },
+        )
+    )
+    if (signedInContent) {
+        add(
+            SiteSettingsEntry(
+                key = "tags",
+                title = "Tags",
+                subtitle = "Browse every OnAir tag",
+                icon = Icons.Default.Label,
+                onClick = { navController.navigateSafely(OnAirTagsIndexRoute) },
+            )
+        )
+        add(
+            SiteSettingsEntry(
+                key = "announcements",
+                title = "Announcements",
+                subtitle = "News from the OnAir administrators",
+                icon = Icons.Default.Campaign,
+                onClick = { navController.navigateSafely(OnAirAnnouncementsRoute) },
+            )
+        )
+        add(
+            SiteSettingsEntry(
+                key = "chat",
+                title = "Chat",
+                subtitle = "Community chat room",
+                icon = Icons.Default.Chat,
+                onClick = { navController.navigateSafely(OnAirChatRoute) },
+            )
+        )
+        add(
+            SiteSettingsEntry(
+                key = "history",
+                title = "OnAir history",
+                subtitle = "Videos you've watched on OnAir",
+                icon = Icons.Default.History,
+                onClick = { navController.navigateSafely(OnAirHistoryRoute) },
+            )
+        )
     }
 }

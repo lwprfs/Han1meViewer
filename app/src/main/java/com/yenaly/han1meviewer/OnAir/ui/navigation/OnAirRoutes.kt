@@ -53,6 +53,9 @@ object OnAirChatRoute
 object OnAirSettingsRoute
 
 @Serializable
+object OnAirAccountSettingsRoute
+
+@Serializable
 object OnAirCookieRoute
 
 @Serializable

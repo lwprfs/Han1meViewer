@@ -82,7 +82,9 @@ import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.logout
 import com.yenaly.han1meviewer.logic.network.HanimeNetwork
 import com.yenaly.han1meviewer.ui.bridge.VideoPageHost
+import com.yenaly.han1meviewer.ui.navigation.CrossSiteNavigator
 import com.yenaly.han1meviewer.ui.navigation.NavigationManager
+import com.yenaly.han1meviewer.ui.navigation.PendingVideoOpen
 import com.yenaly.han1meviewer.ui.navigation.main.AccountRoute
 import com.yenaly.han1meviewer.ui.navigation.main.UnifiedMainNavHost
 import com.yenaly.han1meviewer.ui.navigation.navigateSafely
@@ -94,7 +96,8 @@ import com.yenaly.han1meviewer.videoUrlRegex
 import com.yenaly.yenaly_libs.base.frame.FrameActivity
 import com.yenaly.yenaly_libs.utils.showSnackBar
 import com.yenaly.yenaly_libs.utils.textFromClipboard
-import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.Locale
@@ -109,7 +112,8 @@ class MainActivity : FrameActivity(), PermissionRequester {
 
     lateinit var navController: NavHostController
     private var showAuthGuard by mutableStateOf(true)
-    private val pendingNavigationRequests = MutableSharedFlow<Intent>(extraBufferCapacity = 1)
+
+    private val pendingNavigationRequests = Channel<Intent>(Channel.BUFFERED)
     private var currentVideoHost: VideoPageHost? = null
 
     var showSiteSwitchConfirm by mutableStateOf(false)
@@ -119,6 +123,11 @@ class MainActivity : FrameActivity(), PermissionRequester {
     private var logoutCloseCurrentPage = false
 
     private var showSiteSelectDialog by mutableStateOf(false)
+
+    var crossSiteRequest by mutableStateOf<PendingVideoOpen?>(null)
+        private set
+
+    private var pendingOpenAfterSwitch: PendingVideoOpen? = null
 
     private val _siteChanged = mutableStateOf(0L)
 
@@ -167,7 +176,9 @@ class MainActivity : FrameActivity(), PermissionRequester {
                         Log.d(TAG, "LaunchedEffect: navigating to $it")
 
                         NavigationManager.clearBackStack()
-                        NavigationManager.switchSite(it)
+                        val pendingOpen = pendingOpenAfterSwitch
+                        pendingOpenAfterSwitch = null
+                        NavigationManager.switchSite(it, pendingOpen)
 
                         _siteSwitchState.value = null
                     }
@@ -177,7 +188,7 @@ class MainActivity : FrameActivity(), PermissionRequester {
             MainActivityContent(
                 activity = this,
                 viewModel = viewModel,
-                pendingNavigationRequests = pendingNavigationRequests,
+                pendingNavigationRequests = remember { pendingNavigationRequests.receiveAsFlow() },
                 showAuthGuard = showAuthGuard,
                 onOpenAccount = { navController.navigateSafely(AccountRoute) },
                 onLogoutClick = { requestLogout(false) },
@@ -242,7 +253,9 @@ class MainActivity : FrameActivity(), PermissionRequester {
             showAuthGuard = false
             initData()
         }
-        pendingNavigationRequests.tryEmit(intent)
+        if (savedInstanceState == null) {
+            pendingNavigationRequests.trySend(intent)
+        }
     }
 
     override fun attachBaseContext(newBase: Context) {
@@ -252,11 +265,28 @@ class MainActivity : FrameActivity(), PermissionRequester {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        pendingNavigationRequests.tryEmit(intent)
+        pendingNavigationRequests.trySend(intent)
     }
 
     fun requestSiteSwitch() {
         showSiteSwitchConfirm = true
+    }
+
+    fun requestCrossSiteOpen(request: PendingVideoOpen) {
+        if (CrossSiteNavigator.needsSwitch(request.site)) {
+            crossSiteRequest = request
+        } else {
+            NavigationManager.navigateToVideo(request.videoCode, request.path, request.resumePosition)
+        }
+    }
+
+    fun dismissCrossSiteRequest() {
+        crossSiteRequest = null
+    }
+
+    fun confirmCrossSiteOpen(request: PendingVideoOpen) {
+        crossSiteRequest = null
+        switchToSite(request.site, request)
     }
 
     fun dismissSiteSwitch() {
@@ -292,8 +322,9 @@ class MainActivity : FrameActivity(), PermissionRequester {
         NavigationManager.navigateToHome()
     }
 
-    private fun switchToSite(siteType: SiteType) {
+    fun switchToSite(siteType: SiteType, thenOpen: PendingVideoOpen? = null) {
         Log.d(TAG, "switchToSite called: $siteType")
+        pendingOpenAfterSwitch = thenOpen
         Log.d(TAG, "Current baseUrl before: ${Preferences.baseUrl}")
 
         Preferences.siteType = siteType
@@ -314,9 +345,18 @@ class MainActivity : FrameActivity(), PermissionRequester {
                 ) {
                     Log.d(TAG, "Restoring custom mirror: $savedCustomMirror")
                 } else {
+
+                    val hanimeDomains = HanimeConstants.HANIME_URL.take(3)
+                    val currentDomain = Preferences.preferenceSp
+                        .getString(SettingsPreferenceKeys.DOMAIN_NAME, "").orEmpty()
+                    val lastDomain = Preferences.preferenceSp
+                        .getString("last_hanime_domain", "").orEmpty()
+                    val restoredDomain = hanimeDomains.firstOrNull { it == currentDomain }
+                        ?: hanimeDomains.firstOrNull { it == lastDomain }
+                        ?: HanimeConstants.HANIME_URL[0]
                     Preferences.preferenceSp.edit(true) {
-                        putString(SettingsPreferenceKeys.DOMAIN_NAME, HanimeConstants.HANIME_URL[0])
-                        putString(SettingsPreferenceKeys.SELECTED_BASE_URL, HanimeConstants.HANIME_URL[0])
+                        putString(SettingsPreferenceKeys.DOMAIN_NAME, restoredDomain)
+                        putString(SettingsPreferenceKeys.SELECTED_BASE_URL, restoredDomain)
                         putString(SettingsPreferenceKeys.CUSTOM_MIRROR_SITE, "")
                         putBoolean(SettingsPreferenceKeys.USE_CUSTOM_MIRROR_SITE, false)
                         putBoolean(SettingsPreferenceKeys.APPEND_CUSTOM_MIRROR_PATH, true)
@@ -326,6 +366,11 @@ class MainActivity : FrameActivity(), PermissionRequester {
             }
 
             SiteType.JAVCHU -> {
+                val currentDomain = Preferences.preferenceSp
+                    .getString(SettingsPreferenceKeys.DOMAIN_NAME, "").orEmpty()
+                if (HanimeConstants.HANIME_URL.take(3).contains(currentDomain)) {
+                    Preferences.preferenceSp.edit(true) { putString("last_hanime_domain", currentDomain) }
+                }
                 Preferences.preferenceSp.edit(true) {
                     putString(SettingsPreferenceKeys.DOMAIN_NAME, "https://javchu.com")
                     putString(SettingsPreferenceKeys.SELECTED_BASE_URL, "https://javchu.com")
@@ -355,9 +400,6 @@ class MainActivity : FrameActivity(), PermissionRequester {
             SiteType.ONAIR -> {
                 OnAirNetwork.rebuildNetwork()
             }
-
-            SiteType.FAPFOLDER -> {
-            }
         }
 
         Log.d(TAG, "New baseUrl after: ${Preferences.baseUrl}")
@@ -378,7 +420,6 @@ class MainActivity : FrameActivity(), PermissionRequester {
             val urlDisplay = when (siteType) {
                 SiteType.JAVCHU -> "Javchu (Fixed: https://javchu.com)"
                 SiteType.ONAIR -> "OnAir (${OnAirSitePreferences.currentHostname()})"
-                SiteType.FAPFOLDER -> "FapFolder (${Preferences.baseUrl})"
                 else -> Preferences.displayUrl
             }
             GlobalToasts.show(
@@ -559,7 +600,7 @@ class MainActivity : FrameActivity(), PermissionRequester {
 
     override fun onStop() {
         super.onStop()
-        unregisterReceiver(pipActionReceiver)
+        runCatching { unregisterReceiver(pipActionReceiver) }
     }
 
     private fun applyAppLocale(context: Context): Context {
@@ -642,13 +683,6 @@ class MainActivity : FrameActivity(), PermissionRequester {
                     siteType = SiteType.ONAIR,
                     logoRes = R.drawable.s_switch_onair,
                     accentColor = Color(0xFF00897B),
-                ),
-                SiteInfo(
-                    name = "FapFolder",
-                    description = "Community image/video posts",
-                    siteType = SiteType.FAPFOLDER,
-                    logoRes = R.drawable.s_switch_fapfolder,
-                    accentColor = Color(0xFF7E57C2),
                 ),
             )
         }

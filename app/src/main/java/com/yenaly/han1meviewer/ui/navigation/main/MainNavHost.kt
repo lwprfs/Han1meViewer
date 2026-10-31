@@ -44,6 +44,8 @@ import com.yenaly.han1meviewer.ui.navigation.settings.NetworkSettingsRouteScreen
 import com.yenaly.han1meviewer.ui.navigation.settings.PlayerSettingsRoute
 import com.yenaly.han1meviewer.ui.navigation.settings.PlayerSettingsRouteScreen
 import com.yenaly.han1meviewer.ui.navigation.settings.SettingsScaffold
+import com.yenaly.han1meviewer.ui.navigation.settings.UnifiedHistoryRoute
+import com.yenaly.han1meviewer.ui.navigation.settings.registerUnifiedHistoryRoute
 import com.yenaly.han1meviewer.ui.navigation.settings.SharedHKeyframesRoute
 import com.yenaly.han1meviewer.ui.navigation.settings.SharedHKeyframesRouteScreen
 import com.yenaly.han1meviewer.ui.screen.account.AccountScreen
@@ -210,6 +212,7 @@ fun MainNavHost(
                     onNavigateToHKeyframeSettings = { navController.navigateSafely(HKeyframeSettingsRoute) },
                     onNavigateToDownloadSettings = { navController.navigateSafely(DownloadSettingsRoute) },
                     onNavigateToNetworkSettings = { navController.navigateSafely(NetworkSettingsRoute) },
+                    onNavigateToUnifiedHistory = { navController.navigateSafely(UnifiedHistoryRoute) },
                 )
             }
         }
@@ -284,6 +287,7 @@ fun MainNavHost(
                 )
             }
         }
+        registerUnifiedHistoryRoute(activity, navController)
         composable<SearchRoute> {
             SearchRouteScreen(
                 route = it.toRoute(),

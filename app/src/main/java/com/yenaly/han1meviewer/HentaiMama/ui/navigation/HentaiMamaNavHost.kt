@@ -1,5 +1,12 @@
 package com.yenaly.han1meviewer.HentaiMama.ui.navigation
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.PlayCircleOutline
+import androidx.compose.material.icons.filled.QueueMusic
+import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -14,7 +21,6 @@ import com.yenaly.han1meviewer.HentaiMama.settings.HentaiMamaVideoSettingsScreen
 import com.yenaly.han1meviewer.HentaiMama.ui.history.HentaiMamaHistoryScreen
 import com.yenaly.han1meviewer.HentaiMama.ui.home.HentaiMamaHomeScreen
 import com.yenaly.han1meviewer.HentaiMama.ui.home.HentaiMamaHomeSettingsScreen
-import com.yenaly.han1meviewer.HentaiMama.ui.home.HentaiMamaSettingsHubScreen
 import com.yenaly.han1meviewer.HentaiMama.ui.home.HentaiMamaViewModel
 import com.yenaly.han1meviewer.HentaiMama.ui.playlist.HentaiMamaPlaylistDetailScreen
 import com.yenaly.han1meviewer.HentaiMama.ui.playlist.HentaiMamaPlaylistsScreen
@@ -30,6 +36,13 @@ import com.yenaly.han1meviewer.ui.navigation.NavigationManager
 import com.yenaly.han1meviewer.ui.navigation.canNavigateSafely
 import com.yenaly.han1meviewer.ui.navigation.navigateSafely
 import com.yenaly.han1meviewer.ui.navigation.main.MainDestinationSpec
+import com.yenaly.han1meviewer.ui.navigation.settings.HomeSettingsRoute
+import com.yenaly.han1meviewer.ui.navigation.settings.NetworkSettingsRoute
+import com.yenaly.han1meviewer.ui.navigation.settings.PlayerSettingsRoute
+import com.yenaly.han1meviewer.ui.navigation.settings.UnifiedHistoryRoute
+import com.yenaly.han1meviewer.ui.navigation.settings.registerGlobalSettingsRoutes
+import com.yenaly.han1meviewer.ui.screen.settings.SiteSettingsEntry
+import com.yenaly.han1meviewer.ui.screen.settings.SiteSettingsHubScreen
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 
@@ -380,40 +393,61 @@ fun HentaiMamaNavHost(
         }
 
         composable<HentaiMamaSettingsHubRoute> {
-            HentaiMamaSettingsHubScreen(
+            fun open(route: Any) {
+                if (navController.canNavigateSafely()) navController.navigateSafely(route)
+            }
+            SiteSettingsHubScreen(
+                activity = activity,
+                site = SiteType.HENTAIMAMA,
+                siteEntries = listOf(
+                    SiteSettingsEntry(
+                        key = "video",
+                        title = "Video & card size",
+                        subtitle = "Preferred server & quality, resume playback, card count / size",
+                        icon = Icons.Default.PlayCircleOutline,
+                        onClick = { open(HentaiMamaVideoSettingsRoute(target = "all")) },
+                    ),
+                    SiteSettingsEntry(
+                        key = "home_categories",
+                        title = "Home Categories",
+                        subtitle = "Reorder, hide, edit, add or delete home sections",
+                        icon = Icons.Default.Category,
+                        onClick = { open(HentaiMamaHomeSettingsRoute) },
+                    ),
+                    SiteSettingsEntry(
+                        key = "history",
+                        title = "HentaiMama history",
+                        subtitle = "Series you've watched, resume from where you left off",
+                        icon = Icons.Default.History,
+                        onClick = { open(HentaiMamaHistoryRoute) },
+                    ),
+                    SiteSettingsEntry(
+                        key = "playlists",
+                        title = "Playlists",
+                        subtitle = "Browse public playlists curated by the community",
+                        icon = Icons.Default.QueueMusic,
+                        onClick = { open(HentaiMamaPlaylistsRoute) },
+                    ),
+                    SiteSettingsEntry(
+                        key = "recent_episodes",
+                        title = "Recent Episodes",
+                        subtitle = "Newest episode releases across all series",
+                        icon = Icons.Default.VideoLibrary,
+                        onClick = { open(HentaiMamaRecentEpisodesRoute) },
+                    ),
+                    SiteSettingsEntry(
+                        key = "upcoming",
+                        title = "Upcoming",
+                        subtitle = "Browse upcoming episodes by month",
+                        icon = Icons.Default.CalendarMonth,
+                        onClick = { open(HentaiMamaUpcomingRoute) },
+                    ),
+                ),
                 onBack = { navController.popBackStack() },
-                onNavigateToVideoSettings = {
-                    if (navController.canNavigateSafely()) {
-                        navController.navigateSafely(
-                            HentaiMamaVideoSettingsRoute(target = "all")
-                        )
-                    }
-                },
-                onNavigateToHomeCategories = {
-                    if (navController.canNavigateSafely()) {
-                        navController.navigateSafely(HentaiMamaHomeSettingsRoute)
-                    }
-                },
-                onNavigateToHistory = {
-                    if (navController.canNavigateSafely()) {
-                        navController.navigateSafely(HentaiMamaHistoryRoute)
-                    }
-                },
-                onNavigateToUpcoming = {
-                    if (navController.canNavigateSafely()) {
-                        navController.navigateSafely(HentaiMamaUpcomingRoute)
-                    }
-                },
-                onNavigateToRecentEpisodes = {
-                    if (navController.canNavigateSafely()) {
-                        navController.navigateSafely(HentaiMamaRecentEpisodesRoute)
-                    }
-                },
-                onNavigateToPlaylists = {
-                    if (navController.canNavigateSafely()) {
-                        navController.navigateSafely(HentaiMamaPlaylistsRoute)
-                    }
-                },
+                onOpenAppSettings = { open(HomeSettingsRoute) },
+                onOpenPlayerSettings = { open(PlayerSettingsRoute) },
+                onOpenNetworkSettings = { open(NetworkSettingsRoute) },
+                onOpenUnifiedHistory = { open(UnifiedHistoryRoute) },
             )
         }
 
@@ -440,5 +474,11 @@ fun HentaiMamaNavHost(
                 onBack = { navController.popBackStack() },
             )
         }
+
+        registerGlobalSettingsRoutes(
+            activity = activity,
+            navController = navController,
+            homeFallback = HentaiMamaSettingsHubRoute,
+        )
     }
 }

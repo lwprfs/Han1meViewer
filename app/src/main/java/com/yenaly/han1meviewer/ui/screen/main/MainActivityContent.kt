@@ -27,10 +27,12 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.logic.exception.CloudFlareBlockedException
 import com.yenaly.han1meviewer.logic.model.github.Latest
 import com.yenaly.han1meviewer.logic.state.PageState
 import com.yenaly.han1meviewer.ui.activity.MainActivity
+import com.yenaly.han1meviewer.ui.component.CrossSiteOpenDialog
 import com.yenaly.han1meviewer.ui.component.UpdateDialog
 import com.yenaly.han1meviewer.ui.component.GlobalDialogHost
 import com.yenaly.han1meviewer.ui.component.GlobalToasts
@@ -105,6 +107,9 @@ fun MainActivityContent(
         val headerIsLoading = isLoggedIn && homeState is PageState.Loading
         val selectedDrawerDestination = currentMainDestination.drawerDestination
 
+        val isHanimeFamilySite = Preferences.siteType == SiteType.HANIME ||
+                Preferences.siteType == SiteType.JAVCHU
+
         LaunchedEffect(Unit) {
             pendingNavigationRequests.collect { intent ->
                 composeNavController.handleMainIntent(intent)
@@ -139,7 +144,7 @@ fun MainActivityContent(
 
         MainActivityScaffold(
             drawerState = drawerState,
-            drawerEnabled = currentMainDestination.drawerEnabled,
+            drawerEnabled = currentMainDestination.drawerEnabled && isHanimeFamilySite,
             selectedDestination = selectedDrawerDestination,
             avatarUrl = headerAvatarUrl,
             username = headerUsername,
@@ -176,7 +181,7 @@ fun MainActivityContent(
                     navController = composeNavController,
                     isDrawerOpen = isDrawerOpen,
                     onOpenDrawer = {
-                        if (currentMainDestination.drawerEnabled) {
+                        if (currentMainDestination.drawerEnabled && isHanimeFamilySite) {
                             scope.launch { drawerState.open() }
                         }
                     },
@@ -257,6 +262,14 @@ fun MainActivityContent(
                         Text(stringResource(R.string.no))
                     }
                 },
+            )
+        }
+
+        activity.crossSiteRequest?.let { request ->
+            CrossSiteOpenDialog(
+                request = request,
+                onDismiss = { activity.dismissCrossSiteRequest() },
+                onValidated = { activity.confirmCrossSiteOpen(request) },
             )
         }
 
