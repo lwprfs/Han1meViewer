@@ -21,8 +21,10 @@ import com.yenaly.han1meviewer.logic.state.VideoLoadingState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -151,28 +153,21 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
 
     private suspend fun runHeaderRequest(cleanSlug: String) {
         val groupState = runCatching {
-            firstTerminalGroupState(FapFolderNetworkRepo.getGroupPage(cleanSlug))
+            FapFolderNetworkRepo.getGroupPage(cleanSlug).firstTerminalGroupState()
         }.getOrNull()
 
-        if (groupState == null) {
-            _uiState.update {
+        when (groupState) {
+            null -> _uiState.update {
                 it.copy(
                     isLoading = false,
                     headerError = "Failed to load group.",
                 )
             }
-            return
-        }
-
-        when (groupState) {
-            is VideoLoadingState.Loading -> Unit
-            is VideoLoadingState.Success -> {
-                _uiState.update {
-                    it.copy(
-                        group = groupState.info,
-                        headerError = null,
-                    )
-                }
+            is VideoLoadingState.Success -> _uiState.update {
+                it.copy(
+                    group = groupState.info,
+                    headerError = null,
+                )
             }
             is VideoLoadingState.Error -> {
                 val msg = groupState.throwable.message
@@ -186,6 +181,7 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
             is VideoLoadingState.NoContent -> _uiState.update {
                 it.copy(headerError = "Group not found.")
             }
+            is VideoLoadingState.Loading -> Unit
         }
     }
 
@@ -194,25 +190,11 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
         tab: FapFolderGroupTab,
     ) {
         when (tab) {
-            FapFolderGroupTab.PHOTOS, FapFolderGroupTab.VIDEOS -> {
+            FapFolderGroupTab.PHOTOS, FapFolderGroupTab.VIDEOS ->
                 loadFirstMediaPage(cleanSlug, tab)
-            }
-            FapFolderGroupTab.POSTS -> {
-
-                loadFirstPostPage(cleanSlug)
-            }
-            FapFolderGroupTab.MEMBERS -> {
-
-            }
+            FapFolderGroupTab.POSTS -> loadFirstPostPage(cleanSlug)
+            FapFolderGroupTab.MEMBERS -> Unit
         }
-    }
-
-    private suspend fun firstTerminalGroupState(
-        flow: kotlinx.coroutines.flow.Flow<VideoLoadingState<FapFolderGroup>>,
-    ): VideoLoadingState<FapFolderGroup>? {
-        return runCatching {
-            flow.first { it !is VideoLoadingState.Loading }
-        }.getOrNull()
     }
 
     private suspend fun loadFirstPostPage(cleanSlug: String) {
@@ -323,12 +305,10 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
             viewModelScope.launch {
                 _uiState.update { it.copy(isLoading = true) }
                 when (tab) {
-                    FapFolderGroupTab.PHOTOS, FapFolderGroupTab.VIDEOS -> {
+                    FapFolderGroupTab.PHOTOS, FapFolderGroupTab.VIDEOS ->
                         loadFirstMediaPage(_uiState.value.slug, tab)
-                    }
-                    FapFolderGroupTab.POSTS -> {
+                    FapFolderGroupTab.POSTS ->
                         loadFirstPostPage(_uiState.value.slug)
-                    }
                     else -> Unit
                 }
             }
@@ -700,3 +680,17 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
         joinJob?.cancel()
     }
 }
+
+/**
+ * Collects the first non-Loading emission of a [VideoLoadingState] flow.
+ *
+ * Why [firstOrNull] instead of [kotlinx.coroutines.flow.first]:
+ * `first { it !is VideoLoadingState.Loading }` triggers
+ * "Cannot infer type for type parameter 'R'" because `Loading` is a generic
+ * `data object` on a sealed interface — the compiler can't unify the predicate
+ * return type through the generic `T` without an explicit witness.
+ * `firstOrNull(predicate)` pins `T` from the receiver type, avoiding that.
+ */
+private suspend fun <T> Flow<VideoLoadingState<T>>.firstTerminalGroupState()
+        : VideoLoadingState<T>? =
+    firstOrNull { it !is VideoLoadingState.Loading }

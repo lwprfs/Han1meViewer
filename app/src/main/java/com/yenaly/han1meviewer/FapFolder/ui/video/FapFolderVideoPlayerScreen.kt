@@ -311,9 +311,8 @@ fun FapFolderVideoPlayerScreen(
 
         val dataSourceFactory = DefaultDataSource.Factory(context, httpFactory)
 
-        val mimeType = video.fileExtension
-            ?.takeIf { it.isNotBlank() }
-            ?.let { MimeTypes.getMimeTypeFromExtension(it) }
+        val mimeType = MimeTypes.getMimeTypeFromUrl(playableUrl)
+            ?.takeIf { it.startsWith("video/") || it.startsWith("audio/") }
             ?: MimeTypes.VIDEO_MP4
 
         val mediaItem = MediaItem.Builder()
@@ -647,7 +646,7 @@ fun FapFolderVideoPlayerScreen(
                         exoPlayer?.clearVideoSurfaceView(sv)
                     }
                     if (surfaceRef.value === sv) surfaceRef.value = null
-                    (view as? ViewGroup)?.removeAllChildren()
+                    (view as? ViewGroup)?.removeAllViews()
                 },
             )
 
