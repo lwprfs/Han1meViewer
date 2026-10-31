@@ -6,6 +6,9 @@ import android.util.Log
 import androidx.lifecycle.Lifecycle
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
+import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderHomeRoute
+import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderPostRoute
+import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderSearchRoute
 import com.yenaly.han1meviewer.HentaiMama.ui.navigation.HentaiMamaHomeRoute
 import com.yenaly.han1meviewer.HentaiMama.ui.navigation.HentaiMamaSearchRoute
 import com.yenaly.han1meviewer.HentaiMama.ui.navigation.HentaiMamaVideoRoute
@@ -27,13 +30,14 @@ object NavigationManager {
 
     private const val SWITCH_HOME_DELAY_MS = 300L
     private const val PENDING_OPEN_POLL_MS = 150L
-    private const val PENDING_OPEN_MAX_ATTEMPTS = 240
+    private const val PENDING_OPEN_MAX_ATTEMPTS = 240 // ~36s, enough for a slow Tor gate
 
     private val mainHandler = Handler(Looper.getMainLooper())
 
     private var currentNavController: NavHostController? = null
     private var currentSiteType: SiteType? = null
 
+    /** Incremented every time a pending "open video after switch" is scheduled or cancelled. */
     private var pendingToken = 0L
 
     fun initialize(navController: NavHostController, siteType: SiteType) {
@@ -46,7 +50,12 @@ object NavigationManager {
 
     fun getNavController(): NavHostController? = currentNavController
 
-    fun navigateToVideo(videoCode: String, path: String? = null, resumePosition: Long = 0L) {
+    fun navigateToVideo(
+        videoCode: String,
+        path: String? = null,
+        resumePosition: Long = 0L,
+        autoPlay: Boolean = false,
+    ) {
         currentNavController?.let { navController ->
             try {
                 when (getCurrentSiteType()) {
@@ -67,6 +76,11 @@ object NavigationManager {
                     }
                     SiteType.ONAIR -> {
                         navController.navigate(OnAirVideoRoute(videoId = videoCode))
+                    }
+                    SiteType.FAPFOLDER -> {
+                        navController.navigate(
+                            FapFolderPostRoute(slugOrId = path ?: videoCode, autoPlay = autoPlay)
+                        )
                     }
                 }
             } catch (e: Exception) {
@@ -91,6 +105,9 @@ object NavigationManager {
                     SiteType.ONAIR -> {
                         navController.navigate(OnAirSearchRoute(query = query))
                     }
+                    SiteType.FAPFOLDER -> {
+                        navController.navigate(FapFolderSearchRoute(query = query))
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "navigateToSearch failed: ${e.message}")
@@ -103,7 +120,8 @@ object NavigationManager {
             try {
                 val site = getCurrentSiteType()
                 Log.d(TAG, "navigateToHome called for site: $site")
-
+                // The freshly created NavHost already starts on its home route; navigating again
+                // would stack a second home page on top of it.
                 if (isAtHome(site)) return
                 when (site) {
                     SiteType.HANIME, SiteType.JAVCHU -> {
@@ -122,6 +140,10 @@ object NavigationManager {
                         navController.popBackStack(0, false)
                         navController.navigate(OnAirHomeRoute)
                     }
+                    SiteType.FAPFOLDER -> {
+                        navController.popBackStack(0, false)
+                        navController.navigate(FapFolderHomeRoute)
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "navigateToHome failed: ${e.message}")
@@ -138,11 +160,15 @@ object NavigationManager {
         currentNavController?.popBackStack(0, false)
     }
 
+    /**
+     * Switches to [newSiteType]. When [thenOpen] is given, its video page is opened as soon as the
+     * new site's home page is on screen (for OnAir this is after the Tor / session gate passed).
+     */
     fun switchSite(newSiteType: SiteType, thenOpen: PendingVideoOpen? = null) {
         Log.d(TAG, "switchSite called: $newSiteType (pending open: ${thenOpen?.videoCode})")
         currentSiteType = newSiteType
         Preferences.siteType = newSiteType
-        pendingToken++
+        pendingToken++ // cancels any older pending open
         currentNavController?.popBackStack(0, false)
         mainHandler.postDelayed({
             navigateToHome()
@@ -162,7 +188,12 @@ object NavigationManager {
                 }
                 if (isAtHome(request.site) && isNavigationReady()) {
                     pendingToken++
-                    navigateToVideo(request.videoCode, request.path, request.resumePosition)
+                    navigateToVideo(
+                        request.videoCode,
+                        request.path,
+                        request.resumePosition,
+                        request.autoPlay,
+                    )
                     return
                 }
                 if (++attempts >= PENDING_OPEN_MAX_ATTEMPTS) {
@@ -188,6 +219,7 @@ object NavigationManager {
                 SiteType.MISSAV -> destination.hasRoute(MissAvHomeRoute::class)
                 SiteType.HENTAIMAMA -> destination.hasRoute(HentaiMamaHomeRoute::class)
                 SiteType.ONAIR -> destination.hasRoute(OnAirHomeRoute::class)
+                SiteType.FAPFOLDER -> destination.hasRoute(FapFolderHomeRoute::class)
             }
         } catch (e: Exception) {
             false

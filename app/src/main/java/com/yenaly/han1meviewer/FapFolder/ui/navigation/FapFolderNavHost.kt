@@ -6,6 +6,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Login
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Cookie
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -44,12 +51,18 @@ import com.yenaly.han1meviewer.FapFolder.ui.saved.FapFolderSavedScreen
 import com.yenaly.han1meviewer.FapFolder.ui.search.FapFolderSearchHistoryScreen
 import com.yenaly.han1meviewer.FapFolder.ui.search.FapFolderSearchScreen
 import com.yenaly.han1meviewer.FapFolder.ui.settings.FapFolderCookiesScreen
-import com.yenaly.han1meviewer.FapFolder.ui.settings.FapFolderSettingsHubScreen
 import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.ui.activity.MainActivity
 import com.yenaly.han1meviewer.ui.navigation.NavigationManager
 import com.yenaly.han1meviewer.ui.navigation.navigateSafely
 import com.yenaly.han1meviewer.ui.navigation.main.MainDestinationSpec
+import com.yenaly.han1meviewer.ui.navigation.settings.HomeSettingsRoute
+import com.yenaly.han1meviewer.ui.navigation.settings.NetworkSettingsRoute
+import com.yenaly.han1meviewer.ui.navigation.settings.PlayerSettingsRoute
+import com.yenaly.han1meviewer.ui.navigation.settings.UnifiedHistoryRoute
+import com.yenaly.han1meviewer.ui.navigation.settings.registerGlobalSettingsRoutes
+import com.yenaly.han1meviewer.ui.screen.settings.SiteSettingsEntry
+import com.yenaly.han1meviewer.ui.screen.settings.SiteSettingsHubScreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 
@@ -125,6 +138,7 @@ fun FapFolderNavHost(
         }
         is FapFolderGateState.ContentError -> {
             GateErrorHost(
+                activity = activity,
                 navController = navController,
                 state = state,
                 onRetry = { retryTick = System.currentTimeMillis() },
@@ -304,22 +318,16 @@ fun FapFolderNavHost(
         }
 
         composable<FapFolderSettingsRoute> {
-            FapFolderSettingsHubScreen(
+            val loggedIn = FapFolderNetwork.hasAuthCookies()
+            SiteSettingsHubScreen(
+                activity = activity,
+                site = SiteType.FAPFOLDER,
+                siteEntries = fapFolderHubEntries(navController, isLoggedIn = loggedIn, full = true),
                 onBack = { navController.popBackStack() },
-                onOpenCookies = { navController.navigateSafely(FapFolderCookiesRoute) },
-                onOpenLogin = { navController.navigateSafely(FapFolderLoginRoute) },
-                onOpenHistory = { navController.navigateSafely(FapFolderHistoryRoute) },
-                onOpenSearch = { navController.navigateSafely(FapFolderSearchRoute()) },
-                onOpenSearchHistory = {
-                    navController.navigateSafely(FapFolderSearchHistoryRoute)
-                },
-                onOpenFollowedCommunities = {
-                    navController.navigateSafely(FapFolderFollowedCommunitiesRoute)
-                },
-                onOpenSaved = {
-                    navController.navigateSafely(FapFolderSavedRoute)
-                },
-                isLoggedIn = FapFolderNetwork.hasAuthCookies(),
+                onOpenAppSettings = { navController.navigateSafely(HomeSettingsRoute) },
+                onOpenPlayerSettings = { navController.navigateSafely(PlayerSettingsRoute) },
+                onOpenNetworkSettings = { navController.navigateSafely(NetworkSettingsRoute) },
+                onOpenUnifiedHistory = { navController.navigateSafely(UnifiedHistoryRoute) },
             )
         }
 
@@ -355,9 +363,7 @@ fun FapFolderNavHost(
                 onBack = { navController.popBackStack() },
                 onOpenLogin = { navController.navigateSafely(FapFolderLoginRoute) },
                 onOpenRegister = { },
-                onSwitchSite = {
-                    activity.onBackPressedDispatcher.onBackPressed()
-                },
+                onSwitchSite = { activity.requestSiteSwitch() },
                 onCookiesSaved = {
                     retryTick = System.currentTimeMillis()
                     navController.popBackStack()
@@ -381,6 +387,12 @@ fun FapFolderNavHost(
                 },
             )
         }
+
+        registerGlobalSettingsRoutes(
+            activity = activity,
+            navController = navController,
+            homeFallback = FapFolderSettingsRoute,
+        )
     }
 }
 
@@ -406,6 +418,7 @@ private fun GatePlaceholder(message: String) {
 
 @Composable
 private fun GateErrorHost(
+    activity: MainActivity,
     navController: NavHostController,
     state: FapFolderGateState.ContentError,
     onRetry: () -> Unit,
@@ -424,9 +437,29 @@ private fun GateErrorHost(
                 onOpenLogin = {
                     navController.navigateSafely(FapFolderLoginRoute)
                 },
-                onSwitchSite = { },
+                onSwitchSite = { activity.requestSiteSwitch() },
+                onOpenSettings = {
+                    navController.navigateSafely(FapFolderSettingsRoute)
+                },
             )
         }
+        composable<FapFolderSettingsRoute> {
+            SiteSettingsHubScreen(
+                activity = activity,
+                site = SiteType.FAPFOLDER,
+                siteEntries = fapFolderHubEntries(navController, isLoggedIn = false, full = false),
+                onBack = { navController.popBackStack() },
+                onOpenAppSettings = { navController.navigateSafely(HomeSettingsRoute) },
+                onOpenPlayerSettings = { navController.navigateSafely(PlayerSettingsRoute) },
+                onOpenNetworkSettings = { navController.navigateSafely(NetworkSettingsRoute) },
+                onOpenUnifiedHistory = { navController.navigateSafely(UnifiedHistoryRoute) },
+            )
+        }
+        registerGlobalSettingsRoutes(
+            activity = activity,
+            navController = navController,
+            homeFallback = FapFolderSettingsRoute,
+        )
         composable<FapFolderCookiesRoute> {
             FapFolderCookiesScreen(
                 onBack = { navController.popBackStack() },
@@ -434,7 +467,7 @@ private fun GateErrorHost(
                     navController.navigateSafely(FapFolderLoginRoute)
                 },
                 onOpenRegister = { },
-                onSwitchSite = { },
+                onSwitchSite = { activity.requestSiteSwitch() },
                 onCookiesSaved = onRetry,
                 onLoggedOut = onRetry,
                 gateState = state,
@@ -459,6 +492,7 @@ private fun GateErrorScreen(
     onOpenCookies: () -> Unit,
     onOpenLogin: () -> Unit,
     onSwitchSite: () -> Unit,
+    onOpenSettings: () -> Unit,
 ) {
     Box(
         modifier = Modifier
@@ -480,13 +514,87 @@ private fun GateErrorScreen(
             ) {
                 TextButton(onClick = onRetry) { Text("Retry") }
                 TextButton(onClick = onOpenCookies) { Text("Cookies") }
+                TextButton(onClick = onOpenSettings) { Text("Settings") }
                 if (state.suggestRelogin) {
                     TextButton(onClick = onOpenLogin) { Text("Sign in") }
                 }
-                if (state.suggestSwitchSite) {
-                    TextButton(onClick = onSwitchSite) { Text("Switch site") }
-                }
+                TextButton(onClick = onSwitchSite) { Text("Switch site") }
             }
         }
+    }
+}
+
+/** Site specific entries of the FapFolder settings hub. */
+private fun fapFolderHubEntries(
+    navController: NavHostController,
+    isLoggedIn: Boolean,
+    full: Boolean,
+): List<SiteSettingsEntry> = buildList {
+    add(
+        SiteSettingsEntry(
+            key = "cookies",
+            title = "Cookies",
+            subtitle = "Import, view or clear the FapFolder session cookies",
+            icon = Icons.Default.Cookie,
+            onClick = { navController.navigateSafely(FapFolderCookiesRoute) },
+        )
+    )
+    if (!isLoggedIn) {
+        add(
+            SiteSettingsEntry(
+                key = "login",
+                title = "Sign in",
+                subtitle = "Log in to FapFolder",
+                icon = Icons.AutoMirrored.Filled.Login,
+                onClick = { navController.navigateSafely(FapFolderLoginRoute) },
+            )
+        )
+    }
+    if (full) {
+        add(
+            SiteSettingsEntry(
+                key = "history",
+                title = "FapFolder history",
+                subtitle = "Posts and videos you've opened on FapFolder",
+                icon = Icons.Default.History,
+                onClick = { navController.navigateSafely(FapFolderHistoryRoute) },
+            )
+        )
+        add(
+            SiteSettingsEntry(
+                key = "search",
+                title = "Search",
+                subtitle = "Search posts, people and groups",
+                icon = Icons.Default.Search,
+                onClick = { navController.navigateSafely(FapFolderSearchRoute()) },
+            )
+        )
+        add(
+            SiteSettingsEntry(
+                key = "search_history",
+                title = "Search history",
+                subtitle = "Previous FapFolder searches",
+                icon = Icons.Default.History,
+                onClick = { navController.navigateSafely(FapFolderSearchHistoryRoute) },
+            )
+        )
+        add(
+            SiteSettingsEntry(
+                key = "followed",
+                title = "Followed communities",
+                subtitle = "Groups you follow",
+                icon = Icons.Default.Groups,
+                onClick = { navController.navigateSafely(FapFolderFollowedCommunitiesRoute) },
+            )
+        )
+        add(
+            SiteSettingsEntry(
+                key = "saved",
+                title = "Saved posts",
+                subtitle = "Posts you bookmarked",
+                icon = Icons.Default.Bookmark,
+                onClick = { navController.navigateSafely(FapFolderSavedRoute) },
+            )
+        )
     }
 }

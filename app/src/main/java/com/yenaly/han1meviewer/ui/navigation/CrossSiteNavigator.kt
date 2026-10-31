@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.ui.navigation
 
+import com.yenaly.han1meviewer.FapFolder.common.FapFolderConstants
 import com.yenaly.han1meviewer.HanimeConstants
 import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaConstants
 import com.yenaly.han1meviewer.MissAV.common.MissAvConstants
@@ -20,14 +21,27 @@ import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import java.util.concurrent.TimeUnit
 
+/**
+ * A request to open a video page that belongs to [site].
+ *
+ * It is created by the unified history (and any other cross-site entry point) and consumed by
+ * [com.yenaly.han1meviewer.ui.activity.MainActivity] which switches the active site, waits for the
+ * target site's home to be ready and then navigates to the video page.
+ */
 data class PendingVideoOpen(
     val site: SiteType,
     val videoCode: String,
     val path: String? = null,
     val resumePosition: Long = 0L,
     val title: String = "",
+    val autoPlay: Boolean = false,
 )
 
+/**
+ * Helpers used before a site is switched: decides if a switch is needed at all and validates
+ * that the target site can actually be reached (Tor exit check for OnAir, plain connectivity
+ * check for everything else).
+ */
 object CrossSiteNavigator {
 
     sealed interface Validation {
@@ -47,6 +61,7 @@ object CrossSiteNavigator {
             .build()
     }
 
+    /** Hanime and Javchu are served by the very same NavHost, so no switch is needed between them. */
     fun isSameSiteFamily(a: SiteType, b: SiteType): Boolean {
         if (a == b) return true
         val hanimeFamily = setOf(SiteType.HANIME, SiteType.JAVCHU)
@@ -62,6 +77,7 @@ object CrossSiteNavigator {
         SiteType.MISSAV -> "MissAV"
         SiteType.HENTAIMAMA -> "HentaiMama"
         SiteType.ONAIR -> "OnAir"
+        SiteType.FAPFOLDER -> "FapFolder"
     }
 
     suspend fun validate(site: SiteType): Validation = when (site) {
@@ -96,7 +112,7 @@ object CrossSiteNavigator {
                     .header("User-Agent", USER_AGENT)
                     .get()
                     .build()
-
+                // Any HTTP answer (even a Cloudflare 403/503 challenge) proves the host is reachable.
                 client.newCall(request).execute().use { Validation.Ok }
             } catch (e: SocketTimeoutException) {
                 Validation.Failed(
@@ -124,6 +140,7 @@ object CrossSiteNavigator {
             }
         }
 
+    /** Mirrors the URL that [com.yenaly.han1meviewer.ui.activity.MainActivity.switchToSite] will use. */
     private fun targetUrl(site: SiteType): String = when (site) {
         SiteType.HANIME -> {
             val sp = Preferences.preferenceSp
@@ -146,5 +163,6 @@ object CrossSiteNavigator {
         SiteType.MISSAV -> MissAvConstants.MISSAV_URL[0]
         SiteType.HENTAIMAMA -> HentaiMamaConstants.BASE_URL
         SiteType.ONAIR -> "https://check.torproject.org/"
+        SiteType.FAPFOLDER -> FapFolderConstants.BASE_URL
     }
 }

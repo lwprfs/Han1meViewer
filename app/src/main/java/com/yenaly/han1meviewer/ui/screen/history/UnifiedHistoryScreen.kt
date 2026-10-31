@@ -51,6 +51,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
+import com.yenaly.han1meviewer.FapFolder.data.local.FapFolderHistoryRepo
 import com.yenaly.han1meviewer.HentaiMama.data.local.HentaiMamaHistoryRepo
 import com.yenaly.han1meviewer.MissAV.data.repository.MissAvHistoryRepo
 import com.yenaly.han1meviewer.OnAir.data.local.OnAirHistoryRepo
@@ -70,6 +71,7 @@ import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.util.Date
 
+/** One row of the cross-site history. */
 data class UnifiedHistoryItem(
     val site: SiteType,
     val code: String,
@@ -81,6 +83,7 @@ data class UnifiedHistoryItem(
     val path: String?,
     val subtitle: String?,
     val completed: Boolean,
+    val autoPlay: Boolean = false,
 ) {
     val key: String get() = "${site.name}:$code"
 
@@ -91,19 +94,22 @@ data class UnifiedHistoryItem(
         site = site,
         videoCode = code,
         path = path,
-
+        // Only HentaiMama's video route supports an explicit resume position.
         resumePosition = if (site == SiteType.HENTAIMAMA && !completed) positionMs else 0L,
         title = title,
+        autoPlay = autoPlay,
     )
 }
 
 class UnifiedHistoryViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
-
+        // The per-site repos are normally initialised when their site is visited. The unified
+        // history reads all of them, so make sure they are ready (init is idempotent).
         MissAvHistoryRepo.init(application)
         HentaiMamaHistoryRepo.init(application)
         OnAirHistoryRepo.init(application)
+        FapFolderHistoryRepo.init(application)
     }
 
     private fun <T> safe(flow: kotlinx.coroutines.flow.Flow<List<T>>) =
@@ -114,7 +120,8 @@ class UnifiedHistoryViewModel(application: Application) : AndroidViewModel(appli
         safe(MissAvHistoryRepo.loadAll()),
         safe(HentaiMamaHistoryRepo.loadAll()),
         safe(OnAirHistoryRepo.loadAll()),
-    ) { hanime, missav, mama, onair ->
+        safe(FapFolderHistoryRepo.loadAll()),
+    ) { hanime, missav, mama, onair, fap ->
         buildList {
             hanime.forEach { add(it.toItem()) }
             missav.forEach {
@@ -166,6 +173,24 @@ class UnifiedHistoryViewModel(application: Application) : AndroidViewModel(appli
                     )
                 )
             }
+            fap.forEach {
+                add(
+                    UnifiedHistoryItem(
+                        site = SiteType.FAPFOLDER,
+                        code = it.postId.toString(),
+                        title = it.title,
+                        coverUrl = it.coverUrl,
+                        watchDate = it.watchDate,
+                        positionMs = it.lastPosition,
+                        durationMs = it.totalDuration,
+                        // FapFolder routes are opened by slug (falls back to the numeric id).
+                        path = it.postSlug?.ifBlank { null },
+                        subtitle = it.authorName,
+                        completed = it.completed,
+                        autoPlay = it.isVideo,
+                    )
+                )
+            }
         }.sortedByDescending { it.watchDate }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
@@ -194,11 +219,15 @@ class UnifiedHistoryViewModel(application: Application) : AndroidViewModel(appli
                     SiteType.MISSAV -> MissAvHistoryRepo.deleteByVideoCode(item.code)
                     SiteType.HENTAIMAMA -> HentaiMamaHistoryRepo.deleteByVideoCode(item.code)
                     SiteType.ONAIR -> OnAirHistoryRepo.deleteByVideoId(item.code)
+                    SiteType.FAPFOLDER -> item.code.toLongOrNull()?.let {
+                        FapFolderHistoryRepo.deleteByPostId(it)
+                    }
                 }
             }
         }
     }
 
+    /** Clears the history of [site], or of every site when [site] is null. */
     fun clear(site: SiteType?) {
         viewModelScope.launch {
             runCatching {
@@ -206,6 +235,7 @@ class UnifiedHistoryViewModel(application: Application) : AndroidViewModel(appli
                 if (site == null || site == SiteType.MISSAV) MissAvHistoryRepo.deleteAll()
                 if (site == null || site == SiteType.HENTAIMAMA) HentaiMamaHistoryRepo.deleteAll()
                 if (site == null || site == SiteType.ONAIR) OnAirHistoryRepo.deleteAll()
+                if (site == null || site == SiteType.FAPFOLDER) FapFolderHistoryRepo.deleteAll()
             }
         }
     }
@@ -216,6 +246,7 @@ private val filterSites = listOf(
     SiteType.MISSAV,
     SiteType.HENTAIMAMA,
     SiteType.ONAIR,
+    SiteType.FAPFOLDER,
 )
 
 private fun siteBadge(site: SiteType): String = when (site) {
