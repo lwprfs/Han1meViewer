@@ -1,6 +1,10 @@
 package com.yenaly.han1meviewer.OnAir.ui.components
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import android.content.ClipData
+import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -26,7 +30,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -39,6 +42,7 @@ import com.yenaly.han1meviewer.OnAir.data.remote.OnAirNetwork
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.GlobalToasts
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
+import androidx.compose.ui.platform.LocalClipboard
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -48,12 +52,17 @@ fun OnAirVideoCardItem(
     modifier: Modifier = Modifier,
     onLongClick: ((OnAirVideoCard) -> Unit)? = null,
 ) {
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
+    val clipboardScope = rememberCoroutineScope()
     val defaultLongClick: (OnAirVideoCard) -> Unit = { c ->
         val link = OnAirUrlUtils.normalizeVideoUrl(
             "${OnAirNetwork.baseUrl.trimEnd('/')}/watch/${c.videoId}"
         )
-        clipboard.setText(AnnotatedString(link))
+        clipboardScope.launch {
+                clipboard.setClipEntry(
+                    ClipEntry(ClipData.newPlainText("", link))
+                )
+            }
         GlobalToasts.show(
             "Video link copied",
             level = GlobalToasts.ToastLevel.SUCCESS,

@@ -22,9 +22,9 @@ import androidx.compose.material.icons.filled.Cookie
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Login
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -103,7 +103,7 @@ fun FapFolderSettingsHubScreen(
                     key = "login",
                     title = "Sign in",
                     subtitle = "Log in with username & password",
-                    icon = Icons.Filled.Login,
+                    icon = Icons.AutoMirrored.Filled.Login,
                     onClick = onOpenLogin,
                 )
             )

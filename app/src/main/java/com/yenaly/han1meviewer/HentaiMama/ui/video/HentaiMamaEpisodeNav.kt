@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -51,7 +51,7 @@ fun HentaiMamaEpisodeNav(
             enabled = nav.seriesUrl != null,
         ) {
             Icon(
-                imageVector = Icons.Filled.List,
+                imageVector = Icons.AutoMirrored.Filled.List,
                 contentDescription = null,
                 modifier = Modifier.size(18.dp),
             )

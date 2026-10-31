@@ -13,8 +13,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.ViewAgenda
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -181,7 +181,7 @@ fun HentaiMamaGenreCompactSortBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            imageVector = Icons.Filled.List,
+            imageVector = Icons.AutoMirrored.Filled.List,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(16.dp),

@@ -33,7 +33,7 @@ object OnAirChatRepo {
                     if (!resp.isSuccessful) {
                         throw IllegalStateException("Chat load failed (HTTP ${resp.code})")
                     }
-                    val html = resp.body?.string().orEmpty()
+                    val html = resp.body.string().orEmpty()
                     if (OnAirChatParser.detectLoginRequired(html)) {
                         throw IllegalStateException("Your session expired. Please sign in again.")
                     }
@@ -74,7 +74,7 @@ object OnAirChatRepo {
 
                 OnAirNetwork.sharedOkHttpClient.newCall(request).execute().use { resp ->
                     val code = resp.code
-                    val finalHtml = resp.body?.string().orEmpty()
+                    val finalHtml = resp.body.string().orEmpty()
 
                     if (code == 401 || code == 403) {
                         return@withContext ChatPostResult.LoginRequired

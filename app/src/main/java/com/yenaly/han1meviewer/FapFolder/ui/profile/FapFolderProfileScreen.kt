@@ -319,7 +319,7 @@ private fun ProfileTimelineTab(
             uiState.itemsError != null && uiState.items.isEmpty() -> item("items_error") {
                 ProfileError(
                     title = "Failed to load",
-                    message = uiState.itemsError ?: "",
+                    message = uiState.itemsError ,
                     onRetry = onRetry,
                     compact = true,
                 )
@@ -490,7 +490,7 @@ private fun ProfileGridTab(
             ) {
                 ProfileError(
                     title = "Failed to load",
-                    message = uiState.itemsError ?: "",
+                    message = uiState.itemsError ,
                     onRetry = onRetry,
                     compact = true,
                 )
@@ -885,7 +885,7 @@ private fun ProfileHeader(
 
         if (!profile.bio.isNullOrBlank()) {
             Text(
-                text = profile.bio ?: "",
+                text = profile.bio ,
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                 maxLines = 6,

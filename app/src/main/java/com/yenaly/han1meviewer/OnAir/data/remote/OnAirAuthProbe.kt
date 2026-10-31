@@ -51,7 +51,7 @@ object OnAirAuthProbe {
                 .build()
             OnAirNetwork.sharedOkHttpClient.newCall(request).execute().use { resp ->
                 val code = resp.code
-                val body = resp.body?.string().orEmpty()
+                val body = resp.body.string().orEmpty()
                 Log.d(TAG, "probe /settings: code=$code, htmlLen=${body.length}")
 
                 when {

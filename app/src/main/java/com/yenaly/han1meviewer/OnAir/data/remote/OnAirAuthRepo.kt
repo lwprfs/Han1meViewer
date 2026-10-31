@@ -75,7 +75,7 @@ object OnAirAuthRepo {
             OnAirNetwork.sharedOkHttpClient.newCall(request).execute().use { res ->
                 val code = res.code
                 val location = res.header("Location").orEmpty()
-                val finalHtml = res.body?.string().orEmpty()
+                val finalHtml = res.body.string().orEmpty()
 
                 Log.d(
                     TAG,
@@ -142,7 +142,7 @@ object OnAirAuthRepo {
             OnAirNetwork.sharedOkHttpClient.newCall(request).execute().use { res ->
                 val code = res.code
                 val location = res.header("Location").orEmpty()
-                val finalHtml = res.body?.string().orEmpty()
+                val finalHtml = res.body.string().orEmpty()
 
                 Log.d(
                     TAG,

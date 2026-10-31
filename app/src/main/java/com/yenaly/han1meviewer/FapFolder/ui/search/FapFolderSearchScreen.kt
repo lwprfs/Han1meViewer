@@ -435,7 +435,7 @@ private fun AutocompleteRow(
                 is FapFolderAutocompleteSuggestion.User -> {
                     if (!suggestion.bio.isNullOrBlank()) {
                         Text(
-                            text = suggestion.bio ?: "",
+                            text = suggestion.bio ,
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,

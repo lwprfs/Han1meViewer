@@ -49,7 +49,7 @@ object OnAirNetworkRepo {
             } catch (e: Exception) {
                 lastError = e
             }
-            Log.w(TAG, "Attempt ${attempt + 1}/$MAX_RETRY_COUNT failed: ${lastError?.message}")
+            Log.w(TAG, "Attempt ${attempt + 1}/$MAX_RETRY_COUNT failed: ${lastError.message}")
             if (attempt < MAX_RETRY_COUNT - 1) {
                 delay(RETRY_DELAY_MS * (attempt + 1))
             }

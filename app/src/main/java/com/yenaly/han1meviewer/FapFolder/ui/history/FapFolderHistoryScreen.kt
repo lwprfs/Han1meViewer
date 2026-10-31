@@ -332,7 +332,7 @@ private fun HistoryCard(
                 )
                 if (!entry.authorName.isNullOrBlank()) {
                     Text(
-                        text = entry.authorName ?: "",
+                        text = entry.authorName ,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,

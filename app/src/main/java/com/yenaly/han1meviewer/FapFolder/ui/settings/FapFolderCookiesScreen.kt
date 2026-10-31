@@ -1,6 +1,8 @@
 package com.yenaly.han1meviewer.FapFolder.ui.settings
 
 import androidx.compose.foundation.background
+import android.content.ClipData
+import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,7 +51,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -62,6 +63,7 @@ import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderUserProfile
 import com.yenaly.han1meviewer.FapFolder.ui.gate.FapFolderGateState
 import com.yenaly.han1meviewer.ui.component.GlobalToasts
 import kotlinx.coroutines.launch
+import androidx.compose.ui.platform.LocalClipboard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,7 +76,8 @@ fun FapFolderCookiesScreen(
     onLoggedOut: (() -> Unit)? = null,
     gateState: FapFolderGateState? = null,
 ) {
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
+    val clipboardScope = rememberCoroutineScope()
     val scope = rememberCoroutineScope()
 
     var cookieInput by remember { mutableStateOf(FapFolderCookieManager.cookiesRaw) }
@@ -119,7 +122,11 @@ fun FapFolderCookiesScreen(
                     }
                     if (hasCookies) {
                         TextButton(onClick = {
-                            clipboard.setText(AnnotatedString(FapFolderCookieManager.cookiesRaw))
+                            clipboardScope.launch {
+                clipboard.setClipEntry(
+                    ClipEntry(ClipData.newPlainText("", FapFolderCookieManager.cookiesRaw))
+                )
+            }
                             GlobalToasts.show(
                                 "Cookies copied",
                                 level = GlobalToasts.ToastLevel.SUCCESS,
@@ -378,7 +385,7 @@ private fun SignedInCard(
                     if (!avatar.isNullOrBlank()) {
                         AsyncImage(
                             model = avatar,
-                            contentDescription = profile?.displayName,
+                            contentDescription = profile.displayName,
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop,
                         )

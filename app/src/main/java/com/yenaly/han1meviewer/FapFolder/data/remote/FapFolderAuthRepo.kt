@@ -72,7 +72,7 @@ object FapFolderAuthRepo {
 
             FapFolderNetwork.sharedOkHttpClient.newCall(request).execute().use { resp ->
                 val code = resp.code
-                val body = resp.body?.string().orEmpty()
+                val body = resp.body.string().orEmpty()
                 Log.d(TAG, "probe /: code=$code bodyLen=${body.length}")
 
                 if (FapFolderNetwork.isChallengeResponse(body)) {
@@ -242,7 +242,7 @@ object FapFolderAuthRepo {
 
             FapFolderNetwork.sharedOkHttpClient.newCall(request).execute().use { resp ->
                 val code = resp.code
-                val body = resp.body?.string().orEmpty()
+                val body = resp.body.string().orEmpty()
                 val setCookies = resp.headers("Set-Cookie").toList()
 
                 Log.d(
@@ -289,7 +289,7 @@ object FapFolderAuthRepo {
         }
     }.flowOn(Dispatchers.IO)
 
-    suspend fun logout() = withContext(Dispatchers.IO) {
+    suspend fun logout(): FapFolderAuthResult = withContext(Dispatchers.IO) {
         try {
             val request = Request.Builder()
                 .url(FapFolderConstants.BASE_URL.trimEnd('/') + "/signout")
@@ -300,10 +300,12 @@ object FapFolderAuthRepo {
                     Log.d(TAG, "logout response: ${it.code}")
                 }
             }
+            FapFolderAuthResult.Success
+        } catch (_: Exception) {
+            FapFolderAuthResult.NetworkError(IllegalStateException("Logout failed"))
         } finally {
             FapFolderNetwork.clearCookies()
             FapFolderSessionCache.clear()
-            FapFolderAuthResult.Success
         }
     }
 

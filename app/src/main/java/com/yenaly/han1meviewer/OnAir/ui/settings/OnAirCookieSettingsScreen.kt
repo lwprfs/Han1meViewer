@@ -1,6 +1,8 @@
 package com.yenaly.han1meviewer.OnAir.ui.settings
 
 import androidx.compose.animation.animateColorAsState
+import android.content.ClipData
+import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -63,7 +65,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -85,6 +86,7 @@ import com.yenaly.han1meviewer.logic.state.VideoLoadingState
 import com.yenaly.han1meviewer.ui.component.GlobalToasts
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.ui.platform.LocalClipboard
 
 private enum class TorBubbleState {
     Checking,
@@ -103,7 +105,8 @@ fun OnAirCookieSettingsScreen(
     onLoggedOut: (() -> Unit)? = null,
     gateState: OnAirGateState? = null,
 ) {
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
+    val clipboardScope = rememberCoroutineScope()
     val scope = rememberCoroutineScope()
 
     var cookieInput by remember { mutableStateOf(OnAirCookieManager.cookiesRaw) }
@@ -182,7 +185,7 @@ fun OnAirCookieSettingsScreen(
                         if (i == total) {
                             runCatching {
                                 call.execute().use { resp ->
-                                    resp.body?.string()
+                                    resp.body.string()
                                 }
                             }
                         }
@@ -246,7 +249,11 @@ fun OnAirCookieSettingsScreen(
                     }
                     if (hasCookies) {
                         TextButton(onClick = {
-                            clipboard.setText(AnnotatedString(OnAirCookieManager.cookiesRaw))
+                            clipboardScope.launch {
+                clipboard.setClipEntry(
+                    ClipEntry(ClipData.newPlainText("", OnAirCookieManager.cookiesRaw))
+                )
+            }
                             GlobalToasts.show(
                                 "Cookies copied",
                                 level = GlobalToasts.ToastLevel.SUCCESS,
@@ -558,7 +565,7 @@ private fun SignedInCard(
                     if (!avatar.isNullOrBlank()) {
                         AsyncImage(
                             model = avatar,
-                            contentDescription = profile?.displayName,
+                            contentDescription = profile.displayName,
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop,
                         )
@@ -749,7 +756,7 @@ private fun TorStatusBlock(
 
         if (showProgressBar) {
             LinearProgressIndicator(
-                progress = reloadProgress.coerceIn(0f, 1f),
+                progress = { reloadProgress.coerceIn(0f, 1f) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(3.dp),

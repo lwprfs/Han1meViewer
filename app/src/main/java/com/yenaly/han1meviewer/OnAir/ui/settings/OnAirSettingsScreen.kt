@@ -21,8 +21,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Campaign
-import androidx.compose.material.icons.filled.Chat
-import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -54,6 +52,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Info
 import coil3.compose.AsyncImage
 import com.yenaly.han1meviewer.OnAir.common.OnAirConstants
 import com.yenaly.han1meviewer.OnAir.common.OnAirSitePreferences
@@ -356,7 +356,7 @@ fun OnAirSettingsScreen(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Chat,
+                                imageVector = Icons.Default.Email,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
                             )
@@ -383,7 +383,7 @@ fun OnAirSettingsScreen(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Label,
+                                imageVector = Icons.Default.Info,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
                             )

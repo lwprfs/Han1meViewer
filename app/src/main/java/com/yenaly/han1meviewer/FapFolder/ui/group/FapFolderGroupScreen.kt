@@ -364,7 +364,7 @@ private fun GroupHeaderBlock(
 
         if (!group.bio.isNullOrBlank()) {
             Text(
-                text = group.bio ?: "",
+                text = group.bio ,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -534,7 +534,7 @@ private fun GroupPostsTab(
                             color = MaterialTheme.colorScheme.error,
                         )
                         Text(
-                            text = uiState.itemsError ?: "",
+                            text = uiState.itemsError ,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -830,7 +830,7 @@ private fun GroupMediaTab(
                                     color = MaterialTheme.colorScheme.error,
                                 )
                                 Text(
-                                    text = uiState.itemsError ?: "",
+                                    text = uiState.itemsError ,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -935,7 +935,7 @@ private fun GroupMediaTab(
                                     color = MaterialTheme.colorScheme.error,
                                 )
                                 Text(
-                                    text = uiState.itemsError ?: "",
+                                    text = uiState.itemsError ,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )

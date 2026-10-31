@@ -148,7 +148,7 @@ class OnAirHomeViewModel(application: Application) : AndroidViewModel(applicatio
                 if (!isActive) return@collect
                 when (state) {
                     is PageLoadingState.Success -> {
-                        val pair = state.info as Pair<List<OnAirVideoCard>, OnAirPageInfo?>
+                        val pair = state.info
                         val newCards = pair.first
                         _cards.update { prev ->
                             (prev + newCards).distinctBy { it.videoId }

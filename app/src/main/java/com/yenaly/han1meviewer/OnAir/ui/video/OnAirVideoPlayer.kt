@@ -1,6 +1,8 @@
 package com.yenaly.han1meviewer.OnAir.ui.video
 
 import android.view.ViewGroup
+import kotlinx.coroutines.launch
+import android.content.ClipData
 import android.widget.FrameLayout
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
@@ -49,6 +51,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,8 +59,9 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -632,7 +636,8 @@ fun OnAirStreamUrlBar(
     quality: String,
     modifier: Modifier = Modifier,
 ) {
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
+    val clipboardScope = rememberCoroutineScope()
     var expanded by remember(url) { mutableStateOf(false) }
 
     Row(
@@ -646,7 +651,11 @@ fun OnAirStreamUrlBar(
             .combinedClickable(
                 onClick = { expanded = !expanded },
                 onLongClick = {
-                    clipboard.setText(AnnotatedString(url))
+                    clipboardScope.launch {
+                clipboard.setClipEntry(
+                    ClipEntry(ClipData.newPlainText("", url))
+                )
+            }
                     GlobalToasts.show(
                         "Stream URL copied",
                         level = GlobalToasts.ToastLevel.SUCCESS,
@@ -683,7 +692,11 @@ fun OnAirStreamUrlBar(
         }
         IconButton(
             onClick = {
-                clipboard.setText(AnnotatedString(url))
+                clipboardScope.launch {
+                clipboard.setClipEntry(
+                    ClipEntry(ClipData.newPlainText("", url))
+                )
+            }
                 GlobalToasts.show(
                     "Stream URL copied",
                     level = GlobalToasts.ToastLevel.SUCCESS,

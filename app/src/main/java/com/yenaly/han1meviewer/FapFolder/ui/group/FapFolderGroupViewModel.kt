@@ -309,8 +309,7 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
                         loadFirstMediaPage(_uiState.value.slug, tab)
                     FapFolderGroupTab.POSTS ->
                         loadFirstPostPage(_uiState.value.slug)
-                    else -> Unit
-                }
+                                    }
             }
         }
     }

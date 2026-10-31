@@ -129,7 +129,7 @@ object OnAirStreamFetcher {
                 .apply { if (cookie.isNotBlank()) header("Cookie", cookie) }
                 .build()
             OnAirNetwork.sharedOkHttpClient.newCall(req).execute().use { resp ->
-                if (!resp.isSuccessful && resp.code != 206) return@use false
+                if (!resp.isSuccessful) return@use false
 
                 val ctype = resp.header("Content-Type").orEmpty().lowercase()
                 val ctypeLooksLikeMedia = ctype.startsWith("video/") ||
@@ -145,14 +145,12 @@ object OnAirStreamFetcher {
                 }
 
                 val body = resp.body
-                val bytes = if (body != null) {
-                    runCatching {
-                        val source = body.source()
-                        val buffer = okio.Buffer()
-                        source.read(buffer, 16L)
-                        buffer.readByteArray()
-                    }.getOrNull()
-                } else null
+                val bytes = runCatching {
+                    val source = body.source()
+                    val buffer = okio.Buffer()
+                    source.read(buffer, 16L)
+                    buffer.readByteArray()
+                }.getOrNull()
 
                 if (bytes == null || bytes.isEmpty()) return@use false
 
@@ -165,7 +163,7 @@ object OnAirStreamFetcher {
                         bytes.copyOfRange(0, 7).toString(Charsets.US_ASCII) == "#EXTM3U"
                 if (isHlsText) return@use true
 
-                if (bytes.size >= 4) {
+                run {
                     val mp4 = bytes[4].toInt() == 'f'.code ||
                             (bytes.size >= 8 &&
                                     bytes.copyOfRange(4, 8).toString(Charsets.US_ASCII) == "ftyp")

@@ -86,7 +86,7 @@ fun OnAirTagsIndexScreen(
                 state = s
                 when (s) {
                     is PageLoadingState.Success -> {
-                        val pair = s.info as Pair<List<OnAirTag>, OnAirPageInfo?>
+                        val pair = s.info
                         tags = if (replace) pair.first
                         else (tags + pair.first).distinctBy { it.name }
                         pageInfo = pair.second

@@ -194,38 +194,37 @@ fun HentaiMamaVideoPlayer(
                             ViewGroup.LayoutParams.MATCH_PARENT,
                         )
 
-                        val textureView = TextureView(ctx).apply {
-                            layoutParams = ViewGroup.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                            )
-                            surfaceTextureListener = object : TextureView.SurfaceTextureListener {
-                                override fun onSurfaceTextureAvailable(
-                                    surface: SurfaceTexture,
-                                    width: Int,
-                                    height: Int,
-                                ) {
-                                    Log.d(PLAYER_TAG, "surface available, attaching to player")
-                                    exoPlayer.setVideoTextureView(this@apply)
-                                }
-
-                                override fun onSurfaceTextureSizeChanged(
-                                    surface: SurfaceTexture,
-                                    width: Int,
-                                    height: Int,
-                                ) = Unit
-
-                                override fun onSurfaceTextureDestroyed(
-                                    surface: SurfaceTexture,
-                                ): Boolean {
-                                    exoPlayer.setVideoTextureView(null)
-                                    return true
-                                }
-
-                                override fun onSurfaceTextureUpdated(
-                                    surface: SurfaceTexture,
-                                ) = Unit
+                        val textureView = TextureView(ctx)
+                        textureView.layoutParams = ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                        )
+                        textureView.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
+                            override fun onSurfaceTextureAvailable(
+                                surface: SurfaceTexture,
+                                width: Int,
+                                height: Int,
+                            ) {
+                                Log.d(PLAYER_TAG, "surface available, attaching to player")
+                                exoPlayer.setVideoTextureView(textureView)
                             }
+
+                            override fun onSurfaceTextureSizeChanged(
+                                surface: SurfaceTexture,
+                                width: Int,
+                                height: Int,
+                            ) = Unit
+
+                            override fun onSurfaceTextureDestroyed(
+                                surface: SurfaceTexture,
+                            ): Boolean {
+                                exoPlayer.setVideoTextureView(null)
+                                return true
+                            }
+
+                            override fun onSurfaceTextureUpdated(
+                                surface: SurfaceTexture,
+                            ) = Unit
                         }
                         addView(textureView)
 

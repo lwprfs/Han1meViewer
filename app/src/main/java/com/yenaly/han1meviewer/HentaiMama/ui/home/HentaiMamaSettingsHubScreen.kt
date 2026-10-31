@@ -19,7 +19,6 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.PlayCircleOutline
-import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -36,6 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.automirrored.filled.List
 
 private data class HubEntry(
     val key: String,
@@ -82,7 +82,7 @@ fun HentaiMamaSettingsHubScreen(
             key = "playlists",
             title = "Playlists",
             subtitle = "Browse public playlists curated by the community",
-            icon = Icons.Default.QueueMusic,
+            icon = Icons.AutoMirrored.Filled.List,
             onClick = onNavigateToPlaylists,
         ),
         HubEntry(

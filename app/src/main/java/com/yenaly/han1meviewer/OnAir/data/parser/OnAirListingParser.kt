@@ -248,7 +248,7 @@ object OnAirListingParser {
     fun parseTagCloud(doc: Document): List<OnAirTag> {
         return doc.select("div.tag-cloud a.tag-cloud-item").mapNotNull { element ->
             val href = element.absUrl("href").takeIf { it.isNotBlank() } ?: return@mapNotNull null
-            val name = element.ownText()?.trim()?.takeIf { it.isNotBlank() }
+            val name = element.ownText().trim().takeIf { it.isNotBlank() }
                 ?: return@mapNotNull null
             val count = element.selectFirst("span.tag-cloud-count")
                 ?.text()?.let(::parseTrailingLong)?.toInt()

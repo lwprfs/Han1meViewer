@@ -50,9 +50,9 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.ScreenLockLandscape
 import androidx.compose.material.icons.filled.ScreenLockPortrait
-import androidx.compose.material.icons.filled.VolumeOff
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -632,17 +632,13 @@ fun FapFolderVideoPlayerScreen(
                 },
                 modifier = Modifier.fillMaxSize(),
                 update = { view ->
-                    val sv = view as? SurfaceView ?: return@AndroidView
-                    surfaceRef.value = sv
-                    exoPlayer?.setVideoSurfaceView(sv)
+                    surfaceRef.value = view
+                    exoPlayer?.setVideoSurfaceView(view)
                 },
                 onRelease = { view ->
-                    val sv = view as? SurfaceView
-                    if (sv != null) {
-                        exoPlayer?.clearVideoSurfaceView(sv)
-                    }
-                    if (surfaceRef.value === sv) surfaceRef.value = null
-                    (view as? ViewGroup)?.removeAllViews()
+                    exoPlayer?.clearVideoSurfaceView(view)
+                    if (surfaceRef.value === view) surfaceRef.value = null
+                    // SurfaceView is not a ViewGroup — nothing to remove
                 },
             )
 
@@ -812,8 +808,8 @@ fun FapFolderVideoPlayerScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = if (volumeOverlay == 0f)
-                                Icons.Filled.VolumeOff
-                            else Icons.Filled.VolumeUp,
+                                Icons.AutoMirrored.Filled.VolumeOff
+                            else Icons.AutoMirrored.Filled.VolumeUp,
                             contentDescription = null,
                             tint = Color.White,
                             modifier = Modifier.size(16.dp),
@@ -920,8 +916,8 @@ fun FapFolderVideoPlayerScreen(
                         Spacer(Modifier.weight(1f))
                         IconButton(onClick = { toggleMute() }) {
                             Icon(
-                                imageVector = if (muted) Icons.Filled.VolumeOff
-                                else Icons.Filled.VolumeUp,
+                                imageVector = if (muted) Icons.AutoMirrored.Filled.VolumeOff
+                                else Icons.AutoMirrored.Filled.VolumeUp,
                                 contentDescription =
                                     if (muted) "Unmute" else "Mute",
                                 tint = Color.White,

@@ -39,7 +39,7 @@ object OnAirMirrorStatusRepo {
 
             withTimeout(PER_CHECK_TIMEOUT_MS) {
                 client.newCall(request).execute().use { resp ->
-                    val html = resp.body?.string().orEmpty()
+                    val html = resp.body.string().orEmpty()
                     Log.d(TAG, "check($host): http=${resp.code} htmlLen=${html.length}")
                     if (!resp.isSuccessful && html.isBlank()) {
                         OnAirMirrorStatus.Error(host, "TorWatch HTTP ${resp.code}")

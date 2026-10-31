@@ -94,7 +94,7 @@ fun OnAirPicturesScreen(
                 state = s
                 when (s) {
                     is PageLoadingState.Success -> {
-                        val pair = s.info as Pair<List<OnAirPictureCard>, OnAirPageInfo?>
+                        val pair = s.info
                         cards = if (replace) pair.first
                         else (cards + pair.first).distinctBy { it.pictureId }
                         pageInfo = pair.second
