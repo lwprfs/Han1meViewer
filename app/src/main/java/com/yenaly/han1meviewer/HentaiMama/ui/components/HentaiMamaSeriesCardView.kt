@@ -36,6 +36,7 @@ import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaImageLoader
 import com.yenaly.han1meviewer.HentaiMama.data.model.SeriesCard
 import com.yenaly.han1meviewer.HentaiMama.settings.HentaiMamaCardSettings
 import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.ui.component.SiteVideoCard
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
 
 @Composable
@@ -49,188 +50,21 @@ fun HentaiMamaSeriesCardView(
     val context = LocalContext.current
     val imageLoader = remember(context) { HentaiMamaImageLoader.get(context) }
 
-    Surface(
-        modifier = modifier
-            .combinedClickable(
-                onClick = { onClick(card.slug) },
-                onLongClick = { onLongClick(card.slug, card.title) },
-            ),
-        shape = RoundedCornerShape(12.dp),
-        tonalElevation = 2.dp,
-        shadowElevation = 1.dp,
-        color = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-    ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(aspectRatio),
-            ) {
-                RetryableImage(
-                    model = card.thumbFull.ifBlank { card.thumbSmall.orEmpty() },
-                    contentDescription = card.posterAlt.ifBlank { card.title },
-                    modifier = Modifier.fillMaxSize(),
-                    placeholder = painterResource(R.drawable.h_chan_loading),
-                    error = painterResource(R.drawable.h_chan_load_failed),
-                    contentScale = ContentScale.Crop,
-                    imageLoader = imageLoader,
-                )
-
-                card.rating?.let { rating: Double ->
-                    Surface(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(6.dp),
-                        color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.55f),
-                        shape = RoundedCornerShape(6.dp),
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(
-                                horizontal = 6.dp,
-                                vertical = 2.dp,
-                            ),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Star,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(12.dp),
-                            )
-                            Spacer(Modifier.width(2.dp))
-                            Text(
-                                text = formatRatingValue(rating),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.inverseOnSurface,
-                                fontWeight = FontWeight.Bold,
-                            )
-                        }
-                    }
-                }
-
-                card.episodeCount?.let { count: Int ->
-                    if (count > 0) {
-                        Surface(
-                            modifier = Modifier
-                                .align(Alignment.BottomStart)
-                                .padding(6.dp),
-                            color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.7f),
-                            shape = RoundedCornerShape(6.dp),
-                        ) {
-                            Text(
-                                text = "$count EP",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.inverseOnSurface,
-                                modifier = Modifier.padding(
-                                    horizontal = 6.dp,
-                                    vertical = 2.dp,
-                                ),
-                            )
-                        }
-                    }
-                }
-            }
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Text(
-                    text = card.title,
-                    maxLines = 2,
-                    minLines = 2,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Medium,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    card.rating?.let { r: Double ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Filled.Star,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(11.dp),
-                            )
-                            Spacer(Modifier.width(2.dp))
-                            Text(
-                                text = formatRatingValue(r),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines = 1,
-                            )
-                        }
-                    }
-
-                    card.favorites?.takeIf { it > 0 }?.let { f: Int ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Filled.Favorite,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(11.dp),
-                            )
-                            Spacer(Modifier.width(2.dp))
-                            Text(
-                                text = formatCompactNumber(f.toLong()),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                            )
-                        }
-                    }
-
-                    card.views?.takeIf { it > 0L }?.let { v: Long ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Filled.Visibility,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(11.dp),
-                            )
-                            Spacer(Modifier.width(2.dp))
-                            Text(
-                                text = formatCompactNumber(v),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                            )
-                        }
-                    }
-
-                    card.year?.let { y: Int ->
-                        Text(
-                            text = y.toString(),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                        )
-                    }
-                }
-
-                if (card.studios.isNotEmpty()) {
-                    Text(
-                        text = card.studios.take(2).joinToString(", "),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-        }
-    }
+    SiteVideoCard(
+        modifier = modifier,
+        title = card.title,
+        coverUrl = card.thumbFull.ifBlank { card.thumbSmall.orEmpty() },
+        aspectRatio = aspectRatio,
+        views = card.views?.takeIf { it > 0L }?.let { formatCompactNumber(it) },
+        duration = card.episodeCount?.takeIf { it > 0 }?.let { "$it EP" },
+        subtitle = card.studios.take(2).joinToString(", ").ifBlank { null },
+        reviews = card.rating?.let { "★ ${formatRatingValue(it)}" }
+            ?: card.favorites?.takeIf { it > 0 }?.let { "♥ ${formatCompactNumber(it.toLong())}" },
+        uploadTime = card.year?.toString(),
+        imageLoader = imageLoader,
+        onClick = { onClick(card.slug) },
+        onLongClick = { onLongClick(card.slug, card.title) },
+    )
 }
 
 private fun formatRatingValue(value: Double): String =

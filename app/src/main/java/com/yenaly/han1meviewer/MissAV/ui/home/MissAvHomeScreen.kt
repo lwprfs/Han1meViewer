@@ -47,6 +47,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.state.WebsiteState
+import com.yenaly.han1meviewer.ui.component.SiteBarIconButton
+import com.yenaly.han1meviewer.ui.component.SiteSearchTopBar
+import com.yenaly.han1meviewer.ui.component.SiteSectionHeader
+import com.yenaly.han1meviewer.ui.component.SiteSwitchButton
 import com.yenaly.han1meviewer.ui.component.VideoCardItem
 import com.yenaly.han1meviewer.ui.component.content.ErrorContent
 import com.yenaly.han1meviewer.ui.component.content.LoadingContent
@@ -79,45 +83,23 @@ fun MissAvHomeScreen(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                title = {
-                    Column(
-                        modifier = Modifier.clickable { onNavigateToSearch(null) }
-                    ) {
-                        Text(
-                            text = "MissAV",
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Text(
-                            text = hostLabel,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                },
+            SiteSearchTopBar(
+                hint = "Search MissAV · $hostLabel",
+                onSearchClick = { onNavigateToSearch(null) },
+                leading = { SiteSwitchButton(onClick = onSwitchSite) },
                 actions = {
-                    IconButton(onClick = onNavigateToSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = "Home settings")
-                    }
-                    IconButton(onClick = onNavigateToHistory) {
-                        Icon(
-                            Icons.Default.History,
-                            contentDescription = stringResource(R.string.watch_history),
-                        )
-                    }
-                    IconButton(onClick = onSwitchSite) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_baseline_switch_24),
-                            contentDescription = stringResource(R.string.switch_site),
-                        )
-                    }
-                    IconButton(onClick = { onNavigateToSearch(null) }) {
-                        Icon(
-                            Icons.Default.Search,
-                            contentDescription = stringResource(R.string.search),
-                        )
-                    }
+                    SiteBarIconButton(
+                        imageVector = Icons.Default.History,
+                        contentDescription = stringResource(R.string.watch_history),
+                        onClick = onNavigateToHistory,
+                    )
+                    SiteBarIconButton(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Home settings",
+                        onClick = onNavigateToSettings,
+                    )
                 },
             )
         }
@@ -186,13 +168,14 @@ private fun HomeContent(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 16.dp),
+        contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(SpacingNormal),
     ) {
         if (popular.isNotEmpty()) {
             item(key = "popular_header") {
-                SectionHeader(
+                SiteSectionHeader(
                     title = "Popular Videos",
-                    onMore = { onNavigateToSearch(null) },
+                    onMoreClick = { onNavigateToSearch(null) },
                 )
             }
             item(key = "popular_row") {
@@ -219,9 +202,9 @@ private fun HomeContent(
             val key = row.category.key
 
             item(key = "cat_header_$key") {
-                SectionHeader(
+                SiteSectionHeader(
                     title = row.category.title,
-                    onMore = { onNavigateToSearch(row.category.title) },
+                    onMoreClick = { onNavigateToSearch(row.category.title) },
                 )
             }
 
@@ -263,26 +246,6 @@ private fun HomeContent(
 }
 
 @Composable
-private fun SectionHeader(title: String, onMore: () -> Unit) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.weight(1f),
-        )
-        TextButton(onClick = onMore) {
-            Text(stringResource(R.string.more))
-        }
-    }
-}
-
-@Composable
 private fun CategorySkeletonRow(cardWidth: Dp) {
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(SpacingNormal),
@@ -293,7 +256,7 @@ private fun CategorySkeletonRow(cardWidth: Dp) {
             Box(
                 modifier = Modifier
                     .width(cardWidth)
-                    .height(140.dp)
+                    .height(cardWidth * 9f / 16f + 64.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
             )

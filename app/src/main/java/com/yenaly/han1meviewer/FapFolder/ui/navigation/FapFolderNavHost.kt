@@ -524,7 +524,6 @@ private fun GateErrorScreen(
     }
 }
 
-/** Site specific entries of the FapFolder settings hub. */
 private fun fapFolderHubEntries(
     navController: NavHostController,
     isLoggedIn: Boolean,

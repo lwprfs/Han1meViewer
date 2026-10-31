@@ -113,8 +113,7 @@ class MainActivity : FrameActivity(), PermissionRequester {
 
     lateinit var navController: NavHostController
     private var showAuthGuard by mutableStateOf(true)
-    // A buffered channel keeps the cold-start intent until the Compose collector is ready.
-    // (A replay-less SharedFlow silently dropped it because nobody was collecting yet.)
+
     private val pendingNavigationRequests = Channel<Intent>(Channel.BUFFERED)
     private var currentVideoHost: VideoPageHost? = null
 
@@ -126,7 +125,6 @@ class MainActivity : FrameActivity(), PermissionRequester {
 
     private var showSiteSelectDialog by mutableStateOf(false)
 
-    /** Video of another site that the user touched (e.g. in the unified history). */
     var crossSiteRequest by mutableStateOf<PendingVideoOpen?>(null)
         private set
 
@@ -275,10 +273,6 @@ class MainActivity : FrameActivity(), PermissionRequester {
         showSiteSwitchConfirm = true
     }
 
-    /**
-     * Opens the video page of [request].site. If that site is not the active one a pop-up is shown
-     * (switch site -> validate Tor / connection -> open the video page of the target site).
-     */
     fun requestCrossSiteOpen(request: PendingVideoOpen) {
         if (CrossSiteNavigator.needsSwitch(request.site)) {
             crossSiteRequest = request
@@ -296,7 +290,6 @@ class MainActivity : FrameActivity(), PermissionRequester {
         crossSiteRequest = null
     }
 
-    /** Called once the target site was validated by the pop-up. */
     fun confirmCrossSiteOpen(request: PendingVideoOpen) {
         crossSiteRequest = null
         switchToSite(request.site, request)
@@ -358,8 +351,7 @@ class MainActivity : FrameActivity(), PermissionRequester {
                 ) {
                     Log.d(TAG, "Restoring custom mirror: $savedCustomMirror")
                 } else {
-                    // Keep the Hanime mirror the user picked before visiting Javchu instead of
-                    // always falling back to the first domain.
+
                     val hanimeDomains = HanimeConstants.HANIME_URL.take(3)
                     val currentDomain = Preferences.preferenceSp
                         .getString(SettingsPreferenceKeys.DOMAIN_NAME, "").orEmpty()
@@ -915,5 +907,3 @@ class MainActivity : FrameActivity(), PermissionRequester {
         )
     }
 }
-
-

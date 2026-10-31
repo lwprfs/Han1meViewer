@@ -58,6 +58,10 @@ import com.yenaly.han1meviewer.HentaiMama.ui.components.HentaiMamaVideoCard
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.model.HanimeInfo
+import com.yenaly.han1meviewer.ui.component.SiteBarIconButton
+import com.yenaly.han1meviewer.ui.component.SiteSearchTopBar
+import com.yenaly.han1meviewer.ui.component.SiteSectionHeader
+import com.yenaly.han1meviewer.ui.component.SiteSwitchButton
 import com.yenaly.han1meviewer.ui.theme.SpacingLarge
 import com.yenaly.han1meviewer.ui.theme.SpacingNormal
 
@@ -89,34 +93,23 @@ fun HentaiMamaHomeScreen(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "HentaiMama",
-                        modifier = Modifier.clickable { onNavigateToHome() },
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                },
+            SiteSearchTopBar(
+                hint = "Search HentaiMama",
+                onSearchClick = { onNavigateToSearch(null) },
+                leading = { SiteSwitchButton(onClick = onSwitchSite) },
                 actions = {
-                    IconButton(onClick = onNavigateToSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings")
-                    }
-                    IconButton(onClick = onNavigateToHistory) {
-                        Icon(Icons.Default.History, contentDescription = "History")
-                    }
-                    IconButton(onClick = onSwitchSite) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_baseline_switch_24),
-                            contentDescription = stringResource(R.string.switch_site),
-                        )
-                    }
-                    IconButton(onClick = { onNavigateToSearch(null) }) {
-                        Icon(
-                            Icons.Default.Search,
-                            contentDescription = stringResource(R.string.search),
-                        )
-                    }
+                    SiteBarIconButton(
+                        imageVector = Icons.Default.History,
+                        contentDescription = stringResource(R.string.watch_history),
+                        onClick = onNavigateToHistory,
+                    )
+                    SiteBarIconButton(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = stringResource(R.string.settings),
+                        onClick = onNavigateToSettings,
+                    )
                 },
             )
         }
@@ -131,7 +124,8 @@ fun HentaiMamaHomeScreen(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 16.dp),
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(SpacingNormal),
                 ) {
                     categoryRows.forEach { row ->
                         val key = row.category.key
@@ -143,9 +137,9 @@ fun HentaiMamaHomeScreen(
                         if (!hasContent) return@forEach
 
                         item(key = "header_$key") {
-                            SectionHeader(
+                            SiteSectionHeader(
                                 title = row.category.title,
-                                onMore = {
+                                onMoreClick = {
                                     if (row.isGenre) {
                                         val slug = HentaiMamaNetworkRepo.extractGenreSlug(
                                             row.category.genrePath
@@ -334,29 +328,6 @@ private fun HomeLoadingState(
             TextButton(onClick = onRetry) {
                 Text("Tap to retry")
             }
-        }
-    }
-}
-
-@Composable
-private fun SectionHeader(
-    title: String,
-    onMore: () -> Unit,
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.weight(1f),
-        )
-        TextButton(onClick = onMore) {
-            Text(stringResource(R.string.more))
         }
     }
 }

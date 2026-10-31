@@ -39,6 +39,8 @@ import com.yenaly.han1meviewer.HentaiMama.data.model.GenreSeries
 import com.yenaly.han1meviewer.HentaiMama.settings.HentaiMamaCardSettings
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.model.VideoItemType
+import com.yenaly.han1meviewer.ui.component.SiteVideoCard
+import com.yenaly.han1meviewer.util.DisplayTextLocalizer
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
 
 @Composable
@@ -52,49 +54,20 @@ fun HentaiMamaVideoCard(
     val context = LocalContext.current
     val imageLoader = remember(context) { HentaiMamaImageLoader.get(context) }
 
-    Surface(
-        modifier = modifier
-            .combinedClickable(
-                onClick = { onClick(videoItem.videoCode) },
-                onLongClick = { onLongClick(videoItem.videoCode, videoItem.title) },
-            ),
-        shape = RoundedCornerShape(12.dp),
-        tonalElevation = 2.dp,
-        shadowElevation = 1.dp,
-        color = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-    ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(aspectRatio),
-            ) {
-                RetryableImage(
-                    model = videoItem.coverUrl,
-                    contentDescription = videoItem.title,
-                    modifier = Modifier.fillMaxSize(),
-                    placeholder = painterResource(R.drawable.h_chan_loading),
-                    error = painterResource(R.drawable.h_chan_load_failed),
-                    contentScale = ContentScale.Crop,
-                    imageLoader = imageLoader,
-                )
-            }
-
-            Text(
-                text = videoItem.title,
-                maxLines = 2,
-                minLines = 2,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Medium,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-            )
-        }
-    }
+    SiteVideoCard(
+        modifier = modifier,
+        title = videoItem.title,
+        coverUrl = videoItem.coverUrl,
+        aspectRatio = aspectRatio,
+        views = videoItem.views?.let { DisplayTextLocalizer.localizeViews(it) },
+        duration = videoItem.duration,
+        subtitle = videoItem.currentArtist,
+        reviews = videoItem.reviews,
+        uploadTime = videoItem.uploadTime?.let { DisplayTextLocalizer.localizeRelativeTime(it) },
+        imageLoader = imageLoader,
+        onClick = { onClick(videoItem.videoCode) },
+        onLongClick = { onLongClick(videoItem.videoCode, videoItem.title) },
+    )
 }
 
 @Composable
@@ -110,138 +83,21 @@ fun HentaiMamaGenreSeriesCard(
     val context = LocalContext.current
     val imageLoader = remember(context) { HentaiMamaImageLoader.get(context) }
 
-    Surface(
-        modifier = modifier
-            .combinedClickable(
-                onClick = { onClick(series.slug) },
-                onLongClick = {
-                    onLongClick(series.slug, series.displayTitle)
-                },
-            ),
-        shape = RoundedCornerShape(12.dp),
-        tonalElevation = 2.dp,
-        shadowElevation = 1.dp,
-        color = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-    ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(aspectRatio),
-            ) {
-                RetryableImage(
-                    model = series.posterMid ?: series.posterFull,
-                    contentDescription = series.altText.ifBlank { series.displayTitle },
-                    modifier = Modifier.fillMaxSize(),
-                    placeholder = painterResource(R.drawable.h_chan_loading),
-                    error = painterResource(R.drawable.h_chan_load_failed),
-                    contentScale = ContentScale.Crop,
-                    imageLoader = imageLoader,
-                )
-
-                series.rating?.let { rating ->
-                    Surface(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(6.dp),
-                        color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.55f),
-                        shape = RoundedCornerShape(6.dp),
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(
-                                horizontal = 6.dp,
-                                vertical = 2.dp,
-                            ),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Star,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(12.dp),
-                            )
-                            Spacer(Modifier.width(2.dp))
-                            Text(
-                                text = formatRating(rating),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.inverseOnSurface,
-                                fontWeight = FontWeight.Bold,
-                            )
-                        }
-                    }
-                }
-
-                series.episodeCount?.let { count ->
-                    if (count > 0) {
-                        Surface(
-                            modifier = Modifier
-                                .align(Alignment.BottomStart)
-                                .padding(6.dp),
-                            color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.7f),
-                            shape = RoundedCornerShape(6.dp),
-                        ) {
-                            Text(
-                                text = "$count EP",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.inverseOnSurface,
-                                modifier = Modifier.padding(
-                                    horizontal = 6.dp,
-                                    vertical = 2.dp,
-                                ),
-                            )
-                        }
-                    }
-                }
-            }
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Text(
-                    text = series.displayTitle,
-                    maxLines = 2,
-                    minLines = 2,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Medium,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-
-                val metaLine: String = remember(series) {
-                    buildList {
-                        series.year?.let { add(it.toString()) }
-                        series.views?.let { add(formatViews(it)) }
-                        series.favorites?.let { if (it > 0) add("♥ $it") }
-                    }.joinToString(" • ")
-                }
-
-                if (metaLine.isNotBlank()) {
-                    Text(
-                        text = metaLine,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-
-                if (series.studios.isNotEmpty()) {
-                    Text(
-                        text = series.studios.take(2).joinToString(", "),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-        }
-    }
+    SiteVideoCard(
+        modifier = modifier,
+        title = series.displayTitle,
+        coverUrl = (series.posterMid ?: series.posterFull).orEmpty(),
+        aspectRatio = aspectRatio,
+        views = series.views?.takeIf { it > 0L }?.let { formatViews(it) },
+        duration = series.episodeCount?.takeIf { it > 0 }?.let { "$it EP" },
+        subtitle = series.studios.take(2).joinToString(", ").ifBlank { null },
+        reviews = series.rating?.let { "★ ${formatRating(it)}" }
+            ?: series.favorites?.takeIf { it > 0 }?.let { "♥ $it" },
+        uploadTime = series.year?.toString(),
+        imageLoader = imageLoader,
+        onClick = { onClick(series.slug) },
+        onLongClick = { onLongClick(series.slug, series.displayTitle) },
+    )
 }
 
 @Composable

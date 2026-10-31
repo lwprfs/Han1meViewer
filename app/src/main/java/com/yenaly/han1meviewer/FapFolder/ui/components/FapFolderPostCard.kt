@@ -57,6 +57,9 @@ import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderPost
 import com.yenaly.han1meviewer.FapFolder.data.model.PostVariant
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.preview.ComponentPreview
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.unit.sp
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -81,17 +84,18 @@ fun FapFolderPostCard(
     onClickSave: () -> Unit = {},
     onLongClickPost: () -> Unit = {},
 ) {
-    ElevatedCard(
+    Surface(
         modifier = modifier
             .fillMaxWidth()
             .combinedClickable(
                 onClick = onClickPost,
                 onLongClick = onLongClickPost,
             ),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        ),
+        shape = RoundedCornerShape(12.dp),
+        tonalElevation = 2.dp,
+        shadowElevation = 1.dp,
+        color = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             PostHeaderRow(
@@ -425,31 +429,46 @@ private fun VideoMediaBlock(
         }
         Box(
             modifier = Modifier
-                .size(64.dp)
+                .size(52.dp)
                 .clip(CircleShape)
-                .background(Color.Black.copy(alpha = 0.6f)),
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.85f)),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = Icons.Filled.PlayArrow,
                 contentDescription = "Play",
-                tint = Color.White,
-                modifier = Modifier.size(36.dp),
+                tint = MaterialTheme.colorScheme.onPrimary,
+                modifier = Modifier.size(30.dp),
             )
         }
         video.durationSeconds?.let { secs ->
-            Surface(
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(8.dp),
-                color = Color.Black.copy(alpha = 0.65f),
-                shape = RoundedCornerShape(4.dp),
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                MaterialTheme.colorScheme.surfaceVariant,
+                            ),
+                        ),
+                    )
+                    .padding(horizontal = 6.dp, vertical = 4.dp),
             ) {
+                Spacer(Modifier.weight(1f))
+                Icon(
+                    painter = painterResource(R.drawable.ic_baseline_access_time_24),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(dimensionResource(R.dimen.view_view_and_time_icon_size)),
+                )
                 Text(
                     text = formatDuration(secs),
-                    color = Color.White,
-                    style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontSize = dimensionResource(R.dimen.video_view_and_time_and_duration).value.sp,
+                    modifier = Modifier.padding(horizontal = 2.dp),
                 )
             }
         }

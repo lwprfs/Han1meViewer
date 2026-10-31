@@ -41,6 +41,8 @@ import com.yenaly.han1meviewer.OnAir.data.model.OnAirVideoCard
 import com.yenaly.han1meviewer.OnAir.data.remote.OnAirNetwork
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.GlobalToasts
+import com.yenaly.han1meviewer.ui.component.SiteVideoCard
+import com.yenaly.han1meviewer.util.DisplayTextLocalizer
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
 import androidx.compose.ui.platform.LocalClipboard
 
@@ -70,98 +72,14 @@ fun OnAirVideoCardItem(
     }
     val longClickHandler = onLongClick ?: defaultLongClick
 
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = { longClickHandler(card) },
-            ),
-        shape = RoundedCornerShape(12.dp),
-        tonalElevation = 2.dp,
-        shadowElevation = 1.dp,
-        color = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-    ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(16f / 9f),
-            ) {
-                RetryableImage(
-                    model = card.thumbUrl,
-                    contentDescription = card.title,
-                    modifier = Modifier.fillMaxSize(),
-                    placeholder = painterResource(R.drawable.h_chan_loading),
-                    error = painterResource(R.drawable.h_chan_load_failed),
-                    contentScale = ContentScale.Crop,
-                )
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.BottomCenter)
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    MaterialTheme.colorScheme.surfaceVariant,
-                                )
-                            )
-                        )
-                        .padding(horizontal = 6.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    card.viewsRaw?.let {
-                        Icon(
-                            imageVector = Icons.Filled.PlayCircleOutline,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(14.dp),
-                        )
-                        Text(
-                            modifier = Modifier.padding(horizontal = 2.dp),
-                            text = it,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontSize = 11.sp,
-                        )
-                    }
-                    Spacer(modifier = Modifier.weight(1f))
-                    card.duration?.let {
-                        Text(
-                            modifier = Modifier.padding(horizontal = 2.dp),
-                            text = it,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontSize = 11.sp,
-                        )
-                    }
-                }
-            }
-
-            Text(
-                text = card.title,
-                maxLines = 2,
-                minLines = 2,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Medium,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-            )
-            Text(
-                text = card.uploaderName.orEmpty(),
-                maxLines = 1,
-                style = MaterialTheme.typography.labelSmall,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp)
-                    .padding(bottom = 6.dp),
-            )
-        }
-    }
+    SiteVideoCard(
+        modifier = modifier,
+        title = card.title,
+        coverUrl = card.thumbUrl,
+        views = card.viewsRaw?.let { DisplayTextLocalizer.localizeViews(it) },
+        duration = card.duration,
+        subtitle = card.uploaderName,
+        onClick = onClick,
+        onLongClick = { longClickHandler(card) },
+    )
 }

@@ -71,7 +71,6 @@ import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.util.Date
 
-/** One row of the cross-site history. */
 data class UnifiedHistoryItem(
     val site: SiteType,
     val code: String,
@@ -94,7 +93,7 @@ data class UnifiedHistoryItem(
         site = site,
         videoCode = code,
         path = path,
-        // Only HentaiMama's video route supports an explicit resume position.
+
         resumePosition = if (site == SiteType.HENTAIMAMA && !completed) positionMs else 0L,
         title = title,
         autoPlay = autoPlay,
@@ -104,8 +103,7 @@ data class UnifiedHistoryItem(
 class UnifiedHistoryViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
-        // The per-site repos are normally initialised when their site is visited. The unified
-        // history reads all of them, so make sure they are ready (init is idempotent).
+
         MissAvHistoryRepo.init(application)
         HentaiMamaHistoryRepo.init(application)
         OnAirHistoryRepo.init(application)
@@ -183,7 +181,7 @@ class UnifiedHistoryViewModel(application: Application) : AndroidViewModel(appli
                         watchDate = it.watchDate,
                         positionMs = it.lastPosition,
                         durationMs = it.totalDuration,
-                        // FapFolder routes are opened by slug (falls back to the numeric id).
+
                         path = it.postSlug?.ifBlank { null },
                         subtitle = it.authorName,
                         completed = it.completed,
@@ -227,7 +225,6 @@ class UnifiedHistoryViewModel(application: Application) : AndroidViewModel(appli
         }
     }
 
-    /** Clears the history of [site], or of every site when [site] is null. */
     fun clear(site: SiteType?) {
         viewModelScope.launch {
             runCatching {

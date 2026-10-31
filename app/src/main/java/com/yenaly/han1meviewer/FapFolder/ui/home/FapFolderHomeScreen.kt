@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.FapFolder.ui.home
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -58,6 +59,10 @@ import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderImageLightboxDia
 import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderInteractivePostCard
 import com.yenaly.han1meviewer.FapFolder.ui.video.FapFolderVideoPlayerScreen
 import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.ui.component.SelectableTag
+import com.yenaly.han1meviewer.ui.component.SiteBarIconButton
+import com.yenaly.han1meviewer.ui.component.SiteSearchTopBar
+import com.yenaly.han1meviewer.ui.component.SiteSwitchButton
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -138,36 +143,23 @@ fun FapFolderHomeScreen(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(text = "FapFolder", fontWeight = FontWeight.Bold)
-                },
+            SiteSearchTopBar(
+                hint = "Search FapFolder",
+                onSearchClick = { onOpenSearch(null) },
+                leading = { SiteSwitchButton(onClick = onSwitchSite) },
                 actions = {
-                    IconButton(onClick = onOpenHistory) {
-                        Icon(
-                            imageVector = Icons.Default.History,
-                            contentDescription = stringResource(R.string.watch_history),
-                        )
-                    }
-                    IconButton(onClick = onOpenSettings) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = stringResource(R.string.settings),
-                        )
-                    }
-                    IconButton(onClick = onSwitchSite) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_baseline_switch_24),
-                            contentDescription = stringResource(R.string.switch_site),
-                        )
-                    }
-                    IconButton(onClick = { onOpenSearch(null) }) {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = stringResource(R.string.search),
-                        )
-                    }
+                    SiteBarIconButton(
+                        imageVector = Icons.Default.History,
+                        contentDescription = stringResource(R.string.watch_history),
+                        onClick = onOpenHistory,
+                    )
+                    SiteBarIconButton(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = stringResource(R.string.settings),
+                        onClick = onOpenSettings,
+                    )
                 },
             )
         },
@@ -309,44 +301,26 @@ private fun HomeTabRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        HomeTabChip(
-            label = "My Feed",
+        SelectableTag(
+            text = "My Feed",
             selected = activeTab == FapFolderHomeTab.MY_FEED,
             onClick = { onSelect(FapFolderHomeTab.MY_FEED) },
         )
-        HomeTabChip(
-            label = "Hot",
+        SelectableTag(
+            text = "Hot",
             selected = activeTab == FapFolderHomeTab.HOT,
             onClick = { onSelect(FapFolderHomeTab.HOT) },
         )
-        HomeTabChip(
-            label = "Discover",
+        SelectableTag(
+            text = "Discover",
             selected = activeTab == FapFolderHomeTab.DISCOVER,
             onClick = { onSelect(FapFolderHomeTab.DISCOVER) },
         )
     }
-}
-
-@Composable
-private fun HomeTabChip(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    FilterChip(
-        selected = selected,
-        onClick = onClick,
-        label = {
-            Text(label, style = MaterialTheme.typography.labelMedium)
-        },
-        colors = FilterChipDefaults.filterChipColors(
-            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-        ),
-    )
 }
 
 @Composable
@@ -374,7 +348,7 @@ private fun FeedList(
             top = 4.dp,
             bottom = 24.dp,
         ),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         if (activeTab == FapFolderHomeTab.DISCOVER) {
             if (trending.isNotEmpty()) {

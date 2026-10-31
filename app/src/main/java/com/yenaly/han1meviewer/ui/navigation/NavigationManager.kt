@@ -30,14 +30,13 @@ object NavigationManager {
 
     private const val SWITCH_HOME_DELAY_MS = 300L
     private const val PENDING_OPEN_POLL_MS = 150L
-    private const val PENDING_OPEN_MAX_ATTEMPTS = 240 // ~36s, enough for a slow Tor gate
+    private const val PENDING_OPEN_MAX_ATTEMPTS = 240
 
     private val mainHandler = Handler(Looper.getMainLooper())
 
     private var currentNavController: NavHostController? = null
     private var currentSiteType: SiteType? = null
 
-    /** Incremented every time a pending "open video after switch" is scheduled or cancelled. */
     private var pendingToken = 0L
 
     fun initialize(navController: NavHostController, siteType: SiteType) {
@@ -120,8 +119,7 @@ object NavigationManager {
             try {
                 val site = getCurrentSiteType()
                 Log.d(TAG, "navigateToHome called for site: $site")
-                // The freshly created NavHost already starts on its home route; navigating again
-                // would stack a second home page on top of it.
+
                 if (isAtHome(site)) return
                 when (site) {
                     SiteType.HANIME, SiteType.JAVCHU -> {
@@ -160,15 +158,11 @@ object NavigationManager {
         currentNavController?.popBackStack(0, false)
     }
 
-    /**
-     * Switches to [newSiteType]. When [thenOpen] is given, its video page is opened as soon as the
-     * new site's home page is on screen (for OnAir this is after the Tor / session gate passed).
-     */
     fun switchSite(newSiteType: SiteType, thenOpen: PendingVideoOpen? = null) {
         Log.d(TAG, "switchSite called: $newSiteType (pending open: ${thenOpen?.videoCode})")
         currentSiteType = newSiteType
         Preferences.siteType = newSiteType
-        pendingToken++ // cancels any older pending open
+        pendingToken++
         currentNavController?.popBackStack(0, false)
         mainHandler.postDelayed({
             navigateToHome()

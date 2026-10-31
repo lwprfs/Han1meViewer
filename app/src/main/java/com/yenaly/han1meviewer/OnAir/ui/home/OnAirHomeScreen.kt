@@ -61,6 +61,10 @@ import com.yenaly.han1meviewer.OnAir.data.model.OnAirUserProfile
 import com.yenaly.han1meviewer.OnAir.data.model.OnAirVideoCard
 import com.yenaly.han1meviewer.OnAir.ui.components.OnAirVideoCardItem
 import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.ui.component.SiteBarIconButton
+import com.yenaly.han1meviewer.ui.component.SiteOverflowMenu
+import com.yenaly.han1meviewer.ui.component.SiteSearchTopBar
+import com.yenaly.han1meviewer.ui.component.SiteSwitchButton
 import com.yenaly.han1meviewer.logic.state.WebsiteState
 import com.yenaly.han1meviewer.ui.component.content.ErrorContent
 import com.yenaly.han1meviewer.ui.component.content.LoadingContent
@@ -124,31 +128,24 @@ fun OnAirHomeScreen(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                title = { Text("OnAir", color = MaterialTheme.colorScheme.onSurface) },
+            SiteSearchTopBar(
+                hint = "Search OnAir",
+                onSearchClick = { onOpenSearch(null) },
+                leading = { SiteSwitchButton(onClick = onSwitchSite) },
                 actions = {
-                    IconButton(onClick = onOpenPictures) {
-                        Icon(Icons.Default.PhotoLibrary, contentDescription = "Pictures")
-                    }
-                    IconButton(onClick = onOpenHistory) {
-                        Icon(Icons.Default.History, contentDescription = "History")
-                    }
-                    IconButton(onClick = onOpenSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings")
-                    }
-                    IconButton(onClick = onSwitchSite) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_baseline_switch_24),
-                            contentDescription = stringResource(R.string.switch_site),
-                        )
-                    }
-                    IconButton(onClick = { onOpenSearch(null) }) {
-                        Icon(
-                            Icons.Default.Search,
-                            contentDescription = stringResource(R.string.search),
-                        )
-                    }
+                    SiteBarIconButton(
+                        imageVector = Icons.Default.History,
+                        contentDescription = "History",
+                        onClick = onOpenHistory,
+                    )
+                    SiteOverflowMenu(
+                        items = listOf(
+                            "Pictures" to onOpenPictures,
+                            "Settings" to onOpenSettings,
+                        ),
+                    )
                     currentUser?.let { profile ->
                         CurrentUserAvatar(
                             profile = profile,
@@ -270,7 +267,7 @@ private fun HomeGrid(
         columns = GridCells.Fixed(columns),
         state = gridState,
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(SpacingNormal),
+        contentPadding = PaddingValues(horizontal = SpacingNormal, vertical = SpacingNormal),
         horizontalArrangement = Arrangement.spacedBy(SpacingNormal),
         verticalArrangement = Arrangement.spacedBy(SpacingNormal),
         enableItemAnimation = false,

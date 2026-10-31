@@ -500,5 +500,3 @@ object Preferences {
             return uuid
         }
 }
-
-
