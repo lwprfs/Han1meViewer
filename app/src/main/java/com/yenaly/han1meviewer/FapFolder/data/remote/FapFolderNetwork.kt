@@ -5,9 +5,11 @@ import android.util.Log
 import com.yenaly.han1meviewer.BuildConfig
 import com.yenaly.han1meviewer.FapFolder.common.FapFolderConstants
 import com.yenaly.han1meviewer.FapFolder.common.FapFolderHeaders
+import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.logic.network.HDns
 import com.yenaly.han1meviewer.logic.network.HProxySelector
 import com.yenaly.han1meviewer.logic.network.interceptor.UrlLoggingInterceptor
+import okhttp3.Dns
 import okhttp3.OkHttpClient
 import okhttp3.brotli.BrotliInterceptor
 import retrofit2.Retrofit
@@ -136,33 +138,48 @@ object FapFolderNetwork {
             .followRedirects(true)
             .followSslRedirects(true)
             .cookieJar(getOrCreateCookieJar())
-            .dns(HDns())
-            .proxySelector(HProxySelector())
-            .addInterceptor(BrotliInterceptor)
-            .addInterceptor { chain ->
-                val original = chain.request()
-                val host = original.url.host
 
-                if (!isFirstPartyHost(host)) {
-                    return@addInterceptor chain.proceed(original)
-                }
+        val useCustomDoh = runCatching { Preferences.useDoH }.getOrDefault(false)
+        if (useCustomDoh) {
+            builder.dns(HDns())
+        } else {
+            builder.dns(Dns.SYSTEM)
+        }
 
-                val builder = original.newBuilder()
-                val isAjax = original.url.encodedPath.contains("/includes/ajax/")
-                val hasExplicitHeaders = original.header("x-requested-with") != null ||
-                        original.header("X-Requested-With") != null
+        val proxyType = runCatching { Preferences.proxyType }
+            .getOrDefault(HProxySelector.TYPE_SYSTEM)
+        if (proxyType != HProxySelector.TYPE_NONE &&
+            proxyType != HProxySelector.TYPE_SYSTEM
+        ) {
+            builder.proxySelector(HProxySelector())
+        }
 
-                if (!hasExplicitHeaders) {
-                    val headerSet = if (isAjax) FapFolderHeaders.ajax()
-                    else FapFolderHeaders.pageSameOrigin()
-                    headerSet.names().forEach { name ->
-                        if (original.header(name) == null) {
-                            builder.addHeader(name, headerSet.get(name) ?: "")
-                        }
+        builder.addInterceptor(BrotliInterceptor)
+
+        builder.addInterceptor { chain ->
+            val original = chain.request()
+            val host = original.url.host
+
+            if (!isFirstPartyHost(host)) {
+                return@addInterceptor chain.proceed(original)
+            }
+
+            val builder = original.newBuilder()
+            val isAjax = original.url.encodedPath.contains("/includes/ajax/")
+            val hasExplicitHeaders = original.header("x-requested-with") != null ||
+                    original.header("X-Requested-With") != null
+
+            if (!hasExplicitHeaders) {
+                val headerSet = if (isAjax) FapFolderHeaders.ajax()
+                else FapFolderHeaders.pageSameOrigin()
+                headerSet.names().forEach { name ->
+                    if (original.header(name) == null) {
+                        builder.addHeader(name, headerSet.get(name) ?: "")
                     }
                 }
-                chain.proceed(builder.build())
             }
+            chain.proceed(builder.build())
+        }
 
         if (BuildConfig.DEBUG) {
             builder.addInterceptor(UrlLoggingInterceptor())
@@ -176,9 +193,14 @@ object FapFolderNetwork {
     }
 
     fun rebuildNetwork() {
-        Log.d(TAG, "Refreshing cookie jar (client preserved)")
+        Log.d(TAG, "Refreshing cookie jar and client")
         val jar = getOrCreateCookieJar()
         jar.restoreFromPreferences()
+
+        synchronized(this) {
+            _client = null
+            _service = null
+        }
     }
 
     fun clearCookies() {

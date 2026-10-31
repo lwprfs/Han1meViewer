@@ -113,7 +113,7 @@ object FapFolderConstants {
     const val ACCEPT_LANGUAGE = "en-GB,en-US;q=0.9,en;q=0.8"
 
     const val SEC_CH_UA =
-        "\"Android WebView\";v=\"155\", \"Chromium\";v=\"155\", \"Not(A:Brand\";v=\"24\""
+        "\"Chromium\";v=\"141\", \"Not(A:Brand\";v=\"24\", \"Android WebView\";v=\"141\""
     const val SEC_CH_UA_MOBILE = "?1"
     const val SEC_CH_UA_PLATFORM = "\"Android\""
 
@@ -125,12 +125,12 @@ object FapFolderConstants {
 
     const val MIN_GAP_BETWEEN_PAGES_MS = 500L
     const val MIN_GAP_BETWEEN_LIGHTBOX_MS = 300L
-    const val MIN_GAP_BETWEEN_PAGE_GETS_MS = 2000L
+    const val MIN_GAP_BETWEEN_PAGE_GETS_MS = 500L
     const val MAX_PAGES_PER_QUERY = 50
     const val BACKOFF_403_MS = 60_000L
-    const val CONNECT_TIMEOUT_S = 15L
-    const val READ_TIMEOUT_S = 20L
-    const val CALL_TIMEOUT_S = 30L
+    const val CONNECT_TIMEOUT_S = 8L
+    const val READ_TIMEOUT_S = 12L
+    const val CALL_TIMEOUT_S = 15L
 
     const val TIME_NO_FILTER = -1
     const val PREMFEED_OFF = 0
