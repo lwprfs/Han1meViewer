@@ -69,7 +69,7 @@ object FapFolderNetworkRepo {
 
     private fun readText(response: Response<ResponseBody>): String {
         return if (response.isSuccessful) {
-            readText(response)
+            response.body()?.string().orEmpty()
         } else {
             response.errorBody()?.string().orEmpty()
         }
@@ -1498,3 +1498,5 @@ object FapFolderNetworkRepo {
         }
     }
 }
+
+
