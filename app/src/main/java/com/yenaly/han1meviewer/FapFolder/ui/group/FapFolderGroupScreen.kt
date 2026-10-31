@@ -76,7 +76,7 @@ import com.yenaly.han1meviewer.FapFolder.data.model.GroupMembership
 import com.yenaly.han1meviewer.FapFolder.data.model.GroupVisibility
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderProfileParser
 import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderImageLightboxDialog
-import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderPostCard
+import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderInteractivePostCard
 import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderUserRowCard
 import com.yenaly.han1meviewer.FapFolder.ui.video.FapFolderVideoPlayerScreen
 import com.yenaly.han1meviewer.R
@@ -563,7 +563,7 @@ private fun GroupPostsTab(
                     when (item) {
                         is FapFolderFeedItem.Post -> {
                             val post = item.post
-                            FapFolderPostCard(
+                            FapFolderInteractivePostCard(
                                 post = post,
                                 modifier = Modifier.padding(horizontal = 8.dp),
                                 onClickPost = {
@@ -1096,11 +1096,3 @@ private fun MembershipButton(
 
 private fun memberKey(user: FapFolderUserRow): String =
     "member_${user.uid ?: user.username}"
-
-@Composable
-private fun rememberLazyListStateCompat(): LazyListState =
-    androidx.compose.foundation.lazy.rememberLazyListState()
-
-@Composable
-private fun rememberLazyGridStateCompat(): LazyGridState =
-    androidx.compose.foundation.lazy.grid.rememberLazyGridState()

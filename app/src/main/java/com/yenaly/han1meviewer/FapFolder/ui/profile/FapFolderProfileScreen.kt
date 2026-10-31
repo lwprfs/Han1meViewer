@@ -70,7 +70,7 @@ import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderMedia
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderPost
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderUserProfile
 import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderImageLightboxDialog
-import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderPostCard
+import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderInteractivePostCard
 import com.yenaly.han1meviewer.FapFolder.ui.video.FapFolderVideoPlayerScreen
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
@@ -345,7 +345,7 @@ private fun ProfileTimelineTab(
                     when (item) {
                         is FapFolderFeedItem.Post -> {
                             val post = item.post
-                            FapFolderPostCard(
+                            FapFolderInteractivePostCard(
                                 post = post,
                                 modifier = Modifier.padding(horizontal = 8.dp),
                                 onClickPost = {

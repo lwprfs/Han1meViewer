@@ -60,6 +60,24 @@ object FapFolderFeedPaging {
         hashtag = null,
     )
 
+    fun saved(
+        offset: Int,
+        filter: String = FapFolderConstants.FILTER_ALL,
+        premfeed: Int = FapFolderConstants.PREMFEED_OFF,
+        time: Int = FapFolderConstants.TIME_NO_FILTER,
+    ): FapFolderLoadMoreRequest = FapFolderLoadMoreRequest(
+        get = FapFolderConstants.FEED_GET_SAVED,
+        offset = offset,
+        filter = filter,
+        id = null,
+        type = null,
+        uid = null,
+        premfeed = premfeed,
+        time = time,
+        search = null,
+        hashtag = null,
+    )
+
     fun search(
         query: String,
         offset: Int,

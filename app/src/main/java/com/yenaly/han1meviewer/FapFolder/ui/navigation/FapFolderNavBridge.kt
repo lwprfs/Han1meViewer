@@ -57,6 +57,13 @@ object FapFolderNavBridge {
         }.onFailure { Log.w(TAG, "navigateToSearch failed: ${it.message}") }
     }
 
+    fun navigateToSearchHistory() {
+        val nav = currentNavController ?: return
+        runCatching {
+            nav.navigate(FapFolderSearchHistoryRoute) { launchSingleTop = true }
+        }.onFailure { Log.w(TAG, "navigateToSearchHistory failed: ${it.message}") }
+    }
+
     fun navigateToHashtag(tag: String) {
         val nav = currentNavController ?: return
         if (tag.isBlank()) return
@@ -107,6 +114,20 @@ object FapFolderNavBridge {
         runCatching {
             nav.navigate(FapFolderHistoryRoute) { launchSingleTop = true }
         }.onFailure { Log.w(TAG, "navigateToHistory failed: ${it.message}") }
+    }
+
+    fun navigateToSaved() {
+        val nav = currentNavController ?: return
+        runCatching {
+            nav.navigate(FapFolderSavedRoute) { launchSingleTop = true }
+        }.onFailure { Log.w(TAG, "navigateToSaved failed: ${it.message}") }
+    }
+
+    fun navigateToFollowedCommunities() {
+        val nav = currentNavController ?: return
+        runCatching {
+            nav.navigate(FapFolderFollowedCommunitiesRoute) { launchSingleTop = true }
+        }.onFailure { Log.w(TAG, "navigateToFollowedCommunities failed: ${it.message}") }
     }
 
     fun navigateToCookies() {

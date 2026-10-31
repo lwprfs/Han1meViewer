@@ -46,6 +46,9 @@ object FapFolderConstants {
     const val PATH_HOT = "/popular"
     const val PATH_DISCOVER = "/discover"
 
+    const val FEED_GET_SAVED = "saved"
+    const val PATH_SAVED = "/saved"
+
     const val HOME_TAB_MY_FEED = "my_feed"
     const val HOME_TAB_HOT = "hot"
     const val HOME_TAB_DISCOVER = "discover"

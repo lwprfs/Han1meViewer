@@ -63,7 +63,7 @@ import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderAutocompleteSuggest
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderFeedItem
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderSearchTab
 import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderGroupRowCard
-import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderPostCard
+import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderInteractivePostCard
 import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderUserRowCard
 import kotlinx.coroutines.flow.distinctUntilChanged
 
@@ -299,9 +299,8 @@ fun FapFolderSearchScreen(
                                 when (item) {
                                     is FapFolderFeedItem.Post -> {
                                         val post = item.post
-                                        FapFolderPostCard(
+                                        FapFolderInteractivePostCard(
                                             post = post,
-                                            interactive = false,
                                             onClickPost = {
                                                 val slug = post.slug ?: post.postId.toString()
                                                 onOpenPost(slug)

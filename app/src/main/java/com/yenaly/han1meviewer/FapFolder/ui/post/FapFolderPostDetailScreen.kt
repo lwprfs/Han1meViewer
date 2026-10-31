@@ -195,8 +195,6 @@ fun FapFolderPostDetailScreen(
                                     viewModel.votePoll(poll, option.id)
                                 },
                                 onClickLink = { },
-                                onClickComment = { },
-                                onClickShare = { },
                                 onClickLike = { viewModel.react(positive = true) },
                                 onClickDislike = { viewModel.react(positive = false) },
                                 onClickSave = { viewModel.toggleSave() },

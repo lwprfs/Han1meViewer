@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Cookie
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.History
@@ -73,6 +74,7 @@ fun FapFolderSettingsHubScreen(
     onOpenSearch: () -> Unit,
     onOpenSearchHistory: () -> Unit = onOpenSearch,
     onOpenFollowedCommunities: () -> Unit = {},
+    onOpenSaved: () -> Unit = {},
     isLoggedIn: Boolean = false,
 ) {
     val scope = rememberCoroutineScope()
@@ -115,6 +117,16 @@ fun FapFolderSettingsHubScreen(
                     subtitle = "Communities you follow on FapFolder",
                     icon = Icons.Filled.Groups,
                     onClick = onOpenFollowedCommunities,
+                )
+            )
+
+            add(
+                FapFolderHubEntry(
+                    key = "saved_posts",
+                    title = "Saved Posts",
+                    subtitle = "Posts you've saved on FapFolder",
+                    icon = Icons.Filled.Bookmark,
+                    onClick = onOpenSaved,
                 )
             )
         }

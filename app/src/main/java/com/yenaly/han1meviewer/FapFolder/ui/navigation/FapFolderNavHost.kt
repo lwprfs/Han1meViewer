@@ -40,6 +40,7 @@ import com.yenaly.han1meviewer.FapFolder.ui.home.FapFolderHomeViewModel
 import com.yenaly.han1meviewer.FapFolder.ui.login.FapFolderLoginScreen
 import com.yenaly.han1meviewer.FapFolder.ui.post.FapFolderPostDetailScreen
 import com.yenaly.han1meviewer.FapFolder.ui.profile.FapFolderProfileScreen
+import com.yenaly.han1meviewer.FapFolder.ui.saved.FapFolderSavedScreen
 import com.yenaly.han1meviewer.FapFolder.ui.search.FapFolderSearchHistoryScreen
 import com.yenaly.han1meviewer.FapFolder.ui.search.FapFolderSearchScreen
 import com.yenaly.han1meviewer.FapFolder.ui.settings.FapFolderCookiesScreen
@@ -315,6 +316,9 @@ fun FapFolderNavHost(
                 onOpenFollowedCommunities = {
                     navController.navigateSafely(FapFolderFollowedCommunitiesRoute)
                 },
+                onOpenSaved = {
+                    navController.navigateSafely(FapFolderSavedRoute)
+                },
                 isLoggedIn = FapFolderNetwork.hasAuthCookies(),
             )
         }
@@ -324,6 +328,24 @@ fun FapFolderNavHost(
                 onBack = { navController.popBackStack() },
                 onOpenGroup = { slug ->
                     navController.navigateSafely(FapFolderGroupRoute(slug))
+                },
+            )
+        }
+
+        composable<FapFolderSavedRoute> {
+            FapFolderSavedScreen(
+                onBack = { navController.popBackStack() },
+                onOpenPost = { slug ->
+                    navController.navigateSafely(FapFolderPostRoute(slug))
+                },
+                onOpenHashtag = { tag ->
+                    navController.navigateSafely(FapFolderHashtagRoute(tag))
+                },
+                onOpenGroup = { slug ->
+                    navController.navigateSafely(FapFolderGroupRoute(slug))
+                },
+                onOpenProfile = { username ->
+                    navController.navigateSafely(FapFolderProfileRoute(username))
                 },
             )
         }

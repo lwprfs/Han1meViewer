@@ -76,8 +76,6 @@ fun FapFolderPostCard(
     onClickPoll: (FapFolderMedia.Poll) -> Unit = {},
     onClickPollOption: (FapFolderMedia.Poll, FapFolderPollOption) -> Unit = { _, _ -> },
     onClickLink: (FapFolderMedia.LinkPreview) -> Unit = {},
-    onClickComment: () -> Unit = {},
-    onClickShare: () -> Unit = {},
     onClickLike: () -> Unit = {},
     onClickDislike: () -> Unit = {},
     onClickSave: () -> Unit = {},
@@ -150,8 +148,6 @@ fun FapFolderPostCard(
                     reactionPending = isReactionPending,
                     onClickLike = onClickLike,
                     onClickDislike = onClickDislike,
-                    onClickComment = onClickComment,
-                    onClickShare = onClickShare,
                     onClickSave = onClickSave,
                 )
             } else if (post.viewCount != null && post.viewCount > 0) {
@@ -894,8 +890,6 @@ private fun PostActionsRow(
     reactionPending: Boolean,
     onClickLike: () -> Unit,
     onClickDislike: () -> Unit,
-    onClickComment: () -> Unit,
-    onClickShare: () -> Unit,
     onClickSave: () -> Unit,
 ) {
     val likeCount = reactions.byKind?.get("like") ?: 0
@@ -923,20 +917,6 @@ private fun PostActionsRow(
             tint = if (disliked) Color(0xFF6E9AD8) else MaterialTheme.colorScheme.onSurfaceVariant,
             enabled = !reactionPending,
             onClick = onClickDislike,
-        )
-        PostActionButton(
-            icon = Icons.Outlined.ChatBubbleOutline,
-            label = "Comment",
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            enabled = true,
-            onClick = onClickComment,
-        )
-        PostActionButton(
-            icon = Icons.Outlined.Share,
-            label = "Share",
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            enabled = true,
-            onClick = onClickShare,
         )
         Spacer(Modifier.weight(1f))
         PostActionButton(

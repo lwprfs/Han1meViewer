@@ -55,7 +55,7 @@ import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderMedia
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderSuggestedCommunity
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderTrendingTag
 import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderImageLightboxDialog
-import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderPostCard
+import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderInteractivePostCard
 import com.yenaly.han1meviewer.FapFolder.ui.video.FapFolderVideoPlayerScreen
 import com.yenaly.han1meviewer.R
 import kotlinx.coroutines.flow.conflate
@@ -396,7 +396,7 @@ private fun FeedList(
             when (item) {
                 is FapFolderFeedItem.Post -> {
                     val post = item.post
-                    FapFolderPostCard(
+                    FapFolderInteractivePostCard(
                         post = post,
                         onClickPost = {
                             val slug = post.slug ?: post.postId.toString()

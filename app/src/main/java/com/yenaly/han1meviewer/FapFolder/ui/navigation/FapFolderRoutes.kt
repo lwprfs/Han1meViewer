@@ -60,3 +60,6 @@ object FapFolderGateRoute
 
 @Serializable
 object FapFolderFollowedCommunitiesRoute
+
+@Serializable
+object FapFolderSavedRoute

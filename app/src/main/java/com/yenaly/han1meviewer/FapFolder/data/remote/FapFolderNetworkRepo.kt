@@ -227,6 +227,67 @@ object FapFolderNetworkRepo {
         }
     }.flowOn(Dispatchers.IO)
 
+    fun getSavedPage(): Flow<WebsiteState<FapFolderFeedPage>> = flow {
+        emit(WebsiteState.Loading)
+        val url = basePath() + FapFolderConstants.PATH_SAVED
+        try {
+            PageGetThrottle.await()
+            val response = FapFolderNetwork.service.getByUrl(url)
+            val rawBody = response.body()?.string()
+            val code = response.code()
+            if (!response.isSuccessful || rawBody.isNullOrBlank()) {
+                emit(errorState(code, rawBody))
+                return@flow
+            }
+            if (FapFolderHtmlUtils.looksLikeCloudflareChallenge(rawBody)) {
+                emit(WebsiteState.Error(IllegalStateException("Cloudflare challenge.")))
+                return@flow
+            }
+
+            val session = FapFolderSessionParser.parseAndCache(rawBody, url)
+            val doc = Jsoup.parse(rawBody, url)
+
+            val streamRoot = doc.selectFirst("div.js_posts_stream")
+            val feedGet = streamRoot?.attr("data-get")?.takeIf { it.isNotBlank() }
+                ?: FapFolderConstants.FEED_GET_SAVED
+            val feedFilter = streamRoot?.attr("data-filter")?.takeIf { it.isNotBlank() }
+                ?: FapFolderConstants.FILTER_ALL
+            val feedId = streamRoot?.attr("data-id")?.takeIf { it.isNotBlank() }
+            val feedType = streamRoot?.attr("data-type")?.takeIf { it.isNotBlank() }
+            val feedUid = streamRoot?.attr("data-uid")?.takeIf { it.isNotBlank() }
+
+            val posts = FapFolderPostParser.parsePostsFromList(
+                root = streamRoot ?: doc.body(),
+                baseUrl = url,
+                uploadsBase = uploadsBase(),
+                includeComments = false,
+            )
+
+            val seeMore = doc.selectFirst(".js_see-more-infinite")
+                ?: doc.selectFirst(".js_see-more")
+            val hasMore = seeMore != null && !seeMore.hasClass("done") && posts.isNotEmpty()
+
+            emit(
+                WebsiteState.Success(
+                    FapFolderFeedPage(
+                        items = posts.map { FapFolderFeedItem.Post(it) },
+                        session = session,
+                        nextOffset = 1,
+                        hasMore = hasMore,
+                        feedGet = feedGet,
+                        feedFilter = feedFilter,
+                        feedId = feedId,
+                        feedType = feedType,
+                        feedUid = feedUid,
+                    )
+                )
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "getSavedPage failed", e)
+            emit(WebsiteState.Error(e))
+        }
+    }.flowOn(Dispatchers.IO)
+
     fun getHomePageWithExtras(): Flow<WebsiteState<HomePageBundle>> =
         getPageWithExtras(FapFolderConstants.PATH_HOME)
 
