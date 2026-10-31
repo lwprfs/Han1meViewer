@@ -8,12 +8,14 @@ import com.yenaly.han1meviewer.FapFolder.common.FapFolderConstants
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderFeedItem
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderGroup
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderLoadMoreRequest
+import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderMedia
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderPost
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderUserRow
 import com.yenaly.han1meviewer.FapFolder.data.model.GroupMembership
+import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderProfileParser
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderFeedPaging
-import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetworkRepo
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetwork
+import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetworkRepo
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
@@ -43,6 +45,8 @@ data class FapFolderGroupUiState(
     val headerError: String? = null,
     val sessionExpired: Boolean = false,
     val items: List<FapFolderFeedItem> = emptyList(),
+    val photoTiles: List<FapFolderProfileParser.PhotoTile> = emptyList(),
+    val videoTiles: List<FapFolderProfileParser.VideoTile> = emptyList(),
     val isLoadingMore: Boolean = false,
     val hasMore: Boolean = false,
     val itemsError: String? = null,
@@ -64,6 +68,9 @@ data class FapFolderGroupUiState(
 ) {
     val posts: List<FapFolderPost>
         get() = items.filterIsInstance<FapFolderFeedItem.Post>().map { it.post }
+
+    val mediaImages: List<FapFolderMedia.Image>
+        get() = FapFolderProfileParser.toMediaImages(photoTiles)
 }
 
 class FapFolderGroupViewModel(application: Application) : AndroidViewModel(application) {
@@ -82,6 +89,10 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
     private var joinJob: Job? = null
 
     private val seenPostIds = mutableSetOf<Long>()
+    private val seenPhotoIds = mutableSetOf<Long>()
+    private val seenPhotoUrls = mutableSetOf<String>()
+    private val seenVideoPostIds = mutableSetOf<Long>()
+    private val seenVideoUrls = mutableSetOf<String>()
 
     fun load(slug: String, initialTab: String?) {
         val cleanSlug = slug.trim('/')
@@ -95,7 +106,7 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
         headerJob?.cancel()
         itemsJob?.cancel()
         membersJob?.cancel()
-        seenPostIds.clear()
+        clearSeen()
 
         _uiState.update {
             it.copy(
@@ -106,6 +117,8 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
                 headerError = null,
                 sessionExpired = false,
                 items = emptyList(),
+                photoTiles = emptyList(),
+                videoTiles = emptyList(),
                 itemsError = null,
                 hasMore = false,
                 currentOffset = 1,
@@ -158,6 +171,8 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
             it.copy(
                 activeTab = tab,
                 items = emptyList(),
+                photoTiles = emptyList(),
+                videoTiles = emptyList(),
                 itemsError = null,
                 hasMore = false,
                 currentOffset = 1,
@@ -165,9 +180,16 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
                 membersError = null,
                 membersHasMore = false,
                 membersNextPage = 1,
+                streamGet = null,
+                streamFilter = null,
+                streamId = null,
+                streamType = null,
+                streamUid = null,
+                streamSearch = null,
+                streamHashtag = null,
             )
         }
-        seenPostIds.clear()
+        clearSeen()
         if (tab == FapFolderGroupTab.MEMBERS) {
             loadMembers(reset = true)
         } else {
@@ -203,29 +225,7 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
             FapFolderNetworkRepo.loadMore(request).collect { page ->
                 when (page) {
                     is PageLoadingState.Loading -> Unit
-                    is PageLoadingState.Success -> {
-                        val beforeCount = _uiState.value.items.size
-                        val fresh = page.info.filter { item ->
-                            when (item) {
-                                is FapFolderFeedItem.Post ->
-                                    seenPostIds.add(item.post.postId)
-                                else -> true
-                            }
-                        }
-                        _uiState.update {
-                            it.copy(
-                                items = it.items + fresh,
-                                isLoadingMore = false,
-                                hasMore = page.info.isNotEmpty() && fresh.isNotEmpty(),
-                                itemsError = null,
-                                currentOffset = it.currentOffset + 1,
-                            )
-                        }
-                        val afterCount = _uiState.value.items.size
-                        if (afterCount == beforeCount) {
-                            _uiState.update { it.copy(hasMore = false) }
-                        }
-                    }
+                    is PageLoadingState.Success -> handleLoadMoreSuccess(state.activeTab, page.info)
                     is PageLoadingState.NoMoreData -> _uiState.update {
                         it.copy(isLoadingMore = false, hasMore = false)
                     }
@@ -302,6 +302,14 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
         }
     }
 
+    private fun clearSeen() {
+        seenPostIds.clear()
+        seenPhotoIds.clear()
+        seenPhotoUrls.clear()
+        seenVideoPostIds.clear()
+        seenVideoUrls.clear()
+    }
+
     private fun loadFirstItems(tab: FapFolderGroupTab) {
         val state = _uiState.value
         val group = state.group ?: return
@@ -325,32 +333,10 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
                         }
                         return@launch
                     }
-                    FapFolderNetworkRepo.parseFirstPageFromHtml(
-                        html = rawBody,
-                        pageUrl = tabUrl,
-                        filter = tab.param,
-                        fallbackId = groupId?.toString(),
-                    ).let { snapshot ->
-                        snapshot.items.forEach { item ->
-                            if (item is FapFolderFeedItem.Post) {
-                                seenPostIds.add(item.post.postId)
-                            }
-                        }
-                        _uiState.update {
-                            it.copy(
-                                items = snapshot.items,
-                                isLoading = false,
-                                hasMore = snapshot.hasMore || snapshot.items.isNotEmpty(),
-                                currentOffset = 2,
-                                streamGet = snapshot.get ?: tab.param,
-                                streamFilter = snapshot.filter ?: tab.param,
-                                streamId = snapshot.id ?: groupId?.toString(),
-                                streamType = snapshot.type,
-                                streamUid = snapshot.uid,
-                                streamSearch = snapshot.search,
-                                streamHashtag = snapshot.hashtag,
-                            )
-                        }
+                    when (tab) {
+                        FapFolderGroupTab.PHOTOS -> applyPhotoFirstPage(rawBody, tabUrl, groupId)
+                        FapFolderGroupTab.VIDEOS -> applyVideoFirstPage(rawBody, tabUrl, groupId)
+                        else -> Unit
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "loadFirstItems($tab) failed", e)
@@ -411,6 +397,162 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
         }
     }
 
+    private fun applyPhotoFirstPage(html: String, tabUrl: String, groupId: Long?) {
+        val snapshot = FapFolderProfileParser.parseGalleryPage(html, tabUrl)
+        val tiles = snapshot?.photos.orEmpty().filter { tile ->
+            val id = tile.photoId
+            val url = tile.fullUrl
+            val idTaken = id != null && seenPhotoIds.contains(id)
+            val urlTaken = seenPhotoUrls.contains(url)
+            if (!idTaken && !urlTaken) {
+                id?.let { seenPhotoIds.add(it) }
+                seenPhotoUrls.add(url)
+                true
+            } else false
+        }
+        _uiState.update {
+            it.copy(
+                photoTiles = tiles,
+                items = emptyList(),
+                isLoading = false,
+                hasMore = tiles.isNotEmpty(),
+                currentOffset = 2,
+                streamGet = snapshot?.streamGet
+                    ?: FapFolderProfileParser.FALLBACK_GET_PHOTOS,
+                streamFilter = null,
+                streamId = snapshot?.streamId ?: groupId?.toString(),
+                streamType = snapshot?.streamType ?: "group",
+                itemsError = null,
+            )
+        }
+    }
+
+    private fun applyVideoFirstPage(html: String, tabUrl: String, groupId: Long?) {
+        val snapshot = FapFolderProfileParser.parseVideosPage(html, tabUrl)
+        val tiles = snapshot?.videos.orEmpty().filter { tile ->
+            val id = tile.postId
+            val url = tile.postUrl
+            val idTaken = id != null && seenVideoPostIds.contains(id)
+            val urlTaken = seenVideoUrls.contains(url)
+            if (!idTaken && !urlTaken) {
+                id?.let { seenVideoPostIds.add(it) }
+                seenVideoUrls.add(url)
+                true
+            } else false
+        }
+        _uiState.update {
+            it.copy(
+                videoTiles = tiles,
+                items = emptyList(),
+                isLoading = false,
+                hasMore = tiles.isNotEmpty(),
+                currentOffset = 2,
+                streamGet = snapshot?.streamGet
+                    ?: FapFolderProfileParser.FALLBACK_GET_VIDEOS,
+                streamFilter = null,
+                streamId = snapshot?.streamId ?: groupId?.toString(),
+                streamType = snapshot?.streamType ?: "group",
+                itemsError = null,
+            )
+        }
+    }
+
+    private fun handleLoadMoreSuccess(
+        tab: FapFolderGroupTab,
+        incoming: List<FapFolderFeedItem>,
+    ) {
+        when (tab) {
+            FapFolderGroupTab.PHOTOS -> {
+                val newTiles = incoming.mapNotNull { item ->
+                    (item as? FapFolderFeedItem.Post)?.post?.primaryImage
+                }.map { image ->
+                    FapFolderProfileParser.PhotoTile(
+                        photoId = image.photoId,
+                        fullUrl = image.fullUrl,
+                        previewUrl = image.previewUrl,
+                        pageUrl = image.photoId?.let {
+                            "${FapFolderNetwork.baseUrl.trimEnd('/')}/photos/$it"
+                        },
+                        alt = image.alt,
+                    )
+                }.filter { tile ->
+                    val id = tile.photoId
+                    val url = tile.fullUrl
+                    val idTaken = id != null && seenPhotoIds.contains(id)
+                    val urlTaken = seenPhotoUrls.contains(url)
+                    if (!idTaken && !urlTaken) {
+                        id?.let { seenPhotoIds.add(it) }
+                        seenPhotoUrls.add(url)
+                        true
+                    } else false
+                }
+                _uiState.update {
+                    it.copy(
+                        photoTiles = it.photoTiles + newTiles,
+                        isLoadingMore = false,
+                        hasMore = incoming.isNotEmpty() && newTiles.isNotEmpty(),
+                        itemsError = null,
+                        currentOffset = it.currentOffset + 1,
+                    )
+                }
+            }
+
+            FapFolderGroupTab.VIDEOS -> {
+                val newTiles = incoming
+                    .filterIsInstance<FapFolderFeedItem.Post>()
+                    .map { item ->
+                        val post = item.post
+                        FapFolderProfileParser.VideoTile(
+                            postId = post.postId,
+                            postUrl = post.permalink
+                                ?: "${FapFolderNetwork.baseUrl.trimEnd('/')}/posts/${post.postId}",
+                            thumbnailUrl = post.primaryVideo?.posterUrl
+                                ?: post.primaryImage?.fullUrl,
+                            title = post.bodyPlain.take(80).ifBlank { null },
+                        )
+                    }
+                    .filter { tile ->
+                        val id = tile.postId
+                        val url = tile.postUrl
+                        val idTaken = id != null && seenVideoPostIds.contains(id)
+                        val urlTaken = seenVideoUrls.contains(url)
+                        if (!idTaken && !urlTaken) {
+                            id?.let { seenVideoPostIds.add(it) }
+                            seenVideoUrls.add(url)
+                            true
+                        } else false
+                    }
+                _uiState.update {
+                    it.copy(
+                        videoTiles = it.videoTiles + newTiles,
+                        isLoadingMore = false,
+                        hasMore = incoming.isNotEmpty() && newTiles.isNotEmpty(),
+                        itemsError = null,
+                        currentOffset = it.currentOffset + 1,
+                    )
+                }
+            }
+
+            else -> {
+                val fresh = incoming.filter { item ->
+                    when (item) {
+                        is FapFolderFeedItem.Post -> seenPostIds.add(item.post.postId)
+                        else -> true
+                    }
+                }
+                _uiState.update {
+                    it.copy(
+                        items = it.items + fresh,
+                        isLoadingMore = false,
+                        hasMore = incoming.isNotEmpty() && fresh.isNotEmpty(),
+                        itemsError = null,
+                        currentOffset = it.currentOffset + 1,
+                    )
+                }
+            }
+        }
+    }
+
     private fun loadMembers(reset: Boolean) {
         val state = _uiState.value
         val group = state.group ?: return
@@ -418,12 +560,7 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
 
         membersJob?.cancel()
         membersJob = viewModelScope.launch {
-            _uiState.update {
-                it.copy(
-                    membersLoading = true,
-                    membersError = null,
-                )
-            }
+            _uiState.update { it.copy(membersLoading = true, membersError = null) }
 
             FapFolderNetworkRepo.getGroupMembers(
                 groupId = group.groupId,
@@ -469,24 +606,31 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
         state: FapFolderGroupUiState,
         offset: Int,
     ): FapFolderLoadMoreRequest {
-        val get = state.streamGet
-            ?: when (state.activeTab) {
-                FapFolderGroupTab.PHOTOS -> FapFolderConstants.FEED_GET_POSTS_GROUP
-                FapFolderGroupTab.VIDEOS -> FapFolderConstants.FEED_GET_POSTS_GROUP
-                else -> FapFolderConstants.FEED_GET_POSTS_GROUP
+        val get: String
+        val filter: String?
+        val type: String?
+        when (state.activeTab) {
+            FapFolderGroupTab.PHOTOS -> {
+                get = state.streamGet ?: FapFolderProfileParser.FALLBACK_GET_PHOTOS
+                filter = null
+                type = state.streamType ?: "group"
             }
-        val filter = state.streamFilter
-            ?: when (state.activeTab) {
-                FapFolderGroupTab.PHOTOS -> "photos"
-                FapFolderGroupTab.VIDEOS -> "videos"
-                else -> FapFolderConstants.FILTER_ALL
+            FapFolderGroupTab.VIDEOS -> {
+                get = state.streamGet ?: FapFolderProfileParser.FALLBACK_GET_VIDEOS
+                filter = null
+                type = state.streamType ?: "group"
             }
-        val id = state.streamId ?: state.group?.groupId?.toString()
+            else -> {
+                get = state.streamGet ?: FapFolderConstants.FEED_GET_POSTS_GROUP
+                filter = state.streamFilter ?: FapFolderConstants.FILTER_ALL
+                type = state.streamType
+            }
+        }
         return FapFolderFeedPaging.fromStream(
             get = get,
             filter = filter,
-            id = id,
-            type = state.streamType,
+            id = state.streamId ?: state.group?.groupId?.toString(),
+            type = type,
             uid = state.streamUid,
             search = state.streamSearch,
             hashtag = state.streamHashtag,

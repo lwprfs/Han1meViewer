@@ -1,12 +1,14 @@
 package com.yenaly.han1meviewer.FapFolder.ui.group
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,10 +19,16 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -48,6 +56,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -61,11 +70,14 @@ import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderPost
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderUserRow
 import com.yenaly.han1meviewer.FapFolder.data.model.GroupMembership
 import com.yenaly.han1meviewer.FapFolder.data.model.GroupVisibility
+import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderProfileParser
 import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderImageLightboxDialog
 import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderPostCard
 import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderUserRowCard
 import com.yenaly.han1meviewer.FapFolder.ui.video.FapFolderVideoPlayerScreen
 import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.ui.screen.RetryableImage
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -185,250 +197,67 @@ fun FapFolderGroupScreen(
                 }
 
                 else -> {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 24.dp),
-                    ) {
+                    Column(modifier = Modifier.fillMaxSize()) {
                         uiState.group?.let { group ->
-                            item(key = "group_header") {
-                                GroupHeader(
-                                    group = group,
-                                    joining = uiState.joining,
-                                    joinError = uiState.joinError,
-                                    onToggleMembership = { viewModel.joinGroup() },
-                                )
-                            }
-
-                            item(key = "group_tabs") {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                ) {
-                                    FapFolderGroupTab.entries.forEach { tab ->
-                                        FilterChip(
-                                            selected = uiState.activeTab == tab,
-                                            onClick = { viewModel.switchTab(tab) },
-                                            label = {
-                                                Text(
-                                                    tab.label,
-                                                    style = MaterialTheme.typography.labelMedium,
-                                                )
-                                            },
-                                            colors = FilterChipDefaults.filterChipColors(
-                                                selectedContainerColor =
-                                                    MaterialTheme.colorScheme.primaryContainer,
-                                                selectedLabelColor =
-                                                    MaterialTheme.colorScheme.onPrimaryContainer,
-                                            ),
-                                        )
-                                    }
-                                }
-                            }
+                            GroupHeaderBlock(
+                                group = group,
+                                joining = uiState.joining,
+                                joinError = uiState.joinError,
+                                onToggleMembership = { viewModel.joinGroup() },
+                            )
+                            GroupTabRow(
+                                activeTab = uiState.activeTab,
+                                onSelect = { viewModel.switchTab(it) },
+                            )
                         }
 
-                        if (uiState.activeTab == FapFolderGroupTab.MEMBERS) {
-                            when {
-                                uiState.membersLoading && uiState.members.isEmpty() -> {
-                                    item(key = "members_loading") {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(24.dp),
-                                            contentAlignment = Alignment.Center,
-                                        ) { CircularProgressIndicator() }
-                                    }
-                                }
-                                uiState.membersError != null && uiState.members.isEmpty() -> {
-                                    item(key = "members_error") {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(24.dp),
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                                Text(
-                                                    text = "Failed to load members",
-                                                    style = MaterialTheme.typography.titleSmall,
-                                                    color = MaterialTheme.colorScheme.error,
-                                                )
-                                                TextButton(onClick = {
-                                                    viewModel.loadMoreMembers()
-                                                }) { Text("Retry") }
-                                            }
-                                        }
-                                    }
-                                }
-                                uiState.members.isEmpty() -> {
-                                    item(key = "members_empty") {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(24.dp),
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            Text(
-                                                text = "No members to show.",
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        }
-                                    }
-                                }
-                                else -> {
-                                    items(uiState.members, key = { memberKey(it) }) { member ->
-                                        FapFolderUserRowCard(
-                                            user = member,
-                                            modifier = Modifier.padding(horizontal = 8.dp),
-                                            onClick = {
-                                                val username = member.username
-                                                if (username.isNotBlank()) onOpenProfile(username)
-                                            },
-                                        )
-                                    }
-                                    if (uiState.membersLoading) {
-                                        item(key = "members_more_loading") {
-                                            Box(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(16.dp),
-                                                contentAlignment = Alignment.Center,
-                                            ) {
-                                                CircularProgressIndicator(
-                                                    modifier = Modifier.size(24.dp),
-                                                    strokeWidth = 2.dp,
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        } else {
-                            when {
-                                uiState.isLoading && uiState.items.isEmpty() -> {
-                                    item(key = "items_loading") {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(24.dp),
-                                            contentAlignment = Alignment.Center,
-                                        ) { CircularProgressIndicator() }
-                                    }
-                                }
-                                uiState.itemsError != null && uiState.items.isEmpty() -> {
-                                    item(key = "items_error") {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(24.dp),
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                                Text(
-                                                    text = "Failed to load posts",
-                                                    style = MaterialTheme.typography.titleSmall,
-                                                    color = MaterialTheme.colorScheme.error,
-                                                )
-                                                Text(
-                                                    text = uiState.itemsError ?: "",
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                )
-                                                TextButton(onClick = {
-                                                    viewModel.loadMoreItems()
-                                                }) { Text("Retry") }
-                                            }
-                                        }
-                                    }
-                                }
-                                uiState.items.isEmpty() -> {
-                                    item(key = "items_empty") {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(24.dp),
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            Text(
-                                                text = "Nothing here yet.",
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        }
-                                    }
-                                }
-                                else -> {
-                                    items(uiState.items, key = { it.stableKey }) { item ->
-                                        when (item) {
-                                            is FapFolderFeedItem.Post -> {
-                                                val post = item.post
-                                                FapFolderPostCard(
-                                                    post = post,
-                                                    modifier = Modifier.padding(horizontal = 8.dp),
-                                                    onClickPost = {
-                                                        val slug = post.slug
-                                                            ?: post.postId.toString()
-                                                        onOpenPost(slug)
-                                                    },
-                                                    onClickHashtag = onOpenHashtag,
-                                                    onClickAuthor = { author ->
-                                                        val groupSlug = author.groupSlug
-                                                        val username = author.username
-                                                        when {
-                                                            !groupSlug.isNullOrBlank() ->
-                                                                onOpenProfile(groupSlug)
-                                                            !username.isNullOrBlank() ->
-                                                                onOpenProfile(username)
-                                                        }
-                                                    },
-                                                    onClickVideo = { video ->
-                                                        videoPost = post
-                                                        videoToPlay = video
-                                                    },
-                                                    onClickImage = { img, all ->
-                                                        val idx = all.indexOfFirst {
-                                                            it.photoId == img.photoId
-                                                        }.coerceAtLeast(0)
-                                                        lightboxPayload = all to idx
-                                                    },
-                                                    onClickPoll = { },
-                                                    onClickLink = { },
-                                                    onLongClickPost = { },
-                                                )
-                                            }
-                                            is FapFolderFeedItem.User -> FapFolderUserRowCard(
-                                                user = item.user,
-                                                modifier = Modifier.padding(horizontal = 8.dp),
-                                                onClick = {
-                                                    if (item.user.username.isNotBlank()) {
-                                                        onOpenProfile(item.user.username)
-                                                    }
-                                                },
-                                            )
-                                            is FapFolderFeedItem.Community -> {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            when (uiState.activeTab) {
+                                FapFolderGroupTab.MEMBERS -> GroupMembersList(
+                                    uiState = uiState,
+                                    listState = listState,
+                                    onOpenProfile = onOpenProfile,
+                                    onLoadMore = { viewModel.loadMoreMembers() },
+                                    onRetry = { viewModel.loadMoreMembers() },
+                                )
 
-                                            }
-                                        }
-                                    }
-                                    if (uiState.isLoadingMore) {
-                                        item(key = "items_more_loading") {
-                                            Box(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(16.dp),
-                                                contentAlignment = Alignment.Center,
-                                            ) {
-                                                CircularProgressIndicator(
-                                                    modifier = Modifier.size(24.dp),
-                                                    strokeWidth = 2.dp,
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
+                                FapFolderGroupTab.PHOTOS -> GroupMediaGrid(
+                                    uiState = uiState,
+                                    isPhotos = true,
+                                    onOpenImage = { images, idx ->
+                                        lightboxPayload = images to idx
+                                    },
+                                    onOpenVideoBySlug = onOpenPost,
+                                    onLoadMore = { viewModel.loadMoreItems() },
+                                    onRetry = { viewModel.loadMoreItems() },
+                                )
+
+                                FapFolderGroupTab.VIDEOS -> GroupMediaGrid(
+                                    uiState = uiState,
+                                    isPhotos = false,
+                                    onOpenImage = { images, idx ->
+                                        lightboxPayload = images to idx
+                                    },
+                                    onOpenVideoBySlug = onOpenPost,
+                                    onLoadMore = { viewModel.loadMoreItems() },
+                                    onRetry = { viewModel.loadMoreItems() },
+                                )
+
+                                FapFolderGroupTab.POSTS -> GroupPostsList(
+                                    uiState = uiState,
+                                    listState = listState,
+                                    onOpenPost = onOpenPost,
+                                    onOpenHashtag = onOpenHashtag,
+                                    onOpenProfile = onOpenProfile,
+                                    onOpenVideo = { post, video ->
+                                        videoPost = post
+                                        videoToPlay = video
+                                    },
+                                    onOpenImage = { images, idx ->
+                                        lightboxPayload = images to idx
+                                    },
+                                    onLoadMore = { viewModel.loadMoreItems() },
+                                )
                             }
                         }
                     }
@@ -454,8 +283,8 @@ fun FapFolderGroupScreen(
                 videoToPlay = null
                 videoPost = null
                 if (post != null) {
-                    val slug = post.slug ?: post.postId.toString()
-                    onOpenPost(slug)
+                    val slugOrId = post.slug ?: post.postId.toString()
+                    onOpenPost(slugOrId)
                 }
             },
         )
@@ -471,7 +300,7 @@ fun FapFolderGroupScreen(
 }
 
 @Composable
-private fun GroupHeader(
+private fun GroupHeaderBlock(
     group: com.yenaly.han1meviewer.FapFolder.data.model.FapFolderGroup,
     joining: Boolean,
     joinError: String?,
@@ -596,6 +425,503 @@ private fun GroupHeader(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun GroupTabRow(
+    activeTab: FapFolderGroupTab,
+    onSelect: (FapFolderGroupTab) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        FapFolderGroupTab.entries.forEach { tab ->
+            FilterChip(
+                selected = activeTab == tab,
+                onClick = { onSelect(tab) },
+                label = {
+                    Text(
+                        tab.label,
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                ),
+            )
+        }
+    }
+}
+
+@Composable
+private fun GroupPostsList(
+    uiState: FapFolderGroupUiState,
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    onOpenPost: (String) -> Unit,
+    onOpenHashtag: (String) -> Unit,
+    onOpenProfile: (String) -> Unit,
+    onOpenVideo: (FapFolderPost, FapFolderMedia.Video) -> Unit,
+    onOpenImage: (List<FapFolderMedia.Image>, Int) -> Unit,
+    onLoadMore: () -> Unit,
+) {
+    when {
+        uiState.isLoading && uiState.items.isEmpty() -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center,
+            ) { CircularProgressIndicator() }
+        }
+
+        uiState.itemsError != null && uiState.items.isEmpty() -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Failed to load posts",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                    Text(
+                        text = uiState.itemsError ?: "",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    TextButton(onClick = onLoadMore) { Text("Retry") }
+                }
+            }
+        }
+
+        uiState.items.isEmpty() -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "Nothing here yet.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        else -> {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 24.dp),
+            ) {
+                items(uiState.items, key = { it.stableKey }) { item ->
+                    when (item) {
+                        is FapFolderFeedItem.Post -> {
+                            val post = item.post
+                            FapFolderPostCard(
+                                post = post,
+                                modifier = Modifier.padding(horizontal = 8.dp),
+                                onClickPost = {
+                                    val slugOrId = post.slug ?: post.postId.toString()
+                                    onOpenPost(slugOrId)
+                                },
+                                onClickHashtag = onOpenHashtag,
+                                onClickAuthor = { author ->
+                                    val groupSlug = author.groupSlug
+                                    val username = author.username
+                                    when {
+                                        !groupSlug.isNullOrBlank() -> onOpenProfile(groupSlug)
+                                        !username.isNullOrBlank() -> onOpenProfile(username)
+                                    }
+                                },
+                                onClickVideo = { video -> onOpenVideo(post, video) },
+                                onClickImage = { img, all ->
+                                    val idx = all.indexOfFirst {
+                                        it.photoId == img.photoId
+                                    }.coerceAtLeast(0)
+                                    onOpenImage(all, idx)
+                                },
+                                onClickPoll = { },
+                                onClickLink = { },
+                                onLongClickPost = { },
+                            )
+                        }
+                        is FapFolderFeedItem.User -> FapFolderUserRowCard(
+                            user = item.user,
+                            modifier = Modifier.padding(horizontal = 8.dp),
+                            onClick = {
+                                if (item.user.username.isNotBlank()) {
+                                    onOpenProfile(item.user.username)
+                                }
+                            },
+                        )
+                        is FapFolderFeedItem.Community -> Unit
+                    }
+                }
+                if (uiState.isLoadingMore) {
+                    item(key = "items_more_loading") {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GroupMembersList(
+    uiState: FapFolderGroupUiState,
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    onOpenProfile: (String) -> Unit,
+    onLoadMore: () -> Unit,
+    onRetry: () -> Unit,
+) {
+    when {
+        uiState.membersLoading && uiState.members.isEmpty() -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center,
+            ) { CircularProgressIndicator() }
+        }
+
+        uiState.membersError != null && uiState.members.isEmpty() -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Failed to load members",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                    TextButton(onClick = onRetry) { Text("Retry") }
+                }
+            }
+        }
+
+        uiState.members.isEmpty() -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "No members to show.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        else -> {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 24.dp),
+            ) {
+                items(uiState.members, key = { memberKey(it) }) { member ->
+                    FapFolderUserRowCard(
+                        user = member,
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                        onClick = {
+                            val username = member.username
+                            if (username.isNotBlank()) onOpenProfile(username)
+                        },
+                    )
+                }
+                if (uiState.membersLoading) {
+                    item(key = "members_more_loading") {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GroupMediaGrid(
+    uiState: FapFolderGroupUiState,
+    isPhotos: Boolean,
+    onOpenImage: (List<FapFolderMedia.Image>, Int) -> Unit,
+    onOpenVideoBySlug: (String) -> Unit,
+    onLoadMore: () -> Unit,
+    onRetry: () -> Unit,
+) {
+    val gridState = rememberLazyGridState()
+    val columns = if (isPhotos) 3 else 2
+
+    LaunchedEffect(
+        gridState,
+        uiState.hasMore,
+        uiState.isLoadingMore,
+        uiState.isLoading,
+        uiState.photoTiles.size,
+        uiState.videoTiles.size,
+    ) {
+        snapshotFlow {
+            val info = gridState.layoutInfo
+            info.totalItemsCount to (info.visibleItemsInfo.lastOrNull()?.index ?: -1)
+        }
+            .distinctUntilChanged()
+            .conflate()
+            .collect { (total, last) ->
+                if (total > 6 &&
+                    last >= total - 6 &&
+                    uiState.hasMore &&
+                    !uiState.isLoadingMore &&
+                    !uiState.isLoading
+                ) {
+                    onLoadMore()
+                }
+            }
+    }
+
+    when {
+        uiState.isLoading && uiState.photoTiles.isEmpty() && uiState.videoTiles.isEmpty() -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center,
+            ) { CircularProgressIndicator() }
+        }
+
+        uiState.itemsError != null &&
+                uiState.photoTiles.isEmpty() && uiState.videoTiles.isEmpty() -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = if (isPhotos) "Failed to load photos" else "Failed to load videos",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                    Text(
+                        text = uiState.itemsError ?: "",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    TextButton(onClick = onRetry) { Text("Retry") }
+                }
+            }
+        }
+
+        isPhotos && uiState.photoTiles.isEmpty() -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "No photos yet.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        !isPhotos && uiState.videoTiles.isEmpty() -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "No videos yet.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        isPhotos -> {
+            val images = uiState.mediaImages
+            LazyVerticalGrid(
+                state = gridState,
+                columns = GridCells.Fixed(columns),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = 6.dp,
+                    end = 6.dp,
+                    top = 6.dp,
+                    bottom = 24.dp,
+                ),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                gridItems(
+                    items = uiState.photoTiles,
+                    key = { "p_${it.photoId ?: it.fullUrl.hashCode()}" },
+                ) { tile ->
+                    val idx = uiState.photoTiles.indexOf(tile).coerceAtLeast(0)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(1f)
+                            .clip(RoundedCornerShape(6.dp))
+                            .clickable { onOpenImage(images, idx) },
+                    ) {
+                        RetryableImage(
+                            model = tile.previewUrl ?: tile.fullUrl,
+                            contentDescription = tile.alt,
+                            modifier = Modifier.fillMaxSize(),
+                            placeholder = painterResource(R.drawable.h_chan_loading_small),
+                            error = painterResource(R.drawable.h_chan_load_failed_small),
+                            contentScale = ContentScale.Crop,
+                        )
+                    }
+                }
+                if (uiState.isLoadingMore) {
+                    item(
+                        key = "photos_more_loading",
+                        span = { GridItemSpan(maxLineSpan) },
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        else -> {
+            LazyVerticalGrid(
+                state = gridState,
+                columns = GridCells.Fixed(columns),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = 6.dp,
+                    end = 6.dp,
+                    top = 6.dp,
+                    bottom = 24.dp,
+                ),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                gridItems(
+                    items = uiState.videoTiles,
+                    key = { "v_${it.postId ?: it.postUrl.hashCode()}" },
+                ) { tile ->
+                    VideoTileBox(
+                        tile = tile,
+                        onClick = {
+                            val slugOrId = tile.postId?.toString()
+                                ?: tile.postUrl.trimEnd('/').substringAfterLast('/')
+                            onOpenVideoBySlug(slugOrId)
+                        },
+                    )
+                }
+                if (uiState.isLoadingMore) {
+                    item(
+                        key = "videos_more_loading",
+                        span = { GridItemSpan(maxLineSpan) },
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun VideoTileBox(
+    tile: FapFolderProfileParser.VideoTile,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(16f / 9f)
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(onClick = onClick),
+    ) {
+        val poster = tile.thumbnailUrl
+        if (!poster.isNullOrBlank()) {
+            RetryableImage(
+                model = poster,
+                contentDescription = tile.title,
+                modifier = Modifier.fillMaxSize(),
+                placeholder = painterResource(R.drawable.h_chan_loading_small),
+                error = painterResource(R.drawable.h_chan_load_failed_small),
+                contentScale = ContentScale.Crop,
+            )
+        }
+        Box(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.55f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Filled.PlayArrow,
+                contentDescription = "Play",
+                tint = MaterialTheme.colorScheme.onPrimary,
             )
         }
     }
