@@ -17,13 +17,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridScope
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -93,7 +95,6 @@ fun FapFolderGroupScreen(
     viewModel: FapFolderGroupViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val listState = rememberLazyListState()
 
     var videoToPlay by remember { mutableStateOf<FapFolderMedia.Video?>(null) }
     var videoPost by remember { mutableStateOf<FapFolderPost?>(null) }
@@ -103,29 +104,6 @@ fun FapFolderGroupScreen(
 
     LaunchedEffect(slug, initialTab) {
         viewModel.load(slug, initialTab)
-    }
-
-    LaunchedEffect(listState, uiState.hasMore, uiState.isLoadingMore, uiState.isLoading) {
-        snapshotFlow {
-            val info = listState.layoutInfo
-            val total = info.totalItemsCount
-            val last = info.visibleItemsInfo.lastOrNull()?.index ?: -1
-            total to last
-        }
-            .distinctUntilChanged()
-            .collect { (total, last) ->
-                if (total > 4 &&
-                    last >= total - 4 &&
-                    uiState.hasMore &&
-                    !uiState.isLoadingMore &&
-                    !uiState.isLoading
-                ) {
-                    when (uiState.activeTab) {
-                        FapFolderGroupTab.MEMBERS -> viewModel.loadMoreMembers()
-                        else -> viewModel.loadMoreItems()
-                    }
-                }
-            }
     }
 
     Scaffold(
@@ -197,69 +175,43 @@ fun FapFolderGroupScreen(
                 }
 
                 else -> {
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        uiState.group?.let { group ->
-                            GroupHeaderBlock(
-                                group = group,
-                                joining = uiState.joining,
-                                joinError = uiState.joinError,
-                                onToggleMembership = { viewModel.joinGroup() },
-                            )
-                            GroupTabRow(
-                                activeTab = uiState.activeTab,
-                                onSelect = { viewModel.switchTab(it) },
-                            )
-                        }
+                    when (uiState.activeTab) {
+                        FapFolderGroupTab.PHOTOS,
+                        FapFolderGroupTab.VIDEOS,
+                        -> GroupMediaTab(
+                            uiState = uiState,
+                            onSwitchTab = { viewModel.switchTab(it) },
+                            onOpenImage = { images, idx -> lightboxPayload = images to idx },
+                            onOpenVideoBySlug = onOpenPost,
+                            onLoadMore = { viewModel.loadMoreItems() },
+                            onRetry = { viewModel.loadMoreItems() },
+                            onRefresh = { viewModel.refresh() },
+                        )
 
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            when (uiState.activeTab) {
-                                FapFolderGroupTab.MEMBERS -> GroupMembersList(
-                                    uiState = uiState,
-                                    listState = listState,
-                                    onOpenProfile = onOpenProfile,
-                                    onLoadMore = { viewModel.loadMoreMembers() },
-                                    onRetry = { viewModel.loadMoreMembers() },
-                                )
+                        FapFolderGroupTab.MEMBERS -> GroupMembersTab(
+                            uiState = uiState,
+                            onSwitchTab = { viewModel.switchTab(it) },
+                            onOpenProfile = onOpenProfile,
+                            onLoadMore = { viewModel.loadMoreMembers() },
+                            onRetry = { viewModel.loadMoreMembers() },
+                            onRefresh = { viewModel.refresh() },
+                        )
 
-                                FapFolderGroupTab.PHOTOS -> GroupMediaGrid(
-                                    uiState = uiState,
-                                    isPhotos = true,
-                                    onOpenImage = { images, idx ->
-                                        lightboxPayload = images to idx
-                                    },
-                                    onOpenVideoBySlug = onOpenPost,
-                                    onLoadMore = { viewModel.loadMoreItems() },
-                                    onRetry = { viewModel.loadMoreItems() },
-                                )
-
-                                FapFolderGroupTab.VIDEOS -> GroupMediaGrid(
-                                    uiState = uiState,
-                                    isPhotos = false,
-                                    onOpenImage = { images, idx ->
-                                        lightboxPayload = images to idx
-                                    },
-                                    onOpenVideoBySlug = onOpenPost,
-                                    onLoadMore = { viewModel.loadMoreItems() },
-                                    onRetry = { viewModel.loadMoreItems() },
-                                )
-
-                                FapFolderGroupTab.POSTS -> GroupPostsList(
-                                    uiState = uiState,
-                                    listState = listState,
-                                    onOpenPost = onOpenPost,
-                                    onOpenHashtag = onOpenHashtag,
-                                    onOpenProfile = onOpenProfile,
-                                    onOpenVideo = { post, video ->
-                                        videoPost = post
-                                        videoToPlay = video
-                                    },
-                                    onOpenImage = { images, idx ->
-                                        lightboxPayload = images to idx
-                                    },
-                                    onLoadMore = { viewModel.loadMoreItems() },
-                                )
-                            }
-                        }
+                        FapFolderGroupTab.POSTS -> GroupPostsTab(
+                            uiState = uiState,
+                            onSwitchTab = { viewModel.switchTab(it) },
+                            onOpenPost = onOpenPost,
+                            onOpenHashtag = onOpenHashtag,
+                            onOpenProfile = onOpenProfile,
+                            onOpenVideo = { post, video ->
+                                videoPost = post
+                                videoToPlay = video
+                            },
+                            onOpenImage = { images, idx -> lightboxPayload = images to idx },
+                            onLoadMore = { viewModel.loadMoreItems() },
+                            onRetry = { viewModel.loadMoreItems() },
+                            onRefresh = { viewModel.refresh() },
+                        )
                     }
                 }
             }
@@ -460,71 +412,151 @@ private fun GroupTabRow(
     }
 }
 
-@Composable
-private fun GroupPostsList(
+private fun LazyListScope.groupHeaderItems(
     uiState: FapFolderGroupUiState,
-    listState: androidx.compose.foundation.lazy.LazyListState,
+    onSwitchTab: (FapFolderGroupTab) -> Unit,
+    onToggleMembership: () -> Unit,
+) {
+    uiState.group?.let { group ->
+        item(key = "group_header") {
+            GroupHeaderBlock(
+                group = group,
+                joining = uiState.joining,
+                joinError = uiState.joinError,
+                onToggleMembership = onToggleMembership,
+            )
+        }
+        item(key = "group_tabs") {
+            GroupTabRow(
+                activeTab = uiState.activeTab,
+                onSelect = onSwitchTab,
+            )
+        }
+    }
+}
+
+private fun LazyGridScope.groupHeaderItems(
+    uiState: FapFolderGroupUiState,
+    onSwitchTab: (FapFolderGroupTab) -> Unit,
+    onToggleMembership: () -> Unit,
+) {
+    uiState.group?.let { group ->
+        item(
+            key = "group_header",
+            span = { GridItemSpan(maxLineSpan) },
+        ) {
+            GroupHeaderBlock(
+                group = group,
+                joining = uiState.joining,
+                joinError = uiState.joinError,
+                onToggleMembership = onToggleMembership,
+            )
+        }
+        item(
+            key = "group_tabs",
+            span = { GridItemSpan(maxLineSpan) },
+        ) {
+            GroupTabRow(
+                activeTab = uiState.activeTab,
+                onSelect = onSwitchTab,
+            )
+        }
+    }
+}
+
+@Composable
+private fun GroupPostsTab(
+    uiState: FapFolderGroupUiState,
+    onSwitchTab: (FapFolderGroupTab) -> Unit,
     onOpenPost: (String) -> Unit,
     onOpenHashtag: (String) -> Unit,
     onOpenProfile: (String) -> Unit,
     onOpenVideo: (FapFolderPost, FapFolderMedia.Video) -> Unit,
     onOpenImage: (List<FapFolderMedia.Image>, Int) -> Unit,
     onLoadMore: () -> Unit,
+    onRetry: () -> Unit,
+    onRefresh: () -> Unit,
 ) {
-    when {
-        uiState.isLoading && uiState.items.isEmpty() -> {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(24.dp),
-                contentAlignment = Alignment.Center,
-            ) { CircularProgressIndicator() }
-        }
+    val listState = rememberLazyListStateCompat()
 
-        uiState.itemsError != null && uiState.items.isEmpty() -> {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(24.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "Failed to load posts",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                    Text(
-                        text = uiState.itemsError ?: "",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    TextButton(onClick = onLoadMore) { Text("Retry") }
+    LaunchedEffect(listState, uiState.hasMore, uiState.isLoadingMore, uiState.isLoading) {
+        snapshotFlow {
+            val info = listState.layoutInfo
+            info.totalItemsCount to (info.visibleItemsInfo.lastOrNull()?.index ?: -1)
+        }
+            .distinctUntilChanged()
+            .collect { (total, last) ->
+                if (total > 4 &&
+                    last >= total - 4 &&
+                    uiState.hasMore &&
+                    !uiState.isLoadingMore &&
+                    !uiState.isLoading
+                ) {
+                    onLoadMore()
                 }
             }
-        }
+    }
 
-        uiState.items.isEmpty() -> {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(24.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "Nothing here yet.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = 24.dp),
+    ) {
+        groupHeaderItems(
+            uiState = uiState,
+            onSwitchTab = onSwitchTab,
+            onRefresh = onRefresh,
+        )
+
+        when {
+            uiState.isLoading && uiState.items.isEmpty() -> item(key = "items_loading") {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center,
+                ) { CircularProgressIndicator() }
             }
-        }
 
-        else -> {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 24.dp),
-            ) {
+            uiState.itemsError != null && uiState.items.isEmpty() -> item(key = "items_error") {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "Failed to load posts",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                        Text(
+                            text = uiState.itemsError ?: "",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        TextButton(onClick = onRetry) { Text("Retry") }
+                    }
+                }
+            }
+
+            uiState.items.isEmpty() -> item(key = "items_empty") {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "Nothing here yet.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            else -> {
                 items(uiState.items, key = { it.stableKey }) { item ->
                     when (item) {
                         is FapFolderFeedItem.Post -> {
@@ -590,62 +622,90 @@ private fun GroupPostsList(
 }
 
 @Composable
-private fun GroupMembersList(
+private fun GroupMembersTab(
     uiState: FapFolderGroupUiState,
-    listState: androidx.compose.foundation.lazy.LazyListState,
+    onSwitchTab: (FapFolderGroupTab) -> Unit,
     onOpenProfile: (String) -> Unit,
     onLoadMore: () -> Unit,
     onRetry: () -> Unit,
+    onRefresh: () -> Unit,
 ) {
-    when {
-        uiState.membersLoading && uiState.members.isEmpty() -> {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(24.dp),
-                contentAlignment = Alignment.Center,
-            ) { CircularProgressIndicator() }
-        }
+    val listState = rememberLazyListStateCompat()
 
-        uiState.membersError != null && uiState.members.isEmpty() -> {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(24.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "Failed to load members",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                    TextButton(onClick = onRetry) { Text("Retry") }
+    LaunchedEffect(listState, uiState.membersHasMore, uiState.membersLoading) {
+        snapshotFlow {
+            val info = listState.layoutInfo
+            info.totalItemsCount to (info.visibleItemsInfo.lastOrNull()?.index ?: -1)
+        }
+            .distinctUntilChanged()
+            .collect { (total, last) ->
+                if (total > 4 &&
+                    last >= total - 4 &&
+                    uiState.membersHasMore &&
+                    !uiState.membersLoading
+                ) {
+                    onLoadMore()
                 }
             }
-        }
+    }
 
-        uiState.members.isEmpty() -> {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(24.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "No members to show.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = 24.dp),
+    ) {
+        groupHeaderItems(
+            uiState = uiState,
+            onSwitchTab = onSwitchTab,
+            onRefresh = onRefresh,
+        )
+
+        when {
+            uiState.membersLoading && uiState.members.isEmpty() ->
+                item(key = "members_loading") {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        contentAlignment = Alignment.Center,
+                    ) { CircularProgressIndicator() }
+                }
+
+            uiState.membersError != null && uiState.members.isEmpty() ->
+                item(key = "members_error") {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "Failed to load members",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                            TextButton(onClick = onRetry) { Text("Retry") }
+                        }
+                    }
+                }
+
+            uiState.members.isEmpty() -> item(key = "members_empty") {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "No members to show.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
-        }
 
-        else -> {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 24.dp),
-            ) {
+            else -> {
                 items(uiState.members, key = { memberKey(it) }) { member ->
                     FapFolderUserRowCard(
                         user = member,
@@ -677,15 +737,17 @@ private fun GroupMembersList(
 }
 
 @Composable
-private fun GroupMediaGrid(
+private fun GroupMediaTab(
     uiState: FapFolderGroupUiState,
-    isPhotos: Boolean,
+    onSwitchTab: (FapFolderGroupTab) -> Unit,
     onOpenImage: (List<FapFolderMedia.Image>, Int) -> Unit,
     onOpenVideoBySlug: (String) -> Unit,
     onLoadMore: () -> Unit,
     onRetry: () -> Unit,
+    onRefresh: () -> Unit,
 ) {
-    val gridState = rememberLazyGridState()
+    val isPhotos = uiState.activeTab == FapFolderGroupTab.PHOTOS
+    val gridState = rememberLazyGridStateCompat()
     val columns = if (isPhotos) 3 else 2
 
     LaunchedEffect(
@@ -714,170 +776,220 @@ private fun GroupMediaGrid(
             }
     }
 
-    when {
-        uiState.isLoading && uiState.photoTiles.isEmpty() && uiState.videoTiles.isEmpty() -> {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(24.dp),
-                contentAlignment = Alignment.Center,
-            ) { CircularProgressIndicator() }
-        }
+    LazyVerticalGrid(
+        state = gridState,
+        columns = GridCells.Fixed(columns),
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            start = 6.dp,
+            end = 6.dp,
+            top = 6.dp,
+            bottom = 24.dp,
+        ),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        groupHeaderItems(
+            uiState = uiState,
+            onSwitchTab = onSwitchTab,
+        )
 
-        uiState.itemsError != null &&
-                uiState.photoTiles.isEmpty() && uiState.videoTiles.isEmpty() -> {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(24.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = if (isPhotos) "Failed to load photos" else "Failed to load videos",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                    Text(
-                        text = uiState.itemsError ?: "",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    TextButton(onClick = onRetry) { Text("Retry") }
-                }
-            }
-        }
-
-        isPhotos && uiState.photoTiles.isEmpty() -> {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(24.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "No photos yet.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-
-        !isPhotos && uiState.videoTiles.isEmpty() -> {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(24.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "No videos yet.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-
-        isPhotos -> {
-            val images = uiState.mediaImages
-            LazyVerticalGrid(
-                state = gridState,
-                columns = GridCells.Fixed(columns),
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    start = 6.dp,
-                    end = 6.dp,
-                    top = 6.dp,
-                    bottom = 24.dp,
-                ),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                gridItems(
-                    items = uiState.photoTiles,
-                    key = { "p_${it.photoId ?: it.fullUrl.hashCode()}" },
-                ) { tile ->
-                    val idx = uiState.photoTiles.indexOf(tile).coerceAtLeast(0)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(1f)
-                            .clip(RoundedCornerShape(6.dp))
-                            .clickable { onOpenImage(images, idx) },
-                    ) {
-                        RetryableImage(
-                            model = tile.previewUrl ?: tile.fullUrl,
-                            contentDescription = tile.alt,
-                            modifier = Modifier.fillMaxSize(),
-                            placeholder = painterResource(R.drawable.h_chan_loading_small),
-                            error = painterResource(R.drawable.h_chan_load_failed_small),
-                            contentScale = ContentScale.Crop,
-                        )
-                    }
-                }
-                if (uiState.isLoadingMore) {
+        if (isPhotos) {
+            when {
+                uiState.isLoading && uiState.photoTiles.isEmpty() ->
                     item(
-                        key = "photos_more_loading",
+                        key = "photos_loading",
                         span = { GridItemSpan(maxLineSpan) },
                     ) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
+                                .padding(24.dp),
+                            contentAlignment = Alignment.Center,
+                        ) { CircularProgressIndicator() }
+                    }
+
+                uiState.itemsError != null && uiState.photoTiles.isEmpty() ->
+                    item(
+                        key = "photos_error",
+                        span = { GridItemSpan(maxLineSpan) },
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
                             contentAlignment = Alignment.Center,
                         ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.dp,
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "Failed to load photos",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                                Text(
+                                    text = uiState.itemsError ?: "",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                TextButton(onClick = onRetry) { Text("Retry") }
+                            }
+                        }
+                    }
+
+                uiState.photoTiles.isEmpty() ->
+                    item(
+                        key = "photos_empty",
+                        span = { GridItemSpan(maxLineSpan) },
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = "No photos yet.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
+                        }
+                    }
+
+                else -> {
+                    val images = uiState.mediaImages
+                    gridItems(
+                        items = uiState.photoTiles,
+                        key = { "p_${it.photoId ?: it.fullUrl.hashCode()}" },
+                    ) { tile ->
+                        val idx = uiState.photoTiles.indexOf(tile).coerceAtLeast(0)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(1f)
+                                .clip(RoundedCornerShape(6.dp))
+                                .clickable { onOpenImage(images, idx) },
+                        ) {
+                            RetryableImage(
+                                model = tile.previewUrl ?: tile.fullUrl,
+                                contentDescription = tile.alt,
+                                modifier = Modifier.fillMaxSize(),
+                                placeholder = painterResource(R.drawable.h_chan_loading_small),
+                                error = painterResource(R.drawable.h_chan_load_failed_small),
+                                contentScale = ContentScale.Crop,
+                            )
+                        }
+                    }
+                    if (uiState.isLoadingMore) {
+                        item(
+                            key = "photos_more_loading",
+                            span = { GridItemSpan(maxLineSpan) },
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                            }
                         }
                     }
                 }
             }
-        }
-
-        else -> {
-            LazyVerticalGrid(
-                state = gridState,
-                columns = GridCells.Fixed(columns),
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    start = 6.dp,
-                    end = 6.dp,
-                    top = 6.dp,
-                    bottom = 24.dp,
-                ),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                gridItems(
-                    items = uiState.videoTiles,
-                    key = { "v_${it.postId ?: it.postUrl.hashCode()}" },
-                ) { tile ->
-                    VideoTileBox(
-                        tile = tile,
-                        onClick = {
-                            val slugOrId = tile.postId?.toString()
-                                ?: tile.postUrl.trimEnd('/').substringAfterLast('/')
-                            onOpenVideoBySlug(slugOrId)
-                        },
-                    )
-                }
-                if (uiState.isLoadingMore) {
+        } else {
+            when {
+                uiState.isLoading && uiState.videoTiles.isEmpty() ->
                     item(
-                        key = "videos_more_loading",
+                        key = "videos_loading",
                         span = { GridItemSpan(maxLineSpan) },
                     ) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
+                                .padding(24.dp),
+                            contentAlignment = Alignment.Center,
+                        ) { CircularProgressIndicator() }
+                    }
+
+                uiState.itemsError != null && uiState.videoTiles.isEmpty() ->
+                    item(
+                        key = "videos_error",
+                        span = { GridItemSpan(maxLineSpan) },
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
                             contentAlignment = Alignment.Center,
                         ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.dp,
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "Failed to load videos",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                                Text(
+                                    text = uiState.itemsError ?: "",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                TextButton(onClick = onRetry) { Text("Retry") }
+                            }
+                        }
+                    }
+
+                uiState.videoTiles.isEmpty() ->
+                    item(
+                        key = "videos_empty",
+                        span = { GridItemSpan(maxLineSpan) },
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = "No videos yet.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
+                        }
+                    }
+
+                else -> {
+                    gridItems(
+                        items = uiState.videoTiles,
+                        key = { "v_${it.postId ?: it.postUrl.hashCode()}" },
+                    ) { tile ->
+                        VideoTileBox(
+                            tile = tile,
+                            onClick = {
+                                val slugOrId = tile.postId?.toString()
+                                    ?: tile.postUrl.trimEnd('/').substringAfterLast('/')
+                                onOpenVideoBySlug(slugOrId)
+                            },
+                        )
+                    }
+                    if (uiState.isLoadingMore) {
+                        item(
+                            key = "videos_more_loading",
+                            span = { GridItemSpan(maxLineSpan) },
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                            }
                         }
                     }
                 }
@@ -981,3 +1093,11 @@ private fun MembershipButton(
 
 private fun memberKey(user: FapFolderUserRow): String =
     "member_${user.uid ?: user.username}"
+
+@Composable
+private fun rememberLazyListStateCompat(): LazyListState =
+    androidx.compose.foundation.lazy.rememberLazyListState()
+
+@Composable
+private fun rememberLazyGridStateCompat(): LazyGridState =
+    androidx.compose.foundation.lazy.grid.rememberLazyGridState()
