@@ -37,6 +37,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -541,7 +542,13 @@ fun SiteErrorContent(
             }
             if (onRetry != null) {
                 Button(onClick = onRetry, shape = RoundedCornerShape(14.dp)) {
-                    Text(retryText)
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(retryText, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
@@ -632,3 +639,5 @@ fun SiteIconBadge(
         )
     }
 }
+
+

@@ -3,6 +3,13 @@ package com.yenaly.han1meviewer.FapFolder.ui.profile
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import androidx.compose.foundation.background
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -725,24 +732,44 @@ private fun ProfileTabRow(
     activeTab: FapFolderProfileTab,
     onSelect: (FapFolderProfileTab) -> Unit,
 ) {
-    Row(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        shape = RoundedCornerShape(50),
+        color = MaterialTheme.colorScheme.surfaceContainer,
     ) {
-        FapFolderProfileTab.entries.forEach { tab ->
-            FilterChip(
-                selected = activeTab == tab,
-                onClick = { onSelect(tab) },
-                label = {
-                    Text(tab.label, style = MaterialTheme.typography.labelMedium)
-                },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                ),
-            )
+        Row(
+            modifier = Modifier.padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            FapFolderProfileTab.entries.forEach { tab ->
+                val selected = activeTab == tab
+                Surface(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(50))
+                        .clickable { onSelect(tab) },
+                    shape = RoundedCornerShape(50),
+                    color = if (selected) MaterialTheme.colorScheme.primary
+                    else Color.Transparent,
+                ) {
+                    Box(
+                        modifier = Modifier.padding(vertical = 9.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = tab.label,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (selected) MaterialTheme.colorScheme.onPrimary
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -756,34 +783,51 @@ private fun ProfileHeader(
     onToggleFollow: () -> Unit,
     onOpenTab: (FapFolderProfileTab) -> Unit,
 ) {
+    val surface = MaterialTheme.colorScheme.surface
     Column(modifier = Modifier.fillMaxWidth()) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 140.dp, max = 200.dp)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-        ) {
-            profile.coverUrl?.let { cover ->
-                AsyncImage(
-                    model = cover,
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
-                )
-            }
-        }
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp)
-                .padding(top = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
+        Box(modifier = Modifier.fillMaxWidth()) {
             Box(
                 modifier = Modifier
-                    .size(72.dp)
+                    .fillMaxWidth()
+                    .height(168.dp)
+                    .background(
+                        Brush.linearGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.primaryContainer,
+                                MaterialTheme.colorScheme.tertiaryContainer,
+                            )
+                        )
+                    ),
+            ) {
+                profile.coverUrl?.let { cover ->
+                    AsyncImage(
+                        model = cover,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                0.55f to Color.Transparent,
+                                1f to surface.copy(alpha = 0.85f),
+                            )
+                        ),
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 16.dp)
+                    .offset(y = 40.dp)
+                    .size(84.dp)
+                    .clip(CircleShape)
+                    .background(surface)
+                    .padding(4.dp)
                     .clip(CircleShape),
             ) {
                 val avatar = profile.avatarUrl
@@ -803,7 +847,7 @@ private fun ProfileHeader(
                             Text(
                                 text = profile.displayName.firstOrNull()?.uppercase()
                                     ?: "?",
-                                style = MaterialTheme.typography.headlineSmall,
+                                style = MaterialTheme.typography.headlineMedium,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                                 fontWeight = FontWeight.Bold,
                             )
@@ -811,18 +855,27 @@ private fun ProfileHeader(
                     }
                 }
             }
+        }
 
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(top = 48.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = profile.displayName,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = "@${profile.username}",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -832,56 +885,46 @@ private fun ProfileHeader(
                     OutlinedButton(
                         onClick = onToggleFollow,
                         enabled = !followPending,
-                        contentPadding = PaddingValues(
-                            horizontal = 14.dp,
-                            vertical = 6.dp,
-                        ),
+                        shape = RoundedCornerShape(50),
+                        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 8.dp),
                     ) {
                         if (followPending) {
                             CircularProgressIndicator(
-                                modifier = Modifier.size(14.dp),
+                                modifier = Modifier.size(16.dp),
                                 strokeWidth = 2.dp,
                             )
                         } else {
-                            Text("Following")
+                            Text("Following", fontWeight = FontWeight.SemiBold)
                         }
                     }
                 } else {
                     Button(
                         onClick = onToggleFollow,
                         enabled = !followPending,
+                        shape = RoundedCornerShape(50),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
                         ),
-                        contentPadding = PaddingValues(
-                            horizontal = 14.dp,
-                            vertical = 6.dp,
-                        ),
+                        contentPadding = PaddingValues(horizontal = 22.dp, vertical = 8.dp),
                     ) {
                         if (followPending) {
                             CircularProgressIndicator(
-                                modifier = Modifier.size(14.dp),
+                                modifier = Modifier.size(16.dp),
                                 strokeWidth = 2.dp,
                             )
                         } else {
-                            Text("Follow")
+                            Text("Follow", fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }
             }
         }
 
-        ProfileCountsRow(
-            profile = profile,
-            onOpenTab = onOpenTab,
-            modifier = Modifier.padding(top = 10.dp),
-        )
-
         if (!profile.bio.isNullOrBlank()) {
             Text(
-                text = profile.bio ,
+                text = profile.bio,
                 style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
                 maxLines = 6,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -890,9 +933,9 @@ private fun ProfileHeader(
         if (!profile.joinedLabel.isNullOrBlank()) {
             Text(
                 text = "Joined ${profile.joinedLabel}",
-                style = MaterialTheme.typography.labelSmall,
+                style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
             )
         }
 
@@ -901,9 +944,15 @@ private fun ProfileHeader(
                 text = followError,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             )
         }
+
+        ProfileCountsRow(
+            profile = profile,
+            onOpenTab = onOpenTab,
+            modifier = Modifier.padding(top = 12.dp),
+        )
     }
 }
 
@@ -959,22 +1008,24 @@ private fun ProfileCountItem(
     val displayValue = value?.let(::formatCount) ?: "—"
     Surface(
         modifier = modifier
-            .clip(RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(16.dp))
             .then(
                 if (onClick != null) Modifier.clickable(onClick = onClick)
                 else Modifier
             ),
+        shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 8.dp, horizontal = 6.dp),
+                .padding(vertical = 12.dp, horizontal = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             Text(
                 text = displayValue,
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
@@ -1018,21 +1069,45 @@ private fun ProfileError(
             .padding(24.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.errorContainer,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ErrorOutline,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier
+                        .padding(if (compact) 12.dp else 16.dp)
+                        .size(if (compact) 24.dp else 32.dp),
+                )
+            }
             Text(
                 text = title,
                 style = if (compact) MaterialTheme.typography.titleSmall
                 else MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.error,
+                fontWeight = FontWeight.SemiBold,
             )
-            Spacer(Modifier.height(4.dp))
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
             )
-            Spacer(Modifier.height(12.dp))
-            TextButton(onClick = onRetry) { Text("Retry") }
+            Spacer(Modifier.height(4.dp))
+            FilledTonalButton(onClick = onRetry, shape = RoundedCornerShape(14.dp)) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text("Retry")
+            }
         }
     }
 }
@@ -1045,3 +1120,5 @@ private fun formatDuration(seconds: Int): String {
     return if (h > 0) "%d:%02d:%02d".format(h, m, s)
     else "%d:%02d".format(m, s)
 }
+
+

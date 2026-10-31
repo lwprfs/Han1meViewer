@@ -1,7 +1,6 @@
 package com.yenaly.han1meviewer.ui.component
 
 import androidx.annotation.DrawableRes
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -9,13 +8,15 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,16 +25,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -99,6 +99,7 @@ val DefaultSiteSwitchOptions: List<SiteSwitchOption> = listOf(
     ),
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SiteSwitchDialog(
     currentSite: SiteType,
@@ -107,210 +108,155 @@ fun SiteSwitchDialog(
     modifier: Modifier = Modifier,
     options: List<SiteSwitchOption> = DefaultSiteSwitchOptions,
 ) {
-    var selectedSite by remember { mutableStateOf(currentSite) }
-    val selectedOption = options.firstOrNull { it.siteType == selectedSite }
-    val canSwitch = selectedSite != currentSite
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    AlertDialog(
+    ModalBottomSheet(
         modifier = modifier,
         onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = RoundedCornerShape(28.dp),
-        icon = {
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_baseline_switch_24),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(28.dp),
-                )
-            }
-        },
-        title = {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     text = "Switch site",
-                    style = MaterialTheme.typography.headlineSmall,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
-                Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "Pick a source to browse from",
+                    text = "Tap a source to jump straight to it",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-        },
-        text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                options.forEach { option ->
-                    SiteSwitchRow(
-                        option = option,
-                        isSelected = option.siteType == selectedSite,
-                        isCurrent = option.siteType == currentSite,
-                        onClick = { selectedSite = option.siteType },
-                    )
+
+            options.chunked(2).forEach { rowOptions ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(IntrinsicSize.Max),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    rowOptions.forEach { option ->
+                        SiteSwitchTile(
+                            option = option,
+                            isCurrent = option.siteType == currentSite,
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight(),
+                            onClick = {
+                                if (option.siteType != currentSite) {
+                                    onSiteSelected(option.siteType)
+                                }
+                                onDismiss()
+                            },
+                        )
+                    }
+                    if (rowOptions.size == 1) Spacer(Modifier.weight(1f))
                 }
             }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (canSwitch) onSiteSelected(selectedSite)
-                    onDismiss()
-                },
-                enabled = canSwitch,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_baseline_switch_24),
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = if (canSwitch) {
-                        "Switch to ${selectedOption?.name.orEmpty()}"
-                    } else {
-                        "Current site"
-                    },
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-        },
-        dismissButton = {
-            TextButton(
-                onClick = onDismiss,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    text = "Cancel",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        },
-    )
+        }
+    }
 }
 
 @Composable
-private fun SiteSwitchRow(
+private fun SiteSwitchTile(
     option: SiteSwitchOption,
-    isSelected: Boolean,
     isCurrent: Boolean,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val accent = option.accentColor
-    val containerColor by animateColorAsState(
-        targetValue = if (isSelected) {
-            accent.copy(alpha = 0.14f)
-        } else {
-            MaterialTheme.colorScheme.surfaceContainerLow
-        },
-        label = "siteRowContainer",
-    )
-    val borderColor by animateColorAsState(
-        targetValue = if (isSelected) {
-            accent
-        } else {
-            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-        },
-        label = "siteRowBorder",
-    )
+    val shape = RoundedCornerShape(20.dp)
 
     Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
+        modifier = modifier
+            .clip(shape)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(18.dp),
-        color = containerColor,
-        border = BorderStroke(if (isSelected) 2.dp else 1.dp, borderColor),
+        shape = shape,
+        color = if (isCurrent) {
+            accent.copy(alpha = 0.14f)
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerHigh
+        },
+        border = BorderStroke(
+            width = if (isCurrent) 2.dp else 1.dp,
+            color = if (isCurrent) accent
+            else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+        ),
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Box(
-                modifier = Modifier
-                    .size(52.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(
-                        if (isSelected) {
-                            accent.copy(alpha = 0.22f)
-                        } else {
-                            MaterialTheme.colorScheme.surfaceContainerHighest
-                        },
-                    ),
-                contentAlignment = Alignment.Center,
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                if (option.logoRes != null) {
-                    Image(
-                        painter = painterResource(option.logoRes),
-                        contentDescription = option.name,
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(RoundedCornerShape(8.dp)),
-                        contentScale = ContentScale.Fit,
-                    )
-                } else {
-                    Text(
-                        text = option.name.take(1),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = accent,
-                    )
-                }
-            }
-
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(accent.copy(alpha = 0.18f)),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        text = option.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (isSelected) accent else MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
-                    if (isCurrent) {
-                        Text(
-                            text = "CURRENT",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    if (option.logoRes != null) {
+                        Image(
+                            painter = painterResource(option.logoRes),
+                            contentDescription = option.name,
                             modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(MaterialTheme.colorScheme.secondaryContainer)
-                                .padding(horizontal = 6.dp, vertical = 2.dp),
+                                .size(34.dp)
+                                .clip(RoundedCornerShape(8.dp)),
+                            contentScale = ContentScale.Fit,
+                        )
+                    } else {
+                        Text(
+                            text = option.name.take(1),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = accent,
                         )
                     }
                 }
+                if (isCurrent) {
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .background(accent),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Current site",
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
+                }
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = option.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (isCurrent) accent else MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 Text(
                     text = option.description,
                     style = MaterialTheme.typography.bodySmall,
@@ -318,26 +264,6 @@ private fun SiteSwitchRow(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-            }
-
-            Box(
-                modifier = Modifier
-                    .size(24.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (isSelected) accent
-                        else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
-                    ),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (isSelected) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(16.dp),
-                    )
-                }
             }
         }
     }
@@ -384,3 +310,5 @@ fun SiteSwitchConfirmDialog(
         },
     )
 }
+
+

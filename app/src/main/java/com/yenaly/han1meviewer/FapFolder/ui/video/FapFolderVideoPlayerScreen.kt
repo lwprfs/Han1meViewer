@@ -39,6 +39,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
@@ -891,6 +892,14 @@ fun FapFolderVideoPlayerScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .align(Alignment.TopCenter)
+                            .background(
+                                androidx.compose.ui.graphics.Brush.verticalGradient(
+                                    listOf(
+                                        Color.Black.copy(alpha = 0.7f),
+                                        Color.Transparent,
+                                    )
+                                )
+                            )
                             .then(if (isFullscreen) Modifier.systemBarsPadding() else Modifier)
                             .padding(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -1007,7 +1016,7 @@ fun FapFolderVideoPlayerScreen(
                             modifier = Modifier
                                 .size(72.dp)
                                 .background(
-                                    Color.Black.copy(alpha = 0.5f),
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.92f),
                                     CircleShape,
                                 ),
                         ) {
@@ -1015,7 +1024,7 @@ fun FapFolderVideoPlayerScreen(
                                 imageVector = if (isPlaying) Icons.Filled.Pause
                                 else Icons.Filled.PlayArrow,
                                 contentDescription = "Play/Pause",
-                                tint = Color.White,
+                                tint = MaterialTheme.colorScheme.onPrimary,
                                 modifier = Modifier.size(42.dp),
                             )
                         }
@@ -1045,7 +1054,14 @@ fun FapFolderVideoPlayerScreen(
                                 if (isFullscreen) Modifier.navigationBarsPadding()
                                 else Modifier
                             )
-                            .background(Color.Black.copy(alpha = 0.6f))
+                            .background(
+                                androidx.compose.ui.graphics.Brush.verticalGradient(
+                                    listOf(
+                                        Color.Transparent,
+                                        Color.Black.copy(alpha = 0.8f),
+                                    )
+                                )
+                            )
                             .padding(horizontal = 12.dp, vertical = 8.dp),
                     ) {
                         Row(
@@ -1098,7 +1114,7 @@ fun FapFolderVideoPlayerScreen(
                                 },
                                 modifier = Modifier.weight(1f),
                                 colors = SliderDefaults.colors(
-                                    thumbColor = Color.White,
+                                    thumbColor = MaterialTheme.colorScheme.primary,
                                     activeTrackColor =
                                         MaterialTheme.colorScheme.primary,
                                     inactiveTrackColor =
@@ -1159,6 +1175,7 @@ fun FapFolderVideoPlayerScreen(
                                 text = title,
                                 color = Color.White,
                                 style = MaterialTheme.typography.titleMedium,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier
@@ -1195,13 +1212,27 @@ fun FapFolderVideoPlayerScreen(
 
     if (resumeDialogForPostId != null) {
         AlertDialog(
+            shape = RoundedCornerShape(28.dp),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            icon = {
+                Icon(
+                    imageVector = Icons.Filled.PlayArrow,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            },
             onDismissRequest = {
                 resumeDialogForPostId = null
                 pendingResumeMs = 0L
                 runCatching { exoPlayer?.seekTo(0L) }
                 runCatching { exoPlayer?.play() }
             },
-            title = { Text("Resume playback?") },
+            title = {
+                Text(
+                    "Resume playback?",
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                )
+            },
             text = {
                 Text(
                     "Resume from ${formatTime(pendingResumeMs)} " +
@@ -1253,7 +1284,7 @@ private fun StreamUrlRow(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(14.dp))
             .combinedClickable(
                 onClick = { },
                 onLongClick = {
@@ -1266,15 +1297,21 @@ private fun StreamUrlRow(
                     copied = true
                 },
             ),
-        color = Color.White.copy(alpha = 0.08f),
+        color = Color.White.copy(alpha = 0.10f),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(8.dp),
+                .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            Icon(
+                imageVector = Icons.Filled.Link,
+                contentDescription = null,
+                tint = Color.White.copy(alpha = 0.7f),
+                modifier = Modifier.size(18.dp),
+            )
             Text(
                 text = url,
                 color = Color.White.copy(alpha = 0.55f),
@@ -1285,7 +1322,8 @@ private fun StreamUrlRow(
             )
             Text(
                 text = if (copied) "Copied" else "Hold to copy",
-                color = Color.White.copy(alpha = 0.4f),
+                color = if (copied) MaterialTheme.colorScheme.primary
+                else Color.White.copy(alpha = 0.5f),
                 style = MaterialTheme.typography.labelSmall,
             )
         }
@@ -1340,3 +1378,5 @@ private fun safePosition(player: ExoPlayer?): Long {
 private fun formatSpeed(speed: Float): String =
     if (speed == speed.toInt().toFloat()) "${speed.toInt()}.0x"
     else "${speed}x"
+
+

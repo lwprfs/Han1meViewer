@@ -4,6 +4,7 @@ import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
 import com.yenaly.han1meviewer.ui.component.SiteErrorContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,13 +21,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.Button
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
@@ -44,7 +48,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -186,7 +193,7 @@ private fun SeriesDetailContent(
             item(key = "trailer") {
                 Surface(
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(18.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp),
@@ -195,15 +202,24 @@ private fun SeriesDetailContent(
                         modifier = Modifier.padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Icon(
-                            imageVector = Icons.Filled.PlayArrow,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                        Spacer(Modifier.width(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.PlayArrow,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                        }
+                        Spacer(Modifier.width(12.dp))
                         Text(
                             text = "Watch trailer",
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
                         )
                     }
                 }
@@ -216,12 +232,20 @@ private fun SeriesDetailContent(
 
         if (page.episodes.isEmpty()) {
             item(key = "episodes_empty") {
-                Text(
-                    text = "No episodes available yet.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                )
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    shape = RoundedCornerShape(18.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp),
+                ) {
+                    Text(
+                        text = "No episodes available yet.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(16.dp),
+                    )
+                }
             }
         } else {
             items(
@@ -239,14 +263,21 @@ private fun SeriesDetailContent(
             item(key = "similar_header") {
                 SeriesSectionHeader("Similar titles")
             }
-            items(
-                items = page.similar,
-                key = { sim: SimilarCard -> sim.slug },
-            ) { sim: SimilarCard ->
-                SeriesSimilarRow(
-                    card = sim,
-                    onClick = { onOpenRelatedSeries(sim.slug) },
-                )
+            item(key = "similar_row") {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    items(
+                        items = page.similar,
+                        key = { sim: SimilarCard -> sim.slug },
+                    ) { sim: SimilarCard ->
+                        SeriesSimilarRow(
+                            card = sim,
+                            onClick = { onOpenRelatedSeries(sim.slug) },
+                        )
+                    }
+                }
             }
         }
     }
@@ -259,24 +290,43 @@ private fun SeriesHeroCard(
     onGenreClick: (String) -> Unit,
     onPlayFirstEpisode: () -> Unit,
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        ),
-        shape = RoundedCornerShape(16.dp),
-    ) {
-        Column(modifier = Modifier.padding(14.dp)) {
+    val surface = MaterialTheme.colorScheme.surface
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Box(modifier = Modifier.matchParentSize()) {
+            RetryableImage(
+                model = hero.poster,
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .alpha(0.28f),
+                placeholder = painterResource(R.drawable.h_chan_loading),
+                error = painterResource(R.drawable.h_chan_load_failed),
+                contentScale = ContentScale.Crop,
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            0f to surface.copy(alpha = 0.35f),
+                            1f to surface,
+                        )
+                    ),
+            )
+        }
 
-            Row(verticalAlignment = Alignment.Top) {
-
-                Box(
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+        ) {
+            Row(verticalAlignment = Alignment.Bottom) {
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    shadowElevation = 8.dp,
                     modifier = Modifier
-                        .width(120.dp)
-                        .aspectRatio(2f / 3f)
-                        .clip(RoundedCornerShape(12.dp)),
+                        .width(124.dp)
+                        .aspectRatio(2f / 3f),
                 ) {
                     RetryableImage(
                         model = hero.poster,
@@ -288,13 +338,12 @@ private fun SeriesHeroCard(
                     )
                 }
 
-                Spacer(Modifier.width(12.dp))
+                Spacer(Modifier.width(14.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
-
                     Text(
                         text = hero.title,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         maxLines = 3,
                         overflow = TextOverflow.Ellipsis,
@@ -322,74 +371,66 @@ private fun SeriesHeroCard(
                                 imageVector = Icons.Filled.Star,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(16.dp),
+                                modifier = Modifier.size(18.dp),
                             )
+                            Spacer(Modifier.width(2.dp))
                             Text(
                                 text = "%.1f".format(rating),
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary,
                             )
-                            Spacer(Modifier.width(8.dp))
+                            Spacer(Modifier.width(10.dp))
                         }
                         val views: Long? = hero.views
                         if (views != null) {
                             Text(
                                 text = formatViewsSeries(views),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-
-                    Spacer(Modifier.height(8.dp))
-
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        onClick = onPlayFirstEpisode,
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(
-                                horizontal = 12.dp,
-                                vertical = 6.dp,
-                            ),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.PlayArrow,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                text = "Watch Ep 1",
                                 style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
                 }
             }
 
+            Spacer(Modifier.height(14.dp))
+
+            Button(
+                onClick = onPlayFirstEpisode,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.PlayArrow,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = "Watch Ep 1",
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+
             if (hero.statusChips.isNotEmpty()) {
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(12.dp))
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     for (chip: String in hero.statusChips) {
-                        AssistChip(
-                            onClick = { },
-                            label = {
-                                Text(chip, style = MaterialTheme.typography.labelSmall)
-                            },
-                            colors = AssistChipDefaults.assistChipColors(
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                labelColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                            ),
-                        )
+                        Surface(
+                            shape = RoundedCornerShape(50),
+                            color = MaterialTheme.colorScheme.secondaryContainer,
+                        ) {
+                            Text(
+                                text = chip,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            )
+                        }
                     }
                 }
             }
@@ -403,30 +444,16 @@ private fun SeriesHeroCard(
                     for (genre in hero.genres) {
                         AssistChip(
                             onClick = { onGenreClick(genre.name) },
+                            shape = RoundedCornerShape(50),
                             label = {
                                 Text(
                                     genre.name,
-                                    style = MaterialTheme.typography.labelSmall,
+                                    style = MaterialTheme.typography.labelMedium,
                                 )
                             },
                         )
                     }
                 }
-            }
-
-            if (!hero.synopsisText.isNullOrBlank()) {
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    text = "Synopsis",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = hero.synopsisText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
             }
 
             val metaItems: List<Pair<String, String>> = buildList {
@@ -443,13 +470,13 @@ private fun SeriesHeroCard(
                 ) {
                     for (pair in metaItems) {
                         Surface(
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RoundedCornerShape(14.dp),
                             color = MaterialTheme.colorScheme.surfaceContainerHigh,
                         ) {
                             Column(
                                 modifier = Modifier.padding(
-                                    horizontal = 10.dp,
-                                    vertical = 6.dp,
+                                    horizontal = 12.dp,
+                                    vertical = 8.dp,
                                 ),
                             ) {
                                 Text(
@@ -459,11 +486,33 @@ private fun SeriesHeroCard(
                                 )
                                 Text(
                                     text = pair.second,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontWeight = FontWeight.Medium,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold,
                                 )
                             }
                         }
+                    }
+                }
+            }
+
+            if (!hero.synopsisText.isNullOrBlank()) {
+                Spacer(Modifier.height(14.dp))
+                Surface(
+                    shape = RoundedCornerShape(18.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Text(
+                            text = "Synopsis",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = hero.synopsisText,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             }
@@ -473,12 +522,24 @@ private fun SeriesHeroCard(
 
 @Composable
 private fun SeriesSectionHeader(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-    )
+    Row(
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .width(4.dp)
+                .height(18.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(MaterialTheme.colorScheme.primary),
+        )
+        Spacer(Modifier.width(10.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+        )
+    }
 }
 
 @Composable
@@ -488,22 +549,23 @@ private fun SeriesCastRow(
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerLow,
-        shape = RoundedCornerShape(10.dp),
+        shape = RoundedCornerShape(16.dp),
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 3.dp),
     ) {
-        Column(modifier = Modifier.padding(10.dp)) {
+        Column(modifier = Modifier.padding(14.dp)) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.primary,
             )
             Spacer(Modifier.height(4.dp))
             for (pair in members) {
                 Text(
                     text = pair.first,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyMedium,
                 )
             }
         }
@@ -517,10 +579,10 @@ private fun SeriesEpisodeRow(
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerLow,
-        shape = RoundedCornerShape(10.dp),
+        shape = RoundedCornerShape(16.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 3.dp),
+            .padding(horizontal = 12.dp, vertical = 4.dp),
         onClick = onClick,
     ) {
         Row(
@@ -529,9 +591,9 @@ private fun SeriesEpisodeRow(
         ) {
             Box(
                 modifier = Modifier
-                    .width(72.dp)
+                    .width(112.dp)
                     .aspectRatio(16f / 9f)
-                    .clip(RoundedCornerShape(8.dp)),
+                    .clip(RoundedCornerShape(12.dp)),
             ) {
                 RetryableImage(
                     model = episode.thumb,
@@ -541,23 +603,46 @@ private fun SeriesEpisodeRow(
                     error = painterResource(R.drawable.h_chan_load_failed),
                     contentScale = ContentScale.Crop,
                 )
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(30.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.55f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.PlayArrow,
+                        contentDescription = "Play",
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
             }
 
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = episode.episodeNumber
-                        ?.let { n: Float -> "EP ${n.toInt()}" }
-                        ?: "EP",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                )
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                ) {
+                    Text(
+                        text = episode.episodeNumber
+                            ?.let { n: Float -> "EP ${n.toInt()}" }
+                            ?: "EP",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
                 Text(
                     text = episode.title,
                     style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 1,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
                 val date: String? = episode.date
@@ -569,13 +654,6 @@ private fun SeriesEpisodeRow(
                     )
                 }
             }
-
-            Icon(
-                imageVector = Icons.Filled.PlayArrow,
-                contentDescription = "Play",
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(24.dp),
-            )
         }
     }
 }
@@ -585,71 +663,60 @@ private fun SeriesSimilarRow(
     card: SimilarCard,
     onClick: () -> Unit,
 ) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        shape = RoundedCornerShape(10.dp),
+    Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 3.dp),
-        onClick = onClick,
+            .width(120.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .clickable(onClick = onClick),
     ) {
-        Row(
-            modifier = Modifier.padding(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(2f / 3f)
+                .clip(RoundedCornerShape(14.dp)),
         ) {
-            Box(
-                modifier = Modifier
-                    .width(56.dp)
-                    .aspectRatio(2f / 3f)
-                    .clip(RoundedCornerShape(8.dp)),
-            ) {
-                RetryableImage(
-                    model = card.poster,
-                    contentDescription = card.name,
-                    modifier = Modifier.fillMaxSize(),
-                    placeholder = painterResource(R.drawable.h_chan_loading),
-                    error = painterResource(R.drawable.h_chan_load_failed),
-                    contentScale = ContentScale.Crop,
-                )
-            }
-            Spacer(Modifier.width(10.dp))
-            Column(modifier = Modifier.weight(1f)) {
+            RetryableImage(
+                model = card.poster,
+                contentDescription = card.name,
+                modifier = Modifier.fillMaxSize(),
+                placeholder = painterResource(R.drawable.h_chan_loading),
+                error = painterResource(R.drawable.h_chan_load_failed),
+                contentScale = ContentScale.Crop,
+            )
+            val rating: Double? = card.rating
+            if (rating != null) {
                 Text(
-                    text = card.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
+                    text = "★ %.1f".format(rating),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(6.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color.Black.copy(alpha = 0.65f))
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
                 )
-                Row {
-                    val rating: Double? = card.rating
-                    if (rating != null) {
-                        Text(
-                            text = "★ %.1f".format(rating),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                        Spacer(Modifier.width(8.dp))
-                    }
-                    val year: Int? = card.year
-                    if (year != null) {
-                        Text(
-                            text = year.toString(),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(Modifier.width(8.dp))
-                    }
-                    val episodeCount: Int? = card.episodeCount
-                    if (episodeCount != null) {
-                        Text(
-                            text = "$episodeCount eps",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
             }
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = card.name,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Medium,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        val meta = buildList {
+            card.year?.let { add(it.toString()) }
+            card.episodeCount?.let { add("$it eps") }
+        }.joinToString(" · ")
+        if (meta.isNotBlank()) {
+            Text(
+                text = meta,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -660,3 +727,5 @@ private fun formatViewsSeries(views: Long): String = when {
     views >= 1_000 -> "%.1fK views".format(views / 1_000.0)
     else -> "$views views"
 }
+
+

@@ -12,6 +12,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.ChatBubbleOutline
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.SearchOff
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -202,15 +211,25 @@ fun FapFolderPostDetailScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(horizontal = 12.dp, vertical = 4.dp),
-                                    shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+                                    shape = RoundedCornerShape(16.dp),
                                     color = MaterialTheme.colorScheme.errorContainer,
                                 ) {
-                                    Text(
-                                        text = uiState.commentPostError ?: "",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onErrorContainer,
-                                        modifier = Modifier.padding(10.dp),
-                                    )
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.ErrorOutline,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onErrorContainer,
+                                        )
+                                        Text(
+                                            text = uiState.commentPostError ?: "",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onErrorContainer,
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -224,8 +243,18 @@ fun FapFolderPostDetailScreen(
                                         .fillMaxWidth()
                                         .padding(horizontal = 12.dp, vertical = 4.dp),
                                 ) {
-                                    FilledTonalButton(onClick = { onOpenAlbum(albumId) }) {
-                                        Text("Open album")
+                                    FilledTonalButton(
+                                        onClick = { onOpenAlbum(albumId) },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(16.dp),
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.PhotoLibrary,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("Open album", fontWeight = FontWeight.SemiBold)
                                     }
                                 }
                             }
@@ -240,15 +269,30 @@ fun FapFolderPostDetailScreen(
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 ) {
                                     Text(
-                                        text = "Comments (${post.commentCount})",
+                                        text = "Comments",
                                         style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        modifier = Modifier.weight(1f),
+                                        fontWeight = FontWeight.Bold,
                                     )
+                                    Surface(
+                                        shape = RoundedCornerShape(50),
+                                        color = MaterialTheme.colorScheme.secondaryContainer,
+                                    ) {
+                                        Text(
+                                            text = "${post.commentCount}",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                            modifier = Modifier.padding(
+                                                horizontal = 10.dp,
+                                                vertical = 2.dp,
+                                            ),
+                                        )
+                                    }
                                 }
-                                Spacer(Modifier.height(6.dp))
+                                Spacer(Modifier.height(10.dp))
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     CommentFilterChip(
                                         label = "Recent",
@@ -316,11 +360,22 @@ fun FapFolderPostDetailScreen(
                                             .padding(vertical = 16.dp),
                                         contentAlignment = Alignment.Center,
                                     ) {
-                                        Text(
-                                            text = "No comments yet",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.ChatBubbleOutline,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.outline,
+                                                modifier = Modifier.size(32.dp),
+                                            )
+                                            Text(
+                                                text = "No comments yet",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -424,6 +479,7 @@ private fun CommentFilterChip(
         selected = selected,
         onClick = onClick,
         label = { Text(label, style = MaterialTheme.typography.labelMedium) },
+        shape = RoundedCornerShape(50),
         colors = FilterChipDefaults.filterChipColors(
             selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
             selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -437,9 +493,21 @@ private fun LoadingBlock(message: String) {
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            CircularProgressIndicator()
-            Spacer(Modifier.height(8.dp))
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .padding(18.dp)
+                        .size(32.dp),
+                    strokeWidth = 3.dp,
+                )
+            }
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium,
@@ -457,20 +525,44 @@ private fun ErrorBlock(title: String, message: String, onRetry: () -> Unit) {
             .padding(24.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.errorContainer,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ErrorOutline,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .size(32.dp),
+                )
+            }
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.error,
+                fontWeight = FontWeight.SemiBold,
             )
-            Spacer(Modifier.height(4.dp))
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
             )
-            Spacer(Modifier.height(12.dp))
-            androidx.compose.material3.TextButton(onClick = onRetry) { Text("Retry") }
+            Spacer(Modifier.height(4.dp))
+            FilledTonalButton(onClick = onRetry, shape = RoundedCornerShape(14.dp)) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text("Retry")
+            }
         }
     }
 }
@@ -483,10 +575,21 @@ private fun EmptyBlock(hint: String) {
             .padding(24.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = hint,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Default.SearchOff,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.outline,
+                modifier = Modifier.size(40.dp),
+            )
+            Text(
+                text = hint,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }

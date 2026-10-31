@@ -11,7 +11,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Surface
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -109,7 +118,19 @@ fun FapFolderFollowedCommunitiesScreen(
                 uiState.isLoading && uiState.items.isEmpty() -> Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
-                ) { CircularProgressIndicator() }
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        CircularProgressIndicator(strokeWidth = 3.dp)
+                        Text(
+                            text = "Loading your communities…",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
 
                 uiState.errorMessage != null && uiState.items.isEmpty() -> {
                     Box(
@@ -118,20 +139,45 @@ fun FapFolderFollowedCommunitiesScreen(
                             .padding(24.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.errorContainer,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ErrorOutline,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                                    modifier = Modifier
+                                        .padding(16.dp)
+                                        .size(32.dp),
+                                )
+                            }
                             Text(
                                 text = "Failed to load",
                                 style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.error,
+                                fontWeight = FontWeight.SemiBold,
                             )
-                            Spacer(Modifier.height(4.dp))
                             Text(
                                 text = uiState.errorMessage ?: "",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
                             )
-                            Spacer(Modifier.height(12.dp))
-                            TextButton(onClick = { viewModel.refresh() }) {
+                            Spacer(Modifier.height(4.dp))
+                            FilledTonalButton(
+                                onClick = { viewModel.refresh() },
+                                shape = RoundedCornerShape(14.dp),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Spacer(Modifier.width(8.dp))
                                 Text("Retry")
                             }
                         }
@@ -144,11 +190,35 @@ fun FapFolderFollowedCommunitiesScreen(
                         .padding(24.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        text = "You have not followed any communities yet.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.secondaryContainer,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Groups,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier
+                                    .padding(20.dp)
+                                    .size(36.dp),
+                            )
+                        }
+                        Text(
+                            text = "No communities yet",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            text = "You have not followed any communities yet.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
                 }
 
                 else -> {
@@ -163,6 +233,37 @@ fun FapFolderFollowedCommunitiesScreen(
                         ),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
+                        item(key = "__followed_header__") {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 6.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Text(
+                                    text = "Communities you follow",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Surface(
+                                    shape = RoundedCornerShape(50),
+                                    color = MaterialTheme.colorScheme.secondaryContainer,
+                                ) {
+                                    Text(
+                                        text = "${uiState.items.size}",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                        modifier = Modifier.padding(
+                                            horizontal = 10.dp,
+                                            vertical = 2.dp,
+                                        ),
+                                    )
+                                }
+                            }
+                        }
                         items(
                             items = uiState.items,
                             key = { "followed_${it.groupId ?: it.slug}" },
@@ -197,3 +298,5 @@ fun FapFolderFollowedCommunitiesScreen(
         }
     }
 }
+
+

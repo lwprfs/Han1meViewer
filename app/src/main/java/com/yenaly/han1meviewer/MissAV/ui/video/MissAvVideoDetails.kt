@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -40,14 +43,96 @@ fun MissAvVideoDetails(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         if (!info.title.isNullOrBlank()) {
             Text(
                 text = info.title,
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+
+        if (!info.jpTitle.isNullOrBlank()) {
+            Text(
+                text = info.jpTitle.orEmpty(),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        if (code.isNotBlank()) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                val (bgColor, textColor) = when (extra?.uppercase()) {
+                    "UNCENSORED-LEAK" -> Pair(Color(0xFFC62828), Color.White)
+                    "ENGLISH-SUBTITLE" -> Pair(Color(0xFF1565C0), Color.White)
+                    "CHINESE-SUBTITLE" -> Pair(Color(0xFF0277BD), Color.White)
+                    else -> Pair(
+                        MaterialTheme.colorScheme.primaryContainer,
+                        MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                }
+                Surface(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .combinedClickable(
+                            onClick = { onNavigateToSearch(lowercaseCode) },
+                            onLongClick = {
+                                MissAvVideoUtils.copyToClipboard(context, "Code", lowercaseCode)
+                            }
+                        ),
+                    shape = RoundedCornerShape(50),
+                    color = bgColor,
+                    contentColor = textColor
+                ) {
+                    Text(
+                        text = lowercaseCode.uppercase(),
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                if (extra != null) {
+                    Surface(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .clickable { onNavigateToSearch(extra.lowercase()) },
+                        shape = RoundedCornerShape(50),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    ) {
+                        Text(
+                            text = extra.lowercase(),
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
+                }
+                if (releaseDate != null) {
+                    Surface(
+                        shape = RoundedCornerShape(50),
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    ) {
+                        Text(
+                            text = releaseDate,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            }
+        } else if (releaseDate != null) {
+            Text(
+                text = "Release date: $releaseDate",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary
             )
         }
 
@@ -60,83 +145,17 @@ fun MissAvVideoDetails(
             cleanDescription = cleanDescription.trim()
 
             if (cleanDescription.isNotBlank()) {
-                Text(
-                    text = cleanDescription,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-        }
-
-        if (releaseDate != null) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Release date:",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = releaseDate,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-        }
-
-        if (code.isNotBlank()) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Code:",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                val (bgColor, textColor) = when (extra?.uppercase()) {
-                    "UNCENSORED-LEAK" -> Pair(Color.Red, Color.Black)
-                    "ENGLISH-SUBTITLE" -> Pair(Color.Blue, Color.Black)
-                    "CHINESE-SUBTITLE" -> Pair(Color(0xFF2196F3), Color.Black)
-                    else -> Pair(Color.Green, Color.Black)
-                }
                 Surface(
-                    modifier = Modifier
-                        .combinedClickable(
-                            onClick = { onNavigateToSearch(lowercaseCode) },
-                            onLongClick = {
-                                MissAvVideoUtils.copyToClipboard(context, "Code", lowercaseCode)
-                            }
-                        ),
-                    shape = RoundedCornerShape(4.dp),
-                    color = bgColor,
-                    contentColor = textColor
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
                 ) {
                     Text(
-                        text = lowercaseCode,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        text = cleanDescription,
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(14.dp),
                     )
-                }
-                if (extra != null) {
-                    Surface(
-                        modifier = Modifier.clickable { onNavigateToSearch(extra.lowercase()) },
-                        shape = RoundedCornerShape(4.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    ) {
-                        Text(
-                            text = extra.lowercase(),
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
                 }
             }
         }
@@ -149,48 +168,59 @@ fun MissAvVideoDetails(
         ).filter { it.second.isNullOrBlank().not() }
 
         if (infoItems.isNotEmpty()) {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
             ) {
-                infoItems.forEach { (label, value) ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "$label:",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        val (bgColor, textColor) = when (label) {
-                            "Series" -> Pair(Color(0xFF4A148C), Color.White)
-                            "Actresses" -> Pair(Color(0xFF00695C), Color.White)
-                            else -> Pair(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        val modifier = if (label == "Series") {
-                            Modifier.combinedClickable(
-                                onClick = { onNavigateToSearch(value?.lowercase() ?: "") },
-                                onLongClick = {
-                                    MissAvVideoUtils.copyToClipboard(context, label, value?.lowercase() ?: "")
-                                }
-                            )
-                        } else {
-                            Modifier.clickable { onNavigateToSearch(value?.lowercase() ?: "") }
-                        }
-                        Surface(
-                            modifier = modifier,
-                            shape = RoundedCornerShape(4.dp),
-                            color = bgColor,
-                            contentColor = textColor
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    infoItems.forEach { (label, value) ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = value?.lowercase() ?: "",
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                style = MaterialTheme.typography.bodyMedium,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                text = label,
+                                modifier = Modifier.widthIn(min = 72.dp),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                            val (bgColor, textColor) = when (label) {
+                                "Series" -> Pair(Color(0xFF4A148C), Color.White)
+                                "Actresses" -> Pair(Color(0xFF00695C), Color.White)
+                                else -> Pair(
+                                    MaterialTheme.colorScheme.surfaceContainerHighest,
+                                    MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
+                            val chipModifier = if (label == "Series") {
+                                Modifier.combinedClickable(
+                                    onClick = { onNavigateToSearch(value?.lowercase() ?: "") },
+                                    onLongClick = {
+                                        MissAvVideoUtils.copyToClipboard(context, label, value?.lowercase() ?: "")
+                                    }
+                                )
+                            } else {
+                                Modifier.clickable { onNavigateToSearch(value?.lowercase() ?: "") }
+                            }
+                            Surface(
+                                modifier = chipModifier.clip(RoundedCornerShape(50)),
+                                shape = RoundedCornerShape(50),
+                                color = bgColor,
+                                contentColor = textColor
+                            ) {
+                                Text(
+                                    text = value?.lowercase() ?: "",
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         }
                     }
                 }
@@ -215,20 +245,21 @@ fun MissAvVideoDetails(
                         genreList.forEach { genre ->
                             Surface(
                                 modifier = Modifier
+                                    .clip(RoundedCornerShape(50))
                                     .combinedClickable(
                                         onClick = { onNavigateToSearch(genre) },
                                         onLongClick = {
                                             MissAvVideoUtils.copyToClipboard(context, "Genre", genre)
                                         }
                                     ),
-                                shape = RoundedCornerShape(4.dp),
+                                shape = RoundedCornerShape(50),
                                 color = MaterialTheme.colorScheme.secondaryContainer,
                                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer
                             ) {
                                 Text(
                                     text = genre,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                    style = MaterialTheme.typography.bodyMedium
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    style = MaterialTheme.typography.labelLarge
                                 )
                             }
                         }
@@ -241,14 +272,5 @@ fun MissAvVideoDetails(
             videoCode = lowercaseCode,
             onSubtitleDownloaded = onSubtitleDownloaded
         )
-
-        if (!info.jpTitle.isNullOrBlank()) {
-            Text(
-                text = "Title: ${info.jpTitle}",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        }
     }
 }

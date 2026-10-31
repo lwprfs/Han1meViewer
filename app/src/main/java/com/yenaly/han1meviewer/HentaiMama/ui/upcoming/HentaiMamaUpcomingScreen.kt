@@ -94,16 +94,7 @@ fun HentaiMamaUpcomingScreen(
     }
 
     if (!settingsReady) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = "Loading…",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+        SiteLoadingContent()
         return
     }
 
@@ -287,14 +278,21 @@ private fun DateHeader(label: String, count: Int) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 8.dp),
+            .padding(top = 10.dp),
         color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f),
-        shape = RoundedCornerShape(10.dp),
+        shape = RoundedCornerShape(16.dp),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            Icon(
+                imageVector = Icons.Filled.CalendarMonth,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.size(18.dp),
+            )
             Text(
                 text = label,
                 style = MaterialTheme.typography.titleSmall,
@@ -302,11 +300,18 @@ private fun DateHeader(label: String, count: Int) {
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                 modifier = Modifier.weight(1f),
             )
-            Text(
-                text = "$count",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-            )
+            Surface(
+                shape = RoundedCornerShape(50),
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.12f),
+            ) {
+                Text(
+                    text = "$count",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
+                )
+            }
         }
     }
 }
@@ -518,3 +523,5 @@ private fun MonthPickerDialog(
 
 private fun formatRating(value: Double): String =
     if (value % 1.0 == 0.0) value.toInt().toString() else "%.1f".format(value)
+
+

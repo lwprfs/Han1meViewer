@@ -5,6 +5,11 @@ import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
 import com.yenaly.han1meviewer.ui.component.SiteErrorContent
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.filled.History
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -223,29 +228,42 @@ fun OnAirVideoScreen(
 
                     if (showResumeBanner) {
                         Surface(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            shape = RoundedCornerShape(18.dp),
                             color = MaterialTheme.colorScheme.secondaryContainer,
                         ) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                    .padding(start = 14.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
                                 verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
                             ) {
+                                Icon(
+                                    imageVector = Icons.Default.History,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                )
                                 Text(
                                     text = "Resume from ${formatMillis(resumePosition)}?",
                                     modifier = Modifier.weight(1f),
                                     style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium,
                                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                                 )
                                 TextButton(onClick = {
-                                    viewModel.applyResume()
-                                    viewModel.startPlayback()
-                                }) { Text("Resume") }
-                                TextButton(onClick = {
                                     viewModel.startFromBeginning()
                                     viewModel.startPlayback()
-                                }) { Text("Start Over") }
+                                }) { Text("Restart") }
+                                FilledTonalButton(
+                                    onClick = {
+                                        viewModel.applyResume()
+                                        viewModel.startPlayback()
+                                    },
+                                    shape = RoundedCornerShape(50),
+                                ) { Text("Resume") }
                             }
                         }
                     }
@@ -278,57 +296,83 @@ private fun VideoDetailContent(
                 text = detail.title,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 8.dp),
             )
         }
 
         item(key = "uploader") {
-            Row(
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
             ) {
-                Surface(
-                    shape = RoundedCornerShape(50),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    modifier = Modifier.size(32.dp),
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(enabled = detail.uploaderName != null) {
+                            val path = detail.uploaderUrl?.trimEnd('/')?.substringAfterLast('/')
+                            if (!path.isNullOrBlank()) onOpenUser(path)
+                        }
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center,
+                    ) {
                         Text(
                             text = detail.uploaderName?.firstOrNull()?.uppercase() ?: "?",
-                            style = MaterialTheme.typography.labelMedium,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
                         )
                     }
-                }
-                Spacer(Modifier.width(8.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    detail.uploaderName?.let { name ->
-                        Text(
-                            text = name,
-                            style = MaterialTheme.typography.titleSmall,
-                            modifier = Modifier.clickable {
-                                val path = detail.uploaderUrl?.trimEnd('/')?.substringAfterLast('/')
-                                if (!path.isNullOrBlank()) onOpenUser(path)
-                            },
-                        )
+                    Column(modifier = Modifier.weight(1f)) {
+                        detail.uploaderName?.let { name ->
+                            Text(
+                                text = name,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        val meta = buildList {
+                            detail.viewsRaw?.let { add(it) }
+                            detail.duration?.let { add(it) }
+                            detail.fileSize?.let { add(it) }
+                        }.joinToString(" · ")
+                        if (meta.isNotBlank()) {
+                            Text(
+                                text = meta,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
-                    val meta = buildList {
-                        detail.viewsRaw?.let { add(it) }
-                        detail.duration?.let { add(it) }
-                        detail.fileSize?.let { add(it) }
-                    }.joinToString(" · ")
-                    if (meta.isNotBlank()) {
-                        Text(
-                            text = meta,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-                detail.favoriteCount?.let {
-                    FilledTonalButton(onClick = {}) {
-                        Text("☆ $it")
+                    detail.favoriteCount?.let {
+                        FilledTonalButton(
+                            onClick = {},
+                            shape = RoundedCornerShape(50),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                                horizontal = 14.dp,
+                                vertical = 6.dp,
+                            ),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.StarBorder,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text("$it", fontWeight = FontWeight.SemiBold)
+                        }
                     }
                 }
             }
@@ -339,22 +383,47 @@ private fun VideoDetailContent(
                 FlowRow(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     detail.tags.forEach { tag: OnAirVideoTag ->
                         Surface(
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RoundedCornerShape(50),
                             color = MaterialTheme.colorScheme.secondaryContainer,
                             onClick = { onOpenTag(tag.name) },
                         ) {
-                            Text(
-                                text = "${tag.name} ${tag.score}",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                            )
+                            Row(
+                                modifier = Modifier.padding(
+                                    start = 12.dp,
+                                    end = 6.dp,
+                                    top = 5.dp,
+                                    bottom = 5.dp,
+                                ),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
+                                Text(
+                                    text = tag.name,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                )
+                                Surface(
+                                    shape = RoundedCornerShape(50),
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                        .copy(alpha = 0.12f),
+                                ) {
+                                    Text(
+                                        text = "${tag.score}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                        modifier = Modifier.padding(
+                                            horizontal = 7.dp,
+                                            vertical = 1.dp,
+                                        ),
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -367,7 +436,7 @@ private fun VideoDetailContent(
                     text = "More videos",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 6.dp),
                 )
             }
             items(detail.recommendedVideos.size, key = { i -> "rec_$i" }) { idx ->
@@ -377,11 +446,13 @@ private fun VideoDetailContent(
                         .fillMaxWidth()
                         .clickable { onOpenVideo(rec.videoId) }
                         .padding(horizontal = 16.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.Top,
                 ) {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.size(width = 120.dp, height = 68.dp),
+                    Box(
+                        modifier = Modifier
+                            .size(width = 140.dp, height = 80.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
                     ) {
                         AsyncImage(
                             model = rec.thumbUrl,
@@ -389,29 +460,37 @@ private fun VideoDetailContent(
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize(),
                         )
+                        rec.duration?.let {
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White,
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(6.dp)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(Color.Black.copy(alpha = 0.72f))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                            )
+                        }
                     }
-                    Spacer(Modifier.width(10.dp))
+                    Spacer(Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = rec.title,
                             style = MaterialTheme.typography.bodyMedium,
-                            maxLines = 2,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 3,
                             overflow = TextOverflow.Ellipsis,
                         )
                         rec.uploaderName?.let {
                             Text(
                                 text = it,
-                                style = MaterialTheme.typography.labelSmall,
+                                style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 4.dp),
                             )
                         }
-                    }
-                    rec.duration?.let {
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
                     }
                 }
             }
@@ -426,3 +505,5 @@ private fun formatMillis(ms: Long): String {
     val s = total % 60
     return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
 }
+
+

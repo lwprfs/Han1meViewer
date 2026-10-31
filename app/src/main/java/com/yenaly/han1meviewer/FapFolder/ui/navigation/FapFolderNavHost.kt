@@ -1,6 +1,31 @@
 package com.yenaly.han1meviewer.FapFolder.ui.navigation
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -396,6 +421,8 @@ fun FapFolderNavHost(
     }
 }
 
+private val FapAccent = Color(0xFFD81B60)
+
 @Composable
 private fun GatePlaceholder(message: String) {
     Box(
@@ -404,13 +431,41 @@ private fun GatePlaceholder(message: String) {
             .padding(24.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text = "FapFolder", style = MaterialTheme.typography.headlineMedium)
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(84.dp)
+                    .clip(CircleShape)
+                    .background(FapAccent.copy(alpha = 0.14f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(40.dp),
+                    strokeWidth = 4.dp,
+                    color = FapAccent,
+                )
+            }
+            Text(
+                text = "FapFolder",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+            )
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 8.dp),
+                textAlign = TextAlign.Center,
+            )
+            LinearProgressIndicator(
+                modifier = Modifier
+                    .width(180.dp)
+                    .clip(RoundedCornerShape(50)),
+                color = FapAccent,
+                trackColor = FapAccent.copy(alpha = 0.18f),
             )
         }
     }
@@ -497,31 +552,105 @@ private fun GateErrorScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = 32.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text = "FapFolder", style = MaterialTheme.typography.headlineMedium)
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(84.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.errorContainer),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.size(40.dp),
+                )
+            }
             Text(
-                text = state.reason,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 8.dp),
+                text = "FapFolder",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = FapAccent,
             )
+            Text(
+                text = when {
+                    state.suggestRelogin -> "Session expired"
+                    state.suggestWait -> "Please wait a moment"
+                    state.suggestSwitchSite -> "Site unavailable"
+                    else -> "FapFolder is not ready"
+                },
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+            )
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surfaceContainer,
+            ) {
+                Text(
+                    text = state.reason,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(16.dp),
+                )
+            }
+
+            if (state.suggestRelogin) {
+                Button(
+                    onClick = onOpenLogin,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                ) { GateButtonLabel(Icons.AutoMirrored.Filled.Login, "Sign in") }
+                FilledTonalButton(
+                    onClick = onRetry,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                ) { GateButtonLabel(Icons.Default.Refresh, "Retry") }
+            } else {
+                Button(
+                    onClick = onRetry,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                ) { GateButtonLabel(Icons.Default.Refresh, if (state.suggestWait) "Retry later" else "Retry") }
+            }
+
             Row(
-                modifier = Modifier.padding(top = 16.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                TextButton(onClick = onRetry) { Text("Retry") }
-                TextButton(onClick = onOpenCookies) { Text("Cookies") }
-                TextButton(onClick = onOpenSettings) { Text("Settings") }
-                if (state.suggestRelogin) {
-                    TextButton(onClick = onOpenLogin) { Text("Sign in") }
-                }
-                TextButton(onClick = onSwitchSite) { Text("Switch site") }
+                OutlinedButton(
+                    onClick = onOpenCookies,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(14.dp),
+                ) { GateButtonLabel(Icons.Default.Cookie, "Cookies") }
+                OutlinedButton(
+                    onClick = onSwitchSite,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(14.dp),
+                ) { GateButtonLabel(Icons.Default.SwapHoriz, "Switch site") }
+            }
+            TextButton(onClick = onOpenSettings) {
+                GateButtonLabel(Icons.Default.Settings, "Settings")
             }
         }
     }
+}
+
+@Composable
+private fun GateButtonLabel(icon: ImageVector, text: String) {
+    Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+    Spacer(Modifier.width(8.dp))
+    Text(text, fontWeight = FontWeight.SemiBold, maxLines = 1)
 }
 
 private fun fapFolderHubEntries(
@@ -597,3 +726,5 @@ private fun fapFolderHubEntries(
         )
     }
 }
+
+
