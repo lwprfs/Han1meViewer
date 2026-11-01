@@ -149,18 +149,20 @@ fun FapFolderHomeScreen(
             SiteSearchTopBar(
                 hint = "Search FapFolder",
                 onSearchClick = { onOpenSearch(null) },
-                leading = { SiteSwitchButton(onClick = onSwitchSite) },
+                leading = {
+                    SiteBarIconButton(
+                        imageVector = Icons.Default.Menu,
+                        contentDescription = "Menu",
+                        onClick = onOpenSettings,
+                    )
+                },
                 actions = {
                     SiteBarIconButton(
                         imageVector = Icons.Default.History,
                         contentDescription = stringResource(R.string.watch_history),
                         onClick = onOpenHistory,
                     )
-                    SiteBarIconButton(
-                        imageVector = Icons.Default.Menu,
-                        contentDescription = "Menu",
-                        onClick = onOpenSettings,
-                    )
+                    SiteSwitchButton(onClick = onSwitchSite)
                 },
             )
         },

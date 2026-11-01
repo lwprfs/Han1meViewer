@@ -172,66 +172,68 @@ fun siteDrawerEntries(site: SiteType, loggedIn: Boolean): List<SiteDrawerEntry> 
     val home = SiteDrawerEntry("Home", R.drawable.ic_baseline_home_24) {
         NavigationManager.navigateToHome()
     }
-    val checkIn = SiteDrawerEntry("Did you cum?", R.drawable.ic_baseline_thumb_up_alt_24) {
+    val checkIn = SiteDrawerEntry("Did you cum?", R.drawable.ic_baseline_check_circle_24) {
         it.navigateSafely(DailyCheckInRoute)
     }
-    val history = R.drawable.ic_baseline_history_24
-    val list = R.drawable.ic_baseline_list_24
-    val settings = R.drawable.ic_baseline_settings_24
+    val history = entryIcon(R.drawable.ic_baseline_history_24)
     return when (site) {
         SiteType.MISSAV -> listOf(
             home,
             checkIn,
             entry("History", history, MissAvHistoryRoute),
-            entry("Home categories", list, MissAvHomeCategoriesRoute),
-            entry("Host / Mirror", settings, MissAvHostSettingsRoute),
+            entry("Home categories", R.drawable.baseline_grid_24, MissAvHomeCategoriesRoute),
+            entry("Host / Mirror", R.drawable.baseline_domain_24, MissAvHostSettingsRoute),
         )
 
         SiteType.HENTAIMAMA -> listOf(
             home,
             checkIn,
             entry("History", history, HentaiMamaHistoryRoute),
-            entry("Playlists", list, HentaiMamaPlaylistsRoute),
-            entry("Recent episodes", list, HentaiMamaRecentEpisodesRoute),
-            entry("Upcoming", list, HentaiMamaUpcomingRoute),
-            entry("Video & card size", settings, HentaiMamaVideoSettingsRoute(target = "all")),
-            entry("Home categories", list, HentaiMamaHomeSettingsRoute),
+            entry("Playlists", R.drawable.baseline_format_list_bulleted_24, HentaiMamaPlaylistsRoute),
+            entry("Recent episodes", R.drawable.ic_baseline_update_24, HentaiMamaRecentEpisodesRoute),
+            entry("Upcoming", R.drawable.ic_baseline_access_time_24, HentaiMamaUpcomingRoute),
+            entry("Video & card size", R.drawable.ic_video_quilty, HentaiMamaVideoSettingsRoute(target = "all")),
+            entry("Home categories", R.drawable.baseline_grid_24, HentaiMamaHomeSettingsRoute),
         )
 
         SiteType.ONAIR -> buildList {
             add(home)
             add(checkIn)
             add(entry("History", history, OnAirHistoryRoute))
-            add(entry("Cookies & sign in", settings, OnAirCookieRoute))
-            if (loggedIn) add(entry("Account, host & session", settings, OnAirAccountSettingsRoute))
-            add(entry("Tags", list, OnAirTagsIndexRoute))
-            add(entry("Announcements", list, OnAirAnnouncementsRoute))
-            add(entry("Chat", list, OnAirChatRoute))
-            add(entry("Pictures", list, OnAirPicturesRoute))
+            add(entry("Cookies & sign in", R.drawable.ic_baseline_cookie_24, OnAirCookieRoute))
+            if (loggedIn) {
+                add(entry("Account, host & session", R.drawable.ic_baseline_person_24, OnAirAccountSettingsRoute))
+            }
+            add(entry("Tags", R.drawable.baseline_flag_24, OnAirTagsIndexRoute))
+            add(entry("Announcements", R.drawable.ic_baseline_newspaper_24, OnAirAnnouncementsRoute))
+            add(entry("Chat", R.drawable.baseline_forum_24, OnAirChatRoute))
+            add(entry("Pictures", R.drawable.ic_baseline_image_24, OnAirPicturesRoute))
         }
 
         SiteType.FAPFOLDER -> buildList {
             add(home)
             add(checkIn)
             add(entry("History", history, FapFolderHistoryRoute))
-            add(entry("Cookies", settings, FapFolderCookiesRoute))
-            if (!loggedIn) add(entry("Sign in", settings, FapFolderLoginRoute))
-            add(entry("Search", list, FapFolderSearchRoute()))
-            add(entry("Search history", history, FapFolderSearchHistoryRoute))
-            add(entry("Followed communities", list, FapFolderFollowedCommunitiesRoute))
-            add(entry("Saved", list, FapFolderSavedRoute))
+            add(entry("Cookies", R.drawable.ic_baseline_cookie_24, FapFolderCookiesRoute))
+            if (!loggedIn) add(entry("Sign in", R.drawable.ic_baseline_unlock_24, FapFolderLoginRoute))
+            add(entry("Search", R.drawable.ic_baseline_search_24, FapFolderSearchRoute()))
+            add(entry("Search history", R.drawable.baseline_restore_24, FapFolderSearchHistoryRoute))
+            add(entry("Followed communities", R.drawable.ic_subscribtion, FapFolderFollowedCommunitiesRoute))
+            add(entry("Saved", R.drawable.ic_baseline_favorite_border_24, FapFolderSavedRoute))
         }
 
         SiteType.HANIME, SiteType.JAVCHU -> emptyList()
     }
 }
 
+private fun entryIcon(res: Int): Int = res
+
 /** In-app settings shared by all sites (same ones the Hanime drawer links to). */
 private fun appEntries(): List<SiteDrawerEntry> = listOf(
     entry("Settings", R.drawable.ic_baseline_settings_24, HomeSettingsRoute),
-    entry("Player settings", R.drawable.ic_baseline_settings_24, PlayerSettingsRoute),
-    entry("Network settings", R.drawable.ic_baseline_settings_24, NetworkSettingsRoute),
-    entry("Watch history (all sites)", R.drawable.ic_baseline_history_24, UnifiedHistoryRoute),
+    entry("Player settings", R.drawable.baseline_player_24, PlayerSettingsRoute),
+    entry("Network settings", R.drawable.baseline_mobile_data_24, NetworkSettingsRoute),
+    entry("Watch history (all sites)", R.drawable.ic_baseline_watch_later_24, UnifiedHistoryRoute),
 )
 
 @Composable

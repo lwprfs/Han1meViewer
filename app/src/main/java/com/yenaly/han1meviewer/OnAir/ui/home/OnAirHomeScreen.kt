@@ -134,17 +134,18 @@ fun OnAirHomeScreen(
             SiteSearchTopBar(
                 hint = "Search OnAir",
                 onSearchClick = { onOpenSearch(null) },
-                leading = { SiteSwitchButton(onClick = onSwitchSite) },
+                leading = {
+                    SiteBarIconButton(
+                        imageVector = Icons.Default.Menu,
+                        contentDescription = "Menu",
+                        onClick = onOpenSettings,
+                    )
+                },
                 actions = {
                     SiteBarIconButton(
                         imageVector = Icons.Default.History,
                         contentDescription = "History",
                         onClick = onOpenHistory,
-                    )
-                    SiteBarIconButton(
-                        imageVector = Icons.Default.Menu,
-                        contentDescription = "Menu",
-                        onClick = onOpenSettings,
                     )
                     currentUser?.let { profile ->
                         CurrentUserAvatar(
@@ -152,6 +153,7 @@ fun OnAirHomeScreen(
                             onClick = { onOpenUser(profile.username) },
                         )
                     }
+                    SiteSwitchButton(onClick = onSwitchSite)
                 },
             )
         },

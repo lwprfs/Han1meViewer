@@ -101,18 +101,20 @@ fun HentaiMamaHomeScreen(
             SiteSearchTopBar(
                 hint = "Search HentaiMama",
                 onSearchClick = { onNavigateToSearch(null) },
-                leading = { SiteSwitchButton(onClick = onSwitchSite) },
+                leading = {
+                    SiteBarIconButton(
+                        imageVector = Icons.Default.Menu,
+                        contentDescription = "Menu",
+                        onClick = onNavigateToSettings,
+                    )
+                },
                 actions = {
                     SiteBarIconButton(
                         imageVector = Icons.Default.History,
                         contentDescription = stringResource(R.string.watch_history),
                         onClick = onNavigateToHistory,
                     )
-                    SiteBarIconButton(
-                        imageVector = Icons.Default.Menu,
-                        contentDescription = "Menu",
-                        onClick = onNavigateToSettings,
-                    )
+                    SiteSwitchButton(onClick = onSwitchSite)
                 },
             )
         }
