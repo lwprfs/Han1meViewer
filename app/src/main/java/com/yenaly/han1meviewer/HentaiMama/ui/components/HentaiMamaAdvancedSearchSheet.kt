@@ -673,23 +673,20 @@ private fun AdvancedSearchChip(
     onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
+    // Same look as Hanime's SelectableTag.
     val containerColor = if (checked) {
-        MaterialTheme.colorScheme.primary
+        MaterialTheme.colorScheme.primaryContainer
     } else {
-        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.92f)
+        MaterialTheme.colorScheme.surfaceContainerHighest
     }
     val contentColor = if (checked) {
-        MaterialTheme.colorScheme.onPrimary
-    } else {
         MaterialTheme.colorScheme.onPrimaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurface
     }
     Surface(
-        modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .heightIn(min = 52.dp),
+        modifier = modifier.clip(RoundedCornerShape(10.dp)),
         color = containerColor,
-        tonalElevation = if (checked) 2.dp else 0.dp,
-        shadowElevation = if (checked) 2.dp else 0.dp,
     ) {
         Box(
             modifier = Modifier
@@ -698,13 +695,13 @@ private fun AdvancedSearchChip(
                     onClick = onClick,
                     onLongClick = onLongClick,
                 )
-                .padding(horizontal = 14.dp, vertical = 12.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = title,
                 color = contentColor,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.labelLarge,
             )
         }
     }
@@ -814,9 +811,8 @@ private fun HistoryCard(
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceContainerLow,
-        tonalElevation = 2.dp,
         onClick = onClick,
     ) {
         Row(
@@ -871,3 +867,5 @@ private fun producerChipLabel(key: String?): String =
 
 private fun slugChipLabel(key: String?): String =
     if (key.isNullOrBlank()) "Genre Page" else "Page: $key"
+
+

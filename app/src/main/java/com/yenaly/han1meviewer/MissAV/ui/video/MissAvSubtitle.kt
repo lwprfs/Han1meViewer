@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.ui.component.SiteVideoSectionHeader
 import com.yenaly.han1meviewer.USER_AGENT
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -432,57 +433,14 @@ fun MissAvSubtitleSection(
 
     Box(modifier = modifier.fillMaxWidth()) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = "Subtitles (subtitlecat.com)",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-
-                Surface(
-                    modifier = Modifier
-                        .clickable { if (!isLoading) searchSubtitles() }
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    shape = RoundedCornerShape(4.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        if (isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(14.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.onPrimary,
-                            )
-                        } else {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_baseline_download_24),
-                                contentDescription = "Search",
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.onPrimary,
-                            )
-                        }
-                        Text(
-                            text = if (isLoading) "Searching…" else "Search",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onPrimary,
-                        )
-                    }
-                }
-            }
+            SiteVideoSectionHeader(
+                title = "Subtitles (subtitlecat.com)",
+                actionText = if (isLoading) "Searching…" else "Search",
+                onActionClick = { if (!isLoading) searchSubtitles() },
+            )
 
             when {
                 isLoading && searchResults.isEmpty() -> {
@@ -581,8 +539,8 @@ fun SubtitleResultItem(
     onDownload: () -> Unit,
 ) {
     Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
@@ -735,3 +693,5 @@ private fun ActionSurface(
         }
     }
 }
+
+

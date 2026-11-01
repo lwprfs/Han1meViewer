@@ -4,6 +4,7 @@ import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import com.yenaly.han1meviewer.ui.component.SiteEmptyContent
 import com.yenaly.han1meviewer.ui.component.SiteErrorContent
+import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,14 +24,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -135,12 +134,7 @@ fun HentaiMamaHistoryScreen(
         ) {
             when {
                 uiState.isInitialLoading && uiState.items.isEmpty() -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        CircularProgressIndicator()
-                    }
+                    SiteLoadingContent()
                 }
 
                 uiState.error != null && uiState.items.isEmpty() -> {
@@ -171,8 +165,8 @@ fun HentaiMamaHistoryScreen(
                     LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
                         items(
                             items = uiState.items,
@@ -310,7 +304,7 @@ private fun HistorySwipeRow(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .clip(RoundedCornerShape(14.dp))
+                    .clip(RoundedCornerShape(16.dp))
                     .background(MaterialTheme.colorScheme.errorContainer)
                     .padding(horizontal = 24.dp),
                 contentAlignment = Alignment.CenterEnd,
@@ -354,27 +348,25 @@ private fun HistoryCard(
         }
     }
 
-    Card(
+    // Same card recipe as Hanime's WatchHistoryCard.
+    ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(16.dp),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(10.dp),
+                .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                .padding(12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Box(
                 modifier = Modifier
                     .width(120.dp)
-                    .height(80.dp)
-                    .clip(RoundedCornerShape(10.dp)),
+                    .height(68.dp)
+                    .clip(RoundedCornerShape(8.dp)),
             ) {
                 RetryableImage(
                     model = resolvedCover,
@@ -391,7 +383,7 @@ private fun HistoryCard(
                         .padding(4.dp)
                         .background(
                             MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f),
-                            RoundedCornerShape(6.dp),
+                            RoundedCornerShape(4.dp),
                         )
                         .padding(horizontal = 6.dp, vertical = 2.dp),
                 ) {
@@ -471,3 +463,5 @@ private fun formatDuration(ms: Long): String {
     val minutes: Long = (totalSeconds % 3600) / 60
     return if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
 }
+
+

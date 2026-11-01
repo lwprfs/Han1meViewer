@@ -8,7 +8,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -37,15 +36,16 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -188,14 +188,6 @@ fun SiteSectionHeader(
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 4.dp),
     ) {
-        Box(
-            modifier = Modifier
-                .width(4.dp)
-                .height(18.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(MaterialTheme.colorScheme.primary),
-        )
-        Spacer(Modifier.width(8.dp))
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
@@ -219,6 +211,52 @@ fun SiteSectionHeader(
     }
 }
 
+/**
+ * Section header used inside video pages. Mirrors the private `SectionHeader` of
+ * `VideoIntroductionScreen` (titleLarge bold, start padding 16dp, divider underneath).
+ */
+@Composable
+fun SiteVideoSectionHeader(
+    title: String,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    actionText: String? = null,
+    onActionClick: (() -> Unit)? = null,
+) {
+    Column(
+        modifier = modifier.padding(start = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold,
+                )
+                subtitle?.takeIf { it.isNotBlank() }?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            if (!actionText.isNullOrBlank() && onActionClick != null) {
+                TextButton(onClick = onActionClick) {
+                    Text(actionText)
+                }
+            }
+        }
+        HorizontalDivider()
+    }
+}
+
 @Composable
 fun SiteVideoCard(
     title: String,
@@ -236,10 +274,18 @@ fun SiteVideoCard(
     bottomStartBadge: String? = null,
     isWatched: Boolean = false,
     imageLoader: ImageLoader? = null,
-    contentScale: ContentScale = ContentScale.Crop,
+    contentScale: ContentScale = ContentScale.FillWidth,
 ) {
     val textFontSize = dimensionResource(id = R.dimen.video_view_and_time_and_duration).value.sp
     val iconSize = dimensionResource(id = R.dimen.view_view_and_time_icon_size)
+    // Hanime scales covers to the card width (FillWidth) inside its 16:9 box. For other box
+    // ratios (posters) FillWidth would leave gaps, so those keep filling the box with Crop.
+    val resolvedContentScale =
+        if (contentScale == ContentScale.FillWidth && aspectRatio != 16f / 9f) {
+            ContentScale.Crop
+        } else {
+            contentScale
+        }
 
     Surface(
         modifier = modifier
@@ -269,7 +315,7 @@ fun SiteVideoCard(
                     modifier = Modifier.fillMaxSize(),
                     placeholder = painterResource(R.drawable.h_chan_loading),
                     error = painterResource(R.drawable.h_chan_load_failed),
-                    contentScale = contentScale,
+                    contentScale = resolvedContentScale,
                     imageLoader = imageLoader,
                 )
 
@@ -397,7 +443,6 @@ fun SiteVideoCard(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .padding(horizontal = 8.dp)
-                    .padding(bottom = 6.dp)
                     .fillMaxWidth(),
             ) {
                 if (!reviews.isNullOrEmpty()) {
@@ -458,12 +503,7 @@ fun SiteTopAppBar(
         title = title,
         navigationIcon = navigationIcon,
         actions = actions,
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-            titleContentColor = MaterialTheme.colorScheme.onSurface,
-            navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
-            actionIconContentColor = MaterialTheme.colorScheme.onSurface,
-        ),
+        colors = TopAppBarDefaults.topAppBarColors(),
     )
 }
 
@@ -487,7 +527,7 @@ fun SiteLoadingContent(
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurface,
             )
         }
     }
@@ -513,42 +553,29 @@ fun SiteErrorContent(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Image(
-                modifier = Modifier.size(132.dp),
+                modifier = Modifier.size(150.dp),
                 painter = painterResource(R.drawable.h_chan_sad),
                 contentDescription = resolvedTitle,
             )
             Text(
                 text = resolvedTitle,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.error,
                 textAlign = TextAlign.Center,
             )
             if (!message.isNullOrBlank()) {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                ) {
-                    Text(
-                        text = message,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        maxLines = 6,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                    )
-                }
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
+                    maxLines = 6,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
             if (onRetry != null) {
-                Button(onClick = onRetry, shape = RoundedCornerShape(14.dp)) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(retryText, fontWeight = FontWeight.SemiBold)
+                Button(onClick = onRetry) {
+                    Text(retryText)
                 }
             }
         }
@@ -564,35 +591,30 @@ fun SiteEmptyContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(10.dp),
         contentAlignment = Alignment.Center,
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.Center,
         ) {
             Image(
                 modifier = Modifier
-                    .padding(bottom = 8.dp)
-                    .width(132.dp),
+                    .padding(16.dp)
+                    .width(150.dp),
                 painter = painterResource(picRes),
                 contentDescription = stringResource(R.string.here_is_empty),
             )
             Text(
                 text = hint,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
             )
-            if (subHint.isNotBlank()) {
-                Text(
-                    text = subHint,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                )
-            }
+            Text(
+                text = subHint,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }
@@ -639,5 +661,3 @@ fun SiteIconBadge(
         )
     }
 }
-
-

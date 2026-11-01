@@ -26,13 +26,11 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -267,15 +265,16 @@ private fun RecentEpisodeCard(
     val context = LocalContext.current
     val imageLoader = remember(context) { HentaiMamaImageLoader.get(context) }
 
-    Card(
+    // Same surface recipe as Hanime's VideoCardItem: 12dp shape, tonal 2dp, shadow 1dp.
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        tonalElevation = 2.dp,
+        shadowElevation = 1.dp,
+        color = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Box(
@@ -299,7 +298,7 @@ private fun RecentEpisodeCard(
                             .align(Alignment.BottomStart)
                             .padding(6.dp),
                         color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.7f),
-                        shape = RoundedCornerShape(6.dp),
+                        shape = RoundedCornerShape(4.dp),
                     ) {
                         Text(
                             text = "EP ${episode.episodeNumber}",
@@ -317,7 +316,7 @@ private fun RecentEpisodeCard(
                             .align(Alignment.TopEnd)
                             .padding(6.dp),
                         color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.55f),
-                        shape = RoundedCornerShape(6.dp),
+                        shape = RoundedCornerShape(4.dp),
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
@@ -353,7 +352,7 @@ private fun RecentEpisodeCard(
                             else ->
                                 MaterialTheme.colorScheme.secondaryContainer
                         },
-                        shape = RoundedCornerShape(6.dp),
+                        shape = RoundedCornerShape(4.dp),
                     ) {
                         Text(
                             text = label,
@@ -402,5 +401,7 @@ private fun RecentEpisodeCard(
 
 private fun formatRating(value: Double): String =
     if (value % 1.0 == 0.0) value.toInt().toString() else "%.1f".format(value)
+
+
 
 

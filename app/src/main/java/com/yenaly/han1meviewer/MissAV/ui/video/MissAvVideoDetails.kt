@@ -1,32 +1,59 @@
 package com.yenaly.han1meviewer.MissAV.ui.video
+
 import android.content.Context
 import android.net.Uri
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import java.util.regex.Pattern
-
 import com.yenaly.han1meviewer.MissAV.data.model.MissAvVideoInfo
 import com.yenaly.han1meviewer.MissAV.data.remote.MissAvVideoUtils
+import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.logic.model.HanimeInfo
+import com.yenaly.han1meviewer.ui.component.ExpandableRichText
+import com.yenaly.han1meviewer.ui.component.SiteVideoSectionHeader
+import com.yenaly.han1meviewer.ui.component.VideoCardItem
+import com.yenaly.han1meviewer.ui.theme.SpacingNormal
+import com.yenaly.han1meviewer.ui.theme.VideoNormalCardMinWidth
+import java.util.regex.Pattern
+
+/**
+ * Page content below the player. Follows the Hanime video page order:
+ * title, meta, introduction, info, tags, then the subtitle section.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MissAvVideoDetails(
     info: MissAvVideoInfo,
@@ -40,102 +67,78 @@ fun MissAvVideoDetails(
     val lowercaseCode = code.lowercase()
 
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        if (!info.title.isNullOrBlank()) {
-            Text(
-                text = info.title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        }
-
-        if (!info.jpTitle.isNullOrBlank()) {
-            Text(
-                text = info.jpTitle.orEmpty(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        if (code.isNotBlank()) {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                val (bgColor, textColor) = when (extra?.uppercase()) {
-                    "UNCENSORED-LEAK" -> Pair(Color(0xFFC62828), Color.White)
-                    "ENGLISH-SUBTITLE" -> Pair(Color(0xFF1565C0), Color.White)
-                    "CHINESE-SUBTITLE" -> Pair(Color(0xFF0277BD), Color.White)
-                    else -> Pair(
-                        MaterialTheme.colorScheme.primaryContainer,
-                        MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                }
-                Surface(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50))
-                        .combinedClickable(
-                            onClick = { onNavigateToSearch(lowercaseCode) },
-                            onLongClick = {
-                                MissAvVideoUtils.copyToClipboard(context, "Code", lowercaseCode)
-                            }
-                        ),
-                    shape = RoundedCornerShape(50),
-                    color = bgColor,
-                    contentColor = textColor
-                ) {
-                    Text(
-                        text = lowercaseCode.uppercase(),
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                if (extra != null) {
-                    Surface(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(50))
-                            .clickable { onNavigateToSearch(extra.lowercase()) },
-                        shape = RoundedCornerShape(50),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    ) {
+        // TitleSection
+        if (!info.title.isNullOrBlank() || !info.jpTitle.isNullOrBlank()) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (!info.title.isNullOrBlank()) {
+                    SelectionContainer {
                         Text(
-                            text = extra.lowercase(),
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
-                            style = MaterialTheme.typography.labelLarge
+                            text = info.title,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 }
-                if (releaseDate != null) {
-                    Surface(
-                        shape = RoundedCornerShape(50),
-                        color = MaterialTheme.colorScheme.secondaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                    ) {
+                if (!info.jpTitle.isNullOrBlank()) {
+                    SelectionContainer {
                         Text(
-                            text = releaseDate,
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold
+                            text = info.jpTitle.orEmpty(),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
             }
-        } else if (releaseDate != null) {
-            Text(
-                text = "Release date: $releaseDate",
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary
-            )
         }
 
+        // MetaSection
+        if (code.isNotBlank() || releaseDate != null) {
+            FlowRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (code.isNotBlank()) {
+                    MissAvTagChip(
+                        text = lowercaseCode.uppercase(),
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        onClick = { onNavigateToSearch(lowercaseCode) },
+                        onLongClick = {
+                            MissAvVideoUtils.copyToClipboard(context, "Code", lowercaseCode)
+                        },
+                    )
+                    if (extra != null) {
+                        val isLeak = extra.uppercase() == "UNCENSORED-LEAK"
+                        MissAvTagChip(
+                            text = extra.lowercase(),
+                            containerColor = if (isLeak) {
+                                MaterialTheme.colorScheme.errorContainer
+                            } else {
+                                MaterialTheme.colorScheme.secondaryContainer
+                            },
+                            contentColor = if (isLeak) {
+                                MaterialTheme.colorScheme.onErrorContainer
+                            } else {
+                                MaterialTheme.colorScheme.onSecondaryContainer
+                            },
+                            onClick = { onNavigateToSearch(extra.lowercase()) },
+                        )
+                    }
+                }
+                if (releaseDate != null) {
+                    MissAvMetaInfoItem(text = releaseDate)
+                }
+            }
+        }
+
+        // ExpandableIntroductionSection
         if (!info.description.isNullOrBlank()) {
             var cleanDescription = info.description
             val releaseDatePattern = Pattern.compile("Release date:\\s*\\d{4}-\\d{2}-\\d{2}\\s*", Pattern.CASE_INSENSITIVE)
@@ -145,21 +148,14 @@ fun MissAvVideoDetails(
             cleanDescription = cleanDescription.trim()
 
             if (cleanDescription.isNotBlank()) {
-                Surface(
+                ExpandableRichText(
+                    text = cleanDescription,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
-                ) {
-                    Text(
-                        text = cleanDescription,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(14.dp),
-                    )
-                }
+                )
             }
         }
 
+        // Info rows (directors, label, series, makers)
         val infoItems = listOf(
             "Directors" to info.directors,
             "Label" to info.label,
@@ -168,14 +164,15 @@ fun MissAvVideoDetails(
         ).filter { it.second.isNullOrBlank().not() }
 
         if (infoItems.isNotEmpty()) {
-            Surface(
+            Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                ),
             ) {
                 Column(
-                    modifier = Modifier.padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(SpacingNormal),
                 ) {
                     infoItems.forEach { (label, value) ->
                         Row(
@@ -189,80 +186,60 @@ fun MissAvVideoDetails(
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            val (bgColor, textColor) = when (label) {
-                                "Series" -> Pair(Color(0xFF4A148C), Color.White)
-                                "Actresses" -> Pair(Color(0xFF00695C), Color.White)
-                                else -> Pair(
-                                    MaterialTheme.colorScheme.surfaceContainerHighest,
-                                    MaterialTheme.colorScheme.onSurface,
-                                )
-                            }
-                            val chipModifier = if (label == "Series") {
-                                Modifier.combinedClickable(
-                                    onClick = { onNavigateToSearch(value?.lowercase() ?: "") },
-                                    onLongClick = {
-                                        MissAvVideoUtils.copyToClipboard(context, label, value?.lowercase() ?: "")
+                            val isSeries = label == "Series"
+                            MissAvTagChip(
+                                text = value?.lowercase() ?: "",
+                                containerColor = if (isSeries) {
+                                    MaterialTheme.colorScheme.tertiaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceContainerHighest
+                                },
+                                contentColor = if (isSeries) {
+                                    MaterialTheme.colorScheme.onTertiaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                },
+                                onClick = { onNavigateToSearch(value?.lowercase() ?: "") },
+                                onLongClick = if (isSeries) {
+                                    {
+                                        MissAvVideoUtils.copyToClipboard(
+                                            context,
+                                            label,
+                                            value?.lowercase() ?: ""
+                                        )
                                     }
-                                )
-                            } else {
-                                Modifier.clickable { onNavigateToSearch(value?.lowercase() ?: "") }
-                            }
-                            Surface(
-                                modifier = chipModifier.clip(RoundedCornerShape(50)),
-                                shape = RoundedCornerShape(50),
-                                color = bgColor,
-                                contentColor = textColor
-                            ) {
-                                Text(
-                                    text = value?.lowercase() ?: "",
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
-                                    style = MaterialTheme.typography.labelLarge,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
+                                } else {
+                                    null
+                                },
+                                modifier = Modifier.weight(1f, fill = false),
+                            )
                         }
                     }
                 }
             }
         }
 
+        // TagsSection
         if (!info.genres.isNullOrBlank()) {
             val genreList = info.genres.split(",").map { it.trim().lowercase() }.filter { it.isNotBlank() }
             if (genreList.isNotEmpty()) {
-                Column(
+                val palette = missAvTagPalette()
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
-                        text = "Genres",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        genreList.forEach { genre ->
-                            Surface(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(50))
-                                    .combinedClickable(
-                                        onClick = { onNavigateToSearch(genre) },
-                                        onLongClick = {
-                                            MissAvVideoUtils.copyToClipboard(context, "Genre", genre)
-                                        }
-                                    ),
-                                shape = RoundedCornerShape(50),
-                                color = MaterialTheme.colorScheme.secondaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                            ) {
-                                Text(
-                                    text = genre,
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                    style = MaterialTheme.typography.labelLarge
-                                )
-                            }
-                        }
+                    genreList.forEachIndexed { index, genre ->
+                        val (container, content) = palette[index % palette.size]
+                        MissAvTagChip(
+                            text = genre,
+                            containerColor = container,
+                            contentColor = content,
+                            onClick = { onNavigateToSearch(genre) },
+                            onLongClick = {
+                                MissAvVideoUtils.copyToClipboard(context, "Genre", genre)
+                            },
+                        )
                     }
                 }
             }
@@ -271,6 +248,123 @@ fun MissAvVideoDetails(
         MissAvSubtitleSection(
             videoCode = lowercaseCode,
             onSubtitleDownloaded = onSubtitleDownloaded
+        )
+    }
+}
+
+/**
+ * Related videos block. Mirrors Hanime's `RelatedVideosSection`: section header followed by a
+ * wrapping grid of [VideoCardItem]s sized from the card min width.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun MissAvRelatedVideosSection(
+    videos: List<HanimeInfo>,
+    onOpenVideo: (HanimeInfo) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val uniqueVideos = remember(videos) { videos.distinctBy { it.videoCode } }
+    if (uniqueVideos.isEmpty()) return
+
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(SpacingNormal),
+    ) {
+        SiteVideoSectionHeader(title = stringResource(R.string.related_video))
+
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            val spacing = SpacingNormal
+            val columns = maxOf(2, ((maxWidth + spacing) / (VideoNormalCardMinWidth + spacing)).toInt())
+            val itemWidth = ((maxWidth - (spacing * (columns - 1))) / columns) - 0.5.dp
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                maxItemsInEachRow = columns,
+                horizontalArrangement = Arrangement.spacedBy(spacing),
+                verticalArrangement = Arrangement.spacedBy(spacing)
+            ) {
+                uniqueVideos.forEach { item ->
+                    VideoCardItem(
+                        modifier = Modifier.width(itemWidth),
+                        videoItem = item,
+                        isHorizontalCard = true,
+                        onClickVideosItem = { onOpenVideo(item) },
+                        onLongClickVideosItem = { _, _ -> },
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** Same row as Hanime's `MetaInfoItem`: 32dp high, icon plus bodyMedium text. */
+@Composable
+private fun MissAvMetaInfoItem(text: String) {
+    Row(
+        modifier = Modifier.height(32.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.Schedule,
+            contentDescription = null,
+            modifier = Modifier.size(14.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+        )
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** Tag chip with the proportions of Hanime's assist chips (8dp corners, 32dp high). */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun MissAvTagChip(
+    text: String,
+    containerColor: Color,
+    contentColor: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
+) {
+    val shape = RoundedCornerShape(8.dp)
+    Surface(
+        modifier = modifier
+            .clip(shape)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
+        shape = shape,
+        color = containerColor,
+        contentColor = contentColor,
+    ) {
+        Box(
+            modifier = Modifier
+                .heightIn(min = 32.dp)
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+/** Same colour pairs as the Hanime tag chip palette, taken from the active theme. */
+@Composable
+private fun missAvTagPalette(): List<Pair<Color, Color>> {
+    val scheme = MaterialTheme.colorScheme
+    return remember(scheme) {
+        listOf(
+            scheme.primaryContainer to scheme.onPrimaryContainer,
+            scheme.secondaryContainer to scheme.onSecondaryContainer,
+            scheme.tertiaryContainer to scheme.onTertiaryContainer,
+            scheme.surfaceContainerHigh to scheme.onSurface,
+            scheme.surfaceContainerHighest to scheme.onSurface,
         )
     }
 }

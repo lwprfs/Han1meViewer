@@ -30,14 +30,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -68,6 +66,7 @@ import com.yenaly.han1meviewer.HentaiMama.data.model.UpcomingCard
 import com.yenaly.han1meviewer.HentaiMama.data.model.UpcomingMonthOption
 import com.yenaly.han1meviewer.HentaiMama.settings.HentaiMamaCardSettings
 import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.ui.component.SiteVideoSectionHeader
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
 import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
@@ -275,45 +274,11 @@ private fun UpcomingGrid(
 
 @Composable
 private fun DateHeader(label: String, count: Int) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 10.dp),
-        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f),
-        shape = RoundedCornerShape(16.dp),
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Icon(
-                imageVector = Icons.Filled.CalendarMonth,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.size(18.dp),
-            )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.weight(1f),
-            )
-            Surface(
-                shape = RoundedCornerShape(50),
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.12f),
-            ) {
-                Text(
-                    text = "$count",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
-                )
-            }
-        }
-    }
+    SiteVideoSectionHeader(
+        title = label,
+        subtitle = "$count",
+        modifier = Modifier.padding(top = 10.dp),
+    )
 }
 
 @Composable
@@ -327,15 +292,16 @@ private fun UpcomingCardView(
     val context = LocalContext.current
     val imageLoader = remember(context) { HentaiMamaImageLoader.get(context) }
 
-    Card(
+    // Same surface recipe as Hanime's VideoCardItem: 12dp shape, tonal 2dp, shadow 1dp.
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onOpenEpisode(card.slug, card.url) },
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        tonalElevation = 2.dp,
+        shadowElevation = 1.dp,
+        color = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Box(
@@ -359,7 +325,7 @@ private fun UpcomingCardView(
                             .align(Alignment.TopStart)
                             .padding(6.dp),
                         color = MaterialTheme.colorScheme.tertiaryContainer,
-                        shape = RoundedCornerShape(6.dp),
+                        shape = RoundedCornerShape(4.dp),
                     ) {
                         Text(
                             text = "NEW",
@@ -377,7 +343,7 @@ private fun UpcomingCardView(
                             .align(Alignment.TopEnd)
                             .padding(6.dp),
                         color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.55f),
-                        shape = RoundedCornerShape(6.dp),
+                        shape = RoundedCornerShape(4.dp),
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
@@ -492,7 +458,7 @@ private fun MonthPickerDialog(
                     val selected = option.slug == selectedSlug
                     Surface(
                         onClick = { onSelect(option) },
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(12.dp),
                         color = if (selected) {
                             MaterialTheme.colorScheme.primaryContainer
                         } else {
@@ -523,5 +489,7 @@ private fun MonthPickerDialog(
 
 private fun formatRating(value: Double): String =
     if (value % 1.0 == 0.0) value.toInt().toString() else "%.1f".format(value)
+
+
 
 

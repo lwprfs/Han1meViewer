@@ -12,6 +12,17 @@ import android.view.WindowManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import com.yenaly.han1meviewer.ui.theme.VideoSimplifiedCardMinWidth
+import com.yenaly.han1meviewer.ui.theme.SpacingNormal
+import com.yenaly.han1meviewer.ui.component.SiteVideoSectionHeader
+import com.yenaly.han1meviewer.ui.component.SiteVideoCard
+import com.yenaly.han1meviewer.HentaiMama.data.model.SimilarCard
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -24,7 +35,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -413,7 +423,15 @@ fun HentaiMamaVideoScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(1f),
-                            contentPadding = PaddingValues(bottom = 32.dp),
+                            contentPadding = PaddingValues(
+                                start = 6.dp,
+                                top = 12.dp,
+                                end = 6.dp,
+                                bottom = 24.dp + WindowInsets.navigationBars
+                                    .asPaddingValues()
+                                    .calculateBottomPadding(),
+                            ),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
                             item(key = "nav") {
                                 HentaiMamaEpisodeNav(
@@ -461,7 +479,7 @@ fun HentaiMamaVideoScreen(
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(12.dp),
+                                            .padding(horizontal = 4.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
                                         CircularProgressIndicator(
@@ -485,10 +503,8 @@ fun HentaiMamaVideoScreen(
                                         (extractionState as HentaiMamaExtractionState.Failed).reason
                                     Surface(
                                         color = MaterialTheme.colorScheme.errorContainer,
-                                        shape = RoundedCornerShape(8.dp),
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(12.dp),
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier.fillMaxWidth(),
                                     ) {
                                         Column(modifier = Modifier.padding(12.dp)) {
                                             Text(
@@ -510,52 +526,40 @@ fun HentaiMamaVideoScreen(
                             }
 
                             if (mirrorLinks.size > 1) {
-                                item(key = "sources_header") {
-                                    Text(
-                                        text = "Sources (${mirrorLinks.size})",
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.SemiBold,
-                                        modifier = Modifier.padding(
-                                            horizontal = 12.dp,
-                                            vertical = 4.dp,
-                                        ),
-                                    )
-                                }
-                                itemsIndexed(
-                                    items = mirrorLinks,
-                                    key = { _, link -> link.url },
-                                ) { _, link ->
-                                    val selected = link.quality == playerState.quality
-                                    Surface(
-                                        color = if (selected)
-                                            MaterialTheme.colorScheme.primaryContainer
-                                        else
-                                            MaterialTheme.colorScheme.surfaceContainerLow,
-                                        shape = RoundedCornerShape(8.dp),
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 12.dp, vertical = 2.dp),
-                                        onClick = { viewModel.setQuality(link.quality) },
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(10.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Filled.PlayArrow,
-                                                contentDescription = null,
-                                                tint = if (selected)
-                                                    MaterialTheme.colorScheme.primary
+                                item(key = "sources") {
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        SiteVideoSectionHeader(title = "Sources (${mirrorLinks.size})")
+                                        mirrorLinks.forEach { link ->
+                                            val selected = link.quality == playerState.quality
+                                            Surface(
+                                                color = if (selected)
+                                                    MaterialTheme.colorScheme.primaryContainer
                                                 else
-                                                    MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                            Spacer(Modifier.width(8.dp))
-                                            Text(
-                                                text = link.quality,
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                fontWeight = if (selected) FontWeight.Bold
-                                                else FontWeight.Normal,
-                                            )
+                                                    MaterialTheme.colorScheme.surfaceContainerLow,
+                                                shape = RoundedCornerShape(12.dp),
+                                                modifier = Modifier.fillMaxWidth(),
+                                                onClick = { viewModel.setQuality(link.quality) },
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.padding(12.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Filled.PlayArrow,
+                                                        contentDescription = null,
+                                                        tint = if (selected)
+                                                            MaterialTheme.colorScheme.primary
+                                                        else
+                                                            MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    )
+                                                    Text(
+                                                        text = link.quality,
+                                                        style = MaterialTheme.typography.titleSmall,
+                                                        color = MaterialTheme.colorScheme.onSurface,
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -584,51 +588,26 @@ fun HentaiMamaVideoScreen(
                             }
 
                             if (page.seriesSidebar.isNotEmpty()) {
-                                item(key = "sidebar_header") {
-                                    Text(
-                                        text = "Episodes ${page.seriesSidebarCount ?: ""}",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(
-                                            horizontal = 12.dp,
-                                            vertical = 8.dp,
-                                        ),
-                                    )
-                                }
-                                itemsIndexed(
-                                    items = page.seriesSidebar,
-                                    key = { _, episode -> episode.slug },
-                                ) { _, episode ->
-                                    EpisodeSidebarRow(
-                                        episode = episode,
-                                        onClick = { openEpisode(episode) },
-                                    )
+                                item(key = "sidebar") {
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        SiteVideoSectionHeader(
+                                            title = "Episodes ${page.seriesSidebarCount ?: ""}".trim(),
+                                        )
+                                        page.seriesSidebar.forEach { episode ->
+                                            EpisodeSidebarRow(
+                                                episode = episode,
+                                                onClick = { openEpisode(episode) },
+                                            )
+                                        }
+                                    }
                                 }
                             }
 
                             if (page.similar.isNotEmpty()) {
-                                item(key = "similar_header") {
-                                    Text(
-                                        text = "Similar titles",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(
-                                            horizontal = 12.dp,
-                                            vertical = 8.dp,
-                                        ),
-                                    )
-                                }
-                                itemsIndexed(
-                                    items = page.similar,
-                                    key = { _, sim -> sim.slug },
-                                ) { _, sim ->
-                                    SimilarRow(
-                                        title = sim.name,
-                                        poster = sim.poster,
-                                        rating = sim.rating,
-                                        year = sim.year,
-                                        episodeCount = sim.episodeCount,
-                                        onClick = {
+                                item(key = "similar") {
+                                    SimilarGrid(
+                                        items = page.similar,
+                                        onOpen = { sim ->
                                             onNavigateToVideo(
                                                 sim.slug,
                                                 HentaiMamaUrlUtils.normalizeEpisodeUrl(sim.url),
@@ -653,16 +632,14 @@ private fun EpisodeSidebarRow(
     Surface(
         color = if (episode.isCurrent) MaterialTheme.colorScheme.primaryContainer
         else MaterialTheme.colorScheme.surfaceContainerLow,
-        shape = RoundedCornerShape(8.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 3.dp),
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth(),
         onClick = onClick,
     ) {
         Row(
-            modifier = Modifier.padding(8.dp),
+            modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Box(
                 modifier = Modifier
@@ -729,79 +706,44 @@ private fun EpisodeSidebarRow(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun SimilarRow(
-    title: String,
-    poster: String,
-    rating: Double?,
-    year: Int?,
-    episodeCount: Int?,
-    onClick: () -> Unit,
+private fun SimilarGrid(
+    items: List<SimilarCard>,
+    onOpen: (SimilarCard) -> Unit,
 ) {
     val context = LocalContext.current
     val imageLoader = remember(context) { HentaiMamaImageLoader.get(context) }
+    val uniqueItems = remember(items) { items.distinctBy { it.slug } }
 
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        shape = RoundedCornerShape(8.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 3.dp),
-        onClick = onClick,
-    ) {
-        Row(
-            modifier = Modifier.padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .width(56.dp)
-                    .height(80.dp)
-                    .clip(RoundedCornerShape(8.dp)),
+    // Same grid maths as Hanime's RelatedVideosSection.
+    Column(verticalArrangement = Arrangement.spacedBy(SpacingNormal)) {
+        SiteVideoSectionHeader(title = "Similar titles")
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            val spacing = SpacingNormal
+            val columns = maxOf(
+                2,
+                ((maxWidth + spacing) / (VideoSimplifiedCardMinWidth + spacing)).toInt(),
+            )
+            val itemWidth = ((maxWidth - (spacing * (columns - 1))) / columns) - 0.5.dp
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                maxItemsInEachRow = columns,
+                horizontalArrangement = Arrangement.spacedBy(spacing),
+                verticalArrangement = Arrangement.spacedBy(spacing),
             ) {
-                RetryableImage(
-                    model = poster,
-                    contentDescription = title,
-                    modifier = Modifier.fillMaxSize(),
-                    placeholder = painterResource(R.drawable.h_chan_loading),
-                    error = painterResource(R.drawable.h_chan_load_failed),
-                    contentScale = ContentScale.Crop,
-                    imageLoader = imageLoader,
-                )
-            }
-            Spacer(Modifier.width(10.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Row {
-                    rating?.let {
-                        Text(
-                            text = "★ %.1f".format(it),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                        Spacer(Modifier.width(8.dp))
-                    }
-                    year?.let {
-                        Text(
-                            text = it.toString(),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(Modifier.width(8.dp))
-                    }
-                    episodeCount?.let {
-                        Text(
-                            text = "$it eps",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                uniqueItems.forEach { sim ->
+                    SiteVideoCard(
+                        modifier = Modifier.width(itemWidth),
+                        title = sim.name,
+                        coverUrl = sim.poster,
+                        aspectRatio = 2f / 3f,
+                        duration = sim.episodeCount?.takeIf { it > 0 }?.let { "$it EP" },
+                        reviews = sim.rating?.let { "★ %.1f".format(it) },
+                        uploadTime = sim.year?.toString(),
+                        imageLoader = imageLoader,
+                        onClick = { onOpen(sim) },
+                    )
                 }
             }
         }

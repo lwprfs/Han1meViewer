@@ -1,7 +1,6 @@
 package com.yenaly.han1meviewer.ui.component
 
 import androidx.annotation.DrawableRes
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -9,30 +8,28 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,12 +42,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.SiteType
+import com.yenaly.han1meviewer.ui.theme.SpacingLarge
+import com.yenaly.han1meviewer.ui.theme.SpacingNormal
 
 data class SiteSwitchOption(
     val name: String,
     val description: String,
     val siteType: SiteType,
     @DrawableRes val logoRes: Int?,
+    /** Kept for source compatibility; the sheet follows the app theme and no longer uses it. */
     val accentColor: Color,
 )
 
@@ -114,19 +114,17 @@ fun SiteSwitchDialog(
         modifier = modifier,
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
                 .navigationBarsPadding()
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+                .padding(horizontal = SpacingLarge)
+                .padding(bottom = SpacingLarge),
+            verticalArrangement = Arrangement.spacedBy(SpacingNormal),
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column(modifier = Modifier.padding(bottom = SpacingNormal)) {
                 Text(
                     text = "Switch site",
                     style = MaterialTheme.typography.titleLarge,
@@ -135,7 +133,7 @@ fun SiteSwitchDialog(
                 )
                 Text(
                     text = "Tap a source to jump straight to it",
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -145,7 +143,7 @@ fun SiteSwitchDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(IntrinsicSize.Max),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(SpacingNormal),
                 ) {
                     rowOptions.forEach { option ->
                         SiteSwitchTile(
@@ -176,30 +174,24 @@ private fun SiteSwitchTile(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val accent = option.accentColor
-    val shape = RoundedCornerShape(20.dp)
+    // Same surface recipe as VideoCardItem: 12dp shape, tonal 2dp, shadow 1dp.
+    val shape = RoundedCornerShape(12.dp)
 
     Surface(
         modifier = modifier
             .clip(shape)
             .clickable(onClick = onClick),
         shape = shape,
-        color = if (isCurrent) {
-            accent.copy(alpha = 0.14f)
-        } else {
-            MaterialTheme.colorScheme.surfaceContainerHigh
-        },
-        border = BorderStroke(
-            width = if (isCurrent) 2.dp else 1.dp,
-            color = if (isCurrent) accent
-            else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-        ),
+        tonalElevation = 2.dp,
+        shadowElevation = 1.dp,
+        color = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+                .padding(SpacingLarge),
+            verticalArrangement = Arrangement.spacedBy(SpacingNormal),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -209,8 +201,14 @@ private fun SiteSwitchTile(
                 Box(
                     modifier = Modifier
                         .size(48.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(accent.copy(alpha = 0.18f)),
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            if (option.logoRes != null) {
+                                MaterialTheme.colorScheme.surfaceVariant
+                            } else {
+                                MaterialTheme.colorScheme.primaryContainer
+                            }
+                        ),
                     contentAlignment = Alignment.Center,
                 ) {
                     if (option.logoRes != null) {
@@ -218,7 +216,7 @@ private fun SiteSwitchTile(
                             painter = painterResource(option.logoRes),
                             contentDescription = option.name,
                             modifier = Modifier
-                                .size(34.dp)
+                                .size(36.dp)
                                 .clip(RoundedCornerShape(8.dp)),
                             contentScale = ContentScale.Fit,
                         )
@@ -227,33 +225,23 @@ private fun SiteSwitchTile(
                             text = option.name.take(1),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
-                            color = accent,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
                         )
                     }
                 }
                 if (isCurrent) {
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(CircleShape)
-                            .background(accent),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Current site",
-                            tint = Color.White,
-                            modifier = Modifier.size(16.dp),
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Filled.CheckCircle,
+                        contentDescription = "Current site",
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
                 }
             }
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column {
                 Text(
                     text = option.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (isCurrent) accent else MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -278,37 +266,20 @@ fun SiteSwitchConfirmDialog(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Same structure as Hanime's ConfirmDialog: default AlertDialog, text buttons.
     AlertDialog(
         modifier = modifier,
         onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = RoundedCornerShape(28.dp),
-        icon = {
-            Icon(
-                painter = painterResource(R.drawable.ic_baseline_switch_24),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(32.dp),
-            )
-        },
-        title = {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-            )
-        },
+        title = { Text(text = title) },
         confirmButton = {
-            Button(onClick = onConfirm, shape = RoundedCornerShape(14.dp)) {
-                Text(confirmText, fontWeight = FontWeight.SemiBold)
+            TextButton(onClick = onConfirm) {
+                Text(confirmText)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(dismissText, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(dismissText)
             }
         },
     )
 }
-
-

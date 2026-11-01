@@ -39,6 +39,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaImageLoader
 import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.ui.component.SiteVideoSectionHeader
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
 
 private const val COLLAPSED_PREVIEW_COUNT = 6
@@ -60,19 +61,16 @@ fun HentaiMamaEpisodeGallery(
     val visible = if (expandedGallery) previewUrls else previewUrls.take(COLLAPSED_PREVIEW_COUNT)
     val safeColumns = columns.coerceIn(2, 6)
 
-    Column(modifier = modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
 
-        Text(
-            text = "Previews",
-            style = MaterialTheme.typography.titleSmall,
-            modifier = Modifier.padding(bottom = 8.dp),
-        )
+        SiteVideoSectionHeader(title = "Previews")
 
         visible.chunked(safeColumns).forEach { rowItems ->
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 rowItems.forEachIndexed { index, url ->
@@ -209,3 +207,5 @@ private fun unusedIconImportShim() {
     val icons = listOf(Icons.AutoMirrored.Filled.ArrowBack)
     PaddingValues(0.dp)
 }
+
+

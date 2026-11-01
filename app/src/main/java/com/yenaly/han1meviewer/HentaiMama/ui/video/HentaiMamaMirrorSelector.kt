@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -18,8 +17,6 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -33,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.HentaiMama.data.model.Mirror
+import com.yenaly.han1meviewer.ui.component.SelectableTag
 
 @Composable
 fun HentaiMamaMirrorSelector(
@@ -52,8 +50,7 @@ fun HentaiMamaMirrorSelector(
 
     Row(
         modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
 
@@ -61,17 +58,13 @@ fun HentaiMamaMirrorSelector(
             modifier = Modifier
                 .weight(1f)
                 .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             mirrors.forEachIndexed { index, mirror ->
-                FilterChip(
+                SelectableTag(
+                    text = mirror.label,
                     selected = index == selectedMirrorIndex,
                     onClick = { onMirrorSelected(index) },
-                    label = { Text(mirror.label) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    ),
                 )
             }
         }
@@ -167,3 +160,5 @@ fun HentaiMamaMirrorSelector(
         }
     }
 }
+
+

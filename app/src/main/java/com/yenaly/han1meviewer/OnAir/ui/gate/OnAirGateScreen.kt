@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.OnAir.ui.gate
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -8,7 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -22,11 +22,12 @@ import androidx.compose.material.icons.filled.Cookie
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -38,12 +39,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.ui.theme.SpacingLarge
+import com.yenaly.han1meviewer.ui.theme.SpacingNormal
 
-private val OnAirAccent = Color(0xFF00897B)
-
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun OnAirGateScreen(
     state: OnAirGateState,
@@ -76,35 +79,38 @@ fun OnAirGateScreen(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp, vertical = 32.dp),
+            .padding(24.dp),
         contentAlignment = Alignment.Center,
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            GateBadge(
-                icon = if (showProgress) null else Icons.Default.Warning,
-                tint = if (state is OnAirGateState.TorBlocked) {
-                    MaterialTheme.colorScheme.error
-                } else if (state is OnAirGateState.ContentError) {
-                    MaterialTheme.colorScheme.tertiary
-                } else {
-                    OnAirAccent
-                },
-            )
+            // Same visuals as Hanime's LoadingContent / ErrorContent.
+            if (showProgress) {
+                LoadingIndicator()
+            } else {
+                Image(
+                    modifier = Modifier.size(150.dp),
+                    painter = painterResource(R.drawable.h_chan_sad),
+                    contentDescription = headline,
+                )
+            }
             Text(
                 text = "OnAir",
                 style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-                color = OnAirAccent,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             if (headline.isNotBlank()) {
                 Text(
                     text = headline,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if (showProgress) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.error
+                    },
                     textAlign = TextAlign.Center,
                 )
             }
@@ -112,13 +118,12 @@ fun OnAirGateScreen(
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center,
                 )
             }
 
             if (showProgress) {
-                Spacer(Modifier.height(6.dp))
                 StepCard(
                     torDone = state is OnAirGateState.Probing,
                     torActive = state is OnAirGateState.CheckingTor,
@@ -137,7 +142,6 @@ fun OnAirGateScreen(
                     Button(
                         onClick = onRetry,
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
                     ) {
                         ButtonLabel(Icons.Default.Refresh, "Retry")
                     }
@@ -159,7 +163,6 @@ fun OnAirGateScreen(
                     Button(
                         onClick = onRetry,
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
                     ) {
                         ButtonLabel(
                             Icons.Default.Refresh,
@@ -184,41 +187,19 @@ fun OnAirGateScreen(
 }
 
 @Composable
-private fun GateBadge(icon: ImageVector?, tint: Color) {
-    Box(
-        modifier = Modifier
-            .size(84.dp)
-            .clip(CircleShape)
-            .background(tint.copy(alpha = 0.14f)),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (icon == null) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(40.dp),
-                strokeWidth = 4.dp,
-                color = tint,
-            )
-        } else {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = tint,
-                modifier = Modifier.size(40.dp),
-            )
-        }
-    }
-}
-
-@Composable
 private fun StepCard(torDone: Boolean, torActive: Boolean, sessionActive: Boolean) {
+    // Same surface recipe as VideoCardItem: 12dp shape, tonal 2dp, shadow 1dp.
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = RoundedCornerShape(12.dp),
+        tonalElevation = 2.dp,
+        shadowElevation = 1.dp,
+        color = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(SpacingLarge),
+            verticalArrangement = Arrangement.spacedBy(SpacingNormal),
         ) {
             StepRow("Tor connection", done = torDone, active = torActive)
             StepRow("Session check", done = false, active = sessionActive)
@@ -230,20 +211,19 @@ private fun StepCard(torDone: Boolean, torActive: Boolean, sessionActive: Boolea
 private fun StepRow(label: String, done: Boolean, active: Boolean) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(SpacingNormal),
     ) {
         Box(modifier = Modifier.size(22.dp), contentAlignment = Alignment.Center) {
             when {
                 done -> Icon(
                     Icons.Default.CheckCircle,
                     contentDescription = null,
-                    tint = OnAirAccent,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(22.dp),
                 )
                 active -> CircularProgressIndicator(
                     modifier = Modifier.size(18.dp),
                     strokeWidth = 2.dp,
-                    color = OnAirAccent,
                 )
                 else -> Box(
                     Modifier
@@ -255,8 +235,11 @@ private fun StepRow(label: String, done: Boolean, active: Boolean) {
         }
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
+            style = if (active) {
+                MaterialTheme.typography.titleSmall
+            } else {
+                MaterialTheme.typography.bodyMedium
+            },
             color = if (active || done) {
                 MaterialTheme.colorScheme.onSurface
             } else {
@@ -275,17 +258,16 @@ private fun ReasonCard(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(12.dp),
         color = container,
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.padding(SpacingLarge),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
                 color = content,
             )
             Text(
@@ -300,8 +282,8 @@ private fun ReasonCard(
 @Composable
 private fun ButtonLabel(icon: ImageVector, text: String) {
     Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
-    Spacer(Modifier.width(8.dp))
-    Text(text, fontWeight = FontWeight.SemiBold)
+    Spacer(Modifier.width(SpacingNormal))
+    Text(text, maxLines = 1)
 }
 
 @Composable
@@ -313,12 +295,11 @@ private fun SecondaryActions(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(SpacingNormal),
     ) {
         FilledTonalButton(
             onClick = onOpenCookies,
             modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(14.dp),
         ) {
             ButtonLabel(Icons.Default.Cookie, cookiesLabel)
         }
@@ -326,7 +307,6 @@ private fun SecondaryActions(
             OutlinedButton(
                 onClick = onSwitchSite,
                 modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(14.dp),
             ) {
                 ButtonLabel(Icons.Default.SwapHoriz, "Switch site")
             }
@@ -335,7 +315,7 @@ private fun SecondaryActions(
     onOpenSettings?.let { openSettings ->
         TextButton(onClick = openSettings) {
             Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(SpacingNormal))
             Text("App settings")
         }
     }

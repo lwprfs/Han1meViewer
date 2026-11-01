@@ -19,6 +19,12 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -710,8 +716,19 @@ fun MissAvVideoScreen(
                         )
                     }
 
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
-                        item {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(
+                            start = 6.dp,
+                            top = 12.dp,
+                            end = 6.dp,
+                            bottom = 24.dp + WindowInsets.navigationBars
+                                .asPaddingValues()
+                                .calculateBottomPadding(),
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        item(key = "details") {
                             MissAvVideoDetails(
                                 info = info,
                                 onNavigateToSearch = onNavigateToSearch,
@@ -722,6 +739,19 @@ fun MissAvVideoScreen(
                                 },
                                 context = context
                             )
+                        }
+                        if (info.relatedVideos.isNotEmpty()) {
+                            item(key = "related") {
+                                MissAvRelatedVideosSection(
+                                    videos = info.relatedVideos,
+                                    onOpenVideo = { related ->
+                                        onNavigateToVideo(
+                                            related.videoCode,
+                                            "/en/${related.videoCode}"
+                                        )
+                                    },
+                                )
+                            }
                         }
                     }
                 }
@@ -864,3 +894,5 @@ private fun updateSubtitleForPosition(
         tv?.invalidate()
     }
 }
+
+

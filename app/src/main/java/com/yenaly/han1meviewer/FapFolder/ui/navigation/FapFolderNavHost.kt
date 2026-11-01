@@ -1,30 +1,26 @@
 package com.yenaly.han1meviewer.FapFolder.ui.navigation
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -76,6 +72,7 @@ import com.yenaly.han1meviewer.FapFolder.ui.saved.FapFolderSavedScreen
 import com.yenaly.han1meviewer.FapFolder.ui.search.FapFolderSearchHistoryScreen
 import com.yenaly.han1meviewer.FapFolder.ui.search.FapFolderSearchScreen
 import com.yenaly.han1meviewer.FapFolder.ui.settings.FapFolderCookiesScreen
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.ui.activity.MainActivity
 import com.yenaly.han1meviewer.ui.navigation.NavigationManager
@@ -421,10 +418,10 @@ fun FapFolderNavHost(
     }
 }
 
-private val FapAccent = Color(0xFFD81B60)
-
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun GatePlaceholder(message: String) {
+    // Same look as Hanime's LoadingContent (indicator + bodyMedium message).
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -434,38 +431,19 @@ private fun GatePlaceholder(message: String) {
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Box(
-                modifier = Modifier
-                    .size(84.dp)
-                    .clip(CircleShape)
-                    .background(FapAccent.copy(alpha = 0.14f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(40.dp),
-                    strokeWidth = 4.dp,
-                    color = FapAccent,
-                )
-            }
+            LoadingIndicator()
             Text(
                 text = "FapFolder",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,
-            )
-            LinearProgressIndicator(
-                modifier = Modifier
-                    .width(180.dp)
-                    .clip(RoundedCornerShape(50)),
-                color = FapAccent,
-                trackColor = FapAccent.copy(alpha = 0.18f),
             )
         }
     }
@@ -549,58 +527,53 @@ private fun GateErrorScreen(
     onSwitchSite: () -> Unit,
     onOpenSettings: () -> Unit,
 ) {
+    val headline = when {
+        state.suggestRelogin -> "Session expired"
+        state.suggestWait -> "Please wait a moment"
+        state.suggestSwitchSite -> "Site unavailable"
+        else -> "FapFolder is not ready"
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp, vertical = 32.dp),
+            .padding(24.dp),
         contentAlignment = Alignment.Center,
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Box(
-                modifier = Modifier
-                    .size(84.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.errorContainer),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Warning,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onErrorContainer,
-                    modifier = Modifier.size(40.dp),
-                )
-            }
+            // Same visuals as Hanime's ErrorContent.
+            Image(
+                modifier = Modifier.size(150.dp),
+                painter = painterResource(R.drawable.h_chan_sad),
+                contentDescription = headline,
+            )
             Text(
                 text = "FapFolder",
                 style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-                color = FapAccent,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                text = when {
-                    state.suggestRelogin -> "Session expired"
-                    state.suggestWait -> "Please wait a moment"
-                    state.suggestSwitchSite -> "Site unavailable"
-                    else -> "FapFolder is not ready"
-                },
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
+                text = headline,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.error,
                 textAlign = TextAlign.Center,
             )
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                color = MaterialTheme.colorScheme.surfaceContainer,
+                shape = RoundedCornerShape(12.dp),
+                tonalElevation = 2.dp,
+                shadowElevation = 1.dp,
+                color = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface,
             ) {
                 Text(
                     text = state.reason,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(16.dp),
                 )
             }
@@ -609,18 +582,15 @@ private fun GateErrorScreen(
                 Button(
                     onClick = onOpenLogin,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
                 ) { GateButtonLabel(Icons.AutoMirrored.Filled.Login, "Sign in") }
                 FilledTonalButton(
                     onClick = onRetry,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
                 ) { GateButtonLabel(Icons.Default.Refresh, "Retry") }
             } else {
                 Button(
                     onClick = onRetry,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
                 ) { GateButtonLabel(Icons.Default.Refresh, if (state.suggestWait) "Retry later" else "Retry") }
             }
 
@@ -631,12 +601,10 @@ private fun GateErrorScreen(
                 OutlinedButton(
                     onClick = onOpenCookies,
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(14.dp),
                 ) { GateButtonLabel(Icons.Default.Cookie, "Cookies") }
                 OutlinedButton(
                     onClick = onSwitchSite,
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(14.dp),
                 ) { GateButtonLabel(Icons.Default.SwapHoriz, "Switch site") }
             }
             TextButton(onClick = onOpenSettings) {
@@ -650,7 +618,7 @@ private fun GateErrorScreen(
 private fun GateButtonLabel(icon: ImageVector, text: String) {
     Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
     Spacer(Modifier.width(8.dp))
-    Text(text, fontWeight = FontWeight.SemiBold, maxLines = 1)
+    Text(text, maxLines = 1)
 }
 
 private fun fapFolderHubEntries(
@@ -726,5 +694,7 @@ private fun fapFolderHubEntries(
         )
     }
 }
+
+
 
 
