@@ -1,5 +1,36 @@
 package com.yenaly.han1meviewer.ui.screen.main
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
+import coil3.compose.AsyncImage
+import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetwork
+import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderCookiesRoute
+import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderLoginRoute
+import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderSearchHistoryRoute
+import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderSearchRoute
+import com.yenaly.han1meviewer.HentaiMama.ui.navigation.HentaiMamaHomeSettingsRoute
+import com.yenaly.han1meviewer.HentaiMama.ui.navigation.HentaiMamaVideoSettingsRoute
+import com.yenaly.han1meviewer.MissAV.ui.navigation.MissAvHomeCategoriesRoute
+import com.yenaly.han1meviewer.MissAV.ui.navigation.MissAvHostSettingsRoute
+import com.yenaly.han1meviewer.OnAir.data.local.OnAirProfileCache
+import com.yenaly.han1meviewer.OnAir.ui.navigation.OnAirAccountSettingsRoute
+import com.yenaly.han1meviewer.OnAir.ui.navigation.OnAirCookieRoute
+import com.yenaly.han1meviewer.Preferences
+import com.yenaly.han1meviewer.ui.navigation.settings.HomeSettingsRoute
+import com.yenaly.han1meviewer.ui.navigation.settings.NetworkSettingsRoute
+import com.yenaly.han1meviewer.ui.navigation.settings.PlayerSettingsRoute
+import com.yenaly.han1meviewer.ui.navigation.settings.UnifiedHistoryRoute
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -50,93 +81,294 @@ data class SiteDrawerEntry(
     val onClick: (NavHostController) -> Unit,
 )
 
-/** Site specific drawer entries; replaces the Hanime drawer while another site is active. */
-fun siteDrawerEntries(site: SiteType): List<SiteDrawerEntry> {
+/** Login state shown in the drawer header instead of the Hanime profile card. */
+data class SiteLoginStatus(
+    val title: String,
+    val subtitle: String,
+    val avatarUrl: String?,
+    val loggedIn: Boolean,
+    val onClick: ((NavHostController) -> Unit)?,
+)
+
+private const val ONAIR_COOKIES_KEY = "onair_cookies_raw"
+
+fun siteLoginStatus(site: SiteType): SiteLoginStatus = when (site) {
+    SiteType.ONAIR -> {
+        val profile = OnAirProfileCache.current()
+        val raw = runCatching {
+            Preferences.preferenceSp.getString(ONAIR_COOKIES_KEY, null)
+        }.getOrNull().orEmpty()
+        val loggedIn = profile != null || raw.contains("session=")
+        if (loggedIn) {
+            SiteLoginStatus(
+                title = profile?.displayName?.takeIf { it.isNotBlank() } ?: "Logged in to OnAir",
+                subtitle = profile?.username?.let { "@$it" } ?: "Tap for account & session",
+                avatarUrl = profile?.avatarUrl,
+                loggedIn = true,
+                onClick = { it.navigateSafely(OnAirAccountSettingsRoute) },
+            )
+        } else {
+            SiteLoginStatus(
+                title = "Not logged in",
+                subtitle = "Tap to log in or import cookies",
+                avatarUrl = null,
+                loggedIn = false,
+                onClick = { it.navigateSafely(OnAirCookieRoute) },
+            )
+        }
+    }
+
+    SiteType.FAPFOLDER -> {
+        val loggedIn = runCatching { FapFolderNetwork.hasAuthCookies() }.getOrDefault(false)
+        if (loggedIn) {
+            SiteLoginStatus(
+                title = "Logged in to FapFolder",
+                subtitle = "Tap to manage session cookies",
+                avatarUrl = null,
+                loggedIn = true,
+                onClick = { it.navigateSafely(FapFolderCookiesRoute) },
+            )
+        } else {
+            SiteLoginStatus(
+                title = "Not logged in",
+                subtitle = "Tap to sign in to FapFolder",
+                avatarUrl = null,
+                loggedIn = false,
+                onClick = { it.navigateSafely(FapFolderLoginRoute) },
+            )
+        }
+    }
+
+    SiteType.MISSAV -> SiteLoginStatus(
+        title = "Not logged in",
+        subtitle = "Login is unavailable for MissAV",
+        avatarUrl = null,
+        loggedIn = false,
+        onClick = null,
+    )
+
+    SiteType.HENTAIMAMA -> SiteLoginStatus(
+        title = "Not logged in",
+        subtitle = "Login is unavailable for HentaiMama",
+        avatarUrl = null,
+        loggedIn = false,
+        onClick = null,
+    )
+
+    SiteType.HANIME, SiteType.JAVCHU -> SiteLoginStatus(
+        title = "Not logged in",
+        subtitle = "",
+        avatarUrl = null,
+        loggedIn = false,
+        onClick = null,
+    )
+}
+
+private fun entry(title: String, icon: Int, route: Any) =
+    SiteDrawerEntry(title, icon) { nav -> nav.navigateSafely(route) }
+
+/** Site specific entries (everything the old per-site settings hubs offered). */
+fun siteDrawerEntries(site: SiteType, loggedIn: Boolean): List<SiteDrawerEntry> {
     val home = SiteDrawerEntry("Home", R.drawable.ic_baseline_home_24) {
         NavigationManager.navigateToHome()
     }
     val checkIn = SiteDrawerEntry("Did you cum?", R.drawable.ic_baseline_thumb_up_alt_24) {
         it.navigateSafely(DailyCheckInRoute)
     }
-    fun entry(title: String, icon: Int, route: Any) =
-        SiteDrawerEntry(title, icon) { nav -> nav.navigateSafely(route) }
-
     val history = R.drawable.ic_baseline_history_24
     val list = R.drawable.ic_baseline_list_24
     val settings = R.drawable.ic_baseline_settings_24
     return when (site) {
         SiteType.MISSAV -> listOf(
             home,
-            entry("Settings", settings, MissAvSettingsHubRoute),
             checkIn,
             entry("History", history, MissAvHistoryRoute),
+            entry("Home categories", list, MissAvHomeCategoriesRoute),
+            entry("Host / Mirror", settings, MissAvHostSettingsRoute),
         )
+
         SiteType.HENTAIMAMA -> listOf(
             home,
-            entry("Settings", settings, HentaiMamaSettingsHubRoute),
             checkIn,
             entry("History", history, HentaiMamaHistoryRoute),
-            entry("Upcoming", list, HentaiMamaUpcomingRoute),
-            entry("Recent episodes", list, HentaiMamaRecentEpisodesRoute),
             entry("Playlists", list, HentaiMamaPlaylistsRoute),
+            entry("Recent episodes", list, HentaiMamaRecentEpisodesRoute),
+            entry("Upcoming", list, HentaiMamaUpcomingRoute),
+            entry("Video & card size", settings, HentaiMamaVideoSettingsRoute(target = "all")),
+            entry("Home categories", list, HentaiMamaHomeSettingsRoute),
         )
-        SiteType.ONAIR -> listOf(
-            home,
-            entry("Settings", settings, OnAirSettingsRoute),
-            checkIn,
-            entry("History", history, OnAirHistoryRoute),
-            entry("Announcements", list, OnAirAnnouncementsRoute),
-            entry("Tags", list, OnAirTagsIndexRoute),
-            entry("Pictures", list, OnAirPicturesRoute),
-            entry("Chat", list, OnAirChatRoute),
-        )
-        SiteType.FAPFOLDER -> listOf(
-            home,
-            entry("Settings", settings, FapFolderSettingsRoute),
-            checkIn,
-            entry("History", history, FapFolderHistoryRoute),
-            entry("Saved", list, FapFolderSavedRoute),
-            entry("Followed communities", list, FapFolderFollowedCommunitiesRoute),
-        )
+
+        SiteType.ONAIR -> buildList {
+            add(home)
+            add(checkIn)
+            add(entry("History", history, OnAirHistoryRoute))
+            add(entry("Cookies & sign in", settings, OnAirCookieRoute))
+            if (loggedIn) add(entry("Account, host & session", settings, OnAirAccountSettingsRoute))
+            add(entry("Tags", list, OnAirTagsIndexRoute))
+            add(entry("Announcements", list, OnAirAnnouncementsRoute))
+            add(entry("Chat", list, OnAirChatRoute))
+            add(entry("Pictures", list, OnAirPicturesRoute))
+        }
+
+        SiteType.FAPFOLDER -> buildList {
+            add(home)
+            add(checkIn)
+            add(entry("History", history, FapFolderHistoryRoute))
+            add(entry("Cookies", settings, FapFolderCookiesRoute))
+            if (!loggedIn) add(entry("Sign in", settings, FapFolderLoginRoute))
+            add(entry("Search", list, FapFolderSearchRoute()))
+            add(entry("Search history", history, FapFolderSearchHistoryRoute))
+            add(entry("Followed communities", list, FapFolderFollowedCommunitiesRoute))
+            add(entry("Saved", list, FapFolderSavedRoute))
+        }
+
         SiteType.HANIME, SiteType.JAVCHU -> emptyList()
     }
 }
 
+/** In-app settings shared by all sites (same ones the Hanime drawer links to). */
+private fun appEntries(): List<SiteDrawerEntry> = listOf(
+    entry("Settings", R.drawable.ic_baseline_settings_24, HomeSettingsRoute),
+    entry("Player settings", R.drawable.ic_baseline_settings_24, PlayerSettingsRoute),
+    entry("Network settings", R.drawable.ic_baseline_settings_24, NetworkSettingsRoute),
+    entry("Watch history (all sites)", R.drawable.ic_baseline_history_24, UnifiedHistoryRoute),
+)
+
 @Composable
 fun SiteDrawerContent(
     site: SiteType,
-    entries: List<SiteDrawerEntry>,
-    onEntryClick: (SiteDrawerEntry) -> Unit,
+    navController: NavHostController,
+    onClose: () -> Unit,
+    onSwitchSiteClick: () -> Unit,
+    refreshKey: Any = Unit,
+) {
+    val status = androidx.compose.runtime.remember(site, refreshKey) { siteLoginStatus(site) }
+    val siteEntries = siteDrawerEntries(site, status.loggedIn)
+    val appEntries = appEntries()
+
+    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+        SiteDrawerHeader(
+            site = site,
+            status = status,
+            onStatusClick = status.onClick?.let { click ->
+                {
+                    onClose()
+                    click(navController)
+                }
+            },
+            onSwitchSiteClick = onSwitchSiteClick,
+        )
+        Spacer(Modifier.height(8.dp))
+        siteEntries.forEach { entry ->
+            DrawerItem(entry) {
+                onClose()
+                entry.onClick(navController)
+            }
+        }
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp))
+        appEntries.forEach { entry ->
+            DrawerItem(entry) {
+                onClose()
+                entry.onClick(navController)
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun DrawerItem(entry: SiteDrawerEntry, onClick: () -> Unit) {
+    NavigationDrawerItem(
+        label = { Text(entry.title) },
+        icon = { Icon(painterResource(entry.iconRes), contentDescription = null) },
+        selected = false,
+        onClick = onClick,
+        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+    )
+}
+
+@Composable
+private fun SiteDrawerHeader(
+    site: SiteType,
+    status: SiteLoginStatus,
+    onStatusClick: (() -> Unit)?,
     onSwitchSiteClick: () -> Unit,
 ) {
-    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        Text(
-            text = CrossSiteNavigator.siteLabel(site),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 28.dp, vertical = 20.dp),
-        )
-        HorizontalDivider()
-        Spacer(Modifier.height(8.dp))
-        entries.forEach { entry ->
-            NavigationDrawerItem(
-                label = { Text(entry.title) },
-                icon = { Icon(painterResource(entry.iconRes), contentDescription = entry.title) },
-                selected = false,
-                onClick = { onEntryClick(entry) },
-                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+    ElevatedCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp)
+            .padding(top = 12.dp, bottom = 8.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        ),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AsyncImage(
+                model = status.avatarUrl,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(CircleShape)
+                    .then(
+                        if (onStatusClick != null) Modifier.clickable(onClick = onStatusClick)
+                        else Modifier
+                    ),
+                contentScale = ContentScale.Crop,
+                placeholder = painterResource(id = R.drawable.bg_default_header),
+                fallback = painterResource(id = R.drawable.bg_default_header),
+                error = painterResource(id = R.drawable.bg_default_header),
             )
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 16.dp, end = 8.dp)
+                    .then(
+                        if (onStatusClick != null) Modifier.clickable(onClick = onStatusClick)
+                        else Modifier
+                    ),
+            ) {
+                Text(
+                    text = status.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = status.subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = CrossSiteNavigator.siteLabel(site),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+            Column(
+                modifier = Modifier.clickable(onClick = onSwitchSiteClick),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_baseline_switch_24),
+                    contentDescription = stringResource(R.string.switch_site),
+                    modifier = Modifier.padding(6.dp),
+                )
+                Text(
+                    text = stringResource(R.string.switch_site),
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
         }
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-        NavigationDrawerItem(
-            label = { Text(androidx.compose.ui.res.stringResource(R.string.switch_site)) },
-            icon = {
-                Icon(painterResource(R.drawable.ic_baseline_switch_24), contentDescription = null)
-            },
-            selected = false,
-            onClick = onSwitchSiteClick,
-            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
-        )
-        Spacer(Modifier.height(16.dp))
     }
 }

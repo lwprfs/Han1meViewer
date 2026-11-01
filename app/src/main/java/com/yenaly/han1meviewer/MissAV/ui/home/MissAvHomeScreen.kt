@@ -1,4 +1,5 @@
 package com.yenaly.han1meviewer.MissAV.ui.home
+import androidx.compose.material.icons.filled.Menu
 import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
 import com.yenaly.han1meviewer.ui.component.SiteErrorContent
 import androidx.compose.foundation.background
@@ -98,8 +99,8 @@ fun MissAvHomeScreen(
                         onClick = onNavigateToHistory,
                     )
                     SiteBarIconButton(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = "Home settings",
+                        imageVector = Icons.Default.Menu,
+                        contentDescription = "Menu",
                         onClick = onNavigateToSettings,
                     )
                 },
@@ -294,3 +295,5 @@ private fun CategoryErrorRow(message: String, onRetry: () -> Unit) {
         }
     }
 }
+
+

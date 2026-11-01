@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.OnAir.ui.home
 
+import androidx.compose.material.icons.filled.Menu
 import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
 import com.yenaly.han1meviewer.ui.component.SiteErrorContent
 import androidx.compose.foundation.background
@@ -140,11 +141,10 @@ fun OnAirHomeScreen(
                         contentDescription = "History",
                         onClick = onOpenHistory,
                     )
-                    SiteOverflowMenu(
-                        items = listOf(
-                            "Pictures" to onOpenPictures,
-                            "Settings" to onOpenSettings,
-                        ),
+                    SiteBarIconButton(
+                        imageVector = Icons.Default.Menu,
+                        contentDescription = "Menu",
+                        onClick = onOpenSettings,
                     )
                     currentUser?.let { profile ->
                         CurrentUserAvatar(
@@ -375,3 +375,5 @@ private fun RowScope.StatPill(label: String, value: String) {
         }
     }
 }
+
+

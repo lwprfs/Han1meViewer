@@ -26,7 +26,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.hasRoute
+import androidx.navigation.NavDestination.Companion.hasRoute
 import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderHomeRoute
 import com.yenaly.han1meviewer.HentaiMama.ui.navigation.HentaiMamaHomeRoute
 import com.yenaly.han1meviewer.MissAV.ui.navigation.MissAvHomeRoute
@@ -129,7 +129,6 @@ fun MainActivityContent(
                 else -> false
             }
         }
-        val drawerEntries = remember(currentSite) { siteDrawerEntries(currentSite) }
         val drawerAvailable = if (isHanimeFamilySite) {
             currentMainDestination.drawerEnabled
         } else {
@@ -204,11 +203,9 @@ fun MainActivityContent(
             siteDrawerContent = if (isHanimeFamilySite) null else ({
                 SiteDrawerContent(
                     site = currentSite,
-                    entries = drawerEntries,
-                    onEntryClick = { entry ->
-                        scope.launch { drawerState.close() }
-                        entry.onClick(composeNavController)
-                    },
+                    navController = composeNavController,
+                    refreshKey = drawerState.currentValue,
+                    onClose = { scope.launch { drawerState.close() } },
                     onSwitchSiteClick = {
                         scope.launch { drawerState.close() }
                         onSwitchSiteClick()
