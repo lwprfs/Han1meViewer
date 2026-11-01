@@ -2,6 +2,7 @@ package com.yenaly.han1meviewer.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.yenaly.han1meviewer.logic.SiteCheckIn
 import com.yenaly.han1meviewer.logic.dao.CheckInRecordDatabase
 import com.yenaly.han1meviewer.logic.dao.HistoryDatabase
 import com.yenaly.han1meviewer.logic.entity.CheckInRecordEntity
@@ -125,7 +126,12 @@ class CheckInCalendarViewModel : ViewModel() {
 
     fun getRecentWatchHistory(limit: Int, onResult: (List<WatchHistoryEntity>) -> Unit) {
         viewModelScope.launch {
-            val result = HistoryDatabase.instance.watchHistory.getRecentWatches(limit)
+            val result = SiteCheckIn.recentWatchedAllSites(application, limit)
+            result.forEach { watch ->
+                if (SiteCheckIn.siteOfDishCode(watch.videoCode) != null) {
+                    SiteCheckIn.rememberCover(application, watch.videoCode, watch.title, watch.coverUrl)
+                }
+            }
             onResult(result)
         }
     }
@@ -381,3 +387,5 @@ data class MonthlyStats(
     val dominantPeriod: String = "",
     val scholarDate: String = ""
 )
+
+

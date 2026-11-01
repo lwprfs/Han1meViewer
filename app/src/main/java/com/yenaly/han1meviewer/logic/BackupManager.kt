@@ -4,6 +4,17 @@ import android.content.Context
 import android.net.Uri
 import androidx.core.content.edit
 import com.yenaly.han1meviewer.BuildConfig
+import com.yenaly.han1meviewer.FapFolder.common.FapFolderConstants
+import com.yenaly.han1meviewer.FapFolder.common.FapFolderSecurePrefs
+import com.yenaly.han1meviewer.FapFolder.data.local.FapFolderDatabase
+import com.yenaly.han1meviewer.FapFolder.data.local.FapFolderHistoryEntity
+import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderCookieJar
+import com.yenaly.han1meviewer.HentaiMama.data.local.HentaiMamaDatabase
+import com.yenaly.han1meviewer.HentaiMama.data.local.HentaiMamaHistoryEntity
+import com.yenaly.han1meviewer.MissAV.data.local.MissAvDatabase
+import com.yenaly.han1meviewer.MissAV.data.local.MissAvHistoryEntity
+import com.yenaly.han1meviewer.OnAir.data.local.OnAirDatabase
+import com.yenaly.han1meviewer.OnAir.data.local.OnAirHistoryEntity
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.logic.dao.CheckInRecordDatabase
 import com.yenaly.han1meviewer.logic.dao.DownloadDatabase
@@ -30,6 +41,37 @@ object BackupManager {
         encodeDefaults = true
     }
 
+    /** What can be picked on the export dialog. */
+    enum class Section(val label: String, val group: Group) {
+        SETTINGS("App settings (all sites)", Group.DATA),
+        CHECK_IN("Check-in records & dishes", Group.DATA),
+        KEYFRAMES("H keyframes", Group.DATA),
+        HANIME_HISTORY("Hanime / Javchu watch history", Group.DATA),
+        DOWNLOADS("Download list", Group.DATA),
+        MISSAV_HISTORY("MissAV watch history", Group.DATA),
+        HENTAIMAMA_HISTORY("HentaiMama watch history", Group.DATA),
+        ONAIR_HISTORY("OnAir watch history", Group.DATA),
+        FAPFOLDER_HISTORY("FapFolder watch history", Group.DATA),
+        COOKIES_HANIME("Hanime / Javchu cookies", Group.COOKIES),
+        COOKIES_MISSAV("MissAV cookies", Group.COOKIES),
+        COOKIES_HENTAIMAMA("HentaiMama cookies", Group.COOKIES),
+        COOKIES_ONAIR("OnAir cookies", Group.COOKIES),
+        COOKIES_FAPFOLDER("FapFolder cookies", Group.COOKIES);
+
+        enum class Group { DATA, COOKIES }
+    }
+
+    private const val KEY_ONAIR_COOKIES = "onair_cookies_raw"
+
+    private fun cookieSectionOfKey(key: String): Section? = when {
+        key == com.yenaly.han1meviewer.LOGIN_COOKIE ||
+                key == com.yenaly.han1meviewer.CLOUDFLARE_COOKIE -> Section.COOKIES_HANIME
+        key.startsWith("missav_cf_") -> Section.COOKIES_MISSAV
+        key.startsWith("hm_cf_") -> Section.COOKIES_HENTAIMAMA
+        key == KEY_ONAIR_COOKIES -> Section.COOKIES_ONAIR
+        else -> null
+    }
+
     @Serializable
     private data class BackupData(
         val version: Int = BACKUP_VERSION,
@@ -45,6 +87,12 @@ object BackupManager {
         val downloads: List<HanimeDownloadEntity>? = null,
         val downloadCategories: List<DownloadCategoryEntity>? = null,
         val downloadCategoryCrossRefs: List<HanimeCategoryCrossRef>? = null,
+        val cookies: Map<String, Map<String, PreferenceValue>>? = null,
+        val fapFolderCookies: String? = null,
+        val missAvHistories: List<MissAvHistoryEntity>? = null,
+        val hentaiMamaHistories: List<HentaiMamaHistoryEntity>? = null,
+        val onAirHistories: List<OnAirHistoryEntity>? = null,
+        val fapFolderHistories: List<FapFolderHistoryEntity>? = null,
     )
 
     @Serializable
@@ -68,47 +116,56 @@ object BackupManager {
         data class StringSetValue(val value: Set<String>) : PreferenceValue
     }
 
-    suspend fun exportTo(context: Context, uri: Uri) {
+    suspend fun exportTo(
+        context: Context,
+        uri: Uri,
+        sections: Set<Section> = Section.entries.toSet(),
+    ) {
         context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-            exportTo(context, outputStream)
+            exportTo(context, outputStream, sections)
         } ?: error("Unable to open backup file")
     }
 
-    suspend fun importFrom(context: Context, uri: Uri) {
+    suspend fun importFrom(
+        context: Context,
+        uri: Uri,
+        sections: Set<Section> = Section.entries.toSet(),
+    ) {
         val backup = context.contentResolver.openInputStream(uri)?.use { inputStream ->
             json.decodeFromString<BackupData>(inputStream.bufferedReader().readText())
         } ?: error("Unable to open backup file")
 
-        backup.hKeyframes?.let { hKeyframes ->
+        backup.hKeyframes?.takeIf { Section.KEYFRAMES in sections }?.let { hKeyframes ->
             MiscellanyDatabase.instance.hKeyframeDao.apply {
                 deleteAll()
                 insertAll(hKeyframes)
             }
         }
 
-        backup.checkInRecords?.let { checkInRecords ->
+        backup.checkInRecords?.takeIf { Section.CHECK_IN in sections }?.let { checkInRecords ->
             CheckInRecordDatabase.getDatabase(context).checkInDao().apply {
                 deleteAll()
                 insertAll(checkInRecords.map { it.normalizeSideDishes() })
             }
         }
 
-        backup.sideDishes?.let { sideDishes ->
+        backup.sideDishes?.takeIf { Section.CHECK_IN in sections }?.let { sideDishes ->
             CheckInRecordDatabase.getDatabase(context).sideDishDao().apply {
                 deleteAll()
                 insertAll(sideDishes)
             }
         }
 
-        backup.watchHistories?.let { watchHistories ->
+        backup.watchHistories?.takeIf { Section.HANIME_HISTORY in sections }?.let { watchHistories ->
             HistoryDatabase.instance.watchHistory.apply {
                 deleteAll()
                 insertAll(watchHistories)
             }
         }
 
-        if (backup.downloadGroups != null || backup.downloads != null ||
-            backup.downloadCategories != null || backup.downloadCategoryCrossRefs != null
+        if (Section.DOWNLOADS in sections && (backup.downloadGroups != null ||
+                    backup.downloads != null ||
+                    backup.downloadCategories != null || backup.downloadCategoryCrossRefs != null)
         ) {
             val downloadGroups = backup.downloadGroups.orEmpty()
             val groupIds = downloadGroups.mapTo(mutableSetOf()) { it.id } +
@@ -140,35 +197,110 @@ object BackupManager {
             }
         }
 
-        backup.settings?.let { settings ->
-            Preferences.preferenceSp.edit {
-                settings.forEach { (key, value) ->
-                    when (value) {
-                        is PreferenceValue.BooleanValue -> putBoolean(key, value.value)
-                        is PreferenceValue.FloatValue -> putFloat(key, value.value)
-                        is PreferenceValue.IntValue -> putInt(key, value.value)
-                        is PreferenceValue.LongValue -> putLong(key, value.value)
-                        is PreferenceValue.StringSetValue -> putStringSet(key, value.value)
-                        is PreferenceValue.StringValue -> putString(key, value.value)
-                    }
+        backup.missAvHistories?.takeIf { Section.MISSAV_HISTORY in sections }?.let {
+            MissAvDatabase.getInstance(context).missAvHistoryDao().apply {
+                deleteAll(); insertAll(it)
+            }
+        }
+        backup.hentaiMamaHistories?.takeIf { Section.HENTAIMAMA_HISTORY in sections }?.let {
+            HentaiMamaDatabase.getInstance(context).historyDao().apply {
+                deleteAll(); insertAll(it)
+            }
+        }
+        backup.onAirHistories?.takeIf { Section.ONAIR_HISTORY in sections }?.let {
+            OnAirDatabase.getInstance(context).onAirHistoryDao().apply {
+                deleteAll(); insertAll(it)
+            }
+        }
+        backup.fapFolderHistories?.takeIf { Section.FAPFOLDER_HISTORY in sections }?.let {
+            FapFolderDatabase.getInstance(context).fapFolderHistoryDao().apply {
+                deleteAll(); insertAll(it)
+            }
+        }
+
+        backup.settings?.takeIf { Section.SETTINGS in sections }?.let { applyPrefs(it) }
+
+        backup.cookies?.forEach { (sectionName, prefs) ->
+            val section = Section.entries.firstOrNull { it.name == sectionName } ?: return@forEach
+            if (section in sections) applyPrefs(prefs)
+        }
+
+        if (Section.COOKIES_FAPFOLDER in sections) {
+            backup.fapFolderCookies?.takeIf { it.isNotBlank() }?.let { raw ->
+                FapFolderSecurePrefs.instance.edit(commit = true) {
+                    putString(FapFolderConstants.PREF_FAPFOLDER_COOKIES_RAW, raw)
+                }
+                runCatching { FapFolderCookieJar().restoreFromPreferences() }
+            }
+        }
+    }
+
+    private fun applyPrefs(settings: Map<String, PreferenceValue>) {
+        Preferences.preferenceSp.edit {
+            settings.forEach { (key, value) ->
+                when (value) {
+                    is PreferenceValue.BooleanValue -> putBoolean(key, value.value)
+                    is PreferenceValue.FloatValue -> putFloat(key, value.value)
+                    is PreferenceValue.IntValue -> putInt(key, value.value)
+                    is PreferenceValue.LongValue -> putLong(key, value.value)
+                    is PreferenceValue.StringSetValue -> putStringSet(key, value.value)
+                    is PreferenceValue.StringValue -> putString(key, value.value)
                 }
             }
         }
     }
 
-    private suspend fun exportTo(context: Context, outputStream: OutputStream) {
+    private suspend fun exportTo(
+        context: Context,
+        outputStream: OutputStream,
+        sections: Set<Section>,
+    ) {
+        val allPrefs = Preferences.preferenceSp.all.mapValuesNotNull { (_, value) ->
+            value.toPreferenceValue()
+        }
+        val settings = allPrefs.filterKeys { cookieSectionOfKey(it) == null }
+        val cookies = Section.entries
+            .filter { it.group == Section.Group.COOKIES && it in sections }
+            .associate { section ->
+                section.name to allPrefs.filterKeys { cookieSectionOfKey(it) == section }
+            }
+        val checkInDb = CheckInRecordDatabase.getDatabase(context)
         val backup = BackupData(
-            settings = Preferences.preferenceSp.all.mapValuesNotNull { (_, value) ->
-                value.toPreferenceValue()
-            },
-            hKeyframes = MiscellanyDatabase.instance.hKeyframeDao.getAll(),
-            checkInRecords = CheckInRecordDatabase.getDatabase(context).checkInDao().getAllRecords(),
-            sideDishes = CheckInRecordDatabase.getDatabase(context).sideDishDao().getAll(),
-            watchHistories = HistoryDatabase.instance.watchHistory.getAll(),
-            downloadGroups = DownloadDatabase.instance.downloadGroupDao.getAllGroupsOnce(),
-            downloads = DownloadDatabase.instance.hanimeDownloadDao.getAll(),
-            downloadCategories = DownloadDatabase.instance.downloadCategoryDao.getAllCategoriesOnce(),
-            downloadCategoryCrossRefs = DownloadDatabase.instance.downloadCategoryDao.getAllCrossRefs(),
+            settings = if (Section.SETTINGS in sections) settings else null,
+            hKeyframes = if (Section.KEYFRAMES in sections)
+                MiscellanyDatabase.instance.hKeyframeDao.getAll() else null,
+            checkInRecords = if (Section.CHECK_IN in sections)
+                checkInDb.checkInDao().getAllRecords() else null,
+            sideDishes = if (Section.CHECK_IN in sections)
+                checkInDb.sideDishDao().getAll() else null,
+            watchHistories = if (Section.HANIME_HISTORY in sections)
+                HistoryDatabase.instance.watchHistory.getAll() else null,
+            downloadGroups = if (Section.DOWNLOADS in sections)
+                DownloadDatabase.instance.downloadGroupDao.getAllGroupsOnce() else null,
+            downloads = if (Section.DOWNLOADS in sections)
+                DownloadDatabase.instance.hanimeDownloadDao.getAll() else null,
+            downloadCategories = if (Section.DOWNLOADS in sections)
+                DownloadDatabase.instance.downloadCategoryDao.getAllCategoriesOnce() else null,
+            downloadCategoryCrossRefs = if (Section.DOWNLOADS in sections)
+                DownloadDatabase.instance.downloadCategoryDao.getAllCrossRefs() else null,
+            cookies = cookies.takeIf { it.isNotEmpty() },
+            fapFolderCookies = if (Section.COOKIES_FAPFOLDER in sections) {
+                runCatching {
+                    FapFolderSecurePrefs.instance.getString(
+                        FapFolderConstants.PREF_FAPFOLDER_COOKIES_RAW, null
+                    ) ?: FapFolderSecurePrefs.readFallback(
+                        FapFolderConstants.PREF_FAPFOLDER_COOKIES_RAW
+                    )
+                }.getOrNull()
+            } else null,
+            missAvHistories = if (Section.MISSAV_HISTORY in sections)
+                MissAvDatabase.getInstance(context).missAvHistoryDao().getAllHistorySync() else null,
+            hentaiMamaHistories = if (Section.HENTAIMAMA_HISTORY in sections)
+                HentaiMamaDatabase.getInstance(context).historyDao().getAll() else null,
+            onAirHistories = if (Section.ONAIR_HISTORY in sections)
+                OnAirDatabase.getInstance(context).onAirHistoryDao().getAll() else null,
+            fapFolderHistories = if (Section.FAPFOLDER_HISTORY in sections)
+                FapFolderDatabase.getInstance(context).fapFolderHistoryDao().getAll() else null,
         )
         outputStream.bufferedWriter().use { writer ->
             writer.write(json.encodeToString(backup))
@@ -212,3 +344,5 @@ object BackupManager {
         return copy(sideDishes = normalized)
     }
 }
+
+

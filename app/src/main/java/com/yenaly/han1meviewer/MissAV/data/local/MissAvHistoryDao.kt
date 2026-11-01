@@ -8,6 +8,9 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface MissAvHistoryDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(histories: List<MissAvHistoryEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdate(history: MissAvHistoryEntity)
 
     @Query("SELECT * FROM missav_watch_history ORDER BY watchDate DESC")
@@ -31,3 +34,5 @@ interface MissAvHistoryDao {
     @Query("SELECT * FROM missav_watch_history WHERE videoCode = :videoCode LIMIT 1")
     suspend fun getByVideoCode(videoCode: String): MissAvHistoryEntity?
 }
+
+

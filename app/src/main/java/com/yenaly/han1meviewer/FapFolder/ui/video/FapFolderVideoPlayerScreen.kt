@@ -1,5 +1,10 @@
 package com.yenaly.han1meviewer.FapFolder.ui.video
 
+import androidx.compose.runtime.saveable.rememberSaveable
+import android.widget.FrameLayout
+import com.yenaly.han1meviewer.ui.component.VideoFitState
+import com.yenaly.han1meviewer.ui.component.fitVideoSurface
+import com.yenaly.han1meviewer.ui.component.installVideoFit
 import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -43,6 +48,7 @@ import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
+import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Lock
@@ -173,6 +179,9 @@ fun FapFolderVideoPlayerScreen(
     var controlsLocked by remember { mutableStateOf(false) }
     var controlsInteractionTick by remember { mutableLongStateOf(0L) }
     var isFullscreen by remember { mutableStateOf(false) }
+    val fitState = remember { VideoFitState().also { it.aspect = initialAspect } }
+    var stretched by rememberSaveable { mutableStateOf(false) }
+    fitState.stretched = stretched && isFullscreen
     var fullscreenLandscape by remember { mutableStateOf(videoIsLandscape) }
     var reloadToken by remember { mutableStateOf(0) }
     var reloadAttempts by remember { mutableStateOf(0) }
@@ -581,6 +590,20 @@ fun FapFolderVideoPlayerScreen(
         }
     }
 
+    DisposableEffect(exoPlayer) {
+        val exo = exoPlayer
+        val sizeListener = object : androidx.media3.common.Player.Listener {
+            override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
+                fitState.updateFrom(videoSize)
+                val view = surfaceRef.value
+                val frame = view?.parent as? FrameLayout
+                if (view != null && frame != null) fitVideoSurface(frame, view, fitState)
+            }
+        }
+        exo?.addListener(sizeListener)
+        onDispose { exo?.removeListener(sizeListener) }
+    }
+
     val playerContent: @Composable () -> Unit = {
         Box(
             modifier = Modifier
@@ -603,41 +626,54 @@ fun FapFolderVideoPlayerScreen(
 
             AndroidView(
                 factory = { ctx ->
-                    SurfaceView(ctx).apply {
+                    FrameLayout(ctx).apply {
                         layoutParams = ViewGroup.LayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT,
                             ViewGroup.LayoutParams.MATCH_PARENT,
                         )
-                        surfaceRef.value = this
-                        holder.addCallback(object : SurfaceHolder.Callback {
-                            override fun surfaceCreated(h: SurfaceHolder) {
-                                exoPlayer?.setVideoSurfaceView(this@apply)
-                            }
+                        val surface = SurfaceView(ctx).apply {
+                            layoutParams = FrameLayout.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                            )
+                            holder.addCallback(object : SurfaceHolder.Callback {
+                                override fun surfaceCreated(h: SurfaceHolder) {
+                                    exoPlayer?.setVideoSurfaceView(this@apply)
+                                }
 
-                            override fun surfaceChanged(
-                                h: SurfaceHolder,
-                                format: Int,
-                                width: Int,
-                                height: Int,
-                            ) {
-                                exoPlayer?.setVideoSurfaceView(this@apply)
-                            }
+                                override fun surfaceChanged(
+                                    h: SurfaceHolder,
+                                    format: Int,
+                                    width: Int,
+                                    height: Int,
+                                ) {
+                                    exoPlayer?.setVideoSurfaceView(this@apply)
+                                }
 
-                            override fun surfaceDestroyed(h: SurfaceHolder) {
-                                exoPlayer?.clearVideoSurfaceView(this@apply)
-                            }
-                        })
+                                override fun surfaceDestroyed(h: SurfaceHolder) {
+                                    exoPlayer?.clearVideoSurfaceView(this@apply)
+                                }
+                            })
+                        }
+                        addView(surface)
+                        surfaceRef.value = surface
+                        installVideoFit(this, surface, fitState)
                     }
                 },
                 modifier = Modifier.fillMaxSize(),
-                update = { view ->
+                update = { frame ->
+                    val view = frame.getChildAt(0) as? SurfaceView ?: return@AndroidView
                     surfaceRef.value = view
+                    fitState.stretched = stretched && isFullscreen
+                    fitVideoSurface(frame, view, fitState)
                     exoPlayer?.setVideoSurfaceView(view)
                 },
-                onRelease = { view ->
-                    exoPlayer?.clearVideoSurfaceView(view)
-                    if (surfaceRef.value === view) surfaceRef.value = null
-
+                onRelease = { frame ->
+                    val view = frame.getChildAt(0) as? SurfaceView
+                    if (view != null) {
+                        exoPlayer?.clearVideoSurfaceView(view)
+                        if (surfaceRef.value === view) surfaceRef.value = null
+                    }
                 },
             )
 
@@ -1129,6 +1165,17 @@ fun FapFolderVideoPlayerScreen(
                                 modifier = Modifier.width(52.dp),
                             )
 
+                            if (isFullscreen) {
+                                IconButton(onClick = { stretched = !stretched }) {
+                                    Icon(
+                                        imageVector = Icons.Filled.AspectRatio,
+                                        contentDescription = "Stretch to fill",
+                                        tint = if (stretched) MaterialTheme.colorScheme.primary
+                                        else Color.White,
+                                    )
+                                }
+                            }
+
                             IconButton(onClick = {
                                 if (isFullscreen) exitFullscreen()
                                 else enterFullscreen()
@@ -1378,5 +1425,7 @@ private fun safePosition(player: ExoPlayer?): Long {
 private fun formatSpeed(speed: Float): String =
     if (speed == speed.toInt().toFloat()) "${speed.toInt()}.0x"
     else "${speed}x"
+
+
 
 

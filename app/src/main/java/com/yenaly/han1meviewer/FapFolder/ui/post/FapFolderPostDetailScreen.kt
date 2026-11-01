@@ -1,5 +1,8 @@
 package com.yenaly.han1meviewer.FapFolder.ui.post
 
+import com.yenaly.han1meviewer.SiteType
+import com.yenaly.han1meviewer.ui.component.SiteVideoActionBar
+import com.yenaly.han1meviewer.FapFolder.common.FapFolderUrlUtils
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import androidx.compose.foundation.layout.Arrangement
@@ -202,6 +205,22 @@ fun FapFolderPostDetailScreen(
                                 onClickDislike = { viewModel.react(positive = false) },
                                 onClickSave = { viewModel.toggleSave() },
                                 onLongClickPost = { },
+                            )
+                        }
+
+                        item(key = "site_actions") {
+                            SiteVideoActionBar(
+                                site = SiteType.FAPFOLDER,
+                                videoCode = post.postId.toString(),
+                                title = post.bodyPlain.lineSequence().firstOrNull { it.isNotBlank() }
+                                    ?.take(80)
+                                    ?: post.author.displayName.take(40),
+                                coverUrl = coverUrlOf(post),
+                                webUrl = FapFolderUrlUtils.absoluteUrl(
+                                    post.permalink ?: post.slug ?: slugOrId
+                                ),
+                                downloadUrl = post.primaryVideo?.playUrl,
+                                downloadQuality = "default",
                             )
                         }
 
@@ -593,3 +612,5 @@ private fun EmptyBlock(hint: String) {
         }
     }
 }
+
+

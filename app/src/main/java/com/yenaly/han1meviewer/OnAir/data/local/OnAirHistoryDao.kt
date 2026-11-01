@@ -8,6 +8,9 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface OnAirHistoryDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(histories: List<OnAirHistoryEntity>)
+
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdate(history: OnAirHistoryEntity)
@@ -36,3 +39,5 @@ interface OnAirHistoryDao {
     @Query("DELETE FROM onair_watch_history")
     suspend fun deleteAll()
 }
+
+

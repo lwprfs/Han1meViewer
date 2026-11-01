@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.HentaiMama.ui.video
 
+import com.yenaly.han1meviewer.SiteType
+import com.yenaly.han1meviewer.ui.component.SiteVideoActionBar
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
@@ -565,6 +567,20 @@ fun HentaiMamaVideoScreen(
                                 }
                             }
 
+                            item(key = "site_actions") {
+                                val activeLink = mirrorLinks.firstOrNull { it.quality == playerState.quality }
+                                    ?: mirrorLinks.firstOrNull()
+                                SiteVideoActionBar(
+                                    site = SiteType.HENTAIMAMA,
+                                    videoCode = videoCode,
+                                    title = page.info.title,
+                                    coverUrl = page.info.seriesPoster,
+                                    webUrl = normalizedUrl,
+                                    downloadUrl = activeLink?.url,
+                                    downloadQuality = activeLink?.quality.orEmpty(),
+                                )
+                            }
+
                             item(key = "handler") {
                                 HentaiMamaEpisodeHandler(info = info)
                             }
@@ -749,3 +765,5 @@ private fun SimilarGrid(
         }
     }
 }
+
+

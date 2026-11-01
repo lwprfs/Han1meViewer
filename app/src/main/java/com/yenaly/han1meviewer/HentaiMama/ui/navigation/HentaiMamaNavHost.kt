@@ -151,11 +151,7 @@ fun HentaiMamaNavHost(
                         )
                     }
                 },
-                onNavigateToSettings = {
-                    if (navController.canNavigateSafely()) {
-                        navController.navigateSafely(HentaiMamaSettingsHubRoute)
-                    }
-                },
+                onNavigateToSettings = onOpenDrawer,
                 onNavigateToHistory = {
                     if (navController.canNavigateSafely()) {
                         navController.navigateSafely(HentaiMamaHistoryRoute)
@@ -482,3 +478,5 @@ fun HentaiMamaNavHost(
         )
     }
 }
+
+

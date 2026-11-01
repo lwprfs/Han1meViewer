@@ -59,6 +59,7 @@ import com.yenaly.han1meviewer.HanimeApplication
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.BackupManager
+import com.yenaly.han1meviewer.ui.component.BackupSectionDialog
 import com.yenaly.han1meviewer.logic.state.WebsiteState
 import com.yenaly.han1meviewer.ui.activity.MainActivity
 import com.yenaly.han1meviewer.ui.component.ConfirmDialog
@@ -137,6 +138,11 @@ fun HomeSettingsRouteScreen(
     var showLauncherPicker by remember { mutableStateOf(false) }
     var showApplyDeepLinksDialog by remember { mutableStateOf(false) }
     var pendingImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var showExportSelection by remember { mutableStateOf(false) }
+    var pendingExportSections by remember {
+        mutableStateOf<Set<BackupManager.Section>>(BackupManager.Section.entries.toSet())
+    }
+    var importSections by remember { mutableStateOf<Set<BackupManager.Section>?>(null) }
 
     val backupExportSuccess = stringResource(R.string.backup_export_success)
     val backupExportFailed = stringResource(R.string.backup_export_failed)
@@ -155,7 +161,7 @@ fun HomeSettingsRouteScreen(
     ) { uri ->
         uri ?: return@rememberLauncherForActivityResult
         coroutineScope.launch(Dispatchers.IO) {
-            runCatching { BackupManager.exportTo(context, uri) }
+            runCatching { BackupManager.exportTo(context, uri, pendingExportSections) }
                 .onSuccess { withContext(Dispatchers.Main) { GlobalToasts.show(backupExportSuccess, level = GlobalToasts.ToastLevel.SUCCESS) } }
                 .onFailure { withContext(Dispatchers.Main) { GlobalToasts.show(backupExportFailed, level = GlobalToasts.ToastLevel.ERROR) } }
         }
@@ -404,9 +410,7 @@ fun HomeSettingsRouteScreen(
             }
             showClearCacheConfirm = true
         },
-        onExportBackup = {
-            exportLauncher.launch("Han1meViewer-backup-${System.currentTimeMillis()}.json")
-        },
+        onExportBackup = { showExportSelection = true },
         onImportBackup = {
             importLauncher.launch(arrayOf("application/json", "text/*", "*/*"))
         },
@@ -415,16 +419,41 @@ fun HomeSettingsRouteScreen(
     )
 
     ConfirmDialog(
-        visible = pendingImportUri != null,
+        visible = pendingImportUri != null && importSections == null,
         title = stringResource(R.string.backup_import_title),
         message = stringResource(R.string.backup_import_confirm_message),
         confirmText = stringResource(R.string.confirm),
         dismissText = stringResource(R.string.cancel),
         onConfirm = {
-            val uri = pendingImportUri ?: return@ConfirmDialog
+            importSections = BackupManager.Section.entries.toSet()
+        },
+        onDismiss = { pendingImportUri = null },
+    )
+
+    BackupSectionDialog(
+        visible = showExportSelection,
+        title = "Choose what to export",
+        confirmText = "Export",
+        dismissText = stringResource(R.string.cancel),
+        onConfirm = { sections ->
+            showExportSelection = false
+            pendingExportSections = sections
+            exportLauncher.launch("Han1meViewer-backup-${System.currentTimeMillis()}.json")
+        },
+        onDismiss = { showExportSelection = false },
+    )
+
+    BackupSectionDialog(
+        visible = importSections != null && pendingImportUri != null,
+        title = "Choose what to import",
+        confirmText = stringResource(R.string.confirm),
+        dismissText = stringResource(R.string.cancel),
+        onConfirm = { sections ->
+            val uri = pendingImportUri ?: return@BackupSectionDialog
             pendingImportUri = null
+            importSections = null
             coroutineScope.launch(Dispatchers.IO) {
-                runCatching { BackupManager.importFrom(context, uri) }
+                runCatching { BackupManager.importFrom(context, uri, sections) }
                     .onSuccess {
                         withContext(Dispatchers.Main) {
                             GlobalToasts.show(backupImportSuccess, level = GlobalToasts.ToastLevel.SUCCESS)
@@ -439,7 +468,7 @@ fun HomeSettingsRouteScreen(
                     }
             }
         },
-        onDismiss = { pendingImportUri = null },
+        onDismiss = { pendingImportUri = null; importSections = null },
     )
 
     ConfirmDialog(
@@ -715,3 +744,5 @@ private fun buildHomeSettingsUiState(
         useAvHomeCategoryTitles = Preferences.baseUrl == HanimeConstants.HANIME_URL[3],
     )
 }
+
+

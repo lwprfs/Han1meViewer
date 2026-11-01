@@ -24,7 +24,13 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.hasRoute
+import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderHomeRoute
+import com.yenaly.han1meviewer.HentaiMama.ui.navigation.HentaiMamaHomeRoute
+import com.yenaly.han1meviewer.MissAV.ui.navigation.MissAvHomeRoute
+import com.yenaly.han1meviewer.OnAir.ui.navigation.OnAirHomeRoute
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.SiteType
@@ -111,7 +117,26 @@ fun MainActivityContent(
         val isHanimeFamilySite = Preferences.siteType == SiteType.HANIME ||
                 Preferences.siteType == SiteType.JAVCHU
 
-        val drawerEnabledNow = currentMainDestination.drawerEnabled && isHanimeFamilySite
+        val backStackEntry by composeNavController.currentBackStackEntryAsState()
+        val currentSite = Preferences.siteType
+        val isAtSiteHome = remember(backStackEntry, currentSite) {
+            val d = backStackEntry?.destination
+            when (currentSite) {
+                SiteType.MISSAV -> d?.hasRoute(MissAvHomeRoute::class) == true
+                SiteType.HENTAIMAMA -> d?.hasRoute(HentaiMamaHomeRoute::class) == true
+                SiteType.ONAIR -> d?.hasRoute(OnAirHomeRoute::class) == true
+                SiteType.FAPFOLDER -> d?.hasRoute(FapFolderHomeRoute::class) == true
+                else -> false
+            }
+        }
+        val drawerEntries = remember(currentSite) { siteDrawerEntries(currentSite) }
+        val drawerAvailable = if (isHanimeFamilySite) {
+            currentMainDestination.drawerEnabled
+        } else {
+            isAtSiteHome
+        }
+
+        val drawerEnabledNow = drawerAvailable
         LaunchedEffect(siteChangeKey, Preferences.siteType, drawerEnabledNow) {
             if (drawerState.currentValue == DrawerValue.Open ||
                 drawerState.targetValue == DrawerValue.Open
@@ -154,7 +179,7 @@ fun MainActivityContent(
 
         MainActivityScaffold(
             drawerState = drawerState,
-            drawerEnabled = currentMainDestination.drawerEnabled && isHanimeFamilySite,
+            drawerEnabled = drawerAvailable,
             selectedDestination = selectedDrawerDestination,
             avatarUrl = headerAvatarUrl,
             username = headerUsername,
@@ -176,6 +201,20 @@ fun MainActivityContent(
                 scope.launch { drawerState.close() }
                 onSwitchSiteClick()
             },
+            siteDrawerContent = if (isHanimeFamilySite) null else ({
+                SiteDrawerContent(
+                    site = currentSite,
+                    entries = drawerEntries,
+                    onEntryClick = { entry ->
+                        scope.launch { drawerState.close() }
+                        entry.onClick(composeNavController)
+                    },
+                    onSwitchSiteClick = {
+                        scope.launch { drawerState.close() }
+                        onSwitchSiteClick()
+                    },
+                )
+            }),
             onDrawerItemSelected = { destination ->
                 val handled = composeNavController.navigateDrawerDestination(
                     destination = destination,
@@ -194,7 +233,7 @@ fun MainActivityContent(
                     navController = composeNavController,
                     isDrawerOpen = isDrawerOpen,
                     onOpenDrawer = {
-                        if (currentMainDestination.drawerEnabled && isHanimeFamilySite) {
+                        if (drawerAvailable) {
                             scope.launch { drawerState.open() }
                         }
                     },
@@ -283,3 +322,5 @@ fun MainActivityContent(
         GlobalToastHost()
     }
 }
+
+

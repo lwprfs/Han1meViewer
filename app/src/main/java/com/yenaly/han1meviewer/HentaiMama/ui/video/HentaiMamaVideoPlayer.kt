@@ -1,5 +1,9 @@
 package com.yenaly.han1meviewer.HentaiMama.ui.video
 
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.yenaly.han1meviewer.ui.component.VideoFitState
+import com.yenaly.han1meviewer.ui.component.fitVideoSurface
+import com.yenaly.han1meviewer.ui.component.installVideoFit
 import android.annotation.SuppressLint
 import android.graphics.Color as AndroidColor
 import android.graphics.SurfaceTexture
@@ -29,6 +33,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Forward10
+import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Pause
@@ -163,6 +168,25 @@ fun HentaiMamaVideoPlayer(
         }
     }
 
+    val fitState = remember { VideoFitState() }
+    var stretched by rememberSaveable { mutableStateOf(false) }
+    fitState.stretched = stretched && isFullscreen
+    var fitFrame by remember { mutableStateOf<FrameLayout?>(null) }
+
+    DisposableEffect(exoPlayer) {
+        val listener = object : Player.Listener {
+            override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
+                fitState.updateFrom(videoSize)
+                fitFrame?.let { frame ->
+                    frame.getChildAt(0)?.let { fitVideoSurface(frame, it, fitState) }
+                }
+            }
+        }
+        exoPlayer?.videoSize?.let { fitState.updateFrom(it) }
+        exoPlayer?.addListener(listener)
+        onDispose { exoPlayer?.removeListener(listener) }
+    }
+
     val surfaceModifier = if (isFullscreen) {
         modifier.fillMaxSize()
     } else {
@@ -227,6 +251,8 @@ fun HentaiMamaVideoPlayer(
                             ) = Unit
                         }
                         addView(textureView)
+                        fitFrame = this
+                        installVideoFit(this, textureView, fitState)
 
                         val subtitle = TextView(ctx).apply {
                             setTextColor(AndroidColor.WHITE)
@@ -252,6 +278,10 @@ fun HentaiMamaVideoPlayer(
                     }
                 },
                 modifier = Modifier.fillMaxSize(),
+                update = { frame ->
+                    fitState.stretched = stretched && isFullscreen
+                    frame.getChildAt(0)?.let { fitVideoSurface(frame, it, fitState) }
+                },
                 onRelease = { view ->
                     Log.d(PLAYER_TAG, "AndroidView onRelease: detaching surface")
                     exoPlayer.setVideoTextureView(null)
@@ -330,6 +360,8 @@ fun HentaiMamaVideoPlayer(
                     onSeek = onSeek,
                     onSkip = onSkip,
                     onToggleFullscreen = onToggleFullscreen,
+                    stretched = stretched,
+                    onToggleStretch = { stretched = !stretched },
                 )
             }
         } else {
@@ -368,6 +400,8 @@ private fun PlayerControls(
     onSeek: (Long) -> Unit,
     onSkip: (Long) -> Unit,
     onToggleFullscreen: () -> Unit,
+    stretched: Boolean = false,
+    onToggleStretch: () -> Unit = {},
 ) {
     Box(
         modifier = Modifier
@@ -474,6 +508,16 @@ private fun PlayerControls(
                     color = Color.White.copy(alpha = 0.85f),
                     style = MaterialTheme.typography.labelSmall,
                 )
+                if (isFullscreen) {
+                    IconButton(onClick = onToggleStretch) {
+                        Icon(
+                            imageVector = Icons.Filled.AspectRatio,
+                            contentDescription = "Stretch to fill",
+                            tint = if (stretched) MaterialTheme.colorScheme.primary
+                            else Color.White,
+                        )
+                    }
+                }
                 IconButton(onClick = onToggleFullscreen) {
                     Icon(
                         imageVector = if (isFullscreen) Icons.Filled.FullscreenExit
@@ -494,3 +538,5 @@ internal fun formatTime(ms: Long): String {
     val s: Long = total % 60
     return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
 }
+
+

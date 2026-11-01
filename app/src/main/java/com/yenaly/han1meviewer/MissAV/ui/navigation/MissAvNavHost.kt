@@ -98,9 +98,7 @@ fun MissAvNavHost(
                     onNavigateToHistory = {
                         navController.navigateSafely(MissAvHistoryRoute)
                     },
-                    onNavigateToSettings = {
-                        navController.navigateSafely(MissAvSettingsHubRoute)
-                    },
+                    onNavigateToSettings = onOpenDrawer,
                     viewModel = sharedHomeViewModel,
                 )
             }
@@ -201,3 +199,5 @@ fun MissAvNavHost(
         )
     }
 }
+
+

@@ -1,5 +1,9 @@
 package com.yenaly.han1meviewer.OnAir.ui.video
 
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.yenaly.han1meviewer.ui.component.VideoFitState
+import com.yenaly.han1meviewer.ui.component.fitVideoSurface
+import com.yenaly.han1meviewer.ui.component.installVideoFit
 import android.view.ViewGroup
 import kotlinx.coroutines.launch
 import android.content.ClipData
@@ -29,6 +33,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Pause
@@ -253,6 +258,26 @@ fun OnAirVideoPlayer(
         }
     }
 
+    val fitState = remember { VideoFitState() }
+    var stretched by rememberSaveable { mutableStateOf(false) }
+    fitState.stretched = stretched && isFullscreen
+    var fitFrame by remember { mutableStateOf<FrameLayout?>(null) }
+
+    DisposableEffect(exoPlayer) {
+        val exo = exoPlayer
+        val listener = object : androidx.media3.common.Player.Listener {
+            override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
+                fitState.updateFrom(videoSize)
+                fitFrame?.let { frame ->
+                    (frame.getChildAt(0))?.let { fitVideoSurface(frame, it, fitState) }
+                }
+            }
+        }
+        exo?.videoSize?.let { fitState.updateFrom(it) }
+        exo?.addListener(listener)
+        onDispose { exo?.removeListener(listener) }
+    }
+
     val containerModifier = if (isFullscreen) {
         modifier.fillMaxSize()
     } else {
@@ -289,7 +314,13 @@ fun OnAirVideoPlayer(
                         }
                         view.addView(surfaceView)
                         player.setVideoSurfaceView(surfaceView)
+                        (view as? FrameLayout)?.let {
+                            fitFrame = it
+                            installVideoFit(it, surfaceView, fitState)
+                        }
                     }
+                    fitState.stretched = stretched && isFullscreen
+                    view.getChildAt(0)?.let { fitVideoSurface(view, it, fitState) }
                 },
                 onRelease = { view ->
                     exoPlayer?.setVideoSurfaceView(null)
@@ -483,6 +514,16 @@ fun OnAirVideoPlayer(
                                         },
                                     )
                                 }
+                            }
+                        }
+                        if (isFullscreen) {
+                            IconButton(onClick = { stretched = !stretched }) {
+                                Icon(
+                                    imageVector = Icons.Filled.AspectRatio,
+                                    contentDescription = "Stretch to fill",
+                                    tint = if (stretched) MaterialTheme.colorScheme.primary
+                                    else Color.White,
+                                )
                             }
                         }
                         IconButton(onClick = onToggleFullscreen) {
@@ -712,3 +753,5 @@ fun OnAirStreamUrlBar(
         }
     }
 }
+
+

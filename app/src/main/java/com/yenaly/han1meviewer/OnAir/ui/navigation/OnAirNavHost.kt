@@ -187,7 +187,7 @@ fun OnAirNavHost(
                     onOpenUser = { u -> navController.navigateSafely(OnAirUserRoute(u)) },
                     onOpenHistory = { navController.navigateSafely(OnAirHistoryRoute) },
                     onOpenAnnouncement = { navController.navigateSafely(OnAirAnnouncementsRoute) },
-                    onOpenSettings = { navController.navigateSafely(OnAirSettingsRoute) },
+                    onOpenSettings = onOpenDrawer,
                     onSwitchSite = { activity.requestSiteSwitch() },
                     onLoadFailure = recoverableError,
                     viewModel = homeViewModel,
@@ -500,3 +500,5 @@ private fun onAirHubEntries(
         )
     }
 }
+
+

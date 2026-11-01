@@ -24,7 +24,11 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.ThumbDown
+import androidx.compose.material.icons.filled.ThumbUp
+import androidx.compose.material.icons.outlined.ThumbDown
+import androidx.compose.material.icons.outlined.ThumbUp
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.Share
@@ -163,8 +167,8 @@ fun FapFolderPostCard(
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     StatItem(
-                        icon = Icons.Filled.Visibility,
-                        text = post.viewCount.toString(),
+                        icon = Icons.Rounded.PlayArrow,
+                        text = formatViewCount(post.viewCount),
                     )
                     Spacer(Modifier.weight(1f))
                 }
@@ -894,8 +898,8 @@ private fun PostStatsRow(
         }
         views?.takeIf { it > 0 }?.let {
             StatItem(
-                icon = Icons.Filled.Visibility,
-                text = it.toString(),
+                icon = Icons.Rounded.PlayArrow,
+                text = formatViewCount(it),
             )
         }
         Spacer(Modifier.weight(1f))
@@ -919,24 +923,66 @@ private fun PostActionsRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 4.dp, vertical = 2.dp),
+            .padding(horizontal = 8.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        PostActionButton(
-            icon = if (liked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-            label = likeCount.takeIf { it > 0 }?.toString() ?: "Like",
-            tint = if (liked) Color(0xFFE45B5B) else MaterialTheme.colorScheme.onSurfaceVariant,
-            enabled = !reactionPending,
-            onClick = onClickLike,
-        )
-        PostActionButton(
-            icon = Icons.Filled.FavoriteBorder,
-            label = dislikeCount.takeIf { it > 0 }?.toString() ?: "Dislike",
-            tint = if (disliked) Color(0xFF6E9AD8) else MaterialTheme.colorScheme.onSurfaceVariant,
-            enabled = !reactionPending,
-            onClick = onClickDislike,
-        )
+        val likeColor = if (liked) MaterialTheme.colorScheme.primary
+        else MaterialTheme.colorScheme.onSurfaceVariant
+        val likeBg = if (liked) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+        else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.72f)
+        val dislikeColor = if (disliked) MaterialTheme.colorScheme.error
+        else MaterialTheme.colorScheme.onSurfaceVariant
+        val dislikeBg = if (disliked) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
+        else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.72f)
+        Row(
+            modifier = Modifier
+                .height(32.dp)
+                .clip(RoundedCornerShape(16.dp)),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Row(
+                modifier = Modifier
+                    .height(32.dp)
+                    .background(likeBg)
+                    .clickable(enabled = !reactionPending, onClick = onClickLike)
+                    .padding(start = 10.dp, end = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = if (liked) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = likeColor,
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    text = likeCount.toString(),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = likeColor,
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .width(1.dp)
+                    .height(32.dp)
+                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            )
+            Box(
+                modifier = Modifier
+                    .size(width = 34.dp, height = 32.dp)
+                    .background(dislikeBg)
+                    .clickable(enabled = !reactionPending, onClick = onClickDislike),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = if (disliked) Icons.Filled.ThumbDown else Icons.Outlined.ThumbDown,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = dislikeColor,
+                )
+            }
+        }
         Spacer(Modifier.weight(1f))
         PostActionButton(
             icon = Icons.Filled.Star,
@@ -1000,6 +1046,12 @@ private fun StatItem(
     }
 }
 
+private fun formatViewCount(n: Int): String = when {
+    n >= 1_000_000 -> "%.1fM".format(n / 1_000_000f)
+    n >= 10_000 -> "%.1fK".format(n / 1_000f)
+    else -> n.toString()
+}
+
 private fun formatDuration(seconds: Int): String {
     val total = seconds.coerceAtLeast(0)
     val h = total / 3600
@@ -1050,3 +1102,5 @@ private fun FapFolderPostCardPreview() {
         FapFolderPostCard(post = fakePost)
     }
 }
+
+

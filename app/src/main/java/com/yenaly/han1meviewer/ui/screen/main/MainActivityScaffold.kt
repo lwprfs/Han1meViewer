@@ -52,6 +52,7 @@ fun MainActivityScaffold(
     onAvatarLongClick: () -> Unit,
     onSwitchSiteClick: () -> Unit,
     onDrawerItemSelected: (MainDrawerDestination) -> Boolean,
+    siteDrawerContent: (@Composable () -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -64,6 +65,12 @@ fun MainActivityScaffold(
         gesturesEnabled = drawerEnabled,
         drawerState = drawerState,
         drawerContent = {
+            if (siteDrawerContent != null) {
+                ModalDrawerSheet(
+                    drawerContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                ) { siteDrawerContent() }
+                return@ModalNavigationDrawer
+            }
             ModalDrawerSheet(
                 drawerContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
             ) {
@@ -245,3 +252,5 @@ private fun MainActivityScaffoldPreview() {
         }
     }
 }
+
+

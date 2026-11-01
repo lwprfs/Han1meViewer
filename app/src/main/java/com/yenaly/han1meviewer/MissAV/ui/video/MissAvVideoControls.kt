@@ -1,5 +1,9 @@
 package com.yenaly.han1meviewer.MissAV.ui.video
 
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.yenaly.han1meviewer.ui.component.VideoFitState
+import com.yenaly.han1meviewer.ui.component.fitVideoSurface
+import com.yenaly.han1meviewer.ui.component.installVideoFit
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color as AndroidColor
@@ -40,6 +44,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Pause
@@ -243,6 +248,9 @@ fun MissAvVideoPlayer(
     var isBuffering by remember { mutableStateOf(false) }
     var hasRenderedFirstFrame by remember { mutableStateOf(false) }
     var lastSurfaceView by remember { mutableStateOf<SurfaceView?>(null) }
+    val fitState = remember { VideoFitState() }
+    var stretched by rememberSaveable { mutableStateOf(false) }
+    fitState.stretched = stretched && isFullscreen
 
     val effectiveIsPlaying = isPlaying && !isBuffering
 
@@ -258,7 +266,14 @@ fun MissAvVideoPlayer(
                 hasRenderedFirstFrame = true
                 isBuffering = false
             }
+
+            override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
+                fitState.updateFrom(videoSize)
+                val frame = lastSurfaceView?.parent as? FrameLayout
+                if (frame != null) lastSurfaceView?.let { fitVideoSurface(frame, it, fitState) }
+            }
         }
+        exo?.videoSize?.let { fitState.updateFrom(it) }
         exo?.addListener(listener)
         onDispose { exo?.removeListener(listener) }
     }
@@ -281,7 +296,7 @@ fun MissAvVideoPlayer(
     }
 
     Box(
-        modifier = surfaceModifier,
+        modifier = surfaceModifier.background(Color.Black),
         contentAlignment = Alignment.Center,
     ) {
         if (playerStarted && currentUrl.isNotEmpty()) {
@@ -301,6 +316,7 @@ fun MissAvVideoPlayer(
                         }
                         addView(surface)
                         lastSurfaceView = surface
+                        installVideoFit(this, surface, fitState)
 
                         val subtitleText = TextView(ctx).apply {
                             onSubtitleTextViewCreated(this)
@@ -356,6 +372,10 @@ fun MissAvVideoPlayer(
                     }
                 },
                 modifier = Modifier.fillMaxSize(),
+                update = { frame ->
+                    fitState.stretched = stretched && isFullscreen
+                    lastSurfaceView?.let { fitVideoSurface(frame, it, fitState) }
+                },
                 onRelease = { view ->
                     exoPlayer?.setVideoSurfaceView(null)
                     onSurfaceReleased()
@@ -582,6 +602,20 @@ fun MissAvVideoPlayer(
                                 }
                             }
 
+                            if (isFullscreen) {
+                                IconButton(
+                                    onClick = { stretched = !stretched },
+                                    modifier = Modifier.size(40.dp),
+                                ) {
+                                    Icon(
+                                        Icons.Filled.AspectRatio,
+                                        contentDescription = "Stretch to fill",
+                                        tint = if (stretched) MaterialTheme.colorScheme.primary
+                                        else Color.White,
+                                    )
+                                }
+                            }
+
                             IconButton(
                                 onClick = onToggleFullscreen,
                                 modifier = Modifier.size(40.dp),
@@ -793,3 +827,5 @@ private fun SkipButton(
         }
     }
 }
+
+

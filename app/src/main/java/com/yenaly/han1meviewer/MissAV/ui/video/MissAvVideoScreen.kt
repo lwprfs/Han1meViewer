@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.MissAV.ui.video
+import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
+import com.yenaly.han1meviewer.ui.component.SiteVideoActionBar
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
 import com.yenaly.han1meviewer.ui.component.SiteErrorContent
@@ -728,6 +730,17 @@ fun MissAvVideoScreen(
                         ),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
+                        item(key = "site_actions") {
+                            SiteVideoActionBar(
+                                site = SiteType.MISSAV,
+                                videoCode = videoCode,
+                                title = info.title,
+                                coverUrl = info.coverUrl,
+                                webUrl = Preferences.missAvBaseUrl.trimEnd('/') + normalizedPath,
+                                downloadUrl = capturedUrl.takeIf { it.isNotBlank() },
+                                downloadQuality = selectedQuality,
+                            )
+                        }
                         item(key = "details") {
                             MissAvVideoDetails(
                                 info = info,
@@ -894,5 +907,7 @@ private fun updateSubtitleForPosition(
         tv?.invalidate()
     }
 }
+
+
 
 

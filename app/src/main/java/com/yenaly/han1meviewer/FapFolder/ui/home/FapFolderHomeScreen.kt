@@ -171,7 +171,15 @@ fun FapFolderHomeScreen(
         ) {
             HomeTabRow(
                 activeTab = uiState.activeTab,
-                onSelect = { viewModel.switchTab(it) },
+                onSelect = { tab ->
+                    if (tab == uiState.activeTab) {
+                        isRefreshing = true
+                        scope.launch { listState.scrollToItem(0) }
+                        viewModel.refresh()
+                    } else {
+                        viewModel.switchTab(tab)
+                    }
+                },
             )
 
             PullToRefreshBox(
@@ -468,3 +476,5 @@ private fun emptyTextForTab(tab: FapFolderHomeTab): String = when (tab) {
     FapFolderHomeTab.HOT -> "Nothing trending right now."
     FapFolderHomeTab.DISCOVER -> "Nothing to discover yet."
 }
+
+

@@ -49,7 +49,10 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.yenaly.han1meviewer.OnAir.common.OnAirUrlUtils
 import com.yenaly.han1meviewer.OnAir.data.model.OnAirVideoDetail
+import com.yenaly.han1meviewer.SiteType
+import com.yenaly.han1meviewer.ui.component.SiteVideoActionBar
 import com.yenaly.han1meviewer.OnAir.data.model.OnAirVideoTag
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
 import com.yenaly.han1meviewer.ui.screen.rememberRandomLoadingHint
@@ -267,6 +270,16 @@ fun OnAirVideoScreen(
                             }
                         }
                     }
+
+                    SiteVideoActionBar(
+                        site = SiteType.ONAIR,
+                        videoCode = videoId,
+                        title = detail.title,
+                        coverUrl = detail.recommendedVideos.firstOrNull()?.thumbUrl,
+                        webUrl = OnAirUrlUtils.normalizeVideoUrl(videoId),
+                        downloadUrl = playerState.activeUrl,
+                        downloadQuality = playerState.currentQuality,
+                    )
 
                     VideoDetailContent(
                         detail = detail,
@@ -505,5 +518,7 @@ private fun formatMillis(ms: Long): String {
     val s = total % 60
     return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
 }
+
+
 
 

@@ -10,6 +10,8 @@ import androidx.navigation.compose.composable
 import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.ui.activity.MainActivity
 import com.yenaly.han1meviewer.ui.navigation.PendingVideoOpen
+import com.yenaly.han1meviewer.ui.navigation.main.DailyCheckInRoute
+import com.yenaly.han1meviewer.ui.navigation.main.DailyCheckInRouteScreen
 import com.yenaly.han1meviewer.ui.navigation.navigateSafely
 import com.yenaly.han1meviewer.ui.screen.history.UnifiedHistoryScreen
 import kotlinx.serialization.Serializable
@@ -113,6 +115,14 @@ fun NavGraphBuilder.registerGlobalSettingsRoutes(
         }
     }
     registerUnifiedHistoryRoute(activity, navController)
+
+    composable<DailyCheckInRoute> {
+        DailyCheckInRouteScreen(
+            activity = activity,
+            onBack = { navController.popBackStack() },
+            onNavigateToVideo = openHanimeVideo,
+        )
+    }
 }
 
 fun NavGraphBuilder.registerUnifiedHistoryRoute(
@@ -126,3 +136,5 @@ fun NavGraphBuilder.registerUnifiedHistoryRoute(
         )
     }
 }
+
+

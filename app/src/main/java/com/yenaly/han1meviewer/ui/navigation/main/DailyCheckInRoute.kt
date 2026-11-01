@@ -5,6 +5,8 @@ import android.content.ComponentName
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.logic.SiteCheckIn
+import com.yenaly.han1meviewer.ui.navigation.PendingVideoOpen
 import com.yenaly.han1meviewer.ui.activity.MainActivity
 import com.yenaly.han1meviewer.ui.component.GlobalToasts
 import com.yenaly.han1meviewer.ui.screen.home.DailyCheckInScreen
@@ -33,6 +35,20 @@ fun DailyCheckInRouteScreen(
                 GlobalToasts.show(widgetNotSupported, level = GlobalToasts.ToastLevel.WARNING)
             }
         },
-        onNavigateToVideo = onNavigateToVideo,
+        onNavigateToVideo = { code ->
+            val site = SiteCheckIn.siteOfDishCode(code)
+            if (site != null) {
+                activity.requestCrossSiteOpen(
+                    PendingVideoOpen(
+                        site = site,
+                        videoCode = SiteCheckIn.rawCodeOfDishCode(code),
+                    )
+                )
+            } else {
+                onNavigateToVideo(code)
+            }
+        },
     )
 }
+
+

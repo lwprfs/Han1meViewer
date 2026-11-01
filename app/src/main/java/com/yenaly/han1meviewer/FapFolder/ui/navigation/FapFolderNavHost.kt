@@ -200,7 +200,7 @@ fun FapFolderNavHost(
                     navController.navigateSafely(FapFolderAlbumRoute(albumId))
                 },
                 onOpenHistory = { navController.navigateSafely(FapFolderHistoryRoute) },
-                onOpenSettings = { navController.navigateSafely(FapFolderSettingsRoute) },
+                onOpenSettings = onOpenDrawer,
                 onSwitchSite = {
                     activity.requestSiteSwitch()
                 },
@@ -694,6 +694,8 @@ private fun fapFolderHubEntries(
         )
     }
 }
+
+
 
 
 
