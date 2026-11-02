@@ -129,6 +129,8 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
             val bandwidthMeter = DefaultBandwidthMeter.Builder(context).build()
 
             val renderersFactory = DefaultRenderersFactory(context)
+                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+                .setEnableDecoderFallback(true)
             _exoPlayer = ExoPlayer.Builder(context, renderersFactory)
                 .setTrackSelector(trackSelector)
                 .setLoadControl(loadControl)
@@ -810,3 +812,5 @@ class MpvMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd) {
         }
     }
 }
+
+

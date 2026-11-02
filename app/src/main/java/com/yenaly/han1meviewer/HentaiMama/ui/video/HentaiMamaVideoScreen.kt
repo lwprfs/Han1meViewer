@@ -219,7 +219,7 @@ fun HentaiMamaVideoScreen(
 
         if (existing == null) {
             Log.d(PLAYER_TAG, "Creating ExoPlayer for url=$url")
-            val player = ExoPlayer.Builder(context).build()
+            val player = createHentaiMamaPlayer(context)
             player.setMediaSource(buildHentaiMamaMediaSource(context, url))
             player.prepare()
             player.setPlaybackSpeed(playerState.speed)
@@ -831,3 +831,5 @@ private fun SimilarGrid(
         }
     }
 }
+
+

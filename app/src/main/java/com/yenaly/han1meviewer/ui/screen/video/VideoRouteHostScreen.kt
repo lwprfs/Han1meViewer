@@ -53,6 +53,8 @@ import com.google.firebase.analytics.logEvent
 import com.yenaly.han1meviewer.FirebaseConstants
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.SiteType
+import com.yenaly.han1meviewer.logic.SiteCheckIn
 import com.yenaly.han1meviewer.getHanimeVideoLink
 import com.yenaly.han1meviewer.logic.DatabaseRepo
 import com.yenaly.han1meviewer.logic.dao.CheckInRecordDatabase
@@ -100,7 +102,14 @@ fun VideoRouteHostScreen(
     val scope = rememberCoroutineScope()
     val viewModel: VideoViewModel = viewModel()
     val commentViewModel: CommentViewModel = viewModel()
-    val kernel = remember { HMediaKernel.Type.fromString(Preferences.switchPlayerKernel) }
+    val kernel = remember(route.videoCode) {
+        val preferred = HMediaKernel.Type.fromString(Preferences.switchPlayerKernel)
+        // HentaiMama files are 10-bit H.264, which Android's MediaCodec (ExoPlayer/MediaPlayer)
+        // cannot decode; mpv can (software decode), so use it for those regardless of the setting.
+        if (SiteCheckIn.siteOfDishCode(route.videoCode) == SiteType.HENTAIMAMA) {
+            HMediaKernel.Type.MpvPlayer
+        } else preferred
+    }
     val genres = remember(Preferences.baseUrl) {
         loadAssetAs<List<SearchOption>>(
             if (Preferences.baseUrl == com.yenaly.han1meviewer.HanimeConstants.HANIME_URL[3]) {
@@ -824,3 +833,5 @@ private class VideoRouteShell(
         videoTabsHost.disposeComposition()
     }
 }
+
+

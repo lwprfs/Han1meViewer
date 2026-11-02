@@ -68,6 +68,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import coil3.compose.AsyncImage
@@ -107,10 +108,12 @@ fun HentaiMamaVideoPlayer(
     var playbackState by remember { mutableIntStateOf(Player.STATE_IDLE) }
     var hasRenderedFirstFrame by remember { mutableStateOf(false) }
     var isRebuffering by remember { mutableStateOf(false) }
+    var playbackError by remember(state.url) { mutableStateOf<PlaybackException?>(null) }
+    val context = LocalContext.current
 
     val sourceReady = state.isReady && state.url.isNotBlank()
     val isExoReady = playbackState == Player.STATE_READY
-    val isInitialLoading = sourceReady && !hasRenderedFirstFrame
+    val isInitialLoading = sourceReady && !hasRenderedFirstFrame && playbackError == null
     val isBuffering = sourceReady && (
             isInitialLoading ||
                     isRebuffering ||
@@ -123,8 +126,14 @@ fun HentaiMamaVideoPlayer(
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(newState: Int) {
                 playbackState = newState
+                if (newState == Player.STATE_READY) playbackError = null
                 isRebuffering = newState == Player.STATE_BUFFERING && hasRenderedFirstFrame
                 exo?.let { onPositionUpdate(it.currentPosition, it.duration) }
+            }
+
+            override fun onPlayerError(error: PlaybackException) {
+                Log.e(PLAYER_TAG, "onPlayerError code=${error.errorCodeName}", error)
+                playbackError = error
             }
 
             override fun onRenderedFirstFrame() {
@@ -291,6 +300,34 @@ fun HentaiMamaVideoPlayer(
                 },
             )
 
+            playbackError?.let { err ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.85f)),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Text(
+                        text = if (err.isDecoderProblem())
+                            "This phone can't decode this video (10-bit H.264)."
+                        else "Playback failed: ${err.errorCodeName}",
+                        color = Color.White,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Spacer(Modifier.size(12.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Button(onClick = { openInExternalPlayer(context, state.url) }) {
+                            Text("Open in external player")
+                        }
+                        Button(onClick = {
+                            playbackError = null
+                            exoPlayer.prepare()
+                        }) { Text("Retry") }
+                    }
+                }
+            }
+
             if (showResumeButton && !state.isPlaying) {
                 Box(
                     modifier = Modifier
@@ -379,3 +416,5 @@ internal fun formatTime(ms: Long): String {
     val s: Long = total % 60
     return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
 }
+
+
