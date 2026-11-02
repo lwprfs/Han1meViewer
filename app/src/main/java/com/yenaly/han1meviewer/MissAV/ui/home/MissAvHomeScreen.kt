@@ -297,5 +297,3 @@ private fun CategoryErrorRow(message: String, onRetry: () -> Unit) {
         }
     }
 }
-
-

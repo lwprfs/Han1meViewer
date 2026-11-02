@@ -496,7 +496,7 @@ fun FapFolderNavHost(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun GatePlaceholder(message: String) {
-    // Same look as Hanime's LoadingContent (indicator + bodyMedium message).
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -635,7 +635,7 @@ private fun GateErrorScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // Same visuals as Hanime's ErrorContent.
+
             Image(
                 modifier = Modifier.size(150.dp),
                 painter = painterResource(R.drawable.h_chan_sad),

@@ -207,5 +207,3 @@ private fun unusedIconImportShim() {
     val icons = listOf(Icons.AutoMirrored.Filled.ArrowBack)
     PaddingValues(0.dp)
 }
-
-

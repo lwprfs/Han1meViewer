@@ -62,12 +62,12 @@ fun FapFolderImageLightboxDialog(
     images: List<FapFolderMedia.Image>,
     initialIndex: Int,
     onDismiss: () -> Unit,
-    /** More images can be fetched (group / profile photo tabs). */
+
     hasMore: Boolean = false,
     isLoadingMore: Boolean = false,
-    /** Called when the user nears the last loaded image; keeps loading until [hasMore] is false. */
+
     onLoadMore: (() -> Unit)? = null,
-    /** Folder (below the download root) used by the save button. Null = FapFolder/Photos. */
+
     saveSegments: List<String>? = null,
 ) {
     if (images.isEmpty()) return
@@ -85,7 +85,6 @@ fun FapFolderImageLightboxDialog(
 
     BackHandler(onBack = onDismiss)
 
-    // Keep loading the next images while the user keeps swiping towards the end.
     LaunchedEffect(pagerState.currentPage, images.size, hasMore, isLoadingMore) {
         if (onLoadMore != null && hasMore && !isLoadingMore &&
             pagerState.currentPage >= images.size - 3
@@ -309,5 +308,3 @@ private fun ZoomableImage(
         )
     }
 }
-
-

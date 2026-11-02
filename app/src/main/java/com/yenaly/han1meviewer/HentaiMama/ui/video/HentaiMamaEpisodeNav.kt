@@ -25,10 +25,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.HentaiMama.data.model.EpisodeNav
 
-/**
- * Prev / Episodes / Next, drawn like Hanime's `VideoActionButton` row
- * (icon over label, primary icon tint, labelMedium text).
- */
 @Composable
 fun HentaiMamaEpisodeNav(
     nav: EpisodeNav,

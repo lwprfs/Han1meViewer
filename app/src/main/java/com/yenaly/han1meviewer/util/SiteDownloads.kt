@@ -30,25 +30,6 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.io.OutputStream
 
-/**
- * Folder layout used by every download.
- *
- * ```
- * <download root>/
- *   hanime_download/<code>/                 Hanime / Javchu (unchanged, backwards compatible)
- *   MissAV/<code>/
- *   HentaiMama/<slug>/
- *   OnAir/<id>/
- *   FapFolder/Groups/<group name>/Videos/<post id>/
- *   FapFolder/Groups/<group name>/Photos/<post or album>/
- *   FapFolder/Profiles/<user name>/Videos/<post id>/
- *   FapFolder/Profiles/<user name>/Photos/<post or album>/
- * ```
- *
- * The layout is derived from the download's `videoCode` alone, so pausing / resuming / deleting a
- * task finds the same folder again without any extra database column. Non Hanime sites store
- * `<site>:<path>` as their code, `<path>` may contain `/` to describe nested folders.
- */
 object DownloadLayout {
 
     private const val FALLBACK = "untitled"
@@ -68,7 +49,6 @@ object DownloadLayout {
         SiteType.FAPFOLDER -> "FapFolder"
     }
 
-    /** Folder segments (relative to the download root) that belong to [videoCode]. */
     fun segmentsFor(videoCode: String): List<String> {
         val site = SiteCheckIn.siteOfDishCode(videoCode)
             ?: return listOf(HFileManager.HANIME_DOWNLOAD_FOLDER, videoCode)
@@ -81,13 +61,11 @@ object DownloadLayout {
         return listOf(siteFolder) + rest.ifEmpty { listOf(FALLBACK) }
     }
 
-    /** Raw (un-prefixed) video code for a FapFolder video, e.g. `Groups/Some Group/Videos/123`. */
     fun fapFolderVideoCode(ownerKind: FapOwnerKind?, ownerName: String?, postId: Long): String {
         val owner = ownerSegments(ownerKind, ownerName)
         return (owner + listOf("Videos", postId.toString())).joinToString("/")
     }
 
-    /** Folder segments for FapFolder photos (below the download root). */
     fun fapFolderPhotoSegments(
         ownerKind: FapOwnerKind?,
         ownerName: String?,
@@ -106,12 +84,10 @@ object DownloadLayout {
 
 enum class FapOwnerKind { GROUP, PROFILE }
 
-/** Why a download failed, used to offer the right fix on the downloads screen. */
 enum class DownloadFailureKind { TOR, COOKIES, NETWORK, STORAGE, EXPIRED, OTHER }
 
 data class DownloadFailure(val kind: DownloadFailureKind, val message: String)
 
-/** Remembers the last failure of every download task (survives the process, tiny payload). */
 object DownloadFailureStore {
     private const val PREFS = "download_failures"
 
@@ -137,7 +113,6 @@ object DownloadFailureStore {
     }
 }
 
-/** Picks the HTTP client + request headers that match the site a download belongs to. */
 object SiteDownloadClients {
 
     fun clientFor(videoCode: String): OkHttpClient =
@@ -191,19 +166,10 @@ object SiteDownloadClients {
     }
 }
 
-/**
- * Saves photos into the download location (SAF folder if one was picked, otherwise the app
- * download folder) using the structured [DownloadLayout] folders.
- */
 object SiteImageSaver {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    /**
-     * True when the user has given the app a place to write downloads to: a persisted SAF tree
-     * permission, app private storage (needs no permission) or the public Downloads folder with
-     * storage access granted.
-     */
     fun isDownloadPermissionGranted(context: Context): Boolean {
         val saf = Preferences.safDownloadPath
         if (!saf.isNullOrBlank()) {
@@ -235,7 +201,6 @@ object SiteImageSaver {
         else -> "image/jpeg"
     }
 
-    /** Opens an output stream for [fileName] inside [segments]; null if the folder is unusable. */
     private fun openOutput(
         context: Context,
         segments: List<String>,
@@ -284,7 +249,6 @@ object SiteImageSaver {
         data class Error(val message: String) : SaveResult
     }
 
-    /** Saves one image. Returns the number of bytes written folder wise as a [SaveResult]. */
     suspend fun saveOne(
         context: Context,
         url: String,
@@ -296,7 +260,6 @@ object SiteImageSaver {
         saveBatch(context, listOf(url), segments, baseName, client, headers, onProgress = null)
     }
 
-    /** Saves every image of [urls]; already existing files are skipped. */
     suspend fun saveBatch(
         context: Context,
         urls: List<String>,
@@ -343,7 +306,6 @@ object SiteImageSaver {
         } else SaveResult.Saved(saved, skipped, failed)
     }
 
-    /** Fire-and-forget batch download that reports through toasts. */
     fun saveBatchInBackground(
         context: Context,
         urls: List<String>,

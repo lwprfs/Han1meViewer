@@ -36,10 +36,6 @@ import com.yenaly.han1meviewer.util.DownloadLayout
 import com.yenaly.han1meviewer.util.FapOwnerKind
 import kotlinx.coroutines.flow.first
 
-/**
- * Video post screen content: the post and its video live on one screen. Tapping play starts the
- * video right inside the post (all the player controls are kept), no separate video screen.
- */
 internal fun LazyListScope.fapFolderVideoPostItems(
     post: FapFolderPost,
     video: FapFolderMedia.Video,
@@ -93,7 +89,7 @@ internal fun LazyListScope.fapFolderVideoPostItems(
             post.author.groupSlug ?: post.author.username
         }
         val folder = DownloadLayout.fapFolderVideoCode(ownerKind, ownerName, post.postId)
-            .substringBeforeLast('/') // Groups/<name>/Videos
+            .substringBeforeLast('/')
         SiteVideoActionBar(
             site = SiteType.FAPFOLDER,
             videoCode = post.postId.toString(),

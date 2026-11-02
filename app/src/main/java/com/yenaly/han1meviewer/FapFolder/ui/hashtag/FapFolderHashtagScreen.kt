@@ -264,5 +264,3 @@ fun FapFolderHashtagScreen(
         )
     }
 }
-
-

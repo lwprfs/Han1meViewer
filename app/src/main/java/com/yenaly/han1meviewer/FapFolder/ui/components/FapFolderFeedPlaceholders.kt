@@ -244,5 +244,3 @@ private fun FapFolderGroupRowPreview() {
         )
     }
 }
-
-

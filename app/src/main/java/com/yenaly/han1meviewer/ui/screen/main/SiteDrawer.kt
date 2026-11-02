@@ -88,7 +88,6 @@ data class SiteDrawerEntry(
     val onClick: (NavHostController) -> Unit,
 )
 
-/** Login state shown in the drawer header instead of the Hanime profile card. */
 data class SiteLoginStatus(
     val title: String,
     val subtitle: String,
@@ -176,7 +175,6 @@ private fun entry(title: String, icon: Int, route: Any) =
 
 data class SiteDrawerSection(val title: String, val entries: List<SiteDrawerEntry>)
 
-/** Site specific entries grouped into titled sections (Browse / Library / Account / Customize). */
 fun siteDrawerSections(context: Context, site: SiteType, loggedIn: Boolean): List<SiteDrawerSection> {
     fun str(res: Int) = context.getString(res)
     val home = SiteDrawerEntry(str(R.string.home_page), R.drawable.ic_baseline_home_24) {
@@ -291,7 +289,6 @@ fun siteDrawerSections(context: Context, site: SiteType, loggedIn: Boolean): Lis
     }
 }
 
-/** In-app settings shared by all sites (same ones the Hanime drawer links to). */
 private fun appEntries(context: Context): List<SiteDrawerEntry> = listOf(
     entry(context.getString(R.string.settings), R.drawable.ic_baseline_settings_24, HomeSettingsRoute),
     entry(context.getString(R.string.player_settings), R.drawable.baseline_player_24, PlayerSettingsRoute),
@@ -477,5 +474,3 @@ private fun SiteDrawerHeader(
         }
     }
 }
-
-

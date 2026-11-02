@@ -16,13 +16,6 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
-/**
- * Check-in ("did you cum?") helpers shared by every site.
- *
- * Hanime / Javchu video codes are stored as-is (backwards compatible). Every other site is stored
- * with a `<site>:` prefix so codes from different sites can never collide inside the shared
- * `sidedishes` table.
- */
 object SiteCheckIn {
 
     const val SEP = "\u001E"
@@ -40,7 +33,6 @@ object SiteCheckIn {
         return "$prefix:$code"
     }
 
-    /** Returns the site for a prefixed dish code, or null for Hanime-style plain codes. */
     fun siteOfDishCode(dishCode: String): SiteType? {
         val prefix = dishCode.substringBefore(":", "")
         if (prefix.isEmpty() || prefix == dishCode) return null
@@ -87,10 +79,6 @@ object SiteCheckIn {
         }
     }
 
-    /**
-     * Recently watched videos of every site merged into [WatchHistoryEntity] rows (non Hanime
-     * sites use prefixed video codes) sorted by watch date, newest first.
-     */
     suspend fun recentWatchedAllSites(context: Context, limit: Int): List<WatchHistoryEntity> {
         val result = mutableListOf<WatchHistoryEntity>()
         runCatching {
@@ -145,7 +133,6 @@ object SiteCheckIn {
         return result.sortedByDescending { it.watchDate }.take(limit)
     }
 
-    /** Stores covers of watched items so the check-in page can show thumbnails for them. */
     suspend fun rememberCover(context: Context, dishCode: String, title: String, coverUrl: String) {
         if (coverUrl.isBlank()) return
         CheckInRecordDatabase.getDatabase(context).sideDishDao()

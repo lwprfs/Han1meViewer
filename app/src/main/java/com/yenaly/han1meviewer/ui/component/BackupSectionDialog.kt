@@ -28,7 +28,6 @@ import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.logic.BackupManager
 import com.yenaly.han1meviewer.logic.BackupManager.Section
 
-/** Lets the user tick/untick every data block and every site's cookies before export/import. */
 @Composable
 fun BackupSectionDialog(
     visible: Boolean,

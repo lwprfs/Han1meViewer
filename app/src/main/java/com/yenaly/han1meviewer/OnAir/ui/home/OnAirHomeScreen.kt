@@ -377,5 +377,3 @@ private fun RowScope.StatPill(label: String, value: String) {
         }
     }
 }
-
-

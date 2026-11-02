@@ -744,5 +744,3 @@ private fun buildHomeSettingsUiState(
         useAvHomeCategoryTitles = Preferences.baseUrl == HanimeConstants.HANIME_URL[3],
     )
 }
-
-

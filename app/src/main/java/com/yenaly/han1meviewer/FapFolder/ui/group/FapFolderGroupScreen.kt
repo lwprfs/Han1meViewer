@@ -105,7 +105,6 @@ fun FapFolderGroupScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Photos tab: the lightbox reads the live list so it can keep loading more photos.
     var photoLightboxIndex by remember { mutableStateOf<Int?>(null) }
     var lightboxPayload by remember {
         mutableStateOf<Pair<List<FapFolderMedia.Image>, Int>?>(null)
@@ -202,7 +201,7 @@ fun FapFolderGroupScreen(
                             onOpenHashtag = onOpenHashtag,
                             onOpenProfile = onOpenProfile,
                             onOpenVideo = { post, _ ->
-                                // Video and post are one screen: open the post and autoplay.
+
                                 onOpenVideoPost(post.slug ?: post.postId.toString())
                             },
                             onOpenImage = { images, idx -> lightboxPayload = images to idx },
@@ -694,8 +693,6 @@ private fun GroupPostsTab(
         }
     }
 }
-
-
 
 @Composable
 private fun GroupMediaTab(

@@ -155,8 +155,6 @@ private fun SeriesDetailContent(
     val nonEmptyCastGroups: List<List<Pair<String, String>>> =
         page.cast.filter { it.isNotEmpty() }
 
-    // Same list container as Hanime's video page. Sections get an extra 8dp on top so the gap
-    // between sections is 16dp while the episode rows stay 8dp apart.
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(
@@ -304,10 +302,6 @@ private fun SeriesDetailContent(
     }
 }
 
-/**
- * Poster, title, meta, play button, status and genre tags, synopsis. Laid out like the
- * Hanime video page (Title, Meta, Introduction, Tags) without a gradient backdrop.
- */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SeriesHeroCard(
@@ -366,7 +360,6 @@ private fun SeriesHeroCard(
             }
         }
 
-        // MetaSection
         val rating: Double? = hero.ratingValue
         val views: Long? = hero.views
         val duration: String? = hero.duration
@@ -413,7 +406,6 @@ private fun SeriesHeroCard(
             }
         }
 
-        // Introduction
         if (!hero.synopsisText.isNullOrBlank()) {
             ExpandableRichText(
                 text = hero.synopsisText,
@@ -421,7 +413,6 @@ private fun SeriesHeroCard(
             )
         }
 
-        // Action
         Button(
             onClick = onPlayFirstEpisode,
             modifier = Modifier.fillMaxWidth(),
@@ -435,7 +426,6 @@ private fun SeriesHeroCard(
             Text(text = "Watch Ep 1")
         }
 
-        // TagsSection (status chips and genres)
         val statusChips: List<String> = hero.statusChips
         if (statusChips.isNotEmpty()) {
             TagChipGroup(
@@ -456,7 +446,6 @@ private fun SeriesHeroCard(
     }
 }
 
-/** Same row as Hanime's `MetaInfoItem`: 32dp high, small icon plus bodyMedium text. */
 @Composable
 private fun SeriesMetaInfoItem(
     icon: ImageVector?,
@@ -523,7 +512,7 @@ private fun SeriesEpisodeRow(
     episode: HentaiMamaEpisode,
     onClick: () -> Unit,
 ) {
-    // Same card recipe as Hanime's WatchHistoryCard: 16dp elevated card, 12dp content padding.
+
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()

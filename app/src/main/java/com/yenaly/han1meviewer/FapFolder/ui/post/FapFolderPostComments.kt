@@ -34,7 +34,6 @@ import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderCommentCard
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.ui.component.LoadMoreFooter
 
-/** Comment block shared by the video post screen and the image post screen. */
 internal fun LazyListScope.fapFolderCommentItems(
     post: FapFolderPost,
     uiState: FapFolderPostDetailUiState,
@@ -190,8 +189,6 @@ internal fun LazyListScope.fapFolderCommentItems(
                 )
             }
 
-            // Only show the footer while more comments are really coming. When everything the
-            // post reports is loaded there is no spinner and no "load more" state at all.
             if (uiState.commentsHasMore || uiState.commentsLoading) {
                 item(key = "comments_footer") {
                     LoadMoreFooter(

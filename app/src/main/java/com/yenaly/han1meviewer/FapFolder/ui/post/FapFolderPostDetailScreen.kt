@@ -52,11 +52,6 @@ import com.yenaly.han1meviewer.util.FapOwnerKind
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
-/**
- * Entry point of the post route. A post with a video is shown as the video post screen (the
- * video plays inline, there is no separate video screen); every other post is shown as the image
- * post screen. Both share the comments block.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FapFolderPostDetailScreen(
@@ -328,7 +323,3 @@ private fun EmptyBlock(hint: String) {
         }
     }
 }
-
-
-
-

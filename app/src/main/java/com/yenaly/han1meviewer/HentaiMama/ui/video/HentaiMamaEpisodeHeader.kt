@@ -33,10 +33,6 @@ import com.yenaly.han1meviewer.ui.component.ExpandableRichText
 import com.yenaly.han1meviewer.ui.component.TagChipGroup
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
 
-/**
- * Series card, introduction and genre tags. Mirrors Hanime's `ArtistSection`,
- * `ExpandableIntroductionSection` and `TagsSection`, in that order.
- */
 @Composable
 fun HentaiMamaEpisodeHeader(
     info: EpisodeInfo,
@@ -51,7 +47,7 @@ fun HentaiMamaEpisodeHeader(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        // ArtistSection look: avatar-sized poster, bold name, subtitle.
+
         val studioName: String = info.studio?.takeIf { it.isNotBlank() } ?: "Series"
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -114,7 +110,6 @@ fun HentaiMamaEpisodeHeader(
             }
         }
 
-        // ExpandableIntroductionSection
         val fullSynopsis: String = buildString {
             val short: String? = info.synopsisShort
             if (!short.isNullOrBlank()) append(short)
@@ -131,7 +126,6 @@ fun HentaiMamaEpisodeHeader(
             )
         }
 
-        // TagsSection
         if (info.genres.isNotEmpty()) {
             val genreNames = remember(info.genres) { info.genres.map { it.name } }
             TagChipGroup(

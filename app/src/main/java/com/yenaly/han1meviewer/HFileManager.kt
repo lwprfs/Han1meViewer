@@ -25,8 +25,7 @@ object HFileManager {
     }
 
     fun getDownloadVideoFolder(context: Context, videoCode: String): File {
-        // Hanime / Javchu keep `hanime_download/<code>`; every other site gets its own
-        // structured folder (see DownloadLayout).
+
         val relative = com.yenaly.han1meviewer.util.DownloadLayout.segmentsFor(videoCode)
             .joinToString("/")
         return File(getAppDownloadFolder(context), relative)
@@ -85,5 +84,3 @@ object HFileManager {
         }
     }
 }
-
-

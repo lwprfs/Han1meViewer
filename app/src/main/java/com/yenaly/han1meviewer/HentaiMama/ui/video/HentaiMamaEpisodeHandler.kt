@@ -24,10 +24,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.HentaiMama.data.model.EpisodeInfo
 
-/**
- * Title and meta block, styled like Hanime's `TitleSection` and `MetaSection`.
- * The synopsis is shown once, by [HentaiMamaEpisodeHeader].
- */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HentaiMamaEpisodeHandler(
@@ -69,7 +65,6 @@ fun HentaiMamaEpisodeHandler(
     }
 }
 
-/** Same row as Hanime's `MetaInfoItem`: 32dp high, small icon plus bodyMedium text. */
 @Composable
 private fun MetaInfoItem(
     icon: ImageVector?,

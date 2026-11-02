@@ -31,7 +31,6 @@ import com.yenaly.han1meviewer.util.DownloadLayout
 import com.yenaly.han1meviewer.util.FapOwnerKind
 import com.yenaly.han1meviewer.util.SiteImageSaver
 
-/** Every image of a post (single images and gallery photos), without duplicates. */
 internal fun FapFolderPost.allImages(): List<FapFolderMedia.Image> {
     val out = LinkedHashMap<String, FapFolderMedia.Image>()
     media.forEach { m ->
@@ -44,7 +43,6 @@ internal fun FapFolderPost.allImages(): List<FapFolderMedia.Image> {
     return out.values.toList()
 }
 
-/** Image post screen content (no video): images with the lightbox, album link, comments. */
 internal fun LazyListScope.fapFolderImagePostItems(
     post: FapFolderPost,
     slugOrId: String,
@@ -138,8 +136,6 @@ internal fun LazyListScope.fapFolderImagePostItems(
         )
     }
 
-    // "Open album": the real album when the post has one, otherwise the photos of the group /
-    // profile that published the post (shown as the photos-only screen).
     val albumId = post.firstGallery?.albumId
     val groupSlug = post.author.groupSlug
     val username = post.author.username

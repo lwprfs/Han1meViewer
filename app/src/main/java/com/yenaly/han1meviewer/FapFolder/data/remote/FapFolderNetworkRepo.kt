@@ -137,7 +137,7 @@ object FapFolderNetworkRepo {
         val uid: String?,
         val search: String?,
         val hashtag: String?,
-        /** Offset the site's "see more" button will send next (first page is inline). */
+
         val nextOffset: Int = 1,
     )
 
@@ -560,8 +560,7 @@ object FapFolderNetworkRepo {
                     }
                 }
             }
-            // Videos tab (groups and profiles): the ajax fragment is a grid of
-            // `a.pg_video` tiles, not full posts, so parse the tiles first.
+
             get == FapFolderConstants.FEED_GET_VIDEOS_TAB -> {
                 val doc = Jsoup.parseBodyFragment(dataHtml, base)
                 val tiles = FapFolderProfileParser.parseVideoTiles(doc.body())

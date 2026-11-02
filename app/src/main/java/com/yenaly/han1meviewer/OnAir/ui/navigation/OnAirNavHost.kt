@@ -500,5 +500,3 @@ private fun onAirHubEntries(
         )
     }
 }
-
-

@@ -46,16 +46,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/**
- * The action row that Hanime / Javchu show under their player (quick check-in, download,
- * share, open web page) reused by every other site, plus a "home" button that returns to the
- * respective site's home page.
- *
- * @param videoCode site specific id (MissAV code, HentaiMama slug, OnAir id, FapFolder post id).
- * @param webUrl absolute page url used by share / "open in browser". Hidden if null.
- * @param downloadUrl direct media url. If null the download button reports that nothing can be
- * downloaded yet, HLS (.m3u8) playlists are reported as unsupported by the plain file downloader.
- */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SiteVideoActionBar(
@@ -67,11 +57,11 @@ fun SiteVideoActionBar(
     modifier: Modifier = Modifier,
     downloadUrl: String? = null,
     downloadQuality: String = "",
-    /** Raw folder path (e.g. `Groups/Name/Videos`) inserted before [videoCode] for downloads. */
+
     downloadFolder: String? = null,
-    /** Called when [downloadUrl] is not known yet: extracts the link like the player does. */
+
     resolveDownloadUrl: (suspend () -> String?)? = null,
-    /** Replaces the default download behaviour (used for image posts). */
+
     onDownloadClick: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
@@ -322,5 +312,3 @@ private fun startSiteDownload(
         level = GlobalToasts.ToastLevel.SUCCESS,
     )
 }
-
-

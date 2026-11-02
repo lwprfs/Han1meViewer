@@ -231,7 +231,7 @@ fun FapFolderProfileScreen(
                             onOpenAlbum = onOpenAlbum,
                             onOpenProfile = onOpenProfile,
                             onOpenVideo = { post, _ ->
-                                // Video and post are one screen: open the post and autoplay.
+
                                 onOpenVideoBySlug(post.slug ?: post.postId.toString())
                             },
                             onOpenImage = { images, idx -> lightboxPayload = images to idx },
@@ -1123,7 +1123,3 @@ private fun formatDuration(seconds: Int): String {
     return if (h > 0) "%d:%02d:%02d".format(h, m, s)
     else "%d:%02d".format(m, s)
 }
-
-
-
-

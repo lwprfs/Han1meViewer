@@ -387,5 +387,3 @@ data class MonthlyStats(
     val dominantPeriod: String = "",
     val scholarDate: String = ""
 )
-
-

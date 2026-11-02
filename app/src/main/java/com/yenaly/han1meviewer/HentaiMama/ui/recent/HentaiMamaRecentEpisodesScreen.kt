@@ -265,7 +265,6 @@ private fun RecentEpisodeCard(
     val context = LocalContext.current
     val imageLoader = remember(context) { HentaiMamaImageLoader.get(context) }
 
-    // Same surface recipe as Hanime's VideoCardItem: 12dp shape, tonal 2dp, shadow 1dp.
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -401,7 +400,3 @@ private fun RecentEpisodeCard(
 
 private fun formatRating(value: Double): String =
     if (value % 1.0 == 0.0) value.toInt().toString() else "%.1f".format(value)
-
-
-
-

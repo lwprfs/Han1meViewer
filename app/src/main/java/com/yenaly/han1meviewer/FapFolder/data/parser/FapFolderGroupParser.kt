@@ -98,8 +98,6 @@ object FapFolderGroupParser {
 
         val aboutMap = parseAboutList(doc)
 
-        // The header tabs ("Posts", "Photos"...) carry no numbers, so the counts
-        // come from the "about" list ("61468 followers", "1084 Posts", ...).
         fun count(anchorHref: String, key: String): Int? = firstCount(
             aboutMap[key],
             header.selectFirst("a[href$='/$anchorHref']")?.text(),
@@ -170,7 +168,6 @@ object FapFolderGroupParser {
 
     private val numberRegex = Regex("""(\d[\d,]*(?:\.\d+)?)\s*([KkMm])?""")
 
-    /** First number found in [text]; understands "61,468" and "61.4K". */
     private fun numberIn(text: String?): Int? {
         if (text.isNullOrBlank()) return null
         val m = numberRegex.find(text.replace('\u00A0', ' ')) ?: return null
@@ -211,7 +208,7 @@ object FapFolderGroupParser {
 
     private fun parseAboutList(doc: Document): Map<String, String> {
         val result = mutableMapOf<String, String>()
-        // On the site the "about-list-item" class sits on a <div> inside each <li>.
+
         val items = doc.select("ul.about-list .about-list-item")
             .ifEmpty { doc.select("ul.about-list > li") }
         items.forEach { item ->

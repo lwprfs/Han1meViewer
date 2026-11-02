@@ -455,7 +455,3 @@ private fun emptyTextForTab(tab: FapFolderHomeTab): String = when (tab) {
     FapFolderHomeTab.HOT -> "Nothing trending right now."
     FapFolderHomeTab.DISCOVER -> "Nothing to discover yet."
 }
-
-
-
-

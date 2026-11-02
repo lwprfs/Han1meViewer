@@ -298,5 +298,3 @@ fun FapFolderFollowedCommunitiesScreen(
         }
     }
 }
-
-

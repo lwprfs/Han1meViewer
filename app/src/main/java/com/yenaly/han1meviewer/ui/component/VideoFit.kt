@@ -6,10 +6,6 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.media3.common.VideoSize
 
-/**
- * Keeps a video surface at the video's original aspect ratio, centered inside its parent
- * (the parent supplies the black bars). When [stretched] is true the surface fills the parent.
- */
 class VideoFitState {
     var aspect: Float = 0f
     var stretched: Boolean = false
@@ -45,7 +41,6 @@ fun fitVideoSurface(parent: ViewGroup, surface: View, state: VideoFitState) {
     }
 }
 
-/** Installs a layout listener so the surface is re-fitted whenever the parent is resized. */
 fun installVideoFit(parent: FrameLayout, surface: View, state: VideoFitState) {
     parent.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
         fitVideoSurface(parent, surface, state)

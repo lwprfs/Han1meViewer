@@ -52,7 +52,7 @@ object FapFolderProfileParser {
         val streamGet: String?,
         val streamId: String?,
         val streamType: String?,
-        /** Next `offset` the site's own "see more" button would send. */
+
         val nextOffset: Int = 1,
     )
 
@@ -62,7 +62,7 @@ object FapFolderProfileParser {
         val streamGet: String?,
         val streamId: String?,
         val streamType: String?,
-        /** Next `offset` the site's own "see more" button would send. */
+
         val nextOffset: Int = 1,
     )
 
@@ -300,10 +300,6 @@ object FapFolderProfileParser {
         }.distinctBy { it.photoId ?: it.fullUrl }
     }
 
-    /**
-     * Works on the full videos page *and* on the HTML fragment returned by the
-     * "load more" ajax call, whose markup is not always wrapped in `div.panel-videos`.
-     */
     fun parseVideoTiles(panel: Element): List<VideoTile> {
         val anchors = panel.select("a.pg_video[href]").ifEmpty {
             panel.select("a[href*='/posts/']").filter { a ->

@@ -66,10 +66,6 @@ private data class AccountRow(
     val onClick: () -> Unit,
 )
 
-/**
- * "Profile" page of the signed-in account, or a sign in / create account prompt when the
- * visitor is not logged in. There is deliberately no "forgot password" entry.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FapFolderAccountScreen(

@@ -137,15 +137,12 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
             )
         }
 
-        // Header first (cover, avatar, stats), timeline only afterwards. Loading both
-        // in parallel made the timeline appear first and the header pop in above it.
         headerJob = viewModelScope.launch {
             val headerLoaded = runHeaderRequest(cleanSlug)
             if (headerLoaded) runInitialTabRequest(cleanSlug, tab)
         }
     }
 
-    /** @return true when the header was loaded and the tab content may be requested. */
     private suspend fun runHeaderRequest(cleanSlug: String): Boolean {
         val groupState = runCatching {
             FapFolderNetworkRepo.getGroupPage(cleanSlug).firstTerminalGroupState()
@@ -363,8 +360,6 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
         }
     }
 
-
-
     fun joinGroup() {
         val group = _uiState.value.group ?: return
         val groupId = group.groupId ?: return
@@ -575,8 +570,6 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
             }
         }
     }
-
-
 
     private fun buildStreamRequest(
         state: FapFolderGroupUiState,

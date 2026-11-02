@@ -319,5 +319,3 @@ fun MainActivityContent(
         GlobalToastHost()
     }
 }
-
-

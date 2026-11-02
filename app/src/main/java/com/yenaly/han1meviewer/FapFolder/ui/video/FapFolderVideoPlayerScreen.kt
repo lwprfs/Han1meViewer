@@ -157,12 +157,9 @@ fun FapFolderVideoPlayerScreen(
     coverUrl: String? = null,
     postPermalinkForReferer: String? = null,
     onExpired: (() -> Unit)? = null,
-    /**
-     * Inline mode: the player is embedded in the post screen (aspect-ratio box, no title bar,
-     * back press is left to the host). Fullscreen is shown in a dialog on top of the page.
-     */
+
     inline: Boolean = false,
-    /** Start playing as soon as the stream is prepared (used when the play button was tapped). */
+
     autoStart: Boolean = false,
 ) {
     val context = LocalContext.current
@@ -592,7 +589,6 @@ fun FapFolderVideoPlayerScreen(
         exoPlayer?.let { p -> surfaceRef.value?.let { p.setVideoSurfaceView(it) } }
     }
 
-    // In inline mode the page itself owns the back press; the fullscreen dialog handles its own.
     BackHandler(enabled = !inline) {
         if (isFullscreen) exitFullscreen() else onDismiss()
     }
@@ -1495,9 +1491,3 @@ private fun safePosition(player: ExoPlayer?): Long {
 private fun formatSpeed(speed: Float): String =
     if (speed == speed.toInt().toFloat()) "${speed.toInt()}.0x"
     else "${speed}x"
-
-
-
-
-
-

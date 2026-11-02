@@ -87,7 +87,7 @@ fun OnAirGateScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // Same visuals as Hanime's LoadingContent / ErrorContent.
+
             if (showProgress) {
                 LoadingIndicator()
             } else {
@@ -188,7 +188,7 @@ fun OnAirGateScreen(
 
 @Composable
 private fun StepCard(torDone: Boolean, torActive: Boolean, sessionActive: Boolean) {
-    // Same surface recipe as VideoCardItem: 12dp shape, tonal 2dp, shadow 1dp.
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),

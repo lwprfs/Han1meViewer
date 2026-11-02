@@ -580,7 +580,7 @@ fun HentaiMamaVideoScreen(
                                     downloadUrl = activeLink?.url,
                                     downloadQuality = activeLink?.quality.orEmpty(),
                                     resolveDownloadUrl = {
-                                        // Mirrors are still being resolved: wait for the player's link.
+
                                         kotlinx.coroutines.withTimeoutOrNull(20_000L) {
                                             viewModel.mirrorLinks.first { it.isNotEmpty() }
                                         }?.let { links ->
@@ -742,7 +742,6 @@ private fun SimilarGrid(
     val imageLoader = remember(context) { HentaiMamaImageLoader.get(context) }
     val uniqueItems = remember(items) { items.distinctBy { it.slug } }
 
-    // Same grid maths as Hanime's RelatedVideosSection.
     Column(verticalArrangement = Arrangement.spacedBy(SpacingNormal)) {
         SiteVideoSectionHeader(title = "Similar titles")
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
@@ -775,7 +774,3 @@ private fun SimilarGrid(
         }
     }
 }
-
-
-
-

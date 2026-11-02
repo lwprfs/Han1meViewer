@@ -15,14 +15,8 @@ import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
-/** Thrown for HTTP level problems so the caller can tell "cookies expired" from "network down". */
 class HlsHttpException(val code: Int, message: String) : IOException(message)
 
-/**
- * Minimal HLS VOD downloader: resolves master -> best variant -> media playlist, downloads the
- * segments (optionally AES-128 encrypted) and writes them back to back into one stream, which
- * gives a playable `.ts` (or fragmented mp4 when the playlist uses `EXT-X-MAP`).
- */
 class HlsDownloader(
     private val client: OkHttpClient,
     private val headers: Map<String, String>,
@@ -64,7 +58,6 @@ class HlsDownloader(
     private fun resolve(base: String, ref: String): String =
         runCatching { URI(base).resolve(ref).toString() }.getOrDefault(ref)
 
-    /** Resolves [url] (master or media playlist) into a flat list of segments. */
     suspend fun resolvePlaylist(url: String): MediaPlaylist = withContext(Dispatchers.IO) {
         var currentUrl = url
         var text = fetchText(currentUrl)
@@ -109,7 +102,7 @@ class HlsDownloader(
         var currentKey: Key? = null
         var initUrl: String? = null
         val segments = ArrayList<Segment>()
-        var expectUri = false // kept for readability: EXTINF is always followed by its URI
+        var expectUri = false
         var sequence = 0L
         for (raw in text.lines()) {
             val line = raw.trim()

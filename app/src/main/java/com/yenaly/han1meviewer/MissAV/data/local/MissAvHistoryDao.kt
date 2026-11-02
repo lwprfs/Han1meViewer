@@ -34,5 +34,3 @@ interface MissAvHistoryDao {
     @Query("SELECT * FROM missav_watch_history WHERE videoCode = :videoCode LIMIT 1")
     suspend fun getByVideoCode(videoCode: String): MissAvHistoryEntity?
 }
-
-

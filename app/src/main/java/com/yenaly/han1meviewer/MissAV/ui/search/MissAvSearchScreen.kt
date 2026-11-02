@@ -1267,7 +1267,7 @@ private fun AdvancedChip(
     onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
-    // Same look as Hanime's SelectableTag.
+
     val containerColor = if (checked) {
         MaterialTheme.colorScheme.primaryContainer
     } else {
@@ -1401,5 +1401,3 @@ private fun DisplayResults(
         }
     }
 }
-
-

@@ -136,5 +136,3 @@ fun NavGraphBuilder.registerUnifiedHistoryRoute(
         )
     }
 }
-
-

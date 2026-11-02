@@ -49,10 +49,6 @@ import com.yenaly.han1meviewer.ui.theme.SpacingNormal
 import com.yenaly.han1meviewer.ui.theme.VideoNormalCardMinWidth
 import java.util.regex.Pattern
 
-/**
- * Page content below the player. Follows the Hanime video page order:
- * title, meta, introduction, info, tags, then the subtitle section.
- */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MissAvVideoDetails(
@@ -70,7 +66,7 @@ fun MissAvVideoDetails(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        // TitleSection
+
         if (!info.title.isNullOrBlank() || !info.jpTitle.isNullOrBlank()) {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 if (!info.title.isNullOrBlank()) {
@@ -95,7 +91,6 @@ fun MissAvVideoDetails(
             }
         }
 
-        // MetaSection
         if (code.isNotBlank() || releaseDate != null) {
             FlowRow(
                 modifier = Modifier
@@ -138,7 +133,6 @@ fun MissAvVideoDetails(
             }
         }
 
-        // ExpandableIntroductionSection
         if (!info.description.isNullOrBlank()) {
             var cleanDescription = info.description
             val releaseDatePattern = Pattern.compile("Release date:\\s*\\d{4}-\\d{2}-\\d{2}\\s*", Pattern.CASE_INSENSITIVE)
@@ -155,7 +149,6 @@ fun MissAvVideoDetails(
             }
         }
 
-        // Info rows (directors, label, series, makers)
         val infoItems = listOf(
             "Directors" to info.directors,
             "Label" to info.label,
@@ -219,7 +212,6 @@ fun MissAvVideoDetails(
             }
         }
 
-        // TagsSection
         if (!info.genres.isNullOrBlank()) {
             val genreList = info.genres.split(",").map { it.trim().lowercase() }.filter { it.isNotBlank() }
             if (genreList.isNotEmpty()) {
@@ -252,7 +244,6 @@ fun MissAvVideoDetails(
     }
 }
 
-/** Same row as Hanime's `MetaInfoItem`: 32dp high, icon plus bodyMedium text. */
 @Composable
 private fun MissAvMetaInfoItem(text: String) {
     Row(
@@ -274,7 +265,6 @@ private fun MissAvMetaInfoItem(text: String) {
     }
 }
 
-/** Tag chip with the proportions of Hanime's assist chips (8dp corners, 32dp high). */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MissAvTagChip(
@@ -310,7 +300,6 @@ private fun MissAvTagChip(
     }
 }
 
-/** Same colour pairs as the Hanime tag chip palette, taken from the active theme. */
 @Composable
 private fun missAvTagPalette(): List<Pair<Color, Color>> {
     val scheme = MaterialTheme.colorScheme
@@ -324,5 +313,3 @@ private fun missAvTagPalette(): List<Pair<Color, Color>> {
         )
     }
 }
-
-

@@ -252,5 +252,3 @@ private fun MainActivityScaffoldPreview() {
         }
     }
 }
-
-

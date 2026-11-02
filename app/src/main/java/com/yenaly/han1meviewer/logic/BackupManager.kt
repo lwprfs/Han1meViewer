@@ -43,7 +43,6 @@ object BackupManager {
         encodeDefaults = true
     }
 
-    /** What can be picked on the export dialog. */
     enum class Section(@StringRes val labelRes: Int, val group: Group) {
         SETTINGS(R.string.backup_section_settings, Group.DATA),
         CHECK_IN(R.string.backup_section_check_in, Group.DATA),
@@ -346,5 +345,3 @@ object BackupManager {
         return copy(sideDishes = normalized)
     }
 }
-
-

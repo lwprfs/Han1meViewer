@@ -47,7 +47,6 @@ import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import kotlinx.coroutines.launch
 
-/** settings → Account Settings (email, username, current password check). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FapFolderAccountSettingsScreen(onBack: () -> Unit) {
@@ -222,7 +221,6 @@ fun FapFolderAccountSettingsScreen(onBack: () -> Unit) {
     }
 }
 
-/** settings → Privacy. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FapFolderPrivacySettingsScreen(onBack: () -> Unit) {

@@ -11,7 +11,6 @@ interface HentaiMamaHistoryDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(histories: List<HentaiMamaHistoryEntity>)
 
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdate(history: HentaiMamaHistoryEntity)
 
@@ -36,5 +35,3 @@ interface HentaiMamaHistoryDao {
     @Query("DELETE FROM hentaimama_watch_history")
     suspend fun deleteAll()
 }
-
-

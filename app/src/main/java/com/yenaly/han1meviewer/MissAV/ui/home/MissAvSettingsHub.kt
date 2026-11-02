@@ -82,7 +82,7 @@ fun MissAvSettingsHubScreen(
 
 @Composable
 private fun SettingsHubRow(entry: SettingsHubEntry) {
-    // Same row as Hanime's SettingNavigationItem: flat, 16/14dp padding, 12dp gaps.
+
     Row(
         modifier = Modifier
             .fillMaxWidth()

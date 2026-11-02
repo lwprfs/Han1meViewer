@@ -61,13 +61,6 @@ import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import kotlinx.coroutines.launch
 
-/**
- * Sign-up screen. Same layout as the sign-in screen (and like hanime1.me's account pages):
- * no "forgot password" link because that flow does not work on fapfolder.club.
- *
- * The site protects sign-up with a Cloudflare Turnstile check, which needs a real
- * browser engine, so the widget is hosted in a small WebView below the form.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FapFolderRegisterScreen(
@@ -146,7 +139,7 @@ fun FapFolderRegisterScreen(
                 is FapFolderAccountRepo.RegisterResult.Created -> infoMessage = result.message
                 is FapFolderAccountRepo.RegisterResult.Error -> {
                     errorMessage = result.message
-                    // A Turnstile token is single use: ask for a fresh one.
+
                     captchaToken = null
                     widgetNonce++
                 }
@@ -397,7 +390,7 @@ private fun TurnstileWidget(
                     },
                     "Android",
                 )
-                // The site key is bound to the fapfolder.club hostname.
+
                 loadDataWithBaseURL(
                     FapFolderConstants.BASE_URL + "signup",
                     html,

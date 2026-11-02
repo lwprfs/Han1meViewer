@@ -673,7 +673,7 @@ private fun AdvancedSearchChip(
     onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
-    // Same look as Hanime's SelectableTag.
+
     val containerColor = if (checked) {
         MaterialTheme.colorScheme.primaryContainer
     } else {
@@ -867,5 +867,3 @@ private fun producerChipLabel(key: String?): String =
 
 private fun slugChipLabel(key: String?): String =
     if (key.isNullOrBlank()) "Genre Page" else "Page: $key"
-
-

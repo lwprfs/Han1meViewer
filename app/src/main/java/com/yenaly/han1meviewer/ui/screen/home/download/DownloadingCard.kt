@@ -271,8 +271,6 @@ private fun PreviewDownloadingItemCard() {
     }
 }
 
-
-
 @Composable
 private fun DownloadFailurePanel(item: HanimeDownloadEntity) {
     val context = LocalContext.current

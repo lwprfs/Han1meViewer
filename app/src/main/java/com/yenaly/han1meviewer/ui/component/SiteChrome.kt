@@ -211,10 +211,6 @@ fun SiteSectionHeader(
     }
 }
 
-/**
- * Section header used inside video pages. Mirrors the private `SectionHeader` of
- * `VideoIntroductionScreen` (titleLarge bold, start padding 16dp, divider underneath).
- */
 @Composable
 fun SiteVideoSectionHeader(
     title: String,
@@ -278,8 +274,7 @@ fun SiteVideoCard(
 ) {
     val textFontSize = dimensionResource(id = R.dimen.video_view_and_time_and_duration).value.sp
     val iconSize = dimensionResource(id = R.dimen.view_view_and_time_icon_size)
-    // Hanime scales covers to the card width (FillWidth) inside its 16:9 box. For other box
-    // ratios (posters) FillWidth would leave gaps, so those keep filling the box with Crop.
+
     val resolvedContentScale =
         if (contentScale == ContentScale.FillWidth && aspectRatio != 16f / 9f) {
             ContentScale.Crop

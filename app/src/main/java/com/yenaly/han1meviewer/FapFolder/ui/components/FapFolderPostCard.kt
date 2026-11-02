@@ -865,10 +865,6 @@ private fun JobBlock(job: FapFolderMedia.Job) {
     }
 }
 
-/**
- * One merged interaction row: like / dislike pill (with the like count), the comment count
- * (only when it is not 0), shares / views when available, and the save button in the corner.
- */
 @Composable
 private fun PostInteractionRow(
     reactions: com.yenaly.han1meviewer.FapFolder.data.model.ReactionCount,
@@ -1090,7 +1086,3 @@ private fun FapFolderPostCardPreview() {
         FapFolderPostCard(post = fakePost)
     }
 }
-
-
-
-

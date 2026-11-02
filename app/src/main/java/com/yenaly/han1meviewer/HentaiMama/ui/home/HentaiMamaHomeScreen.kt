@@ -368,5 +368,3 @@ private fun CategoryErrorRow(
         }
     }
 }
-
-

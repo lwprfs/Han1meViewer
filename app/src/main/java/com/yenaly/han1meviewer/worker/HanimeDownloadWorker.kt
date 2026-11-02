@@ -281,7 +281,6 @@ class HanimeDownloadWorker(
 
     private fun isOnAir() = SiteCheckIn.siteOfDishCode(videoCode) == SiteType.ONAIR
 
-    /** Classifies a failure and remembers it so the downloads screen can offer the right fix. */
     private fun recordFailure(e: Throwable?, httpCode: Int?, fallbackMessage: String) {
         val onAir = isOnAir()
         val kind = when {
@@ -361,7 +360,7 @@ class HanimeDownloadWorker(
             var shouldRetry = false
             var out: java.io.OutputStream? = null
             try {
-                // Resuming an HLS download restarts it: the playlist is the unit of work.
+
                 out = if (safUri != null) {
                     context.contentResolver.openOutputStream(safUri, "wt")
                         ?: throw IOException("Open SAF file failed")
@@ -819,5 +818,3 @@ class HanimeDownloadWorker(
         )
     }
 }
-
-

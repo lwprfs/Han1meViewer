@@ -829,5 +829,3 @@ private fun SkipButton(
         }
     }
 }
-
-

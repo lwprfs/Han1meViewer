@@ -50,7 +50,7 @@ data class SiteSwitchOption(
     val description: String,
     val siteType: SiteType,
     @DrawableRes val logoRes: Int?,
-    /** Kept for source compatibility; the sheet follows the app theme and no longer uses it. */
+
     val accentColor: Color,
 )
 
@@ -174,7 +174,7 @@ private fun SiteSwitchTile(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Same surface recipe as VideoCardItem: 12dp shape, tonal 2dp, shadow 1dp.
+
     val shape = RoundedCornerShape(12.dp)
 
     Surface(
@@ -266,7 +266,7 @@ fun SiteSwitchConfirmDialog(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Same structure as Hanime's ConfirmDialog: default AlertDialog, text buttons.
+
     AlertDialog(
         modifier = modifier,
         onDismissRequest = onDismiss,

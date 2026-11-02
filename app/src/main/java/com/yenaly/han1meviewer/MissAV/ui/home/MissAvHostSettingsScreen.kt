@@ -151,7 +151,7 @@ private fun HostOptionRow(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    // Same row as Hanime's SettingChoiceItem: flat, title + summary, check icon when selected.
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
