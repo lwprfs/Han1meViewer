@@ -253,6 +253,12 @@ data class FapFolderGroup(
     val socialLinks: Map<String, String>,
     val galleryPreview: List<FapFolderMedia.Image>,
     val activeTab: String?,
+    val externalLinks: List<FapFolderExternalLink> = emptyList(),
+)
+
+data class FapFolderExternalLink(
+    val label: String,
+    val url: String,
 )
 
 data class FapFolderGroupCategory(

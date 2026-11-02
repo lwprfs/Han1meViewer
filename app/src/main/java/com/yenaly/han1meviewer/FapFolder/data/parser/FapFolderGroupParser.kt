@@ -2,6 +2,7 @@ package com.yenaly.han1meviewer.FapFolder.data.parser
 
 import com.yenaly.han1meviewer.FapFolder.common.FapFolderConstants
 import com.yenaly.han1meviewer.FapFolder.common.FapFolderUrlUtils
+import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderExternalLink
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderGroup
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderGroupCategory
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderGroupRow
@@ -97,26 +98,18 @@ object FapFolderGroupParser {
 
         val aboutMap = parseAboutList(doc)
 
-        val memberCount = FapFolderHtmlUtils.parseLeadingInt(
-            header.selectFirst("a[href$='/members']")?.text()
-                ?: aboutMap["members"]
+        // The header tabs ("Posts", "Photos"...) carry no numbers, so the counts
+        // come from the "about" list ("61468 followers", "1084 Posts", ...).
+        fun count(anchorHref: String, key: String): Int? = firstCount(
+            aboutMap[key],
+            header.selectFirst("a[href$='/$anchorHref']")?.text(),
         )
-        val postCount = FapFolderHtmlUtils.parseLeadingInt(
-            header.selectFirst("a[href$='/posts']")?.text()
-                ?: aboutMap["posts"]
-        )
-        val photoCount = FapFolderHtmlUtils.parseLeadingInt(
-            header.selectFirst("a[href$='/photos']")?.text()
-                ?: aboutMap["photos"]
-        )
-        val videoCount = FapFolderHtmlUtils.parseLeadingInt(
-            header.selectFirst("a[href$='/videos']")?.text()
-                ?: aboutMap["videos"]
-        )
-        val followerCount = FapFolderHtmlUtils.parseLeadingInt(
-            header.selectFirst("a[href$='/followers']")?.text()
-                ?: aboutMap["followers"]
-        )
+
+        val followerCount = count("followers", "followers") ?: count("members", "members")
+        val memberCount = count("members", "members") ?: followerCount
+        val postCount = count("posts", "posts")
+        val photoCount = count("photos", "photos")
+        val videoCount = count("videos", "videos")
 
         val joinBtn = header.selectFirst("button.js_join-group")
         val leaveBtn = header.selectFirst("button.js_leave-group")
@@ -148,6 +141,7 @@ object FapFolderGroupParser {
 
         val galleryPreview = parseGalleryPreview(doc)
         val activeTab = parseActiveTab(doc)
+        val externalLinks = parseExternalLinks(doc)
 
         return FapFolderGroup(
             groupId = groupId,
@@ -170,7 +164,42 @@ object FapFolderGroupParser {
             socialLinks = socialLinks,
             galleryPreview = galleryPreview,
             activeTab = activeTab,
+            externalLinks = externalLinks,
         )
+    }
+
+    private val numberRegex = Regex("""(\d[\d,]*(?:\.\d+)?)\s*([KkMm])?""")
+
+    /** First number found in [text]; understands "61,468" and "61.4K". */
+    private fun numberIn(text: String?): Int? {
+        if (text.isNullOrBlank()) return null
+        val m = numberRegex.find(text.replace('\u00A0', ' ')) ?: return null
+        val base = m.groupValues[1].replace(",", "").toDoubleOrNull() ?: return null
+        val mult = when (m.groupValues[2].lowercase()) {
+            "k" -> 1_000.0
+            "m" -> 1_000_000.0
+            else -> 1.0
+        }
+        return (base * mult).toInt()
+    }
+
+    private fun firstCount(vararg candidates: String?): Int? {
+        candidates.forEach { c -> numberIn(c)?.let { return it } }
+        return null
+    }
+
+    private fun parseExternalLinks(doc: Document): List<FapFolderExternalLink> {
+        val siteHost = FapFolderConstants.SITE_HOST
+        return doc.select("ul.about-list a[href]").mapNotNull { a ->
+            val href = a.absUrl("href").takeIf { it.isNotBlank() }
+                ?: a.attr("href").takeIf { it.startsWith("http") }
+                ?: return@mapNotNull null
+            val host = FapFolderUrlUtils.hostOf(href)?.lowercase() ?: return@mapNotNull null
+            if (host.endsWith(siteHost) || host.endsWith("fap.onl")) return@mapNotNull null
+            val label = FapFolderHtmlUtils.cleanText(a.text())
+                .ifBlank { host.removePrefix("www.") }
+            FapFolderExternalLink(label = label, url = href)
+        }.distinctBy { it.url }
     }
 
     private fun parseBio(doc: Document): Pair<String?, String?> {
@@ -182,27 +211,27 @@ object FapFolderGroupParser {
 
     private fun parseAboutList(doc: Document): Map<String, String> {
         val result = mutableMapOf<String, String>()
-        doc.select("ul.about-list > li.about-list-item").forEach { item ->
+        // On the site the "about-list-item" class sits on a <div> inside each <li>.
+        val items = doc.select("ul.about-list .about-list-item")
+            .ifEmpty { doc.select("ul.about-list > li") }
+        items.forEach { item ->
+            val text = FapFolderHtmlUtils.cleanText(item.text())
+            if (text.isBlank()) return@forEach
+            val lower = text.lowercase()
             val iconClass = item.selectFirst("i")?.classNames()?.firstOrNull {
-                it.startsWith("fa-") && it != "fa-fw" && it != "fa"
+                it.startsWith("fa-") && it != "fa-fw" && it != "fa-lg"
             }
-            val detailsText = FapFolderHtmlUtils.cleanText(
-                item.selectFirst(".details")?.text() ?: item.text()
-            )
-            if (detailsText.isNotBlank()) {
-                val key = when {
-                    iconClass?.contains("calendar") == true -> "created"
-                    iconClass?.contains("users") == true -> "members"
-                    iconClass?.contains("newspaper") == true -> "posts"
-                    iconClass?.contains("images") == true -> "photos"
-                    iconClass?.contains("video") == true -> "videos"
-                    iconClass?.contains("tag") == true -> "category"
-                    else -> item.selectFirst("strong, .label")?.text()?.trim()?.lowercase()
-                }
-                if (!key.isNullOrBlank()) {
-                    result[key] = detailsText
-                }
+            val key = when {
+                lower.contains("follower") || lower.startsWith("followed by") -> "followers"
+                lower.contains("member") -> "members"
+                lower.contains("post") -> "posts"
+                lower.contains("photo") || lower.contains("gallery") -> "photos"
+                lower.contains("video") -> "videos"
+                iconClass?.contains("calendar") == true -> "created"
+                iconClass?.contains("tag") == true -> "category"
+                else -> item.selectFirst("strong, .label")?.text()?.trim()?.lowercase()
             }
+            if (!key.isNullOrBlank()) result.putIfAbsent(key, text)
         }
         return result
     }

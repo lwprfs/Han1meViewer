@@ -137,6 +137,8 @@ object FapFolderNetworkRepo {
         val uid: String?,
         val search: String?,
         val hashtag: String?,
+        /** Offset the site's "see more" button will send next (first page is inline). */
+        val nextOffset: Int = 1,
     )
 
     data class HomeExtras(
@@ -182,6 +184,9 @@ object FapFolderNetworkRepo {
             uid = attrs?.uid,
             search = attrs?.search,
             hashtag = attrs?.hashtag,
+            nextOffset = seeMore?.attr("data-offset")?.toIntOrNull()
+                ?: attrs?.offset
+                ?: 1,
         )
     }
 
@@ -555,16 +560,59 @@ object FapFolderNetworkRepo {
                     }
                 }
             }
-            get == FapFolderConstants.FEED_GET_VIDEOS_TAB && request.type == "group" ->
-                FapFolderPostParser.parsePostsFromHtml(
-                    html = dataHtml, baseUrl = base,
-                    uploadsBase = uploads, includeComments = false,
-                ).map { FapFolderFeedItem.Post(it) }
+            // Videos tab (groups and profiles): the ajax fragment is a grid of
+            // `a.pg_video` tiles, not full posts, so parse the tiles first.
+            get == FapFolderConstants.FEED_GET_VIDEOS_TAB -> {
+                val doc = Jsoup.parseBodyFragment(dataHtml, base)
+                val tiles = FapFolderProfileParser.parseVideoTiles(doc.body())
+                if (tiles.isNotEmpty()) {
+                    tiles.map { wrapVideoTileAsFeedItem(it) }
+                } else {
+                    FapFolderPostParser.parsePostsFromHtml(
+                        html = dataHtml, baseUrl = base,
+                        uploadsBase = uploads, includeComments = false,
+                    ).map { FapFolderFeedItem.Post(it) }
+                }
+            }
             else -> FapFolderPostParser.parsePostsFromHtml(
                 html = dataHtml, baseUrl = base,
                 uploadsBase = uploads, includeComments = false,
             ).map { FapFolderFeedItem.Post(it) }
         }
+    }
+
+    private fun wrapVideoTileAsFeedItem(
+        tile: FapFolderProfileParser.VideoTile,
+    ): FapFolderFeedItem.Post {
+        val id = tile.postId ?: (tile.postUrl.hashCode().toLong() and 0x7fffffffL)
+        val video = FapFolderMedia.Video(
+            videoId = null,
+            onPlayId = null,
+            playUrl = "",
+            posterUrl = tile.thumbnailUrl,
+            durationSeconds = null,
+            aspectRatio = null,
+            adEligible = false,
+            fileExtension = null,
+        )
+        val post = FapFolderPost(
+            postId = id,
+            slug = tile.postUrl.trimEnd('/').substringAfterLast('/').takeIf { it.isNotBlank() },
+            permalink = tile.postUrl,
+            author = com.yenaly.han1meviewer.FapFolder.data.model.FapFolderAuthor(
+                uid = null, username = null, groupSlug = null, displayName = "",
+                profileUrl = null, avatarUrl = null, isGold = false, isAnonymous = true,
+            ),
+            uploaderUsername = null, uploaderUrl = null, uploaderIsGold = false,
+            action = null, postedAtIso = "", bodyHtml = "",
+            bodyPlain = tile.title.orEmpty(),
+            hashtags = emptyList(), media = listOf(video),
+            variants = setOf(com.yenaly.han1meviewer.FapFolder.data.model.PostVariant.VIDEO),
+            isPremium = false,
+            reactions = com.yenaly.han1meviewer.FapFolder.data.model.ReactionCount.EMPTY,
+            commentCount = 0, shareCount = 0, viewCount = null,
+        )
+        return FapFolderFeedItem.Post(post)
     }
 
     private fun wrapImageAsFeedItem(image: FapFolderMedia.Image): FapFolderFeedItem.Post {

@@ -32,7 +32,10 @@ import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Cookie
 import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -57,6 +60,9 @@ import com.yenaly.han1meviewer.FapFolder.data.local.FapFolderHistoryRepo
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderAuthRepo
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetwork
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderProbeFailure
+import com.yenaly.han1meviewer.FapFolder.ui.account.FapFolderAccountScreen
+import com.yenaly.han1meviewer.FapFolder.ui.account.FapFolderAccountSettingsScreen
+import com.yenaly.han1meviewer.FapFolder.ui.account.FapFolderPrivacySettingsScreen
 import com.yenaly.han1meviewer.FapFolder.ui.album.FapFolderAlbumScreen
 import com.yenaly.han1meviewer.FapFolder.ui.followed.FapFolderFollowedCommunitiesScreen
 import com.yenaly.han1meviewer.FapFolder.ui.gate.FapFolderGateState
@@ -66,6 +72,7 @@ import com.yenaly.han1meviewer.FapFolder.ui.history.FapFolderHistoryScreen
 import com.yenaly.han1meviewer.FapFolder.ui.home.FapFolderHomeScreen
 import com.yenaly.han1meviewer.FapFolder.ui.home.FapFolderHomeViewModel
 import com.yenaly.han1meviewer.FapFolder.ui.login.FapFolderLoginScreen
+import com.yenaly.han1meviewer.FapFolder.ui.login.FapFolderRegisterScreen
 import com.yenaly.han1meviewer.FapFolder.ui.post.FapFolderPostDetailScreen
 import com.yenaly.han1meviewer.FapFolder.ui.profile.FapFolderProfileScreen
 import com.yenaly.han1meviewer.FapFolder.ui.saved.FapFolderSavedScreen
@@ -402,7 +409,7 @@ fun FapFolderNavHost(
             FapFolderCookiesScreen(
                 onBack = { navController.popBackStack() },
                 onOpenLogin = { navController.navigateSafely(FapFolderLoginRoute) },
-                onOpenRegister = { },
+                onOpenRegister = { navController.navigateSafely(FapFolderRegisterRoute) },
                 onSwitchSite = { activity.requestSiteSwitch() },
                 onCookiesSaved = {
                     retryTick = System.currentTimeMillis()
@@ -425,7 +432,57 @@ fun FapFolderNavHost(
                 onOpenCookies = {
                     navController.navigateSafely(FapFolderCookiesRoute)
                 },
+                onOpenRegister = {
+                    navController.navigateSafely(FapFolderRegisterRoute)
+                },
             )
+        }
+
+        composable<FapFolderRegisterRoute> {
+            FapFolderRegisterScreen(
+                onBack = { navController.popBackStack() },
+                onRegistered = {
+                    retryTick = System.currentTimeMillis()
+                    navController.popBackStack(FapFolderHomeRoute, inclusive = false)
+                },
+                onOpenLogin = {
+                    navController.popBackStack()
+                    navController.navigateSafely(FapFolderLoginRoute)
+                },
+            )
+        }
+
+        composable<FapFolderAccountRoute> {
+            FapFolderAccountScreen(
+                onBack = { navController.popBackStack() },
+                onOpenLogin = { navController.navigateSafely(FapFolderLoginRoute) },
+                onOpenRegister = { navController.navigateSafely(FapFolderRegisterRoute) },
+                onOpenCookies = { navController.navigateSafely(FapFolderCookiesRoute) },
+                onOpenMyProfile = { username ->
+                    navController.navigateSafely(FapFolderProfileRoute(username))
+                },
+                onOpenAccountSettings = {
+                    navController.navigateSafely(FapFolderAccountSettingsRoute)
+                },
+                onOpenPrivacy = { navController.navigateSafely(FapFolderPrivacyRoute) },
+                onOpenFollowed = {
+                    navController.navigateSafely(FapFolderFollowedCommunitiesRoute)
+                },
+                onOpenSaved = { navController.navigateSafely(FapFolderSavedRoute) },
+                onOpenHistory = { navController.navigateSafely(FapFolderHistoryRoute) },
+                onLoggedOut = {
+                    retryTick = System.currentTimeMillis()
+                    navController.popBackStack(FapFolderHomeRoute, inclusive = false)
+                },
+            )
+        }
+
+        composable<FapFolderAccountSettingsRoute> {
+            FapFolderAccountSettingsScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable<FapFolderPrivacyRoute> {
+            FapFolderPrivacySettingsScreen(onBack = { navController.popBackStack() })
         }
 
         registerGlobalSettingsRoutes(
@@ -517,7 +574,9 @@ private fun GateErrorHost(
                 onOpenLogin = {
                     navController.navigateSafely(FapFolderLoginRoute)
                 },
-                onOpenRegister = { },
+                onOpenRegister = {
+                    navController.navigateSafely(FapFolderRegisterRoute)
+                },
                 onSwitchSite = { activity.requestSiteSwitch() },
                 onCookiesSaved = onRetry,
                 onLoggedOut = onRetry,
@@ -530,6 +589,19 @@ private fun GateErrorHost(
                 onLoginSuccess = onRetry,
                 onOpenCookies = {
                     navController.navigateSafely(FapFolderCookiesRoute)
+                },
+                onOpenRegister = {
+                    navController.navigateSafely(FapFolderRegisterRoute)
+                },
+            )
+        }
+        composable<FapFolderRegisterRoute> {
+            FapFolderRegisterScreen(
+                onBack = { navController.popBackStack() },
+                onRegistered = onRetry,
+                onOpenLogin = {
+                    navController.popBackStack()
+                    navController.navigateSafely(FapFolderLoginRoute)
                 },
             )
         }
@@ -663,8 +735,41 @@ private fun fapFolderHubEntries(
                 onClick = { navController.navigateSafely(FapFolderLoginRoute) },
             )
         )
+        add(
+            SiteSettingsEntry(
+                key = "register",
+                title = "Create account",
+                subtitle = "Sign up for a free FapFolder account",
+                icon = Icons.Default.PersonAdd,
+                onClick = { navController.navigateSafely(FapFolderRegisterRoute) },
+            )
+        )
     }
     if (full) {
+        add(
+            SiteSettingsEntry(
+                key = "account",
+                title = "My account",
+                subtitle = if (isLoggedIn) {
+                    "Profile, account settings and privacy"
+                } else {
+                    "Sign in or create an account"
+                },
+                icon = Icons.Default.AccountCircle,
+                onClick = { navController.navigateSafely(FapFolderAccountRoute) },
+            )
+        )
+        if (isLoggedIn) {
+            add(
+                SiteSettingsEntry(
+                    key = "privacy",
+                    title = "Privacy",
+                    subtitle = "Who can see your info, photos and groups",
+                    icon = Icons.Default.Lock,
+                    onClick = { navController.navigateSafely(FapFolderPrivacyRoute) },
+                )
+            )
+        }
         add(
             SiteSettingsEntry(
                 key = "history",
@@ -712,11 +817,3 @@ private fun fapFolderHubEntries(
         )
     }
 }
-
-
-
-
-
-
-
-

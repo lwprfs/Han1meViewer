@@ -20,7 +20,6 @@ import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -138,46 +137,51 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
             )
         }
 
+        // Header first (cover, avatar, stats), timeline only afterwards. Loading both
+        // in parallel made the timeline appear first and the header pop in above it.
         headerJob = viewModelScope.launch {
-            val headerDeferred = async { runHeaderRequest(cleanSlug) }
-            val tabDeferred = async { runInitialTabRequest(cleanSlug, tab) }
-
-            headerDeferred.await()
-            tabDeferred.await()
+            val headerLoaded = runHeaderRequest(cleanSlug)
+            if (headerLoaded) runInitialTabRequest(cleanSlug, tab)
         }
     }
 
-    private suspend fun runHeaderRequest(cleanSlug: String) {
+    /** @return true when the header was loaded and the tab content may be requested. */
+    private suspend fun runHeaderRequest(cleanSlug: String): Boolean {
         val groupState = runCatching {
             FapFolderNetworkRepo.getGroupPage(cleanSlug).firstTerminalGroupState()
         }.getOrNull()
 
-        when (groupState) {
-            null -> _uiState.update {
-                it.copy(
-                    isLoading = false,
-                    headerError = "Failed to load group.",
-                )
+        return when (groupState) {
+            null -> {
+                _uiState.update {
+                    it.copy(isLoading = false, headerError = "Failed to load group.")
+                }
+                false
             }
-            is VideoLoadingState.Success -> _uiState.update {
-                it.copy(
-                    group = groupState.info,
-                    headerError = null,
-                )
+            is VideoLoadingState.Success -> {
+                _uiState.update {
+                    it.copy(group = groupState.info, headerError = null)
+                }
+                true
             }
             is VideoLoadingState.Error -> {
                 val msg = groupState.throwable.message
                 _uiState.update {
                     it.copy(
+                        isLoading = false,
                         headerError = msg ?: "Failed to load group.",
                         sessionExpired = msg?.contains("session", true) == true,
                     )
                 }
+                false
             }
-            is VideoLoadingState.NoContent -> _uiState.update {
-                it.copy(headerError = "Group not found.")
+            is VideoLoadingState.NoContent -> {
+                _uiState.update {
+                    it.copy(isLoading = false, headerError = "Group not found.")
+                }
+                false
             }
-            is VideoLoadingState.Loading -> Unit
+            is VideoLoadingState.Loading -> false
         }
     }
 
@@ -222,7 +226,7 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
                     items = snapshot.items,
                     isLoading = false,
                     hasMore = snapshot.hasMore || snapshot.items.isNotEmpty(),
-                    currentOffset = 2,
+                    currentOffset = snapshot.nextOffset,
                     streamGet = snapshot.get,
                     streamFilter = snapshot.filter,
                     streamId = snapshot.id ?: it.group?.groupId?.toString(),
@@ -435,7 +439,7 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
                 items = emptyList(),
                 isLoading = false,
                 hasMore = tiles.isNotEmpty(),
-                currentOffset = 2,
+                currentOffset = snapshot?.nextOffset ?: 1,
                 streamGet = snapshot?.streamGet
                     ?: FapFolderProfileParser.FALLBACK_GET_PHOTOS,
                 streamFilter = null,
@@ -465,7 +469,7 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
                 items = emptyList(),
                 isLoading = false,
                 hasMore = tiles.isNotEmpty(),
-                currentOffset = 2,
+                currentOffset = snapshot?.nextOffset ?: 1,
                 streamGet = snapshot?.streamGet
                     ?: FapFolderProfileParser.FALLBACK_GET_VIDEOS,
                 streamFilter = null,
@@ -624,5 +628,3 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
 private suspend fun <T> Flow<VideoLoadingState<T>>.firstTerminalGroupState()
         : VideoLoadingState<T>? =
     firstOrNull { it !is VideoLoadingState.Loading }
-
-

@@ -7,6 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -36,6 +38,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -61,6 +64,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -243,6 +247,7 @@ private fun GroupHeaderBlock(
     joining: Boolean,
     joinError: String?,
     onToggleMembership: () -> Unit,
+    onSelectTab: (FapFolderGroupTab) -> Unit = {},
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Box(
@@ -325,14 +330,10 @@ private fun GroupHeaderBlock(
                         }
                     }
                 }
-                val meta = buildList {
-                    group.postCount?.let { add("$it posts") }
-                    group.photoCount?.let { add("$it photos") }
-                    group.videoCount?.let { add("$it videos") }
-                }.joinToString(" · ")
-                if (meta.isNotBlank()) {
+                val followers = group.followerCount ?: group.memberCount
+                if (followers != null) {
                     Text(
-                        text = meta,
+                        text = "${formatCount(followers)} followers",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -344,6 +345,10 @@ private fun GroupHeaderBlock(
                 onClick = onToggleMembership,
             )
         }
+
+        GroupStatsRow(group = group, onSelectTab = onSelectTab)
+
+        GroupInfoChips(group = group)
 
         if (!group.bio.isNullOrBlank()) {
             Text(
@@ -362,6 +367,88 @@ private fun GroupHeaderBlock(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+            )
+        }
+    }
+}
+
+private fun formatCount(value: Int): String =
+    java.text.NumberFormat.getIntegerInstance().format(value)
+
+@Composable
+private fun GroupStatsRow(
+    group: com.yenaly.han1meviewer.FapFolder.data.model.FapFolderGroup,
+    onSelectTab: (FapFolderGroupTab) -> Unit,
+) {
+    val followers = group.followerCount ?: group.memberCount
+    val stats = listOf(
+        Triple("Followers", followers, null as FapFolderGroupTab?),
+        Triple("Posts", group.postCount, FapFolderGroupTab.POSTS),
+        Triple("Photos", group.photoCount, FapFolderGroupTab.PHOTOS),
+        Triple("Videos", group.videoCount, FapFolderGroupTab.VIDEOS),
+    ).filter { it.second != null }
+    if (stats.isEmpty()) return
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 10.dp),
+        ) {
+            stats.forEach { (label, value, tab) ->
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .then(
+                            if (tab != null) Modifier.clickable { onSelectTab(tab) }
+                            else Modifier
+                        ),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        text = formatCount(value ?: 0),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun GroupInfoChips(
+    group: com.yenaly.han1meviewer.FapFolder.data.model.FapFolderGroup,
+) {
+    val uriHandler = LocalUriHandler.current
+    val categoryName = group.category?.name?.takeIf { it.isNotBlank() }
+    if (categoryName == null && group.externalLinks.isEmpty()) return
+
+    FlowRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        categoryName?.let { name ->
+            AssistChip(onClick = {}, label = { Text(name) })
+        }
+        group.externalLinks.forEach { link ->
+            AssistChip(
+                onClick = { runCatching { uriHandler.openUri(link.url) } },
+                label = { Text(link.label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
             )
         }
     }
@@ -409,6 +496,7 @@ private fun LazyListScope.groupHeaderItems(
                 joining = uiState.joining,
                 joinError = uiState.joinError,
                 onToggleMembership = onToggleMembership,
+                onSelectTab = onSwitchTab,
             )
         }
         item(key = "group_tabs") {
@@ -435,6 +523,7 @@ private fun LazyGridScope.groupHeaderItems(
                 joining = uiState.joining,
                 joinError = uiState.joinError,
                 onToggleMembership = onToggleMembership,
+                onSelectTab = onSwitchTab,
             )
         }
         item(
@@ -966,5 +1055,3 @@ private fun MembershipButton(
 
 private fun memberKey(user: FapFolderUserRow): String =
     "member_${user.uid ?: user.username}"
-
-

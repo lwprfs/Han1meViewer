@@ -59,6 +59,7 @@ fun FapFolderLoginScreen(
     onBack: () -> Unit,
     onLoginSuccess: () -> Unit,
     onOpenCookies: () -> Unit = {},
+    onOpenRegister: () -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
     val keyboard = LocalSoftwareKeyboardController.current
@@ -248,6 +249,14 @@ fun FapFolderLoginScreen(
             }
 
             Spacer(Modifier.height(4.dp))
+
+            TextButton(
+                onClick = onOpenRegister,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isSubmitting,
+            ) {
+                Text("New here? Create an account")
+            }
 
             TextButton(
                 onClick = onOpenCookies,

@@ -52,6 +52,8 @@ object FapFolderProfileParser {
         val streamGet: String?,
         val streamId: String?,
         val streamType: String?,
+        /** Next `offset` the site's own "see more" button would send. */
+        val nextOffset: Int = 1,
     )
 
     data class VideosSnapshot(
@@ -60,6 +62,8 @@ object FapFolderProfileParser {
         val streamGet: String?,
         val streamId: String?,
         val streamType: String?,
+        /** Next `offset` the site's own "see more" button would send. */
+        val nextOffset: Int = 1,
     )
 
     fun parseProfile(
@@ -227,6 +231,7 @@ object FapFolderProfileParser {
                 ?: FapFolderConstants.FEED_GET_PHOTOS_TAB,
             streamId = more?.attr("data-id")?.takeIf { it.isNotBlank() },
             streamType = more?.attr("data-type")?.takeIf { it.isNotBlank() },
+            nextOffset = more?.attr("data-offset")?.toIntOrNull() ?: 1,
         )
     }
 
@@ -259,6 +264,7 @@ object FapFolderProfileParser {
                 ?: FapFolderConstants.FEED_GET_VIDEOS_TAB,
             streamId = more?.attr("data-id")?.takeIf { it.isNotBlank() },
             streamType = more?.attr("data-type")?.takeIf { it.isNotBlank() },
+            nextOffset = more?.attr("data-offset")?.toIntOrNull() ?: 1,
         )
     }
 
@@ -294,8 +300,19 @@ object FapFolderProfileParser {
         }.distinctBy { it.photoId ?: it.fullUrl }
     }
 
+    /**
+     * Works on the full videos page *and* on the HTML fragment returned by the
+     * "load more" ajax call, whose markup is not always wrapped in `div.panel-videos`.
+     */
     fun parseVideoTiles(panel: Element): List<VideoTile> {
-        return panel.select("a.pg_video[href]").mapNotNull { anchor ->
+        val anchors = panel.select("a.pg_video[href]").ifEmpty {
+            panel.select("a[href*='/posts/']").filter { a ->
+                a.selectFirst("img") != null ||
+                        a.selectFirst("[style*=background]") != null ||
+                        a.attr("style").contains("background")
+            }
+        }
+        return anchors.mapNotNull { anchor ->
             val href = anchor.absUrl("href").takeIf { it.isNotBlank() }
                 ?: anchor.attr("href").takeIf { it.isNotBlank() }
                     ?.let(FapFolderUrlUtils::absoluteUrl)
@@ -304,12 +321,21 @@ object FapFolderProfileParser {
             val postId = href.trimEnd('/').substringAfterLast('/').toLongOrNull()
             val thumbEl = anchor.selectFirst("div.video-auth-placeholder-thumb")
                 ?: anchor.selectFirst("div[class*='video-auth-placeholder-thumb']")
+                ?: anchor.selectFirst("[style*=background]")
 
             val thumbUrl = thumbEl?.selectFirst("img.sr-only[src]")?.absUrl("src")
                 ?.takeIf { it.isNotBlank() }
                 ?: thumbEl?.attr("style")
                     ?.let { FapFolderHtmlUtils.extractBackgroundImageUrl(it) }
                     ?.let(FapFolderUrlUtils::normalizeMediaUrl)
+                ?: anchor.attr("style")
+                    .let { FapFolderHtmlUtils.extractBackgroundImageUrl(it) }
+                    ?.let(FapFolderUrlUtils::normalizeMediaUrl)
+                ?: anchor.selectFirst("img[data-src]")?.attr("data-src")
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let(FapFolderUrlUtils::normalizeMediaUrl)
+                ?: anchor.selectFirst("img[src]")?.absUrl("src")
+                    ?.takeIf { it.isNotBlank() }
 
             val title = thumbEl?.attr("aria-label")?.takeIf { it.isNotBlank() }
                 ?: thumbEl?.selectFirst("img")?.attr("alt")?.takeIf { it.isNotBlank() }
