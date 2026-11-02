@@ -1,6 +1,7 @@
 package com.yenaly.han1meviewer.HentaiMama.ui.video
 
 import com.yenaly.han1meviewer.SiteType
+import kotlinx.coroutines.flow.first
 import com.yenaly.han1meviewer.ui.component.SiteVideoActionBar
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
@@ -578,6 +579,15 @@ fun HentaiMamaVideoScreen(
                                     webUrl = normalizedUrl,
                                     downloadUrl = activeLink?.url,
                                     downloadQuality = activeLink?.quality.orEmpty(),
+                                    resolveDownloadUrl = {
+                                        // Mirrors are still being resolved: wait for the player's link.
+                                        kotlinx.coroutines.withTimeoutOrNull(20_000L) {
+                                            viewModel.mirrorLinks.first { it.isNotEmpty() }
+                                        }?.let { links ->
+                                            (links.firstOrNull { it.quality == playerState.quality }
+                                                ?: links.firstOrNull())?.url
+                                        }
+                                    },
                                 )
                             }
 
@@ -765,5 +775,7 @@ private fun SimilarGrid(
         }
     }
 }
+
+
 
 

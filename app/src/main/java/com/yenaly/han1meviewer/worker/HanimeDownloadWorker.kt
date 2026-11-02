@@ -34,6 +34,12 @@ import com.yenaly.han1meviewer.logic.state.DownloadState
 import com.yenaly.han1meviewer.ui.component.GlobalToasts
 import com.yenaly.han1meviewer.util.HImageMeower
 import com.yenaly.han1meviewer.util.SafFileManager
+import com.yenaly.han1meviewer.util.DownloadFailure
+import com.yenaly.han1meviewer.util.DownloadFailureKind
+import com.yenaly.han1meviewer.util.DownloadFailureStore
+import com.yenaly.han1meviewer.util.SiteDownloadClients
+import com.yenaly.han1meviewer.logic.SiteCheckIn
+import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.util.await
 import com.yenaly.yenaly_libs.utils.createFileIfNotExists
 import com.yenaly.yenaly_libs.utils.saveTo
@@ -238,14 +244,16 @@ class HanimeDownloadWorker(
     }
 
     private suspend fun requestContentLength(useHead: Boolean): Long? {
-        val requestBuilder = Request.Builder().url(downloadUrl)
+        val requestBuilder = Request.Builder().url(downloadUrl).apply {
+            SiteDownloadClients.headersFor(videoCode, downloadUrl).forEach { (k, v) -> header(k, v) }
+        }
         val request = if (useHead) {
             requestBuilder.head().build()
         } else {
             requestBuilder.header("Range", "bytes=0-0").get().build()
         }
         return try {
-            ServiceCreator.downloadClient.newCall(request).await().use { response ->
+            siteClient().newCall(request).await().use { response ->
                 if (!response.isSuccessful) return@use null
                 if (useHead) {
                     response.header("Content-Length")?.toLongOrNull()?.takeIf { it > 0 }
@@ -269,7 +277,157 @@ class HanimeDownloadWorker(
             ?.takeIf { it > 0 }
     }
 
+    private fun siteClient() = SiteDownloadClients.clientFor(videoCode)
+
+    private fun isOnAir() = SiteCheckIn.siteOfDishCode(videoCode) == SiteType.ONAIR
+
+    /** Classifies a failure and remembers it so the downloads screen can offer the right fix. */
+    private fun recordFailure(e: Throwable?, httpCode: Int?, fallbackMessage: String) {
+        val onAir = isOnAir()
+        val kind = when {
+            httpCode == 401 || httpCode == 403 -> DownloadFailureKind.COOKIES
+            httpCode == 404 || httpCode == 410 -> DownloadFailureKind.EXPIRED
+            e is HlsHttpException && (e.code == 401 || e.code == 403) -> DownloadFailureKind.COOKIES
+            e is HlsHttpException && (e.code == 404 || e.code == 410) -> DownloadFailureKind.EXPIRED
+            e != null && e.message?.contains("login", true) == true -> DownloadFailureKind.COOKIES
+            e != null && (e.message?.contains("No space", true) == true ||
+                    e.message?.contains("Permission", true) == true ||
+                    e.message?.contains("SAF", true) == true) -> DownloadFailureKind.STORAGE
+            onAir && (e is UnknownHostException || e is ConnectException ||
+                    e is SocketException || e is SocketTimeoutException ||
+                    e is IOException) -> DownloadFailureKind.TOR
+            e is IOException || e is UnknownHostException -> DownloadFailureKind.NETWORK
+            else -> DownloadFailureKind.OTHER
+        }
+        val message = when (kind) {
+            DownloadFailureKind.TOR ->
+                "Connection through Tor failed or dropped. Make sure Tor is running, then redownload."
+            DownloadFailureKind.COOKIES ->
+                "The site rejected the request. Your cookies expired or are invalid."
+            DownloadFailureKind.EXPIRED ->
+                "The video link expired. Open the video again and redownload."
+            else -> fallbackMessage
+        }
+        DownloadFailureStore.put(context, videoCode, DownloadFailure(kind, message))
+    }
+
+    private suspend fun downloadHls(): Result {
+        return withContext(Dispatchers.IO) {
+            val file = HFileManager.getDownloadVideoFile(
+                context = context, title = hanimeName, quality = quality,
+                suffix = videoType, videoCode = videoCode
+            )
+            val fileName = createVideoName(hanimeName, quality, videoType)
+            if (shouldRedownload || shouldDelete) {
+                HFileManager.getDownloadVideoFolder(context, videoCode).deleteRecursively()
+                DatabaseRepo.HanimeDownload.delete(videoCode)
+                if (shouldDelete) return@withContext Result.success()
+            }
+            DownloadFailureStore.clear(context, videoCode)
+
+            val safUri = SafFileManager.getDownloadVideoFileUri(context, videoCode, fileName)
+            var entity = DatabaseRepo.HanimeDownload.find(videoCode, quality)
+                ?: HanimeDownloadEntity(
+                    groupId = groupId.takeIf { it > 0 } ?: DownloadGroupEntity.DEFAULT_GROUP_ID,
+                    coverUrl = coverUrl,
+                    coverUri = null,
+                    title = hanimeName,
+                    addDate = System.currentTimeMillis(),
+                    videoCode = videoCode,
+                    videoUri = safUri?.toString() ?: file.toUri().toString(),
+                    quality = quality,
+                    videoUrl = downloadUrl,
+                    length = 0,
+                    downloadedLength = 0,
+                    state = DownloadState.Queued,
+                ).also { DatabaseRepo.HanimeDownload.insert(it) }
+                    .let { DatabaseRepo.HanimeDownload.find(videoCode, quality)!! }
+
+            if (entity.state == DownloadState.Finished && entity.length > 0) {
+                return@withContext Result.success(
+                    workDataOf(DownloadState.STATE to DownloadState.Finished.mask)
+                )
+            }
+            if (entity.coverUri == null) updateCoverImage(entity)
+            if (isInWaitingQueue) {
+                DatabaseRepo.HanimeDownload.update(entity.copy(state = DownloadState.Queued))
+                return@withContext Result.success()
+            }
+
+            var written = 0L
+            var result: Result = Result.failure(
+                workDataOf(DownloadState.STATE to DownloadState.Failed.mask)
+            )
+            var shouldRetry = false
+            var out: java.io.OutputStream? = null
+            try {
+                // Resuming an HLS download restarts it: the playlist is the unit of work.
+                out = if (safUri != null) {
+                    context.contentResolver.openOutputStream(safUri, "wt")
+                        ?: throw IOException("Open SAF file failed")
+                } else {
+                    file.createFileIfNotExists()
+                    FileOutputStream(file, false)
+                }
+                val downloader = HlsDownloader(siteClient(), SiteDownloadClients.headersFor(videoCode, downloadUrl))
+                val playlist = downloader.resolvePlaylist(downloadUrl)
+                var lastUpdate = 0L
+                written = downloader.download(playlist, out) { done, total, bytes ->
+                    val now = System.currentTimeMillis()
+                    if (now - lastUpdate > RESPONSE_INTERVAL || done == total) {
+                        lastUpdate = now
+                        val estimated = if (done > 0) bytes * total / done else bytes
+                        val progress = (done * 100 / total).coerceAtMost(100)
+                        setProgress(workDataOf(PROGRESS to progress))
+                        updateDownloadNotification(progress)
+                        entity = entity.copy(
+                            length = estimated.coerceAtLeast(bytes),
+                            downloadedLength = bytes,
+                            state = DownloadState.Downloading,
+                        )
+                        DatabaseRepo.HanimeDownload.update(entity)
+                    }
+                }
+                entity = entity.copy(length = written, downloadedLength = written)
+                showSuccessNotification()
+                result = Result.success(workDataOf(DownloadState.STATE to DownloadState.Finished.mask))
+            } catch (e: Exception) {
+                result = if (e is CancellationException || e.isStoppedCancellation()) {
+                    cancelDownloadNotification()
+                    Result.success(workDataOf(DownloadState.STATE to DownloadState.Paused.mask))
+                } else if (e.isRetryableNetworkError() && e !is HlsHttpException &&
+                    !isOnAir() && runAttemptCount < MAX_WORK_RETRY_COUNT
+                ) {
+                    shouldRetry = true
+                    Result.retry()
+                } else {
+                    val reason = e.message?.takeIf { it.isNotBlank() } ?: e.toDownloadErrorMessage()
+                    recordFailure(e, (e as? HlsHttpException)?.code, reason)
+                    val stored = DownloadFailureStore.get(context, videoCode)?.message ?: reason
+                    showFailureNotification(stored)
+                    mainScope.launch {
+                        GlobalToasts.show(
+                            context.getString(R.string.download_task_failed_s_reason_s, hanimeName, stored),
+                            level = GlobalToasts.ToastLevel.ERROR,
+                        )
+                    }
+                    Result.failure(workDataOf(DownloadState.STATE to DownloadState.Failed.mask))
+                }
+            } finally {
+                val state = DownloadState.from(
+                    result.outputData.getInt(DownloadState.STATE, DownloadState.Unknown.mask)
+                )
+                DatabaseRepo.HanimeDownload.update(
+                    entity.copy(state = if (shouldRetry) DownloadState.Queued else state)
+                )
+                runCatching { out?.close() }
+            }
+            result
+        }
+    }
+
     private suspend fun download(): Result {
+        if (HlsDownloader.isHls(downloadUrl)) return downloadHls()
         return withContext(Dispatchers.IO) {
             val file = HFileManager.getDownloadVideoFile(
                 context = context, title = hanimeName, quality = quality, suffix = videoType, videoCode = videoCode
@@ -290,6 +448,7 @@ class HanimeDownloadWorker(
                         ?: return@withContext run {
                             Log.d(TAG, "entity is null, create new raf failed")
                             val reason = context.getString(R.string.download_error_file_info)
+                            recordFailure(null, null, reason)
                             showFailureNotification(reason)
                             mainScope.launch {
                                 GlobalToasts.show(
@@ -373,12 +532,15 @@ class HanimeDownloadWorker(
                 while (downloadedLength < entity.length) {
                     val requestNeedRange = downloadedLength > 0
                     val requestBuilder = Request.Builder().url(downloadUrl).get()
+                    SiteDownloadClients.headersFor(videoCode, downloadUrl)
+                        .forEach { (k, v) -> requestBuilder.header(k, v) }
                     if (requestNeedRange) requestBuilder.header("Range", "bytes=$downloadedLength-")
                     val request = requestBuilder.build()
-                    response = ServiceCreator.downloadClient.newCall(request).await()
+                    response = siteClient().newCall(request).await()
                     val canWrite = (requestNeedRange && response.code == 206) || (!requestNeedRange && response.isSuccessful)
                     if (!canWrite) {
                         val reason = response.toDownloadErrorMessage(requestNeedRange)
+                        recordFailure(null, response.code, reason)
                         showFailureNotification(reason)
                         mainScope.launch {
                             GlobalToasts.show(context.getString(R.string.download_task_failed_s_reason_s, hanimeName, reason), level = GlobalToasts.ToastLevel.ERROR)
@@ -455,6 +617,7 @@ class HanimeDownloadWorker(
                     Result.retry()
                 } else {
                     val reason = e.toDownloadErrorMessage()
+                    recordFailure(e, null, reason)
                     showFailureNotification(reason)
                     e.printStackTrace()
                     mainScope.launch {
@@ -656,3 +819,5 @@ class HanimeDownloadWorker(
         )
     }
 }
+
+

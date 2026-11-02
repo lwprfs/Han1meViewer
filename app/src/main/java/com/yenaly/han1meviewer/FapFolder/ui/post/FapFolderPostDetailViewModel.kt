@@ -495,10 +495,15 @@ class FapFolderPostDetailViewModel(application: Application) : AndroidViewModel(
                             val merged = if (reset) newComments
                             else (prev.comments + newComments)
                                 .distinctBy { it.commentId }
+                            // Once every comment the post reports is loaded, stop asking for more
+                            // pages (and stop showing the loading bar in the footer).
+                            val expected = prev.post?.commentCount ?: 0
+                            val loaded = merged.size + merged.sumOf { it.replies.size }
+                            val allLoaded = expected > 0 && loaded >= expected
                             prev.copy(
                                 comments = merged,
                                 commentsLoading = false,
-                                commentsHasMore = newComments.isNotEmpty(),
+                                commentsHasMore = newComments.isNotEmpty() && !allLoaded,
                                 commentsNextPage = page + 1,
                                 commentsError = null,
                             )
@@ -563,3 +568,5 @@ class FapFolderPostDetailViewModel(application: Application) : AndroidViewModel(
         Log.d(TAG, "onCleared")
     }
 }
+
+

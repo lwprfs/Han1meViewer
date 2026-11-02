@@ -79,7 +79,8 @@ import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderPost
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderUserProfile
 import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderImageLightboxDialog
 import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderInteractivePostCard
-import com.yenaly.han1meviewer.FapFolder.ui.video.FapFolderVideoPlayerScreen
+import com.yenaly.han1meviewer.util.DownloadLayout
+import com.yenaly.han1meviewer.util.FapOwnerKind
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
 import kotlinx.coroutines.flow.conflate
@@ -107,8 +108,7 @@ fun FapFolderProfileScreen(
     var lightboxPayload by remember {
         mutableStateOf<Pair<List<FapFolderMedia.Image>, Int>?>(null)
     }
-    var videoToPlay by remember { mutableStateOf<FapFolderMedia.Video?>(null) }
-    var videoPost by remember { mutableStateOf<FapFolderPost?>(null) }
+    var photoLightboxIndex by remember { mutableStateOf<Int?>(null) }
 
     LaunchedEffect(username, initialTab) {
         viewModel.load(username, initialTab)
@@ -206,10 +206,15 @@ fun FapFolderProfileScreen(
                             uiState = uiState,
                             gridState = gridState,
                             onSwitchTab = { viewModel.switchTab(it.param) },
-                            onOpenImage = { images, idx -> lightboxPayload = images to idx },
+                            onOpenImage = { images, idx ->
+                                if (activeTab == FapFolderProfileTab.PHOTOS) {
+                                    photoLightboxIndex = idx
+                                } else {
+                                    lightboxPayload = images to idx
+                                }
+                            },
                             onOpenVideo = { video ->
-                                videoPost = null
-                                videoToPlay = video
+                                video.videoId?.toString()?.let(onOpenVideoBySlug)
                             },
                             onOpenVideoBySlug = onOpenVideoBySlug,
                             onRetry = { viewModel.refresh() },
@@ -225,9 +230,9 @@ fun FapFolderProfileScreen(
                             onOpenGroup = onOpenGroup,
                             onOpenAlbum = onOpenAlbum,
                             onOpenProfile = onOpenProfile,
-                            onOpenVideo = { post, video ->
-                                videoPost = post
-                                videoToPlay = video
+                            onOpenVideo = { post, _ ->
+                                // Video and post are one screen: open the post and autoplay.
+                                onOpenVideoBySlug(post.slug ?: post.postId.toString())
                             },
                             onOpenImage = { images, idx -> lightboxPayload = images to idx },
                             onRetry = { viewModel.refresh() },
@@ -244,28 +249,26 @@ fun FapFolderProfileScreen(
             images = images,
             initialIndex = startIndex,
             onDismiss = { lightboxPayload = null },
+            saveSegments = DownloadLayout.fapFolderPhotoSegments(
+                FapOwnerKind.PROFILE, uiState.profile?.displayName ?: username, null,
+            ),
         )
     }
 
-    videoToPlay?.let { video ->
-        FapFolderVideoPlayerScreen(
-            video = video,
-            title = videoPost?.bodyPlain?.take(60)
-                ?: uiState.profile?.displayName.orEmpty(),
-            onDismiss = {
-                videoToPlay = null
-                videoPost = null
-            },
-            postId = videoPost?.postId,
-            coverUrl = video.posterUrl,
-            postPermalinkForReferer = videoPost?.permalink
-                ?: uiState.profile?.tabUrls?.get("posts"),
-            onExpired = {
-                videoToPlay = null
-                videoPost = null
-            },
+    photoLightboxIndex?.let { startIndex ->
+        FapFolderImageLightboxDialog(
+            images = uiState.mediaImages,
+            initialIndex = startIndex,
+            onDismiss = { photoLightboxIndex = null },
+            hasMore = uiState.hasMore,
+            isLoadingMore = uiState.isLoadingMore,
+            onLoadMore = { viewModel.loadMore() },
+            saveSegments = DownloadLayout.fapFolderPhotoSegments(
+                FapOwnerKind.PROFILE, uiState.profile?.displayName ?: username, null,
+            ),
         )
     }
+
 }
 
 @Composable
@@ -1120,5 +1123,7 @@ private fun formatDuration(seconds: Int): String {
     return if (h > 0) "%d:%02d:%02d".format(h, m, s)
     else "%d:%02d".format(m, s)
 }
+
+
 
 

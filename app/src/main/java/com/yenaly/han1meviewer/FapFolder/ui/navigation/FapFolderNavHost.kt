@@ -179,6 +179,9 @@ fun FapFolderNavHost(
         composable<FapFolderHomeRoute> {
             FapFolderHomeScreen(
                 onOpenPost = { slug -> navController.navigateSafely(FapFolderPostRoute(slug)) },
+                onOpenVideoPost = { slug ->
+                    navController.navigateSafely(FapFolderPostRoute(slug, autoPlay = true))
+                },
                 onOpenSearch = { query ->
                     navController.navigateSafely(
                         FapFolderSearchRoute(
@@ -233,6 +236,12 @@ fun FapFolderNavHost(
                 onOpenVideo = { slugOrId ->
                     navController.navigateSafely(FapFolderPostRoute(slugOrId, autoPlay = true))
                 },
+                onOpenGroupPhotos = { slug ->
+                    navController.navigateSafely(FapFolderGroupRoute(slug, tab = "photos"))
+                },
+                onOpenProfilePhotos = { username ->
+                    navController.navigateSafely(FapFolderProfileRoute(username, tab = "photos"))
+                },
             )
         }
 
@@ -273,6 +282,9 @@ fun FapFolderNavHost(
                 tag = route.tag,
                 onBack = { navController.popBackStack() },
                 onOpenPost = { slug -> navController.navigateSafely(FapFolderPostRoute(slug)) },
+                onOpenVideoPost = { slug ->
+                    navController.navigateSafely(FapFolderPostRoute(slug, autoPlay = true))
+                },
                 onOpenHashtag = { tag -> navController.navigateSafely(FapFolderHashtagRoute(tag)) },
                 onOpenGroup = { slug -> navController.navigateSafely(FapFolderGroupRoute(slug)) },
                 onOpenProfile = { username ->
@@ -288,6 +300,9 @@ fun FapFolderNavHost(
                 initialTab = route.tab,
                 onBack = { navController.popBackStack() },
                 onOpenPost = { slug -> navController.navigateSafely(FapFolderPostRoute(slug)) },
+                onOpenVideoPost = { slug ->
+                    navController.navigateSafely(FapFolderPostRoute(slug, autoPlay = true))
+                },
                 onOpenProfile = { username ->
                     navController.navigateSafely(FapFolderProfileRoute(username))
                 },
@@ -367,6 +382,9 @@ fun FapFolderNavHost(
                 onBack = { navController.popBackStack() },
                 onOpenPost = { slug ->
                     navController.navigateSafely(FapFolderPostRoute(slug))
+                },
+                onOpenVideoPost = { slug ->
+                    navController.navigateSafely(FapFolderPostRoute(slug, autoPlay = true))
                 },
                 onOpenHashtag = { tag ->
                     navController.navigateSafely(FapFolderHashtagRoute(tag))
@@ -694,6 +712,8 @@ private fun fapFolderHubEntries(
         )
     }
 }
+
+
 
 
 

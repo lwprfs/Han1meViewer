@@ -279,6 +279,12 @@ fun OnAirVideoScreen(
                         webUrl = OnAirUrlUtils.normalizeVideoUrl(videoId),
                         downloadUrl = playerState.activeUrl,
                         downloadQuality = playerState.currentQuality,
+                        resolveDownloadUrl = {
+                            // Same stream lookup the player uses (goes through Tor + cookies).
+                            val quality = playerState.currentQuality.ifBlank { "original" }
+                            com.yenaly.han1meviewer.OnAir.data.remote.OnAirStreamFetcher
+                                .fetch(videoId, quality)?.url
+                        },
                     )
 
                     VideoDetailContent(
@@ -518,6 +524,8 @@ private fun formatMillis(ms: Long): String {
     val s = total % 60
     return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
 }
+
+
 
 
 

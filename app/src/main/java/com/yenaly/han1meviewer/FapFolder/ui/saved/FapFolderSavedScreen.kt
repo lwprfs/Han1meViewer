@@ -47,7 +47,6 @@ import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderFeedItem
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderMedia
 import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderImageLightboxDialog
 import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderInteractivePostCard
-import com.yenaly.han1meviewer.FapFolder.ui.video.FapFolderVideoPlayerScreen
 import com.yenaly.han1meviewer.R
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -58,6 +57,7 @@ import kotlinx.coroutines.flow.filter
 fun FapFolderSavedScreen(
     onBack: () -> Unit,
     onOpenPost: (String) -> Unit,
+    onOpenVideoPost: (String) -> Unit = onOpenPost,
     onOpenHashtag: (String) -> Unit,
     onOpenGroup: (String) -> Unit,
     onOpenProfile: (String) -> Unit,
@@ -66,8 +66,6 @@ fun FapFolderSavedScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
 
-    var videoToPlay by remember { mutableStateOf<FapFolderMedia.Video?>(null) }
-    var videoPost by remember { mutableStateOf<FapFolderFeedItem.Post?>(null) }
     var lightboxPayload by remember {
         mutableStateOf<Pair<List<FapFolderMedia.Image>, Int>?>(null)
     }
@@ -210,9 +208,10 @@ fun FapFolderSavedScreen(
                                                     onOpenProfile(user)
                                             }
                                         },
-                                        onClickVideo = { video ->
-                                            videoPost = item
-                                            videoToPlay = video
+                                        onClickVideo = { _ ->
+                                            onOpenVideoPost(
+                                                item.post.slug ?: item.post.postId.toString()
+                                            )
                                         },
                                         onClickImage = { clicked, all ->
                                             val idx = all
@@ -270,29 +269,6 @@ fun FapFolderSavedScreen(
         }
     }
 
-    videoToPlay?.let { video ->
-        FapFolderVideoPlayerScreen(
-            video = video,
-            title = videoPost?.post?.bodyPlain?.take(60).orEmpty(),
-            onDismiss = {
-                videoToPlay = null
-                videoPost = null
-            },
-            postId = videoPost?.post?.postId,
-            coverUrl = videoPost?.post?.primaryVideo?.posterUrl,
-            postPermalinkForReferer = videoPost?.post?.permalink,
-            onExpired = {
-                val post = videoPost
-                videoToPlay = null
-                videoPost = null
-                if (post != null) {
-                    val slug = post.post.slug ?: post.post.postId.toString()
-                    onOpenPost(slug)
-                }
-            },
-        )
-    }
-
     lightboxPayload?.let { (images, initialIndex) ->
         FapFolderImageLightboxDialog(
             images = images,
@@ -301,3 +277,5 @@ fun FapFolderSavedScreen(
         )
     }
 }
+
+

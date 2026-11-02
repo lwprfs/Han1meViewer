@@ -1,7 +1,12 @@
 package com.yenaly.han1meviewer.ui.screen.main
 
 import android.content.Context
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.Surface
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
@@ -169,8 +174,10 @@ fun siteLoginStatus(context: Context, site: SiteType): SiteLoginStatus = when (s
 private fun entry(title: String, icon: Int, route: Any) =
     SiteDrawerEntry(title, icon) { nav -> nav.navigateSafely(route) }
 
-/** Site specific entries (everything the old per-site settings hubs offered). */
-fun siteDrawerEntries(context: Context, site: SiteType, loggedIn: Boolean): List<SiteDrawerEntry> {
+data class SiteDrawerSection(val title: String, val entries: List<SiteDrawerEntry>)
+
+/** Site specific entries grouped into titled sections (Browse / Library / Account / Customize). */
+fun siteDrawerSections(context: Context, site: SiteType, loggedIn: Boolean): List<SiteDrawerSection> {
     fun str(res: Int) = context.getString(res)
     val home = SiteDrawerEntry(str(R.string.home_page), R.drawable.ic_baseline_home_24) {
         NavigationManager.navigateToHome()
@@ -178,65 +185,118 @@ fun siteDrawerEntries(context: Context, site: SiteType, loggedIn: Boolean): List
     val checkIn = SiteDrawerEntry(str(R.string.has_cum), R.drawable.ic_baseline_check_circle_24) {
         it.navigateSafely(DailyCheckInRoute)
     }
-    val history = entryIcon(R.drawable.ic_baseline_history_24)
+    val history = R.drawable.ic_baseline_history_24
+    val browse = str(R.string.site_drawer_section_browse)
+    val library = str(R.string.site_drawer_section_library)
+    val account = str(R.string.site_drawer_section_account)
+    val customize = str(R.string.site_drawer_section_customize)
+
     return when (site) {
         SiteType.MISSAV -> listOf(
-            home,
-            checkIn,
-            entry(str(R.string.watch_history), history, MissAvHistoryRoute),
-            entry(str(R.string.drawer_home_categories), R.drawable.baseline_grid_24, MissAvHomeCategoriesRoute),
-            entry(str(R.string.drawer_host_mirror), R.drawable.baseline_domain_24, MissAvHostSettingsRoute),
+            SiteDrawerSection(browse, listOf(home, checkIn)),
+            SiteDrawerSection(
+                library,
+                listOf(entry(str(R.string.watch_history), history, MissAvHistoryRoute)),
+            ),
+            SiteDrawerSection(
+                customize,
+                listOf(
+                    entry(str(R.string.drawer_home_categories), R.drawable.baseline_grid_24, MissAvHomeCategoriesRoute),
+                    entry(str(R.string.drawer_host_mirror), R.drawable.baseline_domain_24, MissAvHostSettingsRoute),
+                ),
+            ),
         )
 
         SiteType.HENTAIMAMA -> listOf(
-            home,
-            checkIn,
-            entry(str(R.string.watch_history), history, HentaiMamaHistoryRoute),
-            entry(str(R.string.play_list), R.drawable.baseline_format_list_bulleted_24, HentaiMamaPlaylistsRoute),
-            entry(str(R.string.drawer_recent_episodes), R.drawable.ic_baseline_update_24, HentaiMamaRecentEpisodesRoute),
-            entry(str(R.string.drawer_upcoming), R.drawable.ic_baseline_access_time_24, HentaiMamaUpcomingRoute),
-            entry(str(R.string.drawer_video_card_size), R.drawable.ic_video_quilty, HentaiMamaVideoSettingsRoute(target = "all")),
-            entry(str(R.string.drawer_home_categories), R.drawable.baseline_grid_24, HentaiMamaHomeSettingsRoute),
+            SiteDrawerSection(
+                browse,
+                listOf(
+                    home,
+                    checkIn,
+                    entry(str(R.string.drawer_recent_episodes), R.drawable.ic_baseline_update_24, HentaiMamaRecentEpisodesRoute),
+                    entry(str(R.string.drawer_upcoming), R.drawable.ic_baseline_access_time_24, HentaiMamaUpcomingRoute),
+                ),
+            ),
+            SiteDrawerSection(
+                library,
+                listOf(
+                    entry(str(R.string.watch_history), history, HentaiMamaHistoryRoute),
+                    entry(str(R.string.play_list), R.drawable.baseline_format_list_bulleted_24, HentaiMamaPlaylistsRoute),
+                ),
+            ),
+            SiteDrawerSection(
+                customize,
+                listOf(
+                    entry(str(R.string.drawer_video_card_size), R.drawable.ic_drawer_card_size, HentaiMamaVideoSettingsRoute(target = "all")),
+                    entry(str(R.string.drawer_home_categories), R.drawable.baseline_grid_24, HentaiMamaHomeSettingsRoute),
+                ),
+            ),
         )
 
-        SiteType.ONAIR -> buildList {
-            add(home)
-            add(checkIn)
-            add(entry(str(R.string.watch_history), history, OnAirHistoryRoute))
-            add(entry(str(R.string.drawer_cookies_sign_in), R.drawable.ic_baseline_cookie_24, OnAirCookieRoute))
-            if (loggedIn) {
-                add(entry(str(R.string.drawer_account_session), R.drawable.ic_baseline_person_24, OnAirAccountSettingsRoute))
-            }
-            add(entry(str(R.string.drawer_tags), R.drawable.baseline_flag_24, OnAirTagsIndexRoute))
-            add(entry(str(R.string.announcement), R.drawable.ic_baseline_newspaper_24, OnAirAnnouncementsRoute))
-            add(entry(str(R.string.drawer_chat), R.drawable.baseline_forum_24, OnAirChatRoute))
-            add(entry(str(R.string.drawer_pictures), R.drawable.ic_baseline_image_24, OnAirPicturesRoute))
-        }
+        SiteType.ONAIR -> listOf(
+            SiteDrawerSection(
+                browse,
+                listOf(
+                    home,
+                    checkIn,
+                    entry(str(R.string.drawer_tags), R.drawable.ic_drawer_label, OnAirTagsIndexRoute),
+                    entry(str(R.string.drawer_pictures), R.drawable.ic_baseline_image_24, OnAirPicturesRoute),
+                    entry(str(R.string.drawer_chat), R.drawable.baseline_forum_24, OnAirChatRoute),
+                    entry(str(R.string.announcement), R.drawable.ic_baseline_newspaper_24, OnAirAnnouncementsRoute),
+                ),
+            ),
+            SiteDrawerSection(
+                library,
+                listOf(entry(str(R.string.watch_history), history, OnAirHistoryRoute)),
+            ),
+            SiteDrawerSection(
+                account,
+                buildList {
+                    add(entry(str(R.string.drawer_cookies_sign_in), R.drawable.ic_baseline_cookie_24, OnAirCookieRoute))
+                    if (loggedIn) {
+                        add(entry(str(R.string.drawer_account_session), R.drawable.ic_baseline_person_24, OnAirAccountSettingsRoute))
+                    }
+                },
+            ),
+        )
 
-        SiteType.FAPFOLDER -> buildList {
-            add(home)
-            add(checkIn)
-            add(entry(str(R.string.watch_history), history, FapFolderHistoryRoute))
-            add(entry(str(R.string.cookies_label), R.drawable.ic_baseline_cookie_24, FapFolderCookiesRoute))
-            if (!loggedIn) add(entry(str(R.string.login), R.drawable.ic_baseline_unlock_24, FapFolderLoginRoute))
-            add(entry(str(R.string.search), R.drawable.ic_baseline_search_24, FapFolderSearchRoute()))
-            add(entry(str(R.string.drawer_search_history), R.drawable.baseline_restore_24, FapFolderSearchHistoryRoute))
-            add(entry(str(R.string.drawer_followed_communities), R.drawable.ic_subscribtion, FapFolderFollowedCommunitiesRoute))
-            add(entry(str(R.string.saved), R.drawable.ic_baseline_favorite_border_24, FapFolderSavedRoute))
-        }
+        SiteType.FAPFOLDER -> listOf(
+            SiteDrawerSection(
+                browse,
+                listOf(
+                    home,
+                    checkIn,
+                    entry(str(R.string.search), R.drawable.ic_baseline_search_24, FapFolderSearchRoute()),
+                    entry(str(R.string.drawer_search_history), R.drawable.ic_drawer_search_history, FapFolderSearchHistoryRoute),
+                ),
+            ),
+            SiteDrawerSection(
+                library,
+                listOf(
+                    entry(str(R.string.watch_history), history, FapFolderHistoryRoute),
+                    entry(str(R.string.saved), R.drawable.ic_drawer_bookmark, FapFolderSavedRoute),
+                    entry(str(R.string.drawer_followed_communities), R.drawable.ic_drawer_groups, FapFolderFollowedCommunitiesRoute),
+                ),
+            ),
+            SiteDrawerSection(
+                account,
+                buildList {
+                    if (!loggedIn) add(entry(str(R.string.login), R.drawable.ic_baseline_unlock_24, FapFolderLoginRoute))
+                    add(entry(str(R.string.cookies_label), R.drawable.ic_baseline_cookie_24, FapFolderCookiesRoute))
+                },
+            ),
+        )
 
         SiteType.HANIME, SiteType.JAVCHU -> emptyList()
     }
 }
-
-private fun entryIcon(res: Int): Int = res
 
 /** In-app settings shared by all sites (same ones the Hanime drawer links to). */
 private fun appEntries(context: Context): List<SiteDrawerEntry> = listOf(
     entry(context.getString(R.string.settings), R.drawable.ic_baseline_settings_24, HomeSettingsRoute),
     entry(context.getString(R.string.player_settings), R.drawable.baseline_player_24, PlayerSettingsRoute),
     entry(context.getString(R.string.network_settings), R.drawable.baseline_mobile_data_24, NetworkSettingsRoute),
-    entry(context.getString(R.string.drawer_watch_history_all), R.drawable.ic_baseline_watch_later_24, UnifiedHistoryRoute),
+    entry(context.getString(R.string.drawer_watch_history_all), R.drawable.ic_drawer_library, UnifiedHistoryRoute),
 )
 
 @Composable
@@ -249,8 +309,11 @@ fun SiteDrawerContent(
 ) {
     val context = LocalContext.current
     val status = androidx.compose.runtime.remember(site, refreshKey) { siteLoginStatus(context, site) }
-    val siteEntries = siteDrawerEntries(context, site, status.loggedIn)
-    val appEntries = appEntries(context)
+    val sections = siteDrawerSections(context, site, status.loggedIn) +
+            SiteDrawerSection(
+                context.getString(R.string.site_drawer_section_app),
+                appEntries(context),
+            )
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         SiteDrawerHeader(
@@ -264,32 +327,68 @@ fun SiteDrawerContent(
             },
             onSwitchSiteClick = onSwitchSiteClick,
         )
-        Spacer(Modifier.height(8.dp))
-        siteEntries.forEach { entry ->
-            DrawerItem(entry) {
-                onClose()
-                entry.onClick(navController)
+        sections.forEach { section ->
+            if (section.entries.isEmpty()) return@forEach
+            DrawerSectionHeader(section.title)
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp),
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+            ) {
+                Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                    section.entries.forEach { entry ->
+                        DrawerItem(entry) {
+                            onClose()
+                            entry.onClick(navController)
+                        }
+                    }
+                }
             }
         }
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp))
-        appEntries.forEach { entry ->
-            DrawerItem(entry) {
-                onClose()
-                entry.onClick(navController)
-            }
-        }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(20.dp))
+    }
+}
+
+@Composable
+private fun DrawerSectionHeader(title: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 28.dp, end = 16.dp, top = 16.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(width = 4.dp, height = 14.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(MaterialTheme.colorScheme.primary),
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = title.uppercase(),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.2.sp,
+            color = MaterialTheme.colorScheme.primary,
+        )
     }
 }
 
 @Composable
 private fun DrawerItem(entry: SiteDrawerEntry, onClick: () -> Unit) {
     NavigationDrawerItem(
-        label = { Text(entry.title) },
+        label = { Text(entry.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         icon = { Icon(painterResource(entry.iconRes), contentDescription = null) },
         selected = false,
         onClick = onClick,
-        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+        shape = RoundedCornerShape(16.dp),
+        colors = NavigationDrawerItemDefaults.colors(
+            unselectedContainerColor = Color.Transparent,
+            unselectedIconColor = MaterialTheme.colorScheme.primary,
+        ),
+        modifier = Modifier.padding(horizontal = 4.dp),
     )
 }
 
@@ -378,3 +477,5 @@ private fun SiteDrawerHeader(
         }
     }
 }
+
+

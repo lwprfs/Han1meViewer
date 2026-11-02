@@ -23,6 +23,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import com.yenaly.han1meviewer.ui.component.GlobalToasts
+import com.yenaly.han1meviewer.util.SiteImageSaver
+import kotlinx.coroutines.launch
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -55,8 +62,19 @@ fun FapFolderImageLightboxDialog(
     images: List<FapFolderMedia.Image>,
     initialIndex: Int,
     onDismiss: () -> Unit,
+    /** More images can be fetched (group / profile photo tabs). */
+    hasMore: Boolean = false,
+    isLoadingMore: Boolean = false,
+    /** Called when the user nears the last loaded image; keeps loading until [hasMore] is false. */
+    onLoadMore: (() -> Unit)? = null,
+    /** Folder (below the download root) used by the save button. Null = FapFolder/Photos. */
+    saveSegments: List<String>? = null,
 ) {
     if (images.isEmpty()) return
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val canSave = remember { SiteImageSaver.isDownloadPermissionGranted(context) }
+    var saving by remember { mutableStateOf(false) }
 
     val pagerState = rememberPagerState(
         initialPage = initialIndex.coerceIn(0, images.lastIndex),
@@ -66,6 +84,15 @@ fun FapFolderImageLightboxDialog(
     var controlsVisible by remember { mutableStateOf(true) }
 
     BackHandler(onBack = onDismiss)
+
+    // Keep loading the next images while the user keeps swiping towards the end.
+    LaunchedEffect(pagerState.currentPage, images.size, hasMore, isLoadingMore) {
+        if (onLoadMore != null && hasMore && !isLoadingMore &&
+            pagerState.currentPage >= images.size - 3
+        ) {
+            onLoadMore()
+        }
+    }
 
     LaunchedEffect(controlsVisible) {
         if (controlsVisible) {
@@ -130,6 +157,59 @@ fun FapFolderImageLightboxDialog(
                         )
                     }
 
+                    if (canSave) {
+                        IconButton(
+                            onClick = {
+                                if (saving) return@IconButton
+                                val image = images.getOrNull(pagerState.currentPage)
+                                    ?: return@IconButton
+                                saving = true
+                                scope.launch {
+                                    val name = "photo_" + (image.photoId?.toString()
+                                        ?: image.fullUrl.hashCode().toUInt().toString())
+                                    val result = SiteImageSaver.saveOne(
+                                        context = context,
+                                        url = image.fullUrl,
+                                        segments = saveSegments
+                                            ?: listOf("FapFolder", "Photos"),
+                                        baseName = name,
+                                    )
+                                    saving = false
+                                    when (result) {
+                                        is SiteImageSaver.SaveResult.Error -> GlobalToasts.show(
+                                            result.message,
+                                            level = GlobalToasts.ToastLevel.ERROR,
+                                        )
+                                        is SiteImageSaver.SaveResult.Saved -> GlobalToasts.show(
+                                            if (result.count > 0) "Photo saved"
+                                            else "Photo already saved",
+                                            level = GlobalToasts.ToastLevel.SUCCESS,
+                                        )
+                                    }
+                                }
+                            },
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .statusBarsPadding()
+                                .padding(16.dp)
+                                .background(Color.Black.copy(alpha = 0.55f), CircleShape),
+                        ) {
+                            if (saving) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp,
+                                    color = Color.White,
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Download,
+                                    contentDescription = "Save photo",
+                                    tint = Color.White,
+                                )
+                            }
+                        }
+                    }
+
                     if (images.size > 1) {
                         Row(
                             modifier = Modifier
@@ -158,7 +238,8 @@ fun FapFolderImageLightboxDialog(
                             }
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "${pagerState.currentPage + 1} / ${images.size}",
+                                text = "${pagerState.currentPage + 1} / ${images.size}" +
+                                        if (hasMore) "+" else "",
                                 color = Color.White,
                                 style = MaterialTheme.typography.labelMedium,
                             )
@@ -228,3 +309,5 @@ private fun ZoomableImage(
         )
     }
 }
+
+

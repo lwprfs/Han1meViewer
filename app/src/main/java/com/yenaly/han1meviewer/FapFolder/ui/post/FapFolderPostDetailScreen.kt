@@ -1,40 +1,26 @@
 package com.yenaly.han1meviewer.FapFolder.ui.post
 
-import com.yenaly.han1meviewer.SiteType
-import com.yenaly.han1meviewer.ui.component.SiteVideoActionBar
-import com.yenaly.han1meviewer.FapFolder.common.FapFolderUrlUtils
-import com.yenaly.han1meviewer.ui.component.SiteBackButton
-import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.filled.ChatBubbleOutline
-import androidx.compose.material.icons.filled.ErrorOutline
-import androidx.compose.material.icons.filled.PhotoLibrary
-import androidx.compose.material.icons.filled.SearchOff
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -50,25 +36,27 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderMedia
-import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderPost
-import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderCommentParser
-import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderCommentCard
 import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderImageLightboxDialog
-import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderPostCard
-import com.yenaly.han1meviewer.FapFolder.ui.video.FapFolderVideoPlayerScreen
-import com.yenaly.han1meviewer.R
-import com.yenaly.han1meviewer.logic.state.PageLoadingState
-import com.yenaly.han1meviewer.ui.component.LoadMoreFooter
+import com.yenaly.han1meviewer.ui.component.SiteBackButton
+import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
+import com.yenaly.han1meviewer.util.DownloadLayout
+import com.yenaly.han1meviewer.util.FapOwnerKind
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
+/**
+ * Entry point of the post route. A post with a video is shown as the video post screen (the
+ * video plays inline, there is no separate video screen); every other post is shown as the image
+ * post screen. Both share the comments block.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FapFolderPostDetailScreen(
@@ -80,37 +68,37 @@ fun FapFolderPostDetailScreen(
     onOpenProfile: (String) -> Unit,
     onOpenAlbum: (String) -> Unit,
     onOpenVideo: (String) -> Unit,
+    onOpenGroupPhotos: (String) -> Unit = onOpenGroup,
+    onOpenProfilePhotos: (String) -> Unit = onOpenProfile,
     viewModel: FapFolderPostDetailViewModel = viewModel(),
 ) {
+    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
 
-    var videoToPlay by remember { mutableStateOf<FapFolderMedia.Video?>(null) }
+    var playing by remember(slugOrId) { mutableStateOf(false) }
     var imageViewerPayload by remember {
         mutableStateOf<Pair<List<FapFolderMedia.Image>, Int>?>(null)
     }
 
-    LaunchedEffect(slugOrId) {
-        viewModel.load(slugOrId)
-    }
+    LaunchedEffect(slugOrId) { viewModel.load(slugOrId) }
 
     var autoPlayConsumed by remember(slugOrId) { mutableStateOf(false) }
     LaunchedEffect(autoPlay, uiState.post) {
         if (!autoPlay || autoPlayConsumed) return@LaunchedEffect
-        val post = uiState.post ?: return@LaunchedEffect
-        val video = post.primaryVideo ?: return@LaunchedEffect
+        if (uiState.post?.primaryVideo == null) return@LaunchedEffect
         autoPlayConsumed = true
-        videoToPlay = video
+        playing = true
     }
 
     LaunchedEffect(uiState.refreshToken, uiState.post) {
         val pendingId = viewModel.pendingAutoPlayVideoId() ?: return@LaunchedEffect
         val post = uiState.post ?: return@LaunchedEffect
-        val video = post.media.filterIsInstance<FapFolderMedia.Video>()
+        post.media.filterIsInstance<FapFolderMedia.Video>()
             .firstOrNull { it.videoId == pendingId || it.onPlayId == pendingId }
             ?: return@LaunchedEffect
         viewModel.clearPendingAutoPlay()
-        videoToPlay = video
+        playing = true
     }
 
     LaunchedEffect(listState, uiState.commentsHasMore, uiState.commentsLoading) {
@@ -135,7 +123,7 @@ fun FapFolderPostDetailScreen(
             SiteTopAppBar(
                 title = {
                     Text(
-                        text = "Post",
+                        text = if (uiState.post?.primaryVideo != null) "Video" else "Post",
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -161,7 +149,7 @@ fun FapFolderPostDetailScreen(
             when {
                 uiState.postLoading && post == null -> LoadingBlock("Loading post…")
 
-                post == null && uiState.postError != null -> ErrorBlock(
+                post == null && uiState.postError != null -> PostErrorBlock(
                     title = "Failed to load post",
                     message = uiState.postError ?: "Unknown error",
                     onRetry = { viewModel.refresh() },
@@ -170,284 +158,48 @@ fun FapFolderPostDetailScreen(
                 post == null -> EmptyBlock("Post not found")
 
                 else -> {
+                    val video = post.primaryVideo
                     LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(vertical = 8.dp),
                     ) {
-                        item(key = "post_card") {
-                            FapFolderPostCard(
+                        if (video != null) {
+                            fapFolderVideoPostItems(
                                 post = post,
-                                isSaved = uiState.saved,
-                                isReactionPending = uiState.reactionsPending,
-                                isPollPending = uiState.pollVotePendingOptionId != null,
-                                onClickPost = { },
-                                onClickHashtag = onOpenHashtag,
-                                onClickAuthor = { author ->
-                                    val groupSlug = author.groupSlug
-                                    val username = author.username
-                                    when {
-                                        !groupSlug.isNullOrBlank() -> onOpenGroup(groupSlug)
-                                        !username.isNullOrBlank() -> onOpenProfile(username)
-                                    }
+                                video = video,
+                                slugOrId = slugOrId,
+                                uiState = uiState,
+                                viewModel = viewModel,
+                                playing = playing,
+                                onPlayingChange = { playing = it },
+                                onVideoExpired = { v ->
+                                    val pid = v.videoId ?: v.onPlayId
+                                    playing = false
+                                    if (pid != null) viewModel.requestAutoPlayAfterRefresh(pid)
+                                    viewModel.refresh()
                                 },
-                                onClickVideo = { video -> videoToPlay = video },
-                                onClickImage = { clicked, all ->
-                                    val idx = all.indexOfFirst { it.photoId == clicked.photoId }
-                                    imageViewerPayload = all to idx.coerceAtLeast(0)
-                                },
-                                onClickPoll = { },
-                                onClickPollOption = { poll, option ->
-                                    viewModel.votePoll(poll, option.id)
-                                },
-                                onClickLink = { },
-                                onClickLike = { viewModel.react(positive = true) },
-                                onClickDislike = { viewModel.react(positive = false) },
-                                onClickSave = { viewModel.toggleSave() },
-                                onLongClickPost = { },
+                                onOpenHashtag = onOpenHashtag,
+                                onOpenGroup = onOpenGroup,
+                                onOpenProfile = onOpenProfile,
                             )
-                        }
-
-                        item(key = "site_actions") {
-                            SiteVideoActionBar(
-                                site = SiteType.FAPFOLDER,
-                                videoCode = post.postId.toString(),
-                                title = post.bodyPlain.lineSequence().firstOrNull { it.isNotBlank() }
-                                    ?.take(80)
-                                    ?: post.author.displayName.take(40),
-                                coverUrl = coverUrlOf(post),
-                                webUrl = FapFolderUrlUtils.absoluteUrl(
-                                    post.permalink ?: post.slug ?: slugOrId
-                                ),
-                                downloadUrl = post.primaryVideo?.playUrl,
-                                downloadQuality = "default",
+                        } else {
+                            fapFolderImagePostItems(
+                                post = post,
+                                slugOrId = slugOrId,
+                                uiState = uiState,
+                                viewModel = viewModel,
+                                onOpenImages = { images, idx ->
+                                    imageViewerPayload = images to idx
+                                },
+                                onOpenHashtag = onOpenHashtag,
+                                onOpenGroup = onOpenGroup,
+                                onOpenProfile = onOpenProfile,
+                                onOpenAlbum = onOpenAlbum,
+                                onOpenGroupPhotos = onOpenGroupPhotos,
+                                onOpenProfilePhotos = onOpenProfilePhotos,
+                                context = context,
                             )
-                        }
-
-                        if (!uiState.commentPostError.isNullOrBlank()) {
-                            item(key = "comment_post_error") {
-                                Surface(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 12.dp, vertical = 4.dp),
-                                    shape = RoundedCornerShape(16.dp),
-                                    color = MaterialTheme.colorScheme.errorContainer,
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(12.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.ErrorOutline,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onErrorContainer,
-                                        )
-                                        Text(
-                                            text = uiState.commentPostError ?: "",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onErrorContainer,
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        val albumId = post.firstGallery?.albumId
-                            ?: post.primaryImage?.photoId?.toString()
-                        if (albumId != null) {
-                            item(key = "album_link") {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 12.dp, vertical = 4.dp),
-                                ) {
-                                    FilledTonalButton(
-                                        onClick = { onOpenAlbum(albumId) },
-                                        modifier = Modifier.fillMaxWidth(),
-                                        shape = RoundedCornerShape(16.dp),
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.PhotoLibrary,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(18.dp),
-                                        )
-                                        Spacer(Modifier.width(8.dp))
-                                        Text("Open album", fontWeight = FontWeight.SemiBold)
-                                    }
-                                }
-                            }
-                        }
-
-                        item(key = "comments_header") {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                ) {
-                                    Text(
-                                        text = "Comments",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                    )
-                                    Surface(
-                                        shape = RoundedCornerShape(50),
-                                        color = MaterialTheme.colorScheme.secondaryContainer,
-                                    ) {
-                                        Text(
-                                            text = "${post.commentCount}",
-                                            style = MaterialTheme.typography.labelMedium,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                            modifier = Modifier.padding(
-                                                horizontal = 10.dp,
-                                                vertical = 2.dp,
-                                            ),
-                                        )
-                                    }
-                                }
-                                Spacer(Modifier.height(10.dp))
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    CommentFilterChip(
-                                        label = "Recent",
-                                        selected = uiState.commentsActiveFilter ==
-                                                FapFolderCommentParser.FILTER_MOST_RECENT,
-                                        onClick = {
-                                            viewModel.changeCommentsFilter(
-                                                FapFolderCommentParser.FILTER_MOST_RECENT
-                                            )
-                                        },
-                                    )
-                                    CommentFilterChip(
-                                        label = "Top",
-                                        selected = uiState.commentsActiveFilter ==
-                                                FapFolderCommentParser.FILTER_TOP,
-                                        onClick = {
-                                            viewModel.changeCommentsFilter(
-                                                FapFolderCommentParser.FILTER_TOP
-                                            )
-                                        },
-                                    )
-                                    CommentFilterChip(
-                                        label = "All",
-                                        selected = uiState.commentsActiveFilter ==
-                                                FapFolderCommentParser.FILTER_ALL,
-                                        onClick = {
-                                            viewModel.changeCommentsFilter(
-                                                FapFolderCommentParser.FILTER_ALL
-                                            )
-                                        },
-                                    )
-                                }
-                            }
-                        }
-
-                        when {
-                            uiState.comments.isEmpty() && uiState.commentsLoading -> {
-                                item(key = "comments_loading") {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 16.dp),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        CircularProgressIndicator()
-                                    }
-                                }
-                            }
-
-                            uiState.comments.isEmpty() && uiState.commentsError != null -> {
-                                item(key = "comments_error") {
-                                    ErrorBlock(
-                                        title = "Failed to load comments",
-                                        message = uiState.commentsError ?: "Unknown error",
-                                        onRetry = { viewModel.loadMoreComments() },
-                                    )
-                                }
-                            }
-
-                            uiState.comments.isEmpty() -> {
-                                item(key = "comments_empty") {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 16.dp),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        Column(
-                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.ChatBubbleOutline,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.outline,
-                                                modifier = Modifier.size(32.dp),
-                                            )
-                                            Text(
-                                                text = "No comments yet",
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-
-                            else -> {
-                                items(
-                                    items = uiState.comments,
-                                    key = { "comment_${it.commentId}" },
-                                ) { comment ->
-                                    FapFolderCommentCard(
-                                        comment = comment,
-                                        onReply = { },
-                                        onThumbUp = { viewModel.toggleLiked(comment.commentId) },
-                                        onThumbDown = { },
-                                        onReport = { },
-                                        onOpenUser = { url ->
-                                            val username = runCatching {
-                                                com.yenaly.han1meviewer.FapFolder.common
-                                                    .FapFolderUrlUtils.extractUsername(url)
-                                            }.getOrNull()
-                                            if (!username.isNullOrBlank()) {
-                                                onOpenProfile(username)
-                                            }
-                                        },
-                                        onViewMoreReplies = {
-                                            viewModel.toggleReplies(comment.commentId)
-                                        },
-                                        repliesLoading =
-                                            uiState.repliesLoadingFor == comment.commentId,
-                                        expanded = uiState.expandedReplies.contains(comment.commentId),
-                                        modifier = Modifier.padding(
-                                            horizontal = 12.dp,
-                                            vertical = 4.dp,
-                                        ),
-                                    )
-                                }
-
-                                item(key = "comments_footer") {
-                                    LoadMoreFooter(
-                                        state = when {
-                                            !uiState.commentsHasMore ->
-                                                PageLoadingState.NoMoreData
-                                            uiState.commentsLoading ->
-                                                PageLoadingState.Loading
-                                            else ->
-                                                PageLoadingState.Success(Unit)
-                                        },
-                                        loadedPage = uiState.commentsNextPage - 1,
-                                        isLoadingMore = uiState.commentsLoading,
-                                        modifier = Modifier.padding(vertical = 12.dp),
-                                    )
-                                }
-                            }
                         }
                     }
                 }
@@ -455,55 +207,19 @@ fun FapFolderPostDetailScreen(
         }
     }
 
-    videoToPlay?.let { video ->
-        FapFolderVideoPlayerScreen(
-            video = video,
-            title = uiState.post?.bodyPlain?.take(60).orEmpty(),
-            onDismiss = { videoToPlay = null },
-            postId = uiState.post?.postId,
-            coverUrl = coverUrlOf(uiState.post),
-            postPermalinkForReferer = uiState.post?.permalink,
-            onExpired = {
-                val pid = video.videoId ?: video.onPlayId
-                videoToPlay = null
-                if (pid != null) viewModel.requestAutoPlayAfterRefresh(pid)
-                viewModel.refresh()
-            },
-        )
-    }
-
     imageViewerPayload?.let { (images, initialIndex) ->
+        val post = uiState.post
+        val kind = if (post?.author?.isGroupAuthor == true) FapOwnerKind.GROUP else FapOwnerKind.PROFILE
+        val owner = post?.author?.displayName
         FapFolderImageLightboxDialog(
             images = images,
             initialIndex = initialIndex,
             onDismiss = { imageViewerPayload = null },
+            saveSegments = DownloadLayout.fapFolderPhotoSegments(
+                kind, owner, post?.let { "Post ${it.postId}" },
+            ),
         )
     }
-}
-
-private fun coverUrlOf(post: FapFolderPost?): String? {
-    if (post == null) return null
-    return post.primaryImage?.fullUrl
-        ?: post.primaryVideo?.posterUrl
-        ?: post.firstGallery?.photos?.firstOrNull()?.fullUrl
-}
-
-@Composable
-private fun CommentFilterChip(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    FilterChip(
-        selected = selected,
-        onClick = onClick,
-        label = { Text(label, style = MaterialTheme.typography.labelMedium) },
-        shape = RoundedCornerShape(50),
-        colors = FilterChipDefaults.filterChipColors(
-            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-        ),
-    )
 }
 
 @Composable
@@ -537,7 +253,7 @@ private fun LoadingBlock(message: String) {
 }
 
 @Composable
-private fun ErrorBlock(title: String, message: String, onRetry: () -> Unit) {
+internal fun PostErrorBlock(title: String, message: String, onRetry: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -612,5 +328,7 @@ private fun EmptyBlock(hint: String) {
         }
     }
 }
+
+
 
 

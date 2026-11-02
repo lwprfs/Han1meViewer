@@ -67,6 +67,12 @@ fun SiteVideoActionBar(
     modifier: Modifier = Modifier,
     downloadUrl: String? = null,
     downloadQuality: String = "",
+    /** Raw folder path (e.g. `Groups/Name/Videos`) inserted before [videoCode] for downloads. */
+    downloadFolder: String? = null,
+    /** Called when [downloadUrl] is not known yet: extracts the link like the player does. */
+    resolveDownloadUrl: (suspend () -> String?)? = null,
+    /** Replaces the default download behaviour (used for image posts). */
+    onDownloadClick: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -135,16 +141,42 @@ fun SiteVideoActionBar(
         SiteVideoActionButton(
             iconRes = R.drawable.ic_baseline_download_24,
             label = stringResource(R.string.download),
-            onClick = {
-                startSiteDownload(
-                    context = context,
-                    site = site,
-                    videoCode = videoCode,
-                    title = title,
-                    coverUrl = coverUrl,
-                    downloadUrl = downloadUrl,
-                    quality = downloadQuality,
-                )
+            onClick = onClick@{
+                if (onDownloadClick != null) {
+                    onDownloadClick()
+                    return@onClick
+                }
+                val code = downloadFolder?.takeIf { it.isNotBlank() }
+                    ?.let { "${it.trim('/')}/$videoCode" } ?: videoCode
+                if (downloadUrl.isNullOrBlank() && resolveDownloadUrl != null) {
+                    GlobalToasts.show(
+                        "Getting the download link…",
+                        level = GlobalToasts.ToastLevel.INFO,
+                    )
+                    scope.launch {
+                        val resolved = runCatching { resolveDownloadUrl() }.getOrNull()
+                        if (resolved.isNullOrBlank()) {
+                            GlobalToasts.show(
+                                "Could not get the download link. Try again or play the video first.",
+                                level = GlobalToasts.ToastLevel.ERROR,
+                            )
+                        } else {
+                            startSiteDownload(
+                                context, site, code, title, coverUrl, resolved, downloadQuality,
+                            )
+                        }
+                    }
+                } else {
+                    startSiteDownload(
+                        context = context,
+                        site = site,
+                        videoCode = code,
+                        title = title,
+                        coverUrl = coverUrl,
+                        downloadUrl = downloadUrl,
+                        quality = downloadQuality,
+                    )
+                }
             },
         )
         if (!webUrl.isNullOrBlank()) {
@@ -270,14 +302,11 @@ private fun startSiteDownload(
         return
     }
     val path = downloadUrl.substringBefore('?').lowercase()
-    if (path.endsWith(".m3u8") || path.contains(".m3u8")) {
-        GlobalToasts.show(
-            context.getString(R.string.site_download_hls_unsupported),
-            level = GlobalToasts.ToastLevel.WARNING,
-        )
-        return
+    val suffix = if (path.contains(".m3u8")) {
+        "ts"
+    } else {
+        path.substringAfterLast('.', "").takeIf { it.length in 2..4 } ?: "mp4"
     }
-    val suffix = path.substringAfterLast('.', "").takeIf { it.length in 2..4 } ?: "mp4"
     HanimeDownloadManagerV2.addTask(
         HanimeDownloadWorker.Args(
             quality = quality.ifBlank { "default" },
@@ -293,3 +322,5 @@ private fun startSiteDownload(
         level = GlobalToasts.ToastLevel.SUCCESS,
     )
 }
+
+

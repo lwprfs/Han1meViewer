@@ -45,6 +45,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.FastForward
@@ -98,6 +99,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.PlaybackException
@@ -149,6 +157,13 @@ fun FapFolderVideoPlayerScreen(
     coverUrl: String? = null,
     postPermalinkForReferer: String? = null,
     onExpired: (() -> Unit)? = null,
+    /**
+     * Inline mode: the player is embedded in the post screen (aspect-ratio box, no title bar,
+     * back press is left to the host). Fullscreen is shown in a dialog on top of the page.
+     */
+    inline: Boolean = false,
+    /** Start playing as soon as the stream is prepared (used when the play button was tapped). */
+    autoStart: Boolean = false,
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
@@ -328,7 +343,7 @@ fun FapFolderVideoPlayerScreen(
         val player = ExoPlayer.Builder(context).build().apply {
             setMediaSource(mediaSource)
             prepare()
-            playWhenReady = false
+            playWhenReady = autoStart && resumeDialogForPostId == null
             setPlaybackSpeed(playbackSpeed)
             volume = if (muted) 0f else 1f
         }
@@ -577,7 +592,8 @@ fun FapFolderVideoPlayerScreen(
         exoPlayer?.let { p -> surfaceRef.value?.let { p.setVideoSurfaceView(it) } }
     }
 
-    BackHandler(enabled = true) {
+    // In inline mode the page itself owns the back press; the fullscreen dialog handles its own.
+    BackHandler(enabled = !inline) {
         if (isFullscreen) exitFullscreen() else onDismiss()
     }
 
@@ -586,6 +602,7 @@ fun FapFolderVideoPlayerScreen(
             if (isFullscreen) {
                 activity?.requestedOrientation =
                     ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                showSystemBars()
             }
             activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
@@ -951,6 +968,7 @@ fun FapFolderVideoPlayerScreen(
                             Icon(
                                 imageVector = if (isFullscreen)
                                     Icons.Filled.FullscreenExit
+                                else if (inline) Icons.Filled.Close
                                 else Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = if (isFullscreen)
                                     "Exit fullscreen" else "Close",
@@ -1196,63 +1214,114 @@ fun FapFolderVideoPlayerScreen(
         }
     }
 
-    Surface(color = Color.Black) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            if (isFullscreen) {
-                Box(modifier = Modifier.fillMaxSize()) {
+    if (inline) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(initialAspect)
+                    .background(Color.Black),
+            ) {
+                if (!isFullscreen) playerContent()
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.Black)
+                    .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
+            ) {
+                StreamUrlRow(url = resolvedUrl ?: video.playUrl)
+            }
+        }
+        if (isFullscreen) {
+            Dialog(
+                onDismissRequest = { exitFullscreen() },
+                properties = DialogProperties(
+                    usePlatformDefaultWidth = false,
+                    decorFitsSystemWindows = false,
+                    dismissOnClickOutside = false,
+                ),
+            ) {
+                val dialogView = LocalView.current
+                DisposableEffect(dialogView) {
+                    val window = (dialogView.parent as? DialogWindowProvider)?.window
+                    if (window != null) {
+                        WindowCompat.setDecorFitsSystemWindows(window, false)
+                        val controller = WindowCompat.getInsetsController(window, dialogView)
+                        controller.systemBarsBehavior =
+                            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                        controller.hide(WindowInsetsCompat.Type.systemBars())
+                    }
+                    onDispose { }
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black),
+                ) {
                     playerContent()
                 }
-            } else {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .statusBarsPadding()
-                            .padding(horizontal = 4.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        IconButton(onClick = onDismiss) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Close",
-                                tint = Color.White,
-                            )
-                        }
-                        if (title.isNotBlank()) {
-                            Text(
-                                text = title,
-                                color = Color.White,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .padding(end = 8.dp),
-                            )
-                        } else {
-                            Spacer(Modifier.weight(1f))
-                        }
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(initialAspect),
-                    ) {
+            }
+        }
+    } else {
+        Surface(color = Color.Black) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                if (isFullscreen) {
+                    Box(modifier = Modifier.fillMaxSize()) {
                         playerContent()
                     }
+                } else {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .statusBarsPadding()
+                                .padding(horizontal = 4.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            IconButton(onClick = onDismiss) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Close",
+                                    tint = Color.White,
+                                )
+                            }
+                            if (title.isNotBlank()) {
+                                Text(
+                                    text = title,
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .padding(end = 8.dp),
+                                )
+                            } else {
+                                Spacer(Modifier.weight(1f))
+                            }
+                        }
 
-                    StreamUrlRow(
-                        url = resolvedUrl ?: video.playUrl,
-                        modifier = Modifier.padding(
-                            start = 16.dp,
-                            end = 16.dp,
-                            top = 12.dp,
-                        ),
-                    )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(initialAspect),
+                        ) {
+                            playerContent()
+                        }
 
-                    Spacer(Modifier.height(8.dp))
+                        StreamUrlRow(
+                            url = resolvedUrl ?: video.playUrl,
+                            modifier = Modifier.padding(
+                                start = 16.dp,
+                                end = 16.dp,
+                                top = 12.dp,
+                            ),
+                        )
+
+                        Spacer(Modifier.height(8.dp))
+                    }
                 }
             }
         }
@@ -1426,6 +1495,8 @@ private fun safePosition(player: ExoPlayer?): Long {
 private fun formatSpeed(speed: Float): String =
     if (speed == speed.toInt().toFloat()) "${speed.toInt()}.0x"
     else "${speed}x"
+
+
 
 
 

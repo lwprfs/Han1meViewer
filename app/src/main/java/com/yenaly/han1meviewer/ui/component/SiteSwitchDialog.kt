@@ -94,7 +94,7 @@ val DefaultSiteSwitchOptions: List<SiteSwitchOption> = listOf(
         name = "FapFolder",
         description = "Community feed, albums and videos",
         siteType = SiteType.FAPFOLDER,
-        logoRes = null,
+        logoRes = R.drawable.s_switch_fapfolder,
         accentColor = Color(0xFFD81B60),
     ),
 )

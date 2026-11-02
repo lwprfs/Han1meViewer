@@ -79,7 +79,8 @@ import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderProfileParser
 import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderImageLightboxDialog
 import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderInteractivePostCard
 import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderUserRowCard
-import com.yenaly.han1meviewer.FapFolder.ui.video.FapFolderVideoPlayerScreen
+import com.yenaly.han1meviewer.util.DownloadLayout
+import com.yenaly.han1meviewer.util.FapOwnerKind
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
 import kotlinx.coroutines.flow.conflate
@@ -95,12 +96,13 @@ fun FapFolderGroupScreen(
     onOpenProfile: (String) -> Unit,
     onOpenAlbum: (String) -> Unit,
     onOpenHashtag: (String) -> Unit = {},
+    onOpenVideoPost: (String) -> Unit = onOpenPost,
     viewModel: FapFolderGroupViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    var videoToPlay by remember { mutableStateOf<FapFolderMedia.Video?>(null) }
-    var videoPost by remember { mutableStateOf<FapFolderPost?>(null) }
+    // Photos tab: the lightbox reads the live list so it can keep loading more photos.
+    var photoLightboxIndex by remember { mutableStateOf<Int?>(null) }
     var lightboxPayload by remember {
         mutableStateOf<Pair<List<FapFolderMedia.Image>, Int>?>(null)
     }
@@ -178,19 +180,14 @@ fun FapFolderGroupScreen(
                             uiState = uiState,
                             onSwitchTab = { viewModel.switchTab(it) },
                             onToggleMembership = { viewModel.joinGroup() },
-                            onOpenImage = { images, idx -> lightboxPayload = images to idx },
-                            onOpenVideoBySlug = onOpenPost,
+                            onOpenImage = { _, idx ->
+                                if (uiState.activeTab == FapFolderGroupTab.PHOTOS) {
+                                    photoLightboxIndex = idx
+                                }
+                            },
+                            onOpenVideoBySlug = onOpenVideoPost,
                             onLoadMore = { viewModel.loadMoreItems() },
                             onRetry = { viewModel.retryLoadMoreItems() },
-                        )
-
-                        FapFolderGroupTab.MEMBERS -> GroupMembersTab(
-                            uiState = uiState,
-                            onSwitchTab = { viewModel.switchTab(it) },
-                            onToggleMembership = { viewModel.joinGroup() },
-                            onOpenProfile = onOpenProfile,
-                            onLoadMore = { viewModel.loadMoreMembers() },
-                            onRetry = { viewModel.loadMoreMembers() },
                         )
 
                         FapFolderGroupTab.POSTS -> GroupPostsTab(
@@ -200,9 +197,9 @@ fun FapFolderGroupScreen(
                             onOpenPost = onOpenPost,
                             onOpenHashtag = onOpenHashtag,
                             onOpenProfile = onOpenProfile,
-                            onOpenVideo = { post, video ->
-                                videoPost = post
-                                videoToPlay = video
+                            onOpenVideo = { post, _ ->
+                                // Video and post are one screen: open the post and autoplay.
+                                onOpenVideoPost(post.slug ?: post.postId.toString())
                             },
                             onOpenImage = { images, idx -> lightboxPayload = images to idx },
                             onLoadMore = { viewModel.loadMoreItems() },
@@ -214,27 +211,17 @@ fun FapFolderGroupScreen(
         }
     }
 
-    videoToPlay?.let { video ->
-        FapFolderVideoPlayerScreen(
-            video = video,
-            title = videoPost?.bodyPlain?.take(60).orEmpty(),
-            onDismiss = {
-                videoToPlay = null
-                videoPost = null
-            },
-            postId = videoPost?.postId,
-            coverUrl = video.posterUrl,
-            postPermalinkForReferer = videoPost?.permalink
-                ?: "https://fapfolder.club/groups/${uiState.slug}",
-            onExpired = {
-                val post = videoPost
-                videoToPlay = null
-                videoPost = null
-                if (post != null) {
-                    val slugOrId = post.slug ?: post.postId.toString()
-                    onOpenPost(slugOrId)
-                }
-            },
+    photoLightboxIndex?.let { startIndex ->
+        FapFolderImageLightboxDialog(
+            images = uiState.mediaImages,
+            initialIndex = startIndex,
+            onDismiss = { photoLightboxIndex = null },
+            hasMore = uiState.hasMore,
+            isLoadingMore = uiState.isLoadingMore,
+            onLoadMore = { viewModel.loadMoreItems() },
+            saveSegments = DownloadLayout.fapFolderPhotoSegments(
+                FapOwnerKind.GROUP, uiState.group?.displayName ?: slug, null,
+            ),
         )
     }
 
@@ -243,6 +230,9 @@ fun FapFolderGroupScreen(
             images = images,
             initialIndex = startIndex,
             onDismiss = { lightboxPayload = null },
+            saveSegments = DownloadLayout.fapFolderPhotoSegments(
+                FapOwnerKind.GROUP, uiState.group?.displayName ?: slug, null,
+            ),
         )
     }
 }
@@ -336,7 +326,6 @@ private fun GroupHeaderBlock(
                     }
                 }
                 val meta = buildList {
-                    group.memberCount?.let { add("$it members") }
                     group.postCount?.let { add("$it posts") }
                     group.photoCount?.let { add("$it photos") }
                     group.videoCount?.let { add("$it videos") }
@@ -617,120 +606,7 @@ private fun GroupPostsTab(
     }
 }
 
-@Composable
-private fun GroupMembersTab(
-    uiState: FapFolderGroupUiState,
-    onSwitchTab: (FapFolderGroupTab) -> Unit,
-    onToggleMembership: () -> Unit,
-    onOpenProfile: (String) -> Unit,
-    onLoadMore: () -> Unit,
-    onRetry: () -> Unit,
-) {
-    val listState: LazyListState = rememberLazyListState()
 
-    LaunchedEffect(listState, uiState.membersHasMore, uiState.membersLoading) {
-        snapshotFlow {
-            val info = listState.layoutInfo
-            info.totalItemsCount to (info.visibleItemsInfo.lastOrNull()?.index ?: -1)
-        }
-            .distinctUntilChanged()
-            .collect { (total, last) ->
-                if (total > 4 &&
-                    last >= total - 4 &&
-                    uiState.membersHasMore &&
-                    !uiState.membersLoading
-                ) {
-                    onLoadMore()
-                }
-            }
-    }
-
-    LazyColumn(
-        state = listState,
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 24.dp),
-    ) {
-        groupHeaderItems(
-            uiState = uiState,
-            onSwitchTab = onSwitchTab,
-            onToggleMembership = onToggleMembership,
-        )
-
-        when {
-            uiState.membersLoading && uiState.members.isEmpty() ->
-                item(key = "members_loading") {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(24.dp),
-                        contentAlignment = Alignment.Center,
-                    ) { CircularProgressIndicator() }
-                }
-
-            uiState.membersError != null && uiState.members.isEmpty() ->
-                item(key = "members_error") {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(24.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "Failed to load members",
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.error,
-                            )
-                            TextButton(onClick = onRetry) { Text("Retry") }
-                        }
-                    }
-                }
-
-            uiState.members.isEmpty() -> item(key = "members_empty") {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "No members to show.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-
-            else -> {
-                items(uiState.members, key = { memberKey(it) }) { member ->
-                    FapFolderUserRowCard(
-                        user = member,
-                        modifier = Modifier.padding(horizontal = 8.dp),
-                        onClick = {
-                            val username = member.username
-                            if (username.isNotBlank()) onOpenProfile(username)
-                        },
-                    )
-                }
-                if (uiState.membersLoading) {
-                    item(key = "members_more_loading") {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.dp,
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
 
 @Composable
 private fun GroupMediaTab(
@@ -1090,3 +966,5 @@ private fun MembershipButton(
 
 private fun memberKey(user: FapFolderUserRow): String =
     "member_${user.uid ?: user.username}"
+
+

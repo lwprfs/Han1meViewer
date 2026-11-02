@@ -87,6 +87,7 @@ fun FapFolderPostCard(
     onClickDislike: () -> Unit = {},
     onClickSave: () -> Unit = {},
     onLongClickPost: () -> Unit = {},
+    videoContent: (@Composable (FapFolderMedia.Video) -> Unit)? = null,
 ) {
     Surface(
         modifier = modifier
@@ -139,19 +140,16 @@ fun FapFolderPostCard(
                     onClickPoll = onClickPoll,
                     onClickPollOption = onClickPollOption,
                     onClickLink = onClickLink,
+                    videoContent = videoContent,
                 )
             }
 
             if (interactive) {
-                PostStatsRow(
-                    reactions = post.reactions.total,
+                PostInteractionRow(
+                    reactions = post.reactions,
                     comments = post.commentCount,
                     shares = post.shareCount,
                     views = post.viewCount,
-                )
-
-                PostActionsRow(
-                    reactions = post.reactions,
                     saved = isSaved,
                     reactionPending = isReactionPending,
                     onClickLike = onClickLike,
@@ -376,6 +374,7 @@ private fun PostMediaSection(
     onClickPoll: (FapFolderMedia.Poll) -> Unit,
     onClickPollOption: (FapFolderMedia.Poll, FapFolderPollOption) -> Unit,
     onClickLink: (FapFolderMedia.LinkPreview) -> Unit,
+    videoContent: (@Composable (FapFolderMedia.Video) -> Unit)? = null,
 ) {
     if (media.isEmpty()) return
     Column(
@@ -386,7 +385,9 @@ private fun PostMediaSection(
     ) {
         media.forEach { item ->
             when (item) {
-                is FapFolderMedia.Video -> VideoMediaBlock(item, onClickVideo)
+                is FapFolderMedia.Video ->
+                    if (videoContent != null) videoContent(item)
+                    else VideoMediaBlock(item, onClickVideo)
                 is FapFolderMedia.Image -> ImageMediaBlock(item, onClickImage)
                 is FapFolderMedia.Gallery -> GalleryMediaBlock(item, onClickImage)
                 is FapFolderMedia.Embed -> EmbedMediaBlock(item)
@@ -864,51 +865,16 @@ private fun JobBlock(job: FapFolderMedia.Job) {
     }
 }
 
+/**
+ * One merged interaction row: like / dislike pill (with the like count), the comment count
+ * (only when it is not 0), shares / views when available, and the save button in the corner.
+ */
 @Composable
-private fun PostStatsRow(
-    reactions: Int,
+private fun PostInteractionRow(
+    reactions: com.yenaly.han1meviewer.FapFolder.data.model.ReactionCount,
     comments: Int,
     shares: Int,
     views: Int?,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        if (reactions > 0) {
-            StatItem(
-                icon = Icons.Filled.FavoriteBorder,
-                text = reactions.toString(),
-            )
-        }
-        if (comments > 0) {
-            StatItem(
-                icon = Icons.Outlined.ChatBubbleOutline,
-                text = comments.toString(),
-            )
-        }
-        if (shares > 0) {
-            StatItem(
-                icon = Icons.Outlined.Share,
-                text = shares.toString(),
-            )
-        }
-        views?.takeIf { it > 0 }?.let {
-            StatItem(
-                icon = Icons.Rounded.PlayArrow,
-                text = formatViewCount(it),
-            )
-        }
-        Spacer(Modifier.weight(1f))
-    }
-}
-
-@Composable
-private fun PostActionsRow(
-    reactions: com.yenaly.han1meviewer.FapFolder.data.model.ReactionCount,
     saved: Boolean,
     reactionPending: Boolean,
     onClickLike: () -> Unit,
@@ -923,9 +889,9 @@ private fun PostActionsRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+            .padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         val likeColor = if (liked) MaterialTheme.colorScheme.primary
         else MaterialTheme.colorScheme.onSurfaceVariant
@@ -935,6 +901,7 @@ private fun PostActionsRow(
         else MaterialTheme.colorScheme.onSurfaceVariant
         val dislikeBg = if (disliked) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
         else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.72f)
+
         Row(
             modifier = Modifier
                 .height(32.dp)
@@ -957,7 +924,7 @@ private fun PostActionsRow(
                 )
                 Spacer(Modifier.width(4.dp))
                 Text(
-                    text = likeCount.toString(),
+                    text = reactions.total.toString(),
                     style = MaterialTheme.typography.labelMedium,
                     color = likeColor,
                 )
@@ -983,7 +950,28 @@ private fun PostActionsRow(
                 )
             }
         }
+
+        if (comments > 0) {
+            StatItem(
+                icon = Icons.Outlined.ChatBubbleOutline,
+                text = comments.toString(),
+            )
+        }
+        if (shares > 0) {
+            StatItem(
+                icon = Icons.Outlined.Share,
+                text = shares.toString(),
+            )
+        }
+        views?.takeIf { it > 0 }?.let {
+            StatItem(
+                icon = Icons.Rounded.PlayArrow,
+                text = formatViewCount(it),
+            )
+        }
+
         Spacer(Modifier.weight(1f))
+
         PostActionButton(
             icon = Icons.Filled.Star,
             label = if (saved) "Saved" else "Save",
@@ -1102,5 +1090,7 @@ private fun FapFolderPostCardPreview() {
         FapFolderPostCard(post = fakePost)
     }
 }
+
+
 
 

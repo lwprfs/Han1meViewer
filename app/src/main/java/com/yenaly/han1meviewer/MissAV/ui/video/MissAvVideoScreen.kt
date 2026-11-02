@@ -65,11 +65,20 @@ import com.yenaly.han1meviewer.logic.state.VideoLoadingState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import java.io.File
+import kotlinx.coroutines.flow.first
 
 import com.yenaly.han1meviewer.MissAV.data.repository.MissAvHistoryRepo
 import com.yenaly.han1meviewer.MissAV.ui.history.MissAvHistoryViewModel
 import com.yenaly.han1meviewer.MissAV.viewmodel.MissAvViewModel
 internal const val QUALITY_UNAVAILABLE = "Unavailable"
+
+private val RESOLUTION_SEGMENT = Regex("/(\\d+)p/")
+
+/** Applies the selected quality (e.g. `720P`) to an extracted stream url when it has a /720p/ part. */
+private fun qualityUrlFor(url: String, quality: String): String {
+    if (quality == QUALITY_UNAVAILABLE || !RESOLUTION_SEGMENT.containsMatchIn(url)) return url
+    return url.replace(RESOLUTION_SEGMENT, "/" + quality.lowercase() + "/")
+}
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
@@ -90,6 +99,8 @@ fun MissAvVideoScreen(
     var capturedUrl by remember { mutableStateOf("") }
     var isExtractingUrl by remember { mutableStateOf(false) }
     var extractionFailed by remember { mutableStateOf(false) }
+    // True while the link is being extracted for the Download button (do not start playback).
+    var pendingDownload by remember { mutableStateOf(false) }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
     var isPlaying by remember { mutableStateOf(false) }
@@ -453,7 +464,7 @@ fun MissAvVideoScreen(
     LaunchedEffect(capturedUrl) {
         if (capturedUrl.isNotBlank() && isExtractingUrl) {
             isExtractingUrl = false
-            playerStarted = true
+            if (!pendingDownload) playerStarted = true
             webViewRef?.let { wv ->
                 wv.stopLoading()
                 (wv.parent as? ViewGroup)?.removeView(wv)
@@ -469,7 +480,7 @@ fun MissAvVideoScreen(
             if (isExtractingUrl) {
                 if (capturedUrl.isNotBlank()) {
                     isExtractingUrl = false
-                    playerStarted = true
+                    if (!pendingDownload) playerStarted = true
                 } else {
                     isExtractingUrl = false
                     extractionFailed = true
@@ -737,8 +748,27 @@ fun MissAvVideoScreen(
                                 title = info.title,
                                 coverUrl = info.coverUrl,
                                 webUrl = Preferences.missAvBaseUrl.trimEnd('/') + normalizedPath,
-                                downloadUrl = capturedUrl.takeIf { it.isNotBlank() },
+                                downloadUrl = capturedUrl.takeIf { it.isNotBlank() }
+                                    ?.let { qualityUrlFor(it, selectedQuality) },
                                 downloadQuality = selectedQuality,
+                                resolveDownloadUrl = {
+                                    // Extract the stream link exactly like Play does.
+                                    pendingDownload = true
+                                    capturedUrl = ""
+                                    extractionFailed = false
+                                    isExtractingUrl = true
+                                    val ok = kotlinx.coroutines.withTimeoutOrNull(30_000L) {
+                                        androidx.compose.runtime.snapshotFlow {
+                                            capturedUrl.isNotBlank() to extractionFailed
+                                        }.first { (url, failed) -> url || failed }
+                                    }
+                                    pendingDownload = false
+                                    if (ok?.first == true) qualityUrlFor(capturedUrl, selectedQuality)
+                                    else {
+                                        isExtractingUrl = false
+                                        null
+                                    }
+                                },
                             )
                         }
                         item(key = "details") {
@@ -752,19 +782,6 @@ fun MissAvVideoScreen(
                                 },
                                 context = context
                             )
-                        }
-                        if (info.relatedVideos.isNotEmpty()) {
-                            item(key = "related") {
-                                MissAvRelatedVideosSection(
-                                    videos = info.relatedVideos,
-                                    onOpenVideo = { related ->
-                                        onNavigateToVideo(
-                                            related.videoCode,
-                                            "/en/${related.videoCode}"
-                                        )
-                                    },
-                                )
-                            }
                         }
                     }
                 }
@@ -907,6 +924,8 @@ private fun updateSubtitleForPosition(
         tv?.invalidate()
     }
 }
+
+
 
 
 

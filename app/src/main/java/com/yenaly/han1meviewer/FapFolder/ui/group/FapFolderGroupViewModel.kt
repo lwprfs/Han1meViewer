@@ -31,8 +31,7 @@ import kotlinx.coroutines.launch
 enum class FapFolderGroupTab(val label: String, val param: String) {
     POSTS("Posts", "posts"),
     PHOTOS("Photos", "photos"),
-    VIDEOS("Videos", "videos"),
-    MEMBERS("Members", "members");
+    VIDEOS("Videos", "videos");
 
     companion object {
         fun fromParam(value: String?): FapFolderGroupTab =
@@ -141,10 +140,7 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
 
         headerJob = viewModelScope.launch {
             val headerDeferred = async { runHeaderRequest(cleanSlug) }
-            val tabDeferred = async {
-                if (tab == FapFolderGroupTab.MEMBERS) null
-                else runInitialTabRequest(cleanSlug, tab)
-            }
+            val tabDeferred = async { runInitialTabRequest(cleanSlug, tab) }
 
             headerDeferred.await()
             tabDeferred.await()
@@ -193,7 +189,6 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
             FapFolderGroupTab.PHOTOS, FapFolderGroupTab.VIDEOS ->
                 loadFirstMediaPage(cleanSlug, tab)
             FapFolderGroupTab.POSTS -> loadFirstPostPage(cleanSlug)
-            FapFolderGroupTab.MEMBERS -> Unit
         }
     }
 
@@ -299,9 +294,7 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
             )
         }
         clearSeen()
-        if (tab == FapFolderGroupTab.MEMBERS) {
-            loadMembers(reset = true)
-        } else {
+        run {
             viewModelScope.launch {
                 _uiState.update { it.copy(isLoading = true) }
                 when (tab) {
@@ -332,10 +325,6 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
         val canRetryAfterError = forceAfterError && state.itemsError != null
         if (state.isLoadingMore || state.isLoading ||
             (!state.hasMore && !canRetryAfterError)) return
-        if (state.activeTab == FapFolderGroupTab.MEMBERS) {
-            loadMoreMembers()
-            return
-        }
         if (state.currentOffset >= MAX_PAGES) {
             _uiState.update { it.copy(hasMore = false) }
             return
@@ -370,15 +359,7 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
         }
     }
 
-    fun loadMoreMembers() {
-        val state = _uiState.value
-        if (state.membersLoading || !state.membersHasMore) return
-        if (state.membersNextPage > MAX_PAGES) {
-            _uiState.update { it.copy(membersHasMore = false) }
-            return
-        }
-        loadMembers(reset = false)
-    }
+
 
     fun joinGroup() {
         val group = _uiState.value.group ?: return
@@ -591,54 +572,7 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
         }
     }
 
-    private fun loadMembers(reset: Boolean) {
-        val state = _uiState.value
-        val group = state.group ?: return
-        val page = if (reset) 1 else state.membersNextPage
 
-        membersJob?.cancel()
-        membersJob = viewModelScope.launch {
-            _uiState.update { it.copy(membersLoading = true, membersError = null) }
-
-            FapFolderNetworkRepo.getGroupMembers(
-                groupId = group.groupId,
-                slug = state.slug,
-                page = page,
-            ).collect { pageState ->
-                when (pageState) {
-                    is PageLoadingState.Loading -> Unit
-                    is PageLoadingState.Success -> {
-                        val incoming = pageState.info.members
-                        _uiState.update {
-                            val existing = if (reset) emptyList() else it.members
-                            val merged = (existing + incoming)
-                                .distinctBy { m -> m.uid ?: m.username }
-                            it.copy(
-                                members = merged,
-                                membersLoading = false,
-                                membersHasMore = incoming.isNotEmpty(),
-                                membersNextPage = page + 1,
-                                membersError = null,
-                            )
-                        }
-                    }
-                    is PageLoadingState.NoMoreData -> _uiState.update {
-                        it.copy(membersLoading = false, membersHasMore = false)
-                    }
-                    is PageLoadingState.Error -> {
-                        val msg = pageState.throwable.message
-                        _uiState.update {
-                            it.copy(
-                                membersLoading = false,
-                                membersError = msg,
-                                sessionExpired = msg?.contains("session", true) == true,
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
 
     private fun buildStreamRequest(
         state: FapFolderGroupUiState,
@@ -690,3 +624,5 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
 private suspend fun <T> Flow<VideoLoadingState<T>>.firstTerminalGroupState()
         : VideoLoadingState<T>? =
     firstOrNull { it !is VideoLoadingState.Loading }
+
+

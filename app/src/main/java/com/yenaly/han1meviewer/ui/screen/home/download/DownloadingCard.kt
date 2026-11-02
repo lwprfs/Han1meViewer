@@ -40,6 +40,26 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import com.yenaly.han1meviewer.OnAir.data.remote.OnAirTorChecker
+import com.yenaly.han1meviewer.OnAir.ui.navigation.OnAirCookieRoute
+import com.yenaly.han1meviewer.SiteType
+import com.yenaly.han1meviewer.logic.SiteCheckIn
+import com.yenaly.han1meviewer.ui.component.GlobalToasts
+import com.yenaly.han1meviewer.ui.navigation.NavigationManager
+import com.yenaly.han1meviewer.ui.navigation.navigateSafely
+import com.yenaly.han1meviewer.util.DownloadFailure
+import com.yenaly.han1meviewer.util.DownloadFailureStore
+import com.yenaly.han1meviewer.worker.HanimeDownloadManagerV2
+import com.yenaly.han1meviewer.worker.HanimeDownloadWorker
+import kotlinx.coroutines.launch
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.entity.download.HanimeDownloadEntity
 import com.yenaly.han1meviewer.logic.state.DownloadState
@@ -217,6 +237,10 @@ fun DownloadingItemCard(
                 progress = { animatedProgress },
                 modifier = Modifier.fillMaxWidth(),
             )
+
+            if (item.state == DownloadState.Failed) {
+                DownloadFailurePanel(item)
+            }
         }
     }
 }
@@ -244,5 +268,67 @@ private fun PreviewDownloadingItemCard() {
             onResume = {},
             onDelete = {},
         )
+    }
+}
+
+
+
+@Composable
+private fun DownloadFailurePanel(item: HanimeDownloadEntity) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val failure: DownloadFailure? = remember(item.videoCode, item.state) {
+        DownloadFailureStore.get(context, item.videoCode)
+    }
+    val isOnAir = SiteCheckIn.siteOfDishCode(item.videoCode) == SiteType.ONAIR
+    var checking by remember { mutableStateOf(false) }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.errorContainer,
+    ) {
+        Column(
+            modifier = Modifier.padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                text = failure?.message ?: "Download failed.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = {
+                    DownloadFailureStore.clear(context, item.videoCode)
+                    HanimeDownloadManagerV2.addTask(
+                        HanimeDownloadWorker.Args.fromEntity(item),
+                        redownload = true,
+                    )
+                }) { Text("Redownload") }
+                if (isOnAir) {
+                    TextButton(
+                        enabled = !checking,
+                        onClick = {
+                            checking = true
+                            scope.launch {
+                                val status = OnAirTorChecker.check()
+                                checking = false
+                                GlobalToasts.show(
+                                    status.message,
+                                    level = if (status.connected && status.isTorExit)
+                                        GlobalToasts.ToastLevel.SUCCESS
+                                    else GlobalToasts.ToastLevel.ERROR,
+                                )
+                            }
+                        },
+                    ) { Text(if (checking) "Checking…" else "Check Tor") }
+                    TextButton(onClick = {
+                        runCatching {
+                            NavigationManager.getNavController()?.navigateSafely(OnAirCookieRoute)
+                        }
+                    }) { Text("Cookies") }
+                }
+            }
+        }
     }
 }

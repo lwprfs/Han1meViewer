@@ -68,10 +68,12 @@ object SafFileManager {
 
     fun getDownloadVideoFolderSaf(context: Context, videoCode: String): DocumentFile? {
         val root = getAppDownloadFolderSaf(context) ?: return null
-        val hanime = root.ensureChildDir(HANIME_DOWNLOAD_FOLDER) ?: return null
-        val videoDir = hanime.ensureChildDir(videoCode) ?: return null
-        videoDir.ensureNoMedia()
-        return videoDir
+        var dir: DocumentFile = root
+        for (segment in DownloadLayout.segmentsFor(videoCode)) {
+            dir = dir.ensureChildDir(segment) ?: return null
+        }
+        dir.ensureNoMedia()
+        return dir
     }
 
     fun getDownloadVideoCoverDoc(
@@ -125,12 +127,12 @@ object SafFileManager {
         if (!isSafReady()) return null
         val treeUri = Preferences.safDownloadPath?.toUri() ?: return null
         val docTree = DocumentFile.fromTreeUri(context, treeUri) ?: return null
-        val rootDir = docTree.findFile(HANIME_DOWNLOAD_FOLDER)
-            ?: docTree.createDirectory(HANIME_DOWNLOAD_FOLDER)
-            ?: return null
-        val videoDir = rootDir.findFile(videoCode)
-            ?: rootDir.createDirectory(videoCode)
-            ?: return null
+        var videoDir: DocumentFile = docTree
+        for (segment in DownloadLayout.segmentsFor(videoCode)) {
+            videoDir = videoDir.findFile(segment)?.takeIf { it.isDirectory }
+                ?: videoDir.createDirectory(segment)
+                ?: return null
+        }
         val ext = fileName.substringAfterLast('.', "")
         val mimeType = mimeForExt(ext)
         val target = videoDir.findFile(fileName)
@@ -142,6 +144,7 @@ object SafFileManager {
 
     private fun mimeForExt(ext: String): String = when (ext.lowercase()) {
         "mp4" -> "video/mp4"
+        "ts" -> "video/mp2t"
         "mkv" -> "video/x-matroska"
         "webm" -> "video/webm"
         "png" -> "image/png"
@@ -461,3 +464,5 @@ object SafFileManager {
         }
     }
 }
+
+

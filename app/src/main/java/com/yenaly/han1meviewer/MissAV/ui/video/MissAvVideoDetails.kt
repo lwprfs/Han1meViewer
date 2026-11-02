@@ -252,50 +252,6 @@ fun MissAvVideoDetails(
     }
 }
 
-/**
- * Related videos block. Mirrors Hanime's `RelatedVideosSection`: section header followed by a
- * wrapping grid of [VideoCardItem]s sized from the card min width.
- */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-fun MissAvRelatedVideosSection(
-    videos: List<HanimeInfo>,
-    onOpenVideo: (HanimeInfo) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val uniqueVideos = remember(videos) { videos.distinctBy { it.videoCode } }
-    if (uniqueVideos.isEmpty()) return
-
-    Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(SpacingNormal),
-    ) {
-        SiteVideoSectionHeader(title = stringResource(R.string.related_video))
-
-        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-            val spacing = SpacingNormal
-            val columns = maxOf(2, ((maxWidth + spacing) / (VideoNormalCardMinWidth + spacing)).toInt())
-            val itemWidth = ((maxWidth - (spacing * (columns - 1))) / columns) - 0.5.dp
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                maxItemsInEachRow = columns,
-                horizontalArrangement = Arrangement.spacedBy(spacing),
-                verticalArrangement = Arrangement.spacedBy(spacing)
-            ) {
-                uniqueVideos.forEach { item ->
-                    VideoCardItem(
-                        modifier = Modifier.width(itemWidth),
-                        videoItem = item,
-                        isHorizontalCard = true,
-                        onClickVideosItem = { onOpenVideo(item) },
-                        onLongClickVideosItem = { _, _ -> },
-                    )
-                }
-            }
-        }
-    }
-}
-
 /** Same row as Hanime's `MetaInfoItem`: 32dp high, icon plus bodyMedium text. */
 @Composable
 private fun MissAvMetaInfoItem(text: String) {
@@ -368,3 +324,5 @@ private fun missAvTagPalette(): List<Pair<Color, Color>> {
         )
     }
 }
+
+

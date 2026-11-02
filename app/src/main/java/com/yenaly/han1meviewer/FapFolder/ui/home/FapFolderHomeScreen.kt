@@ -58,7 +58,6 @@ import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderSuggestedCommunity
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderTrendingTag
 import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderImageLightboxDialog
 import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderInteractivePostCard
-import com.yenaly.han1meviewer.FapFolder.ui.video.FapFolderVideoPlayerScreen
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.SelectableTag
 import com.yenaly.han1meviewer.ui.component.SiteBarIconButton
@@ -73,6 +72,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun FapFolderHomeScreen(
     onOpenPost: (postId: String) -> Unit,
+    onOpenVideoPost: (postId: String) -> Unit = onOpenPost,
     onOpenSearch: (query: String?) -> Unit,
     onOpenUser: (username: String) -> Unit,
     onOpenHashtag: (tag: String) -> Unit,
@@ -92,8 +92,6 @@ fun FapFolderHomeScreen(
     val scope = rememberCoroutineScope()
     var isRefreshing by remember { mutableStateOf(false) }
 
-    var videoToPlay by remember { mutableStateOf<FapFolderMedia.Video?>(null) }
-    var videoPost by remember { mutableStateOf<FapFolderFeedItem.Post?>(null) }
     var lightboxPayload by remember {
         mutableStateOf<Pair<List<FapFolderMedia.Image>, Int>?>(null)
     }
@@ -257,9 +255,10 @@ fun FapFolderHomeScreen(
                                 onOpenHashtag = onOpenHashtag,
                                 onOpenGroup = onOpenGroup,
                                 onOpenAlbum = onOpenAlbum,
-                                onOpenVideo = { post, video ->
-                                    videoPost = post
-                                    videoToPlay = video
+                                onOpenVideo = { post, _ ->
+                                    onOpenVideoPost(
+                                        post.post.slug ?: post.post.postId.toString()
+                                    )
                                 },
                                 onOpenImage = { images, index ->
                                     lightboxPayload = images to index
@@ -270,29 +269,6 @@ fun FapFolderHomeScreen(
                 }
             }
         }
-    }
-
-    videoToPlay?.let { video ->
-        FapFolderVideoPlayerScreen(
-            video = video,
-            title = videoPost?.post?.bodyPlain?.take(60).orEmpty(),
-            onDismiss = {
-                videoToPlay = null
-                videoPost = null
-            },
-            postId = videoPost?.post?.postId,
-            coverUrl = videoPost?.post?.primaryVideo?.posterUrl,
-            postPermalinkForReferer = videoPost?.post?.permalink,
-            onExpired = {
-                val post = videoPost
-                videoToPlay = null
-                videoPost = null
-                if (post != null) {
-                    val slug = post.post.slug ?: post.post.postId.toString()
-                    onOpenPost(slug)
-                }
-            },
-        )
     }
 
     lightboxPayload?.let { (images, initialIndex) ->
@@ -479,5 +455,7 @@ private fun emptyTextForTab(tab: FapFolderHomeTab): String = when (tab) {
     FapFolderHomeTab.HOT -> "Nothing trending right now."
     FapFolderHomeTab.DISCOVER -> "Nothing to discover yet."
 }
+
+
 
 
