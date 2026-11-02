@@ -83,10 +83,14 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.okhttp.OkHttpDataSource
+import androidx.media3.exoplayer.source.MediaSource
+import com.yenaly.han1meviewer.HentaiMama.settings.HentaiMamaCardSettings
+import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaImageLoader
+import com.yenaly.han1meviewer.ui.component.player.SitePlayerSettings
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
-import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaImageLoader
 import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaUrlUtils
 import com.yenaly.han1meviewer.HentaiMama.data.local.HentaiMamaHistoryRepo
 import com.yenaly.han1meviewer.HentaiMama.data.model.HentaiMamaEpisode
@@ -112,6 +116,29 @@ private tailrec fun Context.findHostActivity(): Activity? = when (this) {
     is Activity -> this
     is ContextWrapper -> baseContext.findHostActivity()
     else -> null
+}
+
+/**
+ * Builds the media source with the app's HentaiMama OkHttp client (cookies, user agent,
+ * Cloudflare handling) plus Referer/Origin. The plain DefaultHttpDataSource used before sent none
+ * of the cookies, which is why files could download fine yet refuse to load in the player.
+ */
+private fun buildHentaiMamaMediaSource(context: Context, url: String): MediaSource {
+    val base = HentaiMamaNetwork.baseUrl.trimEnd('/')
+    val http = OkHttpDataSource.Factory(HentaiMamaNetwork.sharedOkHttpClient)
+        .setDefaultRequestProperties(
+            hashMapOf(
+                "Referer" to "$base/",
+                "Origin" to base,
+            )
+        )
+    val dsFactory = DefaultDataSource.Factory(context, http)
+    val mediaItem = MediaItem.Builder().setUri(url).build()
+    return if (url.substringBefore('?').contains(".m3u8", ignoreCase = true)) {
+        HlsMediaSource.Factory(dsFactory).createMediaSource(mediaItem)
+    } else {
+        ProgressiveMediaSource.Factory(dsFactory).createMediaSource(mediaItem)
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -198,53 +225,36 @@ fun HentaiMamaVideoScreen(
 
         if (existing == null) {
             Log.d(PLAYER_TAG, "Creating ExoPlayer for url=$url")
-            val base = HentaiMamaNetwork.baseUrl
-            val dsFactory = DefaultDataSource.Factory(
-                context,
-                DefaultHttpDataSource.Factory().setDefaultRequestProperties(
-                    hashMapOf(
-                        "Referer" to "$base/",
-                        "Origin" to base.trimEnd('/'),
-                    )
-                )
-            )
-            val mediaItem = MediaItem.Builder().setUri(url).build()
-            val mediaSource = if (url.contains(".m3u8")) {
-                HlsMediaSource.Factory(dsFactory).createMediaSource(mediaItem)
-            } else {
-                ProgressiveMediaSource.Factory(dsFactory).createMediaSource(mediaItem)
-            }
             val player = ExoPlayer.Builder(context).build()
-            player.setMediaSource(mediaSource)
+            player.setMediaSource(buildHentaiMamaMediaSource(context, url))
             player.prepare()
             player.setPlaybackSpeed(playerState.speed)
             exoPlayer.value = player
             currentMediaUrl.value = url
         } else {
             Log.d(PLAYER_TAG, "Swapping media source to url=$url")
-            val base = HentaiMamaNetwork.baseUrl
-            val dsFactory = DefaultDataSource.Factory(
-                context,
-                DefaultHttpDataSource.Factory().setDefaultRequestProperties(
-                    hashMapOf(
-                        "Referer" to "$base/",
-                        "Origin" to base.trimEnd('/'),
-                    )
-                )
-            )
-            val mediaItem = MediaItem.Builder().setUri(url).build()
-            val mediaSource = if (url.contains(".m3u8")) {
-                HlsMediaSource.Factory(dsFactory).createMediaSource(mediaItem)
-            } else {
-                ProgressiveMediaSource.Factory(dsFactory).createMediaSource(mediaItem)
-            }
             val wasPlaying = existing.playWhenReady
             val pos = existing.currentPosition
-            existing.setMediaSource(mediaSource)
+            existing.setMediaSource(buildHentaiMamaMediaSource(context, url))
             existing.prepare()
             existing.seekTo(pos)
             existing.playWhenReady = wasPlaying
             currentMediaUrl.value = url
+        }
+    }
+
+    // Player settings for this site (follow the in-app player unless separated in Settings > Player).
+    val playerConfig = SitePlayerSettings.config(SiteType.HENTAIMAMA)
+    LaunchedEffect(playerConfig.defaultSpeed) {
+        viewModel.setSpeed(playerConfig.defaultSpeed)
+    }
+    LaunchedEffect(playerState.isReady, playerState.url, playerConfig.autoPlay) {
+        if (playerConfig.autoPlay && playerState.isReady && playerState.url.isNotBlank()) {
+            // Give the resume-history lookup a moment so we never start over a resume prompt.
+            delay(500)
+            if (!showResumeDialog && !viewModel.playerState.value.isPlaying) {
+                viewModel.setPlaying(true)
+            }
         }
     }
 
@@ -387,6 +397,10 @@ fun HentaiMamaVideoScreen(
                 showResumeButton = false,
                 onResumeFromSaved = {},
                 onStartFromBeginning = {},
+                title = (pageState as? VideoLoadingState.Success)?.info?.page?.info?.title.orEmpty(),
+                onBack = { exitFullscreen() },
+                onSpeedSelect = { viewModel.setSpeed(it) },
+                onQualitySelect = { viewModel.setQuality(it) },
             )
         }
     }
@@ -457,6 +471,10 @@ fun HentaiMamaVideoScreen(
                                     exoPlayer.value?.seekTo(0)
                                     showResumeDialog = false
                                 },
+                                title = info.title,
+                                onBack = onBack,
+                                onSpeedSelect = { viewModel.setSpeed(it) },
+                                onQualitySelect = { viewModel.setQuality(it) },
                             )
                         }
                         LazyColumn(
@@ -615,16 +633,19 @@ fun HentaiMamaVideoScreen(
                                     title = page.info.title,
                                     coverUrl = page.info.seriesPoster,
                                     webUrl = normalizedUrl,
-                                    downloadUrl = activeLink?.url,
+                                    downloadUrl = activeLink?.url
+                                        ?: playerState.url.takeIf { it.isNotBlank() },
                                     downloadQuality = activeLink?.quality.orEmpty(),
                                     resolveDownloadUrl = {
-
-                                        kotlinx.coroutines.withTimeoutOrNull(20_000L) {
-                                            viewModel.mirrorLinks.first { it.isNotEmpty() }
-                                        }?.let { links ->
-                                            (links.firstOrNull { it.quality == playerState.quality }
-                                                ?: links.firstOrNull())?.url
-                                        }
+                                        // Prefer what the player already resolved; only wait for
+                                        // mirror links when nothing is playing yet.
+                                        viewModel.playerState.value.url.takeIf { it.isNotBlank() }
+                                            ?: kotlinx.coroutines.withTimeoutOrNull(20_000L) {
+                                                viewModel.mirrorLinks.first { it.isNotEmpty() }
+                                            }?.let { links ->
+                                                (links.firstOrNull { it.quality == playerState.quality }
+                                                    ?: links.firstOrNull())?.url
+                                            }
                                     },
                                 )
                             }
@@ -779,6 +800,7 @@ private fun SimilarGrid(
     val context = LocalContext.current
     val imageLoader = remember(context) { HentaiMamaImageLoader.get(context) }
     val uniqueItems = remember(items) { items.distinctBy { it.slug } }
+    val cardAspectRatio by HentaiMamaCardSettings.effectiveAspectRatioState
 
     Column(verticalArrangement = Arrangement.spacedBy(SpacingNormal)) {
         SiteVideoSectionHeader(title = "Similar titles")
@@ -786,7 +808,9 @@ private fun SimilarGrid(
             val spacing = SpacingNormal
             val columns = maxOf(
                 2,
-                ((maxWidth + spacing) / (VideoSimplifiedCardMinWidth + spacing)).toInt(),
+                ((maxWidth + spacing) /
+                    ((VideoSimplifiedCardMinWidth / HentaiMamaCardSettings.effectiveCardCount(1f)
+                        .coerceAtLeast(0.5f)) + spacing)).toInt(),
             )
             val itemWidth = ((maxWidth - (spacing * (columns - 1))) / columns) - 0.5.dp
             FlowRow(
@@ -800,7 +824,10 @@ private fun SimilarGrid(
                         modifier = Modifier.width(itemWidth),
                         title = sim.name,
                         coverUrl = sim.poster,
-                        aspectRatio = 2f / 3f,
+                        aspectRatio = cardAspectRatio,
+                        placeholder = androidx.compose.ui.graphics.painter.ColorPainter(
+                            MaterialTheme.colorScheme.surfaceVariant
+                        ),
                         duration = sim.episodeCount?.takeIf { it > 0 }?.let { "$it EP" },
                         reviews = sim.rating?.let { "★ %.1f".format(it) },
                         uploadTime = sim.year?.toString(),
@@ -812,5 +839,7 @@ private fun SimilarGrid(
         }
     }
 }
+
+
 
 

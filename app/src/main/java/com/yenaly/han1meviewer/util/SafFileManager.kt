@@ -447,20 +447,25 @@ object SafFileManager {
     }
 
     fun deleteDownloadVideoFolder(context: Context, videoCode: String) {
-        if (Preferences.isUsePrivateStorage) {
+        // Where a video lives depends on its site (see DownloadLayout.segmentsFor): Hanime keeps
+        // "hanime_download/<code>", every other site has its own "<Site>/<...>" folder. The old
+        // code always looked in hanime_download, so videos from other sites were never removed
+        // from disk when deleted in the download page.
+        val segments = DownloadLayout.segmentsFor(videoCode)
 
-            val folder = File(getAppDownloadFolder(context), "$HANIME_DOWNLOAD_FOLDER/$videoCode")
+        runCatching {
+            val folder = com.yenaly.han1meviewer.HFileManager.getDownloadVideoFolder(context, videoCode)
             if (folder.exists()) folder.deleteRecursively()
-        } else {
+        }.onFailure { Log.w("SafFileManager", "delete local folder failed", it) }
 
+        if (Preferences.isUsePrivateStorage) return
+        runCatching {
             val treeUri = Preferences.safDownloadPath?.toUri() ?: return
-            val docTree = DocumentFile.fromTreeUri(context, treeUri) ?: return
-
-            val rootDir = docTree.findFile(HANIME_DOWNLOAD_FOLDER) ?: return
-            val videoDir = rootDir.findFile(videoCode)
-            if (videoDir != null && videoDir.isDirectory) {
-                videoDir.delete()
+            var dir: DocumentFile = DocumentFile.fromTreeUri(context, treeUri) ?: return
+            for (segment in segments) {
+                dir = dir.findFile(segment)?.takeIf { it.isDirectory } ?: return
             }
-        }
+            dir.delete()
+        }.onFailure { Log.w("SafFileManager", "delete SAF folder failed", it) }
     }
 }

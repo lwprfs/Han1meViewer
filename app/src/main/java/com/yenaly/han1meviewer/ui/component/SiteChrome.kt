@@ -271,6 +271,7 @@ fun SiteVideoCard(
     isWatched: Boolean = false,
     imageLoader: ImageLoader? = null,
     contentScale: ContentScale = ContentScale.FillWidth,
+    placeholder: androidx.compose.ui.graphics.painter.Painter? = null,
 ) {
     val textFontSize = dimensionResource(id = R.dimen.video_view_and_time_and_duration).value.sp
     val iconSize = dimensionResource(id = R.dimen.view_view_and_time_icon_size)
@@ -308,7 +309,7 @@ fun SiteVideoCard(
                     model = coverUrl,
                     contentDescription = title,
                     modifier = Modifier.fillMaxSize(),
-                    placeholder = painterResource(R.drawable.h_chan_loading),
+                    placeholder = placeholder ?: painterResource(R.drawable.h_chan_loading),
                     error = painterResource(R.drawable.h_chan_load_failed),
                     contentScale = resolvedContentScale,
                     imageLoader = imageLoader,
@@ -656,3 +657,5 @@ fun SiteIconBadge(
         )
     }
 }
+
+

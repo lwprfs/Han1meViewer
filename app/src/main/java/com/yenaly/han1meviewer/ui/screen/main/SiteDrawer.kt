@@ -275,7 +275,7 @@ fun siteDrawerSections(context: Context, site: SiteType, loggedIn: Boolean): Lis
                 listOf(
                     entry(str(R.string.watch_history), history, FapFolderHistoryRoute),
                     entry(str(R.string.saved), R.drawable.ic_drawer_bookmark, FapFolderSavedRoute),
-                    entry("Image download folder", R.drawable.ic_baseline_image_24, FapFolderImageFolderRoute),
+                    entry("Downloaded photos", R.drawable.ic_baseline_image_24, FapFolderImageFolderRoute),
                     entry(str(R.string.drawer_followed_communities), R.drawable.ic_drawer_groups, FapFolderFollowedCommunitiesRoute),
                 ),
             ),
@@ -478,5 +478,7 @@ private fun SiteDrawerHeader(
         }
     }
 }
+
+
 
 

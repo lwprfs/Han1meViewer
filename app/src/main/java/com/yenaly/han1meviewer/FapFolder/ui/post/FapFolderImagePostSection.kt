@@ -150,24 +150,40 @@ internal fun LazyListScope.fapFolderImagePostItems(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                FilledTonalButton(
-                    onClick = {
-                        when {
-                            !albumId.isNullOrBlank() -> onOpenAlbum(albumId)
-                            !groupSlug.isNullOrBlank() -> onOpenGroupPhotos(groupSlug)
-                            !username.isNullOrBlank() -> onOpenProfilePhotos(username)
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.PhotoLibrary,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text("Open album", fontWeight = FontWeight.SemiBold)
+                val hasGroupPhotos = !groupSlug.isNullOrBlank() || !username.isNullOrBlank()
+                // Opening the post's photos goes to the group's / profile's grouped photos.
+                if (hasGroupPhotos) {
+                    FilledTonalButton(
+                        onClick = {
+                            when {
+                                !groupSlug.isNullOrBlank() -> onOpenGroupPhotos(groupSlug)
+                                !username.isNullOrBlank() -> onOpenProfilePhotos(username)
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(16.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PhotoLibrary,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            if (!groupSlug.isNullOrBlank()) "Group photos" else "Photos",
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
+                // The album screen itself only opens from "See album".
+                if (!albumId.isNullOrBlank()) {
+                    FilledTonalButton(
+                        onClick = { onOpenAlbum(albumId) },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(16.dp),
+                    ) {
+                        Text("See album", fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
         }
@@ -175,5 +191,7 @@ internal fun LazyListScope.fapFolderImagePostItems(
 
     fapFolderCommentItems(post, uiState, viewModel, onOpenProfile)
 }
+
+
 
 

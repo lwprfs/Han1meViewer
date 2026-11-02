@@ -1,7 +1,16 @@
 package com.yenaly.han1meviewer.ui.navigation.settings
 
 import android.content.Context
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Modifier
+import com.yenaly.han1meviewer.SiteType
+import com.yenaly.han1meviewer.ui.screen.settings.PlayerSiteChips
+import com.yenaly.han1meviewer.ui.screen.settings.SitePlayerSettingsScreen
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -30,6 +39,14 @@ fun PlayerSettingsRouteScreen(
     var refreshKey by remember { mutableIntStateOf(0) }
     val uiState = remember(refreshKey, context) { buildPlayerSettingsUiState(context) }
 
+    var selectedSite by rememberSaveable { mutableStateOf(SiteType.HANIME) }
+    Column(modifier = Modifier.fillMaxSize()) {
+        PlayerSiteChips(selected = selectedSite, onSelect = { selectedSite = it })
+        if (selectedSite != SiteType.HANIME && selectedSite != SiteType.JAVCHU) {
+            SitePlayerSettingsScreen(site = selectedSite, modifier = Modifier.weight(1f))
+            return@Column
+        }
+        Box(modifier = Modifier.weight(1f)) {
     PlayerSettingsScreen(
         state = uiState,
         kernelOptions = HMediaKernel.Type.entries.map { it.name to it.name },
@@ -73,6 +90,8 @@ fun PlayerSettingsRouteScreen(
         },
         onOpenMpvSettings = onNavigateToMpvSettings,
     )
+        }
+    }
 }
 
 private fun buildPlayerSettingsUiState(context: Context): PlayerSettingsUiState {
@@ -103,3 +122,5 @@ private fun buildPlayerSettingsUiState(context: Context): PlayerSettingsUiState 
         slideSensitivitySummary = toPrettySensitivityString(context, Preferences.slideSensitivity),
     )
 }
+
+

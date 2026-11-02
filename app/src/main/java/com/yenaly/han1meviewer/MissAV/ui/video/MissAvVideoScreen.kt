@@ -113,7 +113,12 @@ fun MissAvVideoScreen(
     var subtitleCues by remember { mutableStateOf<List<SubtitleCue>>(emptyList()) }
     var currentSubtitleText by remember { mutableStateOf("") }
     val availableSpeeds = remember { listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f) }
-    var currentSpeed by remember { mutableStateOf(1.0f) }
+    var currentSpeed by remember {
+        mutableStateOf(
+            com.yenaly.han1meviewer.ui.component.player.SitePlayerSettings
+                .config(com.yenaly.han1meviewer.SiteType.MISSAV).defaultSpeed
+        )
+    }
     var showSpeedMenu by remember { mutableStateOf(false) }
     var showQualityMenu by remember { mutableStateOf(false) }
     var subtitleTextView by remember { mutableStateOf<TextView?>(null) }
@@ -751,7 +756,11 @@ fun MissAvVideoScreen(
                                     ?.let { qualityUrlFor(it, selectedQuality) },
                                 downloadQuality = selectedQuality,
                                 resolveDownloadUrl = {
-
+                                    // Already captured for playback: reuse it. Wiping it forced a
+                                    // second extraction that can never run while the player is up.
+                                    if (capturedUrl.isNotBlank()) {
+                                        return@SiteVideoActionBar qualityUrlFor(capturedUrl, selectedQuality)
+                                    }
                                     pendingDownload = true
                                     capturedUrl = ""
                                     extractionFailed = false
@@ -923,3 +932,5 @@ private fun updateSubtitleForPosition(
         tv?.invalidate()
     }
 }
+
+

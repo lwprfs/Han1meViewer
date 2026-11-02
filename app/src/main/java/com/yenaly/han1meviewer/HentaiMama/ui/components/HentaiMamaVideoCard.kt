@@ -28,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -65,6 +66,7 @@ fun HentaiMamaVideoCard(
         reviews = videoItem.reviews,
         uploadTime = videoItem.uploadTime?.let { DisplayTextLocalizer.localizeRelativeTime(it) },
         imageLoader = imageLoader,
+        placeholder = ColorPainter(MaterialTheme.colorScheme.surfaceVariant),
         onClick = { onClick(videoItem.videoCode) },
         onLongClick = { onLongClick(videoItem.videoCode, videoItem.title) },
     )
@@ -95,6 +97,7 @@ fun HentaiMamaGenreSeriesCard(
             ?: series.favorites?.takeIf { it > 0 }?.let { "♥ $it" },
         uploadTime = series.year?.toString(),
         imageLoader = imageLoader,
+        placeholder = ColorPainter(MaterialTheme.colorScheme.surfaceVariant),
         onClick = { onClick(series.slug) },
         onLongClick = { onLongClick(series.slug, series.displayTitle) },
     )
@@ -137,7 +140,7 @@ fun HentaiMamaGenreSeriesRow(
                     model = series.posterMid ?: series.posterFull,
                     contentDescription = series.displayTitle,
                     modifier = Modifier.fillMaxSize(),
-                    placeholder = painterResource(R.drawable.h_chan_loading),
+                    placeholder = ColorPainter(MaterialTheme.colorScheme.surfaceVariant),
                     error = painterResource(R.drawable.h_chan_load_failed),
                     contentScale = ContentScale.Crop,
                     imageLoader = imageLoader,
@@ -280,3 +283,5 @@ private fun formatViews(views: Long): String = when {
     views >= 1_000 -> "%.1fK".format(views / 1_000.0)
     else -> views.toString()
 }
+
+

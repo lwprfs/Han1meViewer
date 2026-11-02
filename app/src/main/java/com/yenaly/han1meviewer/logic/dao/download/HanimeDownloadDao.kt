@@ -80,6 +80,23 @@ abstract class HanimeDownloadDao {
     @Query("UPDATE HanimeDownloadEntity SET groupId = :newGroupId WHERE videoCode = :videoCode")
     abstract suspend fun updateVideoGroup(videoCode: String, newGroupId: Int)
 
+    @Query("SELECT groupId FROM HanimeDownloadEntity WHERE id = :id")
+    abstract suspend fun findGroupId(id: Int): Int?
+
+    @Query("UPDATE HanimeDownloadEntity SET coverUri = :coverUri WHERE id = :id")
+    abstract suspend fun updateCoverUri(id: Int, coverUri: String?)
+
+    /**
+     * Progress/state updates come from a worker that holds a copy of the entity taken when the
+     * download started. If the user moved the video to another group meanwhile, writing that
+     * stale copy back would silently undo the move, so the group currently stored is kept.
+     */
+    @Transaction
+    open suspend fun updateKeepingGroup(entity: HanimeDownloadEntity): Int {
+        val currentGroup = findGroupId(entity.id) ?: return 0
+        return update(entity.copy(groupId = currentGroup))
+    }
+
     @Query(
         "SELECT groupId FROM HanimeDownloadEntity WHERE videoCode IN (:videoCodes) " +
                 "AND groupId != ${DownloadGroupEntity.DEFAULT_GROUP_ID} " +
@@ -88,3 +105,5 @@ abstract class HanimeDownloadDao {
     abstract suspend fun findGroupIdOfSeries(videoCodes: List<String>): Int?
 
 }
+
+

@@ -20,6 +20,12 @@ class HlsHttpException(val code: Int, message: String) : IOException(message)
 class HlsDownloader(
     private val client: OkHttpClient,
     private val headers: Map<String, String>,
+    /**
+     * When the OkHttp request is rejected (403/401/429/5xx or a network error), retry the same
+     * request the way the in-app player does (plain HttpURLConnection + Referer/Origin). Some
+     * CDNs accept the player but reject OkHttp's fingerprint, so a video can play yet not download.
+     */
+    private val urlConnectionFallback: Boolean = false,
 ) {
 
     data class Key(val uri: String, val iv: ByteArray?)
@@ -41,6 +47,42 @@ class HlsDownloader(
         }.build()
 
     private fun fetchBytes(url: String): ByteArray {
+        if (!urlConnectionFallback) return fetchBytesOkHttp(url)
+        return try {
+            fetchBytesOkHttp(url)
+        } catch (e: HlsHttpException) {
+            if (e.code == 404 || e.code == 410) throw e
+            fetchBytesUrlConnection(url, e)
+        } catch (e: IOException) {
+            fetchBytesUrlConnection(url, e)
+        }
+    }
+
+    private fun fetchBytesUrlConnection(url: String, original: Exception): ByteArray {
+        var conn: java.net.HttpURLConnection? = null
+        try {
+            conn = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+            conn.connectTimeout = 30_000
+            conn.readTimeout = 60_000
+            conn.instanceFollowRedirects = true
+            headers.forEach { (k, v) -> conn.setRequestProperty(k, v) }
+            if (headers.keys.none { it.equals("User-Agent", true) }) {
+                conn.setRequestProperty("User-Agent", "ExoPlayerLib/1.4.0")
+            }
+            val code = conn.responseCode
+            if (code !in 200..299) throw HlsHttpException(code, "HTTP $code for $url")
+            return conn.inputStream.use { it.readBytes() }
+        } catch (e: HlsHttpException) {
+            throw e
+        } catch (e: IOException) {
+            // Report the first failure; it is usually the more informative one.
+            throw if (original is IOException) original else e
+        } finally {
+            conn?.disconnect()
+        }
+    }
+
+    private fun fetchBytesOkHttp(url: String): ByteArray {
         client.newCall(request(url)).execute().use { response ->
             if (!response.isSuccessful) {
                 throw HlsHttpException(response.code, "HTTP ${response.code} for $url")
@@ -232,3 +274,5 @@ class HlsDownloader(
         }
     }
 }
+
+

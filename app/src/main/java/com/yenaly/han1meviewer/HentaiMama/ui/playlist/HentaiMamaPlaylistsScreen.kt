@@ -47,6 +47,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -287,7 +288,7 @@ private fun PlaylistCardItem(
                     model = card.thumbFull ?: card.thumbMid ?: card.thumbSmall.orEmpty(),
                     contentDescription = card.title,
                     modifier = Modifier.fillMaxSize(),
-                    placeholder = painterResource(R.drawable.h_chan_loading),
+                    placeholder = ColorPainter(MaterialTheme.colorScheme.surfaceVariant),
                     error = painterResource(R.drawable.h_chan_load_failed),
                     contentScale = ContentScale.Crop,
                     imageLoader = imageLoader,
@@ -416,3 +417,5 @@ private fun PlaylistCardItem(
         }
     }
 }
+
+

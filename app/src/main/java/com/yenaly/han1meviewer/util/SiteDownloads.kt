@@ -165,15 +165,26 @@ object SiteDownloadClients {
                 .getOrDefault(ServiceCreator.downloadClient)
             SiteType.FAPFOLDER -> runCatching { FapFolderNetwork.playbackOkHttpClient }
                 .getOrDefault(ServiceCreator.downloadClient)
+            SiteType.MISSAV -> runCatching { com.yenaly.han1meviewer.MissAV.data.remote.MissAvNetwork.downloadOkHttpClient }
+                .getOrDefault(ServiceCreator.downloadClient)
             else -> ServiceCreator.downloadClient
         }
+
+    /** Sites whose CDN may refuse OkHttp while accepting the in-app player. */
+    fun useUrlConnectionFallback(videoCode: String): Boolean =
+        SiteCheckIn.siteOfDishCode(videoCode) == SiteType.MISSAV
 
     fun headersFor(videoCode: String, url: String): Map<String, String> {
         val host = runCatching { java.net.URI(url).host }.getOrNull().orEmpty()
         return when (SiteCheckIn.siteOfDishCode(videoCode)) {
             SiteType.MISSAV -> {
                 val base = Preferences.missAvBaseUrl.trimEnd('/')
-                mapOf("Referer" to "$base/", "Origin" to base)
+                mapOf(
+                    "Referer" to "$base/",
+                    "Origin" to base,
+                    "Accept" to "*/*",
+                    "Accept-Language" to "en-US,en;q=0.9",
+                )
             }
             SiteType.HENTAIMAMA -> {
                 val base = runCatching { HentaiMamaNetwork.baseUrl.trimEnd('/') }.getOrDefault("")
@@ -350,5 +361,7 @@ object SiteImageSaver {
         "User-Agent" to FapFolderConstants.USER_AGENT_FAPFOLDER,
     )
 }
+
+
 
 

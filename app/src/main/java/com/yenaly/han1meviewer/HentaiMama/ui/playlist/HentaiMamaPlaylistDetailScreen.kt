@@ -48,6 +48,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -335,7 +336,7 @@ private fun PlaylistHeroBlock(
                     modifier = Modifier
                         .size(28.dp)
                         .clip(CircleShape),
-                    placeholder = painterResource(R.drawable.h_chan_loading),
+                    placeholder = ColorPainter(MaterialTheme.colorScheme.surfaceVariant),
                     error = painterResource(R.drawable.h_chan_load_failed),
                     contentScale = ContentScale.Crop,
                     imageLoader = imageLoader,
@@ -491,7 +492,7 @@ private fun PlaylistEpisodeRow(
                     model = episode.thumbFull ?: episode.thumbSmall.orEmpty(),
                     contentDescription = episode.title,
                     modifier = Modifier.fillMaxSize(),
-                    placeholder = painterResource(R.drawable.h_chan_loading),
+                    placeholder = ColorPainter(MaterialTheme.colorScheme.surfaceVariant),
                     error = painterResource(R.drawable.h_chan_load_failed),
                     contentScale = ContentScale.Crop,
                     imageLoader = imageLoader,
@@ -523,3 +524,5 @@ private fun PlaylistEpisodeRow(
         }
     }
 }
+
+

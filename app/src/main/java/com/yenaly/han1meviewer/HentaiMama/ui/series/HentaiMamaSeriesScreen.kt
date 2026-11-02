@@ -55,6 +55,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -327,7 +328,7 @@ private fun SeriesHeroCard(
                     model = hero.poster,
                     contentDescription = hero.title,
                     modifier = Modifier.fillMaxSize(),
-                    placeholder = painterResource(R.drawable.h_chan_loading),
+                    placeholder = ColorPainter(MaterialTheme.colorScheme.surfaceVariant),
                     error = painterResource(R.drawable.h_chan_load_failed),
                     contentScale = ContentScale.Crop,
                 )
@@ -536,7 +537,7 @@ private fun SeriesEpisodeRow(
                     model = episode.thumb,
                     contentDescription = episode.title,
                     modifier = Modifier.fillMaxSize(),
-                    placeholder = painterResource(R.drawable.h_chan_loading),
+                    placeholder = ColorPainter(MaterialTheme.colorScheme.surfaceVariant),
                     error = painterResource(R.drawable.h_chan_load_failed),
                     contentScale = ContentScale.Crop,
                 )
@@ -579,3 +580,5 @@ private fun formatViewsSeries(views: Long): String = when {
     views >= 1_000 -> "%.1fK views".format(views / 1_000.0)
     else -> "$views views"
 }
+
+

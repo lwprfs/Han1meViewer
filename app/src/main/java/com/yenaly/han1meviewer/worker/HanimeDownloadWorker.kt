@@ -351,7 +351,7 @@ class HanimeDownloadWorker(
             }
             if (entity.coverUri == null) updateCoverImage(entity)
             if (isInWaitingQueue) {
-                DatabaseRepo.HanimeDownload.update(entity.copy(state = DownloadState.Queued))
+                DatabaseRepo.HanimeDownload.updateKeepingGroup(entity.copy(state = DownloadState.Queued))
                 return@withContext Result.success()
             }
 
@@ -370,7 +370,11 @@ class HanimeDownloadWorker(
                     file.createFileIfNotExists()
                     FileOutputStream(file, false)
                 }
-                val downloader = HlsDownloader(siteClient(), SiteDownloadClients.headersFor(videoCode, downloadUrl))
+                val downloader = HlsDownloader(
+                    siteClient(),
+                    SiteDownloadClients.headersFor(videoCode, downloadUrl),
+                    SiteDownloadClients.useUrlConnectionFallback(videoCode),
+                )
                 val playlist = downloader.resolvePlaylist(downloadUrl)
                 var lastUpdate = 0L
                 written = downloader.download(playlist, out) { done, total, bytes ->
@@ -386,7 +390,7 @@ class HanimeDownloadWorker(
                             downloadedLength = bytes,
                             state = DownloadState.Downloading,
                         )
-                        DatabaseRepo.HanimeDownload.update(entity)
+                        DatabaseRepo.HanimeDownload.updateKeepingGroup(entity)
                     }
                 }
                 entity = entity.copy(length = written, downloadedLength = written)
@@ -418,7 +422,7 @@ class HanimeDownloadWorker(
                 val state = DownloadState.from(
                     result.outputData.getInt(DownloadState.STATE, DownloadState.Unknown.mask)
                 )
-                DatabaseRepo.HanimeDownload.update(
+                DatabaseRepo.HanimeDownload.updateKeepingGroup(
                     entity.copy(state = if (shouldRetry) DownloadState.Queued else state)
                 )
                 runCatching { out?.close() }
@@ -463,7 +467,7 @@ class HanimeDownloadWorker(
             } catch (e: Exception) {
                 if (e.isRetryableNetworkError() && runAttemptCount < MAX_WORK_RETRY_COUNT) {
                     DatabaseRepo.HanimeDownload.find(videoCode, quality)?.let {
-                        DatabaseRepo.HanimeDownload.update(it.copy(state = DownloadState.Queued))
+                        DatabaseRepo.HanimeDownload.updateKeepingGroup(it.copy(state = DownloadState.Queued))
                     }
                     return@withContext Result.retry()
                 }
@@ -472,12 +476,20 @@ class HanimeDownloadWorker(
 
             val targetGroupId = groupId.takeIf { it > 0 }
             if (targetGroupId != null && entity.groupId != targetGroupId) {
-                entity = entity.copy(groupId = targetGroupId)
-                DatabaseRepo.HanimeDownload.update(entity)
+                // Only (re)assign videos that are still "ungrouped" (default group or their
+                // automatic site group). A group the user picked by hand is never overridden
+                // by stale task arguments.
+                val siteGroupId = DatabaseRepo.HanimeDownload.groupIdForVideoCode(videoCode)
+                if (entity.groupId == DownloadGroupEntity.DEFAULT_GROUP_ID ||
+                    entity.groupId == siteGroupId
+                ) {
+                    entity = entity.copy(groupId = targetGroupId)
+                    DatabaseRepo.HanimeDownload.update(entity)
+                }
             }
 
             if (entity.downloadedLength >= entity.length && entity.length > 0) {
-                DatabaseRepo.HanimeDownload.update(entity.copy(state = DownloadState.Finished))
+                DatabaseRepo.HanimeDownload.updateKeepingGroup(entity.copy(state = DownloadState.Finished))
                 showSuccessNotification()
                 return@withContext Result.success(
                     workDataOf(DownloadState.STATE to DownloadState.Finished.mask)
@@ -486,14 +498,14 @@ class HanimeDownloadWorker(
 
             if (entity.downloadedLength < 0 || entity.downloadedLength > entity.length) {
                 entity = entity.copy(downloadedLength = 0, state = DownloadState.Queued)
-                DatabaseRepo.HanimeDownload.update(entity)
+                DatabaseRepo.HanimeDownload.updateKeepingGroup(entity)
             }
 
             if (entity.coverUri == null) {
                 updateCoverImage(entity)
             }
             if (isInWaitingQueue) {
-                DatabaseRepo.HanimeDownload.update(
+                DatabaseRepo.HanimeDownload.updateKeepingGroup(
                     entity.copy(state = DownloadState.Queued)
                 )
                 return@withContext Result.success()
@@ -566,7 +578,7 @@ class HanimeDownloadWorker(
                                 val progress = (downloadedLength * 100 / entity.length).coerceAtMost(100)
                                 setProgress(workDataOf(PROGRESS to progress.toInt()))
                                 updateDownloadNotification(progress.toInt())
-                                DatabaseRepo.HanimeDownload.update(
+                                DatabaseRepo.HanimeDownload.updateKeepingGroup(
                                     entity.copy(downloadedLength = downloadedLength,
                                         state = DownloadState.Downloading
                                     )
@@ -632,7 +644,7 @@ class HanimeDownloadWorker(
                 val state = DownloadState.from(
                     result.outputData.getInt(DownloadState.STATE, DownloadState.Unknown.mask)
                 )
-                DatabaseRepo.HanimeDownload.update(
+                DatabaseRepo.HanimeDownload.updateKeepingGroup(
                     entity.copy(
                         state = if (shouldRetry) DownloadState.Queued else state,
                         downloadedLength = downloadedLength
@@ -718,9 +730,9 @@ class HanimeDownloadWorker(
             if (isSuccess && uri != null) {
                 val coverUriStr = uri.toString()
                 withContext(Dispatchers.IO) {
-                    DatabaseRepo.HanimeDownload.update(
-                        entity.copy(coverUri = coverUriStr)
-                    )
+                    // Only the cover column: a full-row update from this stale copy would
+                    // overwrite the progress/state the download loop keeps writing.
+                    DatabaseRepo.HanimeDownload.updateCoverUri(entity.id, coverUriStr)
                 }
                 entity.coverUri = coverUriStr
             }
@@ -820,5 +832,9 @@ class HanimeDownloadWorker(
         )
     }
 }
+
+
+
+
 
 

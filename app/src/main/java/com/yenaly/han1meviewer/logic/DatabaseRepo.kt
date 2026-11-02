@@ -19,6 +19,8 @@ import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
@@ -240,6 +242,13 @@ object DatabaseRepo {
         suspend fun update(entity: HanimeDownloadEntity) =
             hanimeDownloadDao.update(entity)
 
+        /** Like [update] but never changes the group the video currently belongs to. */
+        suspend fun updateKeepingGroup(entity: HanimeDownloadEntity) =
+            hanimeDownloadDao.updateKeepingGroup(entity)
+
+        suspend fun updateCoverUri(id: Int, coverUri: String?) =
+            hanimeDownloadDao.updateCoverUri(id, coverUri)
+
         suspend fun find(videoCode: String, quality: String) =
             hanimeDownloadDao.find(videoCode, quality)
 
@@ -280,6 +289,10 @@ object DatabaseRepo {
         suspend fun updateGroup(group: DownloadGroupEntity)=
             downloadGroupDao.update(group)
 
+        // Several downloads (and the one-time migration) can ask for the same site group at the
+        // same moment; without this two "MissAV" groups could be created.
+        private val siteGroupMutex = Mutex()
+
         private const val SITE_GROUP_ID_PREFIX = "download_site_group_id_"
         private const val SITE_GROUPS_MIGRATED = "download_site_groups_migrated_v1"
 
@@ -298,15 +311,15 @@ object DatabaseRepo {
          * Id of the default "site name" group. The id is remembered so renaming the group
          * keeps working; if the group was deleted it is created again.
          */
-        suspend fun siteGroupId(site: SiteType): Int {
+        suspend fun siteGroupId(site: SiteType): Int = siteGroupMutex.withLock {
             val key = SITE_GROUP_ID_PREFIX + (if (site == SiteType.JAVCHU) SiteType.HANIME else site).name
             val sp = Preferences.preferenceSp
             val saved = sp.getInt(key, -1)
-            if (saved > 0 && downloadGroupDao.getGroupById(saved) != null) return saved
+            if (saved > 0 && downloadGroupDao.getGroupById(saved) != null) return@withLock saved
             val name = siteGroupName(site)
             val id = downloadGroupDao.getGroupByName(name)?.id ?: createNewGroup(name).toInt()
             sp.edit().putInt(key, id).apply()
-            return id
+            id
         }
 
         suspend fun groupIdForVideoCode(videoCode: String): Int =
@@ -332,5 +345,7 @@ object DatabaseRepo {
         }
     }
 }
+
+
 
 

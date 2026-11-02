@@ -204,7 +204,12 @@ fun FapFolderVideoPlayerScreen(
     var expiryHandled by remember { mutableStateOf(false) }
 
     var muted by remember { mutableStateOf(false) }
-    var playbackSpeed by remember { mutableStateOf(1.0f) }
+    var playbackSpeed by remember {
+        mutableStateOf(
+            com.yenaly.han1meviewer.ui.component.player.SitePlayerSettings
+                .config(com.yenaly.han1meviewer.SiteType.FAPFOLDER).defaultSpeed
+        )
+    }
     var speedMenuOpen by remember { mutableStateOf(false) }
     var sliderDragging by remember { mutableStateOf(false) }
     var sliderValue by remember { mutableFloatStateOf(0f) }
@@ -1491,3 +1496,5 @@ private fun safePosition(player: ExoPlayer?): Long {
 private fun formatSpeed(speed: Float): String =
     if (speed == speed.toInt().toFloat()) "${speed.toInt()}.0x"
     else "${speed}x"
+
+

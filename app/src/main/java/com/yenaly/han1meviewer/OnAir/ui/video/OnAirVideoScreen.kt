@@ -130,6 +130,13 @@ fun OnAirVideoScreen(
         }
     }
 
+    LaunchedEffect(Unit) {
+        viewModel.setSpeed(
+            com.yenaly.han1meviewer.ui.component.player.SitePlayerSettings
+                .config(com.yenaly.han1meviewer.SiteType.ONAIR).defaultSpeed
+        )
+    }
+
     LaunchedEffect(videoId) {
         exoPlayer.stop()
         exoPlayer.clearMediaItems()
@@ -616,3 +623,5 @@ private fun formatMillis(ms: Long): String {
     val s = total % 60
     return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
 }
+
+

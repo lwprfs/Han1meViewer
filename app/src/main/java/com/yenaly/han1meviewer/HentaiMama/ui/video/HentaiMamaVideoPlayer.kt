@@ -71,6 +71,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import coil3.compose.AsyncImage
+import com.yenaly.han1meviewer.SiteType
+import com.yenaly.han1meviewer.ui.component.player.SitePlayerOverlay
+import com.yenaly.han1meviewer.ui.component.player.SitePlayerSettings
 import kotlinx.coroutines.delay
 
 private const val PLAYER_TAG = "HentaiMamaPlayer"
@@ -92,8 +95,13 @@ fun HentaiMamaVideoPlayer(
     savedPosition: Long = 0L,
     onResumeFromSaved: () -> Unit = {},
     onStartFromBeginning: () -> Unit = {},
+    title: String = "",
+    onBack: () -> Unit = {},
+    onSpeedSelect: (Float) -> Unit = {},
+    onQualitySelect: (String) -> Unit = {},
 ) {
-    var showControls by remember { mutableStateOf(true) }
+    val config = SitePlayerSettings.config(SiteType.HENTAIMAMA)
+    var tempSpeed by remember { mutableStateOf<Float?>(null) }
     var lastPosition by remember { mutableLongStateOf(0L) }
     var surfaceReady by remember { mutableStateOf(false) }
     var playbackState by remember { mutableIntStateOf(Player.STATE_IDLE) }
@@ -113,10 +121,6 @@ fun HentaiMamaVideoPlayer(
     DisposableEffect(exoPlayer) {
         val exo = exoPlayer
         val listener = object : Player.Listener {
-            override fun onIsPlayingChanged(isPlaying: Boolean) {
-                showControls = true
-            }
-
             override fun onPlaybackStateChanged(newState: Int) {
                 playbackState = newState
                 isRebuffering = newState == Player.STATE_BUFFERING && hasRenderedFirstFrame
@@ -140,8 +144,8 @@ fun HentaiMamaVideoPlayer(
         isRebuffering = false
     }
 
-    LaunchedEffect(state.speed, exoPlayer) {
-        exoPlayer?.setPlaybackSpeed(state.speed)
+    LaunchedEffect(state.speed, tempSpeed, exoPlayer) {
+        exoPlayer?.setPlaybackSpeed(tempSpeed ?: state.speed)
     }
 
     LaunchedEffect(state.isPlaying, isExoReady, surfaceReady, exoPlayer) {
@@ -162,13 +166,6 @@ fun HentaiMamaVideoPlayer(
                 lastPosition = pos
                 onPositionUpdate(pos, dur)
             }
-        }
-    }
-
-    LaunchedEffect(showControls, effectiveIsPlaying) {
-        if (showControls && effectiveIsPlaying) {
-            delay(3000)
-            showControls = false
         }
     }
 
@@ -295,35 +292,6 @@ fun HentaiMamaVideoPlayer(
                 },
             )
 
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .pointerInput(Unit) {
-                        detectTapGestures(
-                            onTap = { showControls = !showControls },
-                            onDoubleTap = { offset ->
-                                val half: Float = size.width / 2f
-                                if (offset.x < half) onSkip(-10_000L)
-                                else onSkip(10_000L)
-                            },
-                        )
-                    },
-            )
-
-            if (isBuffering) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.35f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator(
-                        color = Color.White,
-                        modifier = Modifier.size(56.dp),
-                    )
-                }
-            }
-
             if (showResumeButton && !state.isPlaying) {
                 Box(
                     modifier = Modifier
@@ -352,22 +320,30 @@ fun HentaiMamaVideoPlayer(
                 }
             }
 
-            AnimatedVisibility(
-                visible = showControls && !showResumeButton,
-                enter = fadeIn(),
-                exit = fadeOut(),
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                PlayerControls(
-                    state = state,
+            if (!showResumeButton) {
+                SitePlayerOverlay(
+                    config = config,
+                    title = title,
+                    isPlaying = effectiveIsPlaying,
+                    isBuffering = isBuffering,
+                    positionMs = state.position,
+                    durationMs = state.duration,
+                    bufferedMs = exoPlayer.bufferedPosition.coerceAtLeast(0L),
+                    qualityLabel = state.quality.ifBlank { "Auto" },
+                    speed = state.speed,
                     isFullscreen = isFullscreen,
-                    effectiveIsPlaying = effectiveIsPlaying,
                     onPlayPause = onPlayPause,
-                    onSeek = onSeek,
-                    onSkip = onSkip,
+                    onSeekTo = onSeek,
+                    onSeekBy = onSkip,
                     onToggleFullscreen = onToggleFullscreen,
+                    onBack = onBack,
+                    speedOptions = state.availableSpeeds,
+                    onSpeedSelect = onSpeedSelect,
+                    qualityOptions = state.qualityOptions.keys.toList(),
+                    onQualitySelect = onQualitySelect,
                     stretched = stretched,
                     onToggleStretch = { stretched = !stretched },
+                    onTemporarySpeed = { tempSpeed = it },
                 )
             }
         } else {
@@ -397,149 +373,6 @@ fun HentaiMamaVideoPlayer(
     }
 }
 
-@Composable
-private fun PlayerControls(
-    state: HentaiMamaPlayerState,
-    isFullscreen: Boolean,
-    effectiveIsPlaying: Boolean,
-    onPlayPause: () -> Unit,
-    onSeek: (Long) -> Unit,
-    onSkip: (Long) -> Unit,
-    onToggleFullscreen: () -> Unit,
-    stretched: Boolean = false,
-    onToggleStretch: () -> Unit = {},
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.35f)),
-    ) {
-        Row(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .padding(4.dp),
-            horizontalArrangement = Arrangement.spacedBy(24.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(
-                onClick = { onSkip(-10_000L) },
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(Color.Black.copy(alpha = 0.5f), CircleShape),
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Replay10,
-                    contentDescription = "Rewind 10 seconds",
-                    tint = Color.White,
-                )
-            }
-
-            IconButton(
-                onClick = onPlayPause,
-                modifier = Modifier
-                    .size(if (isFullscreen) 72.dp else 60.dp)
-                    .background(Color.Black.copy(alpha = 0.55f), CircleShape),
-            ) {
-                Icon(
-                    imageVector = if (effectiveIsPlaying) Icons.Filled.Pause
-                    else Icons.Filled.PlayArrow,
-                    contentDescription = if (effectiveIsPlaying) "Pause" else "Play",
-                    tint = Color.White,
-                    modifier = Modifier.size(if (isFullscreen) 44.dp else 36.dp),
-                )
-            }
-
-            IconButton(
-                onClick = { onSkip(10_000L) },
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(Color.Black.copy(alpha = 0.5f), CircleShape),
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Forward10,
-                    contentDescription = "Forward 10 seconds",
-                    tint = Color.White,
-                )
-            }
-        }
-
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .then(if (isFullscreen) Modifier.navigationBarsPadding() else Modifier)
-                .background(Color.Black.copy(alpha = 0.6f))
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Text(
-                    text = formatTime(state.position),
-                    color = Color.White,
-                    style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.width(52.dp),
-                )
-                var scrub by remember { mutableStateOf<Float?>(null) }
-                Slider(
-                    value = scrub ?: if (state.duration > 0) {
-                        (state.position.toFloat() / state.duration).coerceIn(0f, 1f)
-                    } else 0f,
-                    onValueChange = { newValue: Float -> scrub = newValue },
-                    onValueChangeFinished = {
-                        scrub?.let { if (state.duration > 0) onSeek((it * state.duration).toLong()) }
-                        scrub = null
-                    },
-                    modifier = Modifier.weight(1f),
-                    colors = SliderDefaults.colors(
-                        thumbColor = Color.White,
-                        activeTrackColor = MaterialTheme.colorScheme.primary,
-                        inactiveTrackColor = Color.White.copy(alpha = 0.3f),
-                    ),
-                )
-                Text(
-                    text = formatTime(state.duration),
-                    color = Color.White,
-                    style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.width(52.dp),
-                )
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = state.quality.ifBlank { "Auto" },
-                    color = Color.White.copy(alpha = 0.85f),
-                    style = MaterialTheme.typography.labelSmall,
-                )
-                if (isFullscreen) {
-                    IconButton(onClick = onToggleStretch) {
-                        Icon(
-                            imageVector = Icons.Filled.AspectRatio,
-                            contentDescription = stringResource(R.string.stretch_to_fill),
-                            tint = if (stretched) MaterialTheme.colorScheme.primary
-                            else Color.White,
-                        )
-                    }
-                }
-                IconButton(onClick = onToggleFullscreen) {
-                    Icon(
-                        imageVector = if (isFullscreen) Icons.Filled.FullscreenExit
-                        else Icons.Filled.Fullscreen,
-                        contentDescription = "Fullscreen",
-                        tint = Color.White,
-                    )
-                }
-            }
-        }
-    }
-}
-
 internal fun formatTime(ms: Long): String {
     val total: Long = (ms / 1000).coerceAtLeast(0L)
     val h: Long = total / 3600
@@ -547,5 +380,7 @@ internal fun formatTime(ms: Long): String {
     val s: Long = total % 60
     return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
 }
+
+
 
 

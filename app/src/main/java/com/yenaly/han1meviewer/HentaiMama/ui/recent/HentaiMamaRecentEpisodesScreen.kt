@@ -51,6 +51,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -285,7 +286,7 @@ private fun RecentEpisodeCard(
                     model = episode.thumbMedium ?: episode.thumbFull,
                     contentDescription = episode.altText.ifBlank { episode.seriesTitle },
                     modifier = Modifier.fillMaxSize(),
-                    placeholder = painterResource(R.drawable.h_chan_loading),
+                    placeholder = ColorPainter(MaterialTheme.colorScheme.surfaceVariant),
                     error = painterResource(R.drawable.h_chan_load_failed),
                     contentScale = ContentScale.Crop,
                     imageLoader = imageLoader,
@@ -400,3 +401,5 @@ private fun RecentEpisodeCard(
 
 private fun formatRating(value: Double): String =
     if (value % 1.0 == 0.0) value.toInt().toString() else "%.1f".format(value)
+
+
