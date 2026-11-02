@@ -432,8 +432,8 @@ fun HomeSettingsRouteScreen(
 
     BackupSectionDialog(
         visible = showExportSelection,
-        title = "Choose what to export",
-        confirmText = "Export",
+        title = stringResource(R.string.backup_choose_export),
+        confirmText = stringResource(R.string.backup_action_export),
         dismissText = stringResource(R.string.cancel),
         onConfirm = { sections ->
             showExportSelection = false
@@ -445,7 +445,7 @@ fun HomeSettingsRouteScreen(
 
     BackupSectionDialog(
         visible = importSections != null && pendingImportUri != null,
-        title = "Choose what to import",
+        title = stringResource(R.string.backup_choose_import),
         confirmText = stringResource(R.string.confirm),
         dismissText = stringResource(R.string.cancel),
         onConfirm = { sections ->

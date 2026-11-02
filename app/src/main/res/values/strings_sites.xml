@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="drawer_home_categories">首頁欄目</string>
+    <string name="drawer_host_mirror">網域 / 鏡像站</string>
+    <string name="drawer_recent_episodes">最新集數</string>
+    <string name="drawer_upcoming">即將上線</string>
+    <string name="drawer_video_card_size">影片與卡片大小</string>
+    <string name="drawer_cookies_sign_in">Cookies 與登入</string>
+    <string name="drawer_account_session">帳號、網域與工作階段</string>
+    <string name="drawer_tags">標籤</string>
+    <string name="drawer_chat">聊天室</string>
+    <string name="drawer_pictures">圖片</string>
+    <string name="drawer_search_history">搜尋歷史</string>
+    <string name="drawer_followed_communities">已追蹤社群</string>
+    <string name="drawer_watch_history_all">全站觀看歷史</string>
+    <string name="login_status_logged_in_site">已登入 %1$s</string>
+    <string name="login_status_tap_account">點擊管理帳號與工作階段</string>
+    <string name="login_status_tap_login_cookies">點擊登入或匯入 Cookies</string>
+    <string name="login_status_tap_manage_cookies">點擊管理工作階段 Cookies</string>
+    <string name="login_status_tap_sign_in">點擊登入 %1$s</string>
+    <string name="login_status_unavailable">%1$s 不支援登入</string>
+    <string name="site_checkin_failed">打卡失敗</string>
+    <string name="site_download_hls_unsupported">此影片為 HLS (m3u8) 串流，檔案下載器暫時無法儲存。</string>
+    <string name="backup_group_data">資料</string>
+    <string name="backup_group_cookies">Cookies（依站點）</string>
+    <string name="backup_choose_export">選擇要匯出的內容</string>
+    <string name="backup_choose_import">選擇要匯入的內容</string>
+    <string name="backup_action_export">匯出</string>
+    <string name="backup_section_settings">應用設定（所有站點）</string>
+    <string name="backup_section_check_in">打卡記錄與配菜</string>
+    <string name="backup_section_keyframes">關鍵H幀</string>
+    <string name="backup_section_hanime_history">Hanime / Javchu 觀看歷史</string>
+    <string name="backup_section_downloads">下載清單</string>
+    <string name="backup_section_missav_history">MissAV 觀看歷史</string>
+    <string name="backup_section_hentaimama_history">HentaiMama 觀看歷史</string>
+    <string name="backup_section_onair_history">OnAir 觀看歷史</string>
+    <string name="backup_section_fapfolder_history">FapFolder 觀看歷史</string>
+    <string name="backup_section_cookies_hanime">Hanime / Javchu Cookies</string>
+    <string name="backup_section_cookies_missav">MissAV Cookies</string>
+    <string name="backup_section_cookies_hentaimama">HentaiMama Cookies</string>
+    <string name="backup_section_cookies_onair">OnAir Cookies</string>
+    <string name="backup_section_cookies_fapfolder">FapFolder Cookies</string>
+    <string name="stretch_to_fill">拉伸填滿</string>
+</resources>

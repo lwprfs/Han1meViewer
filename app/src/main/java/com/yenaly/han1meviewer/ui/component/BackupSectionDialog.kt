@@ -21,7 +21,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import com.yenaly.han1meviewer.R
 import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.logic.BackupManager
 import com.yenaly.han1meviewer.logic.BackupManager.Section
@@ -50,12 +52,12 @@ fun BackupSectionDialog(
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    TextButton(onClick = { selected = Section.entries.toSet() }) { Text("Select all") }
-                    TextButton(onClick = { selected = emptySet() }) { Text("Deselect all") }
+                    TextButton(onClick = { selected = Section.entries.toSet() }) { Text(stringResource(R.string.select_all)) }
+                    TextButton(onClick = { selected = emptySet() }) { Text(stringResource(R.string.deselect_all)) }
                 }
                 listOf(
-                    Section.Group.DATA to "Data",
-                    Section.Group.COOKIES to "Cookies (per site)",
+                    Section.Group.DATA to stringResource(R.string.backup_group_data),
+                    Section.Group.COOKIES to stringResource(R.string.backup_group_cookies),
                 ).forEach { (group, header) ->
                     Text(
                         text = header,
@@ -76,7 +78,7 @@ fun BackupSectionDialog(
                         ) {
                             Checkbox(checked = section in selected, onCheckedChange = null)
                             Text(
-                                text = section.label,
+                                text = stringResource(section.labelRes),
                                 modifier = Modifier.padding(start = 10.dp, top = 8.dp, bottom = 8.dp),
                             )
                         }

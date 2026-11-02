@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="drawer_home_categories">Home categories</string>
+    <string name="drawer_host_mirror">Host / Mirror</string>
+    <string name="drawer_recent_episodes">Recent episodes</string>
+    <string name="drawer_upcoming">Upcoming</string>
+    <string name="drawer_video_card_size">Video &amp; card size</string>
+    <string name="drawer_cookies_sign_in">Cookies &amp; sign in</string>
+    <string name="drawer_account_session">Account, host &amp; session</string>
+    <string name="drawer_tags">Tags</string>
+    <string name="drawer_chat">Chat</string>
+    <string name="drawer_pictures">Pictures</string>
+    <string name="drawer_search_history">Search history</string>
+    <string name="drawer_followed_communities">Followed communities</string>
+    <string name="drawer_watch_history_all">Watch history (all sites)</string>
+    <string name="login_status_logged_in_site">Logged in to %1$s</string>
+    <string name="login_status_tap_account">Tap for account &amp; session</string>
+    <string name="login_status_tap_login_cookies">Tap to log in or import cookies</string>
+    <string name="login_status_tap_manage_cookies">Tap to manage session cookies</string>
+    <string name="login_status_tap_sign_in">Tap to sign in to %1$s</string>
+    <string name="login_status_unavailable">Login is unavailable for %1$s</string>
+    <string name="site_checkin_failed">Check-in failed</string>
+    <string name="site_download_hls_unsupported">This video is an HLS (m3u8) stream and cannot be saved by the file downloader yet.</string>
+    <string name="backup_group_data">Data</string>
+    <string name="backup_group_cookies">Cookies (per site)</string>
+    <string name="backup_choose_export">Choose what to export</string>
+    <string name="backup_choose_import">Choose what to import</string>
+    <string name="backup_action_export">Export</string>
+    <string name="backup_section_settings">App settings (all sites)</string>
+    <string name="backup_section_check_in">Check-in records &amp; dishes</string>
+    <string name="backup_section_keyframes">H keyframes</string>
+    <string name="backup_section_hanime_history">Hanime / Javchu watch history</string>
+    <string name="backup_section_downloads">Download list</string>
+    <string name="backup_section_missav_history">MissAV watch history</string>
+    <string name="backup_section_hentaimama_history">HentaiMama watch history</string>
+    <string name="backup_section_onair_history">OnAir watch history</string>
+    <string name="backup_section_fapfolder_history">FapFolder watch history</string>
+    <string name="backup_section_cookies_hanime">Hanime / Javchu cookies</string>
+    <string name="backup_section_cookies_missav">MissAV cookies</string>
+    <string name="backup_section_cookies_hentaimama">HentaiMama cookies</string>
+    <string name="backup_section_cookies_onair">OnAir cookies</string>
+    <string name="backup_section_cookies_fapfolder">FapFolder cookies</string>
+    <string name="stretch_to_fill">Stretch to fill</string>
+</resources>

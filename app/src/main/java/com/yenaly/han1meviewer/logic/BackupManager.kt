@@ -3,7 +3,9 @@ package com.yenaly.han1meviewer.logic
 import android.content.Context
 import android.net.Uri
 import androidx.core.content.edit
+import androidx.annotation.StringRes
 import com.yenaly.han1meviewer.BuildConfig
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.FapFolder.common.FapFolderConstants
 import com.yenaly.han1meviewer.FapFolder.common.FapFolderSecurePrefs
 import com.yenaly.han1meviewer.FapFolder.data.local.FapFolderDatabase
@@ -42,21 +44,21 @@ object BackupManager {
     }
 
     /** What can be picked on the export dialog. */
-    enum class Section(val label: String, val group: Group) {
-        SETTINGS("App settings (all sites)", Group.DATA),
-        CHECK_IN("Check-in records & dishes", Group.DATA),
-        KEYFRAMES("H keyframes", Group.DATA),
-        HANIME_HISTORY("Hanime / Javchu watch history", Group.DATA),
-        DOWNLOADS("Download list", Group.DATA),
-        MISSAV_HISTORY("MissAV watch history", Group.DATA),
-        HENTAIMAMA_HISTORY("HentaiMama watch history", Group.DATA),
-        ONAIR_HISTORY("OnAir watch history", Group.DATA),
-        FAPFOLDER_HISTORY("FapFolder watch history", Group.DATA),
-        COOKIES_HANIME("Hanime / Javchu cookies", Group.COOKIES),
-        COOKIES_MISSAV("MissAV cookies", Group.COOKIES),
-        COOKIES_HENTAIMAMA("HentaiMama cookies", Group.COOKIES),
-        COOKIES_ONAIR("OnAir cookies", Group.COOKIES),
-        COOKIES_FAPFOLDER("FapFolder cookies", Group.COOKIES);
+    enum class Section(@StringRes val labelRes: Int, val group: Group) {
+        SETTINGS(R.string.backup_section_settings, Group.DATA),
+        CHECK_IN(R.string.backup_section_check_in, Group.DATA),
+        KEYFRAMES(R.string.backup_section_keyframes, Group.DATA),
+        HANIME_HISTORY(R.string.backup_section_hanime_history, Group.DATA),
+        DOWNLOADS(R.string.backup_section_downloads, Group.DATA),
+        MISSAV_HISTORY(R.string.backup_section_missav_history, Group.DATA),
+        HENTAIMAMA_HISTORY(R.string.backup_section_hentaimama_history, Group.DATA),
+        ONAIR_HISTORY(R.string.backup_section_onair_history, Group.DATA),
+        FAPFOLDER_HISTORY(R.string.backup_section_fapfolder_history, Group.DATA),
+        COOKIES_HANIME(R.string.backup_section_cookies_hanime, Group.COOKIES),
+        COOKIES_MISSAV(R.string.backup_section_cookies_missav, Group.COOKIES),
+        COOKIES_HENTAIMAMA(R.string.backup_section_cookies_hentaimama, Group.COOKIES),
+        COOKIES_ONAIR(R.string.backup_section_cookies_onair, Group.COOKIES),
+        COOKIES_FAPFOLDER(R.string.backup_section_cookies_fapfolder, Group.COOKIES);
 
         enum class Group { DATA, COOKIES }
     }

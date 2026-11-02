@@ -1,6 +1,8 @@
 package com.yenaly.han1meviewer.ui.screen.main
 
+import android.content.Context
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -92,7 +94,7 @@ data class SiteLoginStatus(
 
 private const val ONAIR_COOKIES_KEY = "onair_cookies_raw"
 
-fun siteLoginStatus(site: SiteType): SiteLoginStatus = when (site) {
+fun siteLoginStatus(context: Context, site: SiteType): SiteLoginStatus = when (site) {
     SiteType.ONAIR -> {
         val profile = OnAirProfileCache.current()
         val raw = runCatching {
@@ -101,16 +103,16 @@ fun siteLoginStatus(site: SiteType): SiteLoginStatus = when (site) {
         val loggedIn = profile != null || raw.contains("session=")
         if (loggedIn) {
             SiteLoginStatus(
-                title = profile?.displayName?.takeIf { it.isNotBlank() } ?: "Logged in to OnAir",
-                subtitle = profile?.username?.let { "@$it" } ?: "Tap for account & session",
+                title = profile?.displayName?.takeIf { it.isNotBlank() } ?: context.getString(R.string.login_status_logged_in_site, CrossSiteNavigator.siteLabel(SiteType.ONAIR)),
+                subtitle = profile?.username?.let { "@$it" } ?: context.getString(R.string.login_status_tap_account),
                 avatarUrl = profile?.avatarUrl,
                 loggedIn = true,
                 onClick = { it.navigateSafely(OnAirAccountSettingsRoute) },
             )
         } else {
             SiteLoginStatus(
-                title = "Not logged in",
-                subtitle = "Tap to log in or import cookies",
+                title = context.getString(R.string.not_logged_in),
+                subtitle = context.getString(R.string.login_status_tap_login_cookies),
                 avatarUrl = null,
                 loggedIn = false,
                 onClick = { it.navigateSafely(OnAirCookieRoute) },
@@ -122,16 +124,16 @@ fun siteLoginStatus(site: SiteType): SiteLoginStatus = when (site) {
         val loggedIn = runCatching { FapFolderNetwork.hasAuthCookies() }.getOrDefault(false)
         if (loggedIn) {
             SiteLoginStatus(
-                title = "Logged in to FapFolder",
-                subtitle = "Tap to manage session cookies",
+                title = context.getString(R.string.login_status_logged_in_site, CrossSiteNavigator.siteLabel(SiteType.FAPFOLDER)),
+                subtitle = context.getString(R.string.login_status_tap_manage_cookies),
                 avatarUrl = null,
                 loggedIn = true,
                 onClick = { it.navigateSafely(FapFolderCookiesRoute) },
             )
         } else {
             SiteLoginStatus(
-                title = "Not logged in",
-                subtitle = "Tap to sign in to FapFolder",
+                title = context.getString(R.string.not_logged_in),
+                subtitle = context.getString(R.string.login_status_tap_sign_in, CrossSiteNavigator.siteLabel(SiteType.FAPFOLDER)),
                 avatarUrl = null,
                 loggedIn = false,
                 onClick = { it.navigateSafely(FapFolderLoginRoute) },
@@ -140,23 +142,23 @@ fun siteLoginStatus(site: SiteType): SiteLoginStatus = when (site) {
     }
 
     SiteType.MISSAV -> SiteLoginStatus(
-        title = "Not logged in",
-        subtitle = "Login is unavailable for MissAV",
+        title = context.getString(R.string.not_logged_in),
+        subtitle = context.getString(R.string.login_status_unavailable, CrossSiteNavigator.siteLabel(SiteType.MISSAV)),
         avatarUrl = null,
         loggedIn = false,
         onClick = null,
     )
 
     SiteType.HENTAIMAMA -> SiteLoginStatus(
-        title = "Not logged in",
-        subtitle = "Login is unavailable for HentaiMama",
+        title = context.getString(R.string.not_logged_in),
+        subtitle = context.getString(R.string.login_status_unavailable, CrossSiteNavigator.siteLabel(SiteType.HENTAIMAMA)),
         avatarUrl = null,
         loggedIn = false,
         onClick = null,
     )
 
     SiteType.HANIME, SiteType.JAVCHU -> SiteLoginStatus(
-        title = "Not logged in",
+        title = context.getString(R.string.not_logged_in),
         subtitle = "",
         avatarUrl = null,
         loggedIn = false,
@@ -168,11 +170,12 @@ private fun entry(title: String, icon: Int, route: Any) =
     SiteDrawerEntry(title, icon) { nav -> nav.navigateSafely(route) }
 
 /** Site specific entries (everything the old per-site settings hubs offered). */
-fun siteDrawerEntries(site: SiteType, loggedIn: Boolean): List<SiteDrawerEntry> {
-    val home = SiteDrawerEntry("Home", R.drawable.ic_baseline_home_24) {
+fun siteDrawerEntries(context: Context, site: SiteType, loggedIn: Boolean): List<SiteDrawerEntry> {
+    fun str(res: Int) = context.getString(res)
+    val home = SiteDrawerEntry(str(R.string.home_page), R.drawable.ic_baseline_home_24) {
         NavigationManager.navigateToHome()
     }
-    val checkIn = SiteDrawerEntry("Did you cum?", R.drawable.ic_baseline_check_circle_24) {
+    val checkIn = SiteDrawerEntry(str(R.string.has_cum), R.drawable.ic_baseline_check_circle_24) {
         it.navigateSafely(DailyCheckInRoute)
     }
     val history = entryIcon(R.drawable.ic_baseline_history_24)
@@ -180,46 +183,46 @@ fun siteDrawerEntries(site: SiteType, loggedIn: Boolean): List<SiteDrawerEntry> 
         SiteType.MISSAV -> listOf(
             home,
             checkIn,
-            entry("History", history, MissAvHistoryRoute),
-            entry("Home categories", R.drawable.baseline_grid_24, MissAvHomeCategoriesRoute),
-            entry("Host / Mirror", R.drawable.baseline_domain_24, MissAvHostSettingsRoute),
+            entry(str(R.string.watch_history), history, MissAvHistoryRoute),
+            entry(str(R.string.drawer_home_categories), R.drawable.baseline_grid_24, MissAvHomeCategoriesRoute),
+            entry(str(R.string.drawer_host_mirror), R.drawable.baseline_domain_24, MissAvHostSettingsRoute),
         )
 
         SiteType.HENTAIMAMA -> listOf(
             home,
             checkIn,
-            entry("History", history, HentaiMamaHistoryRoute),
-            entry("Playlists", R.drawable.baseline_format_list_bulleted_24, HentaiMamaPlaylistsRoute),
-            entry("Recent episodes", R.drawable.ic_baseline_update_24, HentaiMamaRecentEpisodesRoute),
-            entry("Upcoming", R.drawable.ic_baseline_access_time_24, HentaiMamaUpcomingRoute),
-            entry("Video & card size", R.drawable.ic_video_quilty, HentaiMamaVideoSettingsRoute(target = "all")),
-            entry("Home categories", R.drawable.baseline_grid_24, HentaiMamaHomeSettingsRoute),
+            entry(str(R.string.watch_history), history, HentaiMamaHistoryRoute),
+            entry(str(R.string.play_list), R.drawable.baseline_format_list_bulleted_24, HentaiMamaPlaylistsRoute),
+            entry(str(R.string.drawer_recent_episodes), R.drawable.ic_baseline_update_24, HentaiMamaRecentEpisodesRoute),
+            entry(str(R.string.drawer_upcoming), R.drawable.ic_baseline_access_time_24, HentaiMamaUpcomingRoute),
+            entry(str(R.string.drawer_video_card_size), R.drawable.ic_video_quilty, HentaiMamaVideoSettingsRoute(target = "all")),
+            entry(str(R.string.drawer_home_categories), R.drawable.baseline_grid_24, HentaiMamaHomeSettingsRoute),
         )
 
         SiteType.ONAIR -> buildList {
             add(home)
             add(checkIn)
-            add(entry("History", history, OnAirHistoryRoute))
-            add(entry("Cookies & sign in", R.drawable.ic_baseline_cookie_24, OnAirCookieRoute))
+            add(entry(str(R.string.watch_history), history, OnAirHistoryRoute))
+            add(entry(str(R.string.drawer_cookies_sign_in), R.drawable.ic_baseline_cookie_24, OnAirCookieRoute))
             if (loggedIn) {
-                add(entry("Account, host & session", R.drawable.ic_baseline_person_24, OnAirAccountSettingsRoute))
+                add(entry(str(R.string.drawer_account_session), R.drawable.ic_baseline_person_24, OnAirAccountSettingsRoute))
             }
-            add(entry("Tags", R.drawable.baseline_flag_24, OnAirTagsIndexRoute))
-            add(entry("Announcements", R.drawable.ic_baseline_newspaper_24, OnAirAnnouncementsRoute))
-            add(entry("Chat", R.drawable.baseline_forum_24, OnAirChatRoute))
-            add(entry("Pictures", R.drawable.ic_baseline_image_24, OnAirPicturesRoute))
+            add(entry(str(R.string.drawer_tags), R.drawable.baseline_flag_24, OnAirTagsIndexRoute))
+            add(entry(str(R.string.announcement), R.drawable.ic_baseline_newspaper_24, OnAirAnnouncementsRoute))
+            add(entry(str(R.string.drawer_chat), R.drawable.baseline_forum_24, OnAirChatRoute))
+            add(entry(str(R.string.drawer_pictures), R.drawable.ic_baseline_image_24, OnAirPicturesRoute))
         }
 
         SiteType.FAPFOLDER -> buildList {
             add(home)
             add(checkIn)
-            add(entry("History", history, FapFolderHistoryRoute))
-            add(entry("Cookies", R.drawable.ic_baseline_cookie_24, FapFolderCookiesRoute))
-            if (!loggedIn) add(entry("Sign in", R.drawable.ic_baseline_unlock_24, FapFolderLoginRoute))
-            add(entry("Search", R.drawable.ic_baseline_search_24, FapFolderSearchRoute()))
-            add(entry("Search history", R.drawable.baseline_restore_24, FapFolderSearchHistoryRoute))
-            add(entry("Followed communities", R.drawable.ic_subscribtion, FapFolderFollowedCommunitiesRoute))
-            add(entry("Saved", R.drawable.ic_baseline_favorite_border_24, FapFolderSavedRoute))
+            add(entry(str(R.string.watch_history), history, FapFolderHistoryRoute))
+            add(entry(str(R.string.cookies_label), R.drawable.ic_baseline_cookie_24, FapFolderCookiesRoute))
+            if (!loggedIn) add(entry(str(R.string.login), R.drawable.ic_baseline_unlock_24, FapFolderLoginRoute))
+            add(entry(str(R.string.search), R.drawable.ic_baseline_search_24, FapFolderSearchRoute()))
+            add(entry(str(R.string.drawer_search_history), R.drawable.baseline_restore_24, FapFolderSearchHistoryRoute))
+            add(entry(str(R.string.drawer_followed_communities), R.drawable.ic_subscribtion, FapFolderFollowedCommunitiesRoute))
+            add(entry(str(R.string.saved), R.drawable.ic_baseline_favorite_border_24, FapFolderSavedRoute))
         }
 
         SiteType.HANIME, SiteType.JAVCHU -> emptyList()
@@ -229,11 +232,11 @@ fun siteDrawerEntries(site: SiteType, loggedIn: Boolean): List<SiteDrawerEntry> 
 private fun entryIcon(res: Int): Int = res
 
 /** In-app settings shared by all sites (same ones the Hanime drawer links to). */
-private fun appEntries(): List<SiteDrawerEntry> = listOf(
-    entry("Settings", R.drawable.ic_baseline_settings_24, HomeSettingsRoute),
-    entry("Player settings", R.drawable.baseline_player_24, PlayerSettingsRoute),
-    entry("Network settings", R.drawable.baseline_mobile_data_24, NetworkSettingsRoute),
-    entry("Watch history (all sites)", R.drawable.ic_baseline_watch_later_24, UnifiedHistoryRoute),
+private fun appEntries(context: Context): List<SiteDrawerEntry> = listOf(
+    entry(context.getString(R.string.settings), R.drawable.ic_baseline_settings_24, HomeSettingsRoute),
+    entry(context.getString(R.string.player_settings), R.drawable.baseline_player_24, PlayerSettingsRoute),
+    entry(context.getString(R.string.network_settings), R.drawable.baseline_mobile_data_24, NetworkSettingsRoute),
+    entry(context.getString(R.string.drawer_watch_history_all), R.drawable.ic_baseline_watch_later_24, UnifiedHistoryRoute),
 )
 
 @Composable
@@ -244,9 +247,10 @@ fun SiteDrawerContent(
     onSwitchSiteClick: () -> Unit,
     refreshKey: Any = Unit,
 ) {
-    val status = androidx.compose.runtime.remember(site, refreshKey) { siteLoginStatus(site) }
-    val siteEntries = siteDrawerEntries(site, status.loggedIn)
-    val appEntries = appEntries()
+    val context = LocalContext.current
+    val status = androidx.compose.runtime.remember(site, refreshKey) { siteLoginStatus(context, site) }
+    val siteEntries = siteDrawerEntries(context, site, status.loggedIn)
+    val appEntries = appEntries(context)
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         SiteDrawerHeader(

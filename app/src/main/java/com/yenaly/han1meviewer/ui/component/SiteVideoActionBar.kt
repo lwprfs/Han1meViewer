@@ -107,7 +107,7 @@ fun SiteVideoActionBar(
                     }.onFailure {
                         withContext(Dispatchers.Main) {
                             GlobalToasts.show(
-                                it.message ?: "Check-in failed",
+                                it.message ?: context.getString(R.string.site_checkin_failed),
                                 level = GlobalToasts.ToastLevel.ERROR,
                             )
                         }
@@ -272,7 +272,7 @@ private fun startSiteDownload(
     val path = downloadUrl.substringBefore('?').lowercase()
     if (path.endsWith(".m3u8") || path.contains(".m3u8")) {
         GlobalToasts.show(
-            "This video is an HLS (m3u8) stream and cannot be saved by the file downloader yet.",
+            context.getString(R.string.site_download_hls_unsupported),
             level = GlobalToasts.ToastLevel.WARNING,
         )
         return
@@ -289,7 +289,7 @@ private fun startSiteDownload(
         )
     )
     GlobalToasts.show(
-        context.getString(R.string.download),
+        context.getString(R.string.added_to_download_queue),
         level = GlobalToasts.ToastLevel.SUCCESS,
     )
 }

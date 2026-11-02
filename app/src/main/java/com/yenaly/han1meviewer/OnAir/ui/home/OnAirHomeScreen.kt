@@ -137,7 +137,7 @@ fun OnAirHomeScreen(
                 leading = {
                     SiteBarIconButton(
                         imageVector = Icons.Default.Menu,
-                        contentDescription = "Menu",
+                        contentDescription = stringResource(R.string.open_menu),
                         onClick = onOpenSettings,
                     )
                 },

@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.MissAV.ui.video
 
+import com.yenaly.han1meviewer.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.saveable.rememberSaveable
 import com.yenaly.han1meviewer.ui.component.VideoFitState
 import com.yenaly.han1meviewer.ui.component.fitVideoSurface
@@ -609,7 +611,7 @@ fun MissAvVideoPlayer(
                                 ) {
                                     Icon(
                                         Icons.Filled.AspectRatio,
-                                        contentDescription = "Stretch to fill",
+                                        contentDescription = stringResource(R.string.stretch_to_fill),
                                         tint = if (stretched) MaterialTheme.colorScheme.primary
                                         else Color.White,
                                     )

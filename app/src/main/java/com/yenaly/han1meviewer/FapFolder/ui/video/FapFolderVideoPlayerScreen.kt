@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.FapFolder.ui.video
 
+import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.saveable.rememberSaveable
 import android.widget.FrameLayout
 import com.yenaly.han1meviewer.ui.component.VideoFitState
@@ -1169,7 +1170,7 @@ fun FapFolderVideoPlayerScreen(
                                 IconButton(onClick = { stretched = !stretched }) {
                                     Icon(
                                         imageVector = Icons.Filled.AspectRatio,
-                                        contentDescription = "Stretch to fill",
+                                        contentDescription = stringResource(R.string.stretch_to_fill),
                                         tint = if (stretched) MaterialTheme.colorScheme.primary
                                         else Color.White,
                                     )
