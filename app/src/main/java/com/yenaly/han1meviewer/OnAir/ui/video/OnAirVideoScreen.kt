@@ -3,7 +3,17 @@ package com.yenaly.han1meviewer.OnAir.ui.video
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
 import com.yenaly.han1meviewer.ui.component.SiteErrorContent
+import android.app.Activity
+import android.content.pm.ActivityInfo
 import androidx.activity.compose.BackHandler
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.media3.exoplayer.ExoPlayer
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.filled.StarBorder
@@ -76,6 +86,31 @@ fun OnAirVideoScreen(
     val showResumeBanner by viewModel.showResumeBanner.collectAsStateWithLifecycle()
     val resumePosition by viewModel.resumePosition.collectAsStateWithLifecycle()
 
+    // One ExoPlayer for the whole screen so it survives the inline <-> fullscreen switch.
+    val context = LocalContext.current
+    val exoPlayer = remember { ExoPlayer.Builder(context).build() }
+    DisposableEffect(exoPlayer) {
+        onDispose { exoPlayer.release() }
+    }
+
+    // Landscape while fullscreen, restore afterwards.
+    DisposableEffect(playerState.isFullscreen) {
+        val activity = context as? Activity
+        if (playerState.isFullscreen) {
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        }
+        onDispose {
+            if (playerState.isFullscreen) {
+                activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            }
+        }
+    }
+
+    LaunchedEffect(videoId) {
+        exoPlayer.stop()
+        exoPlayer.clearMediaItems()
+    }
+
     LaunchedEffect(videoId, preferredQuality) {
         viewModel.loadVideo(videoId, preferredQuality)
     }
@@ -128,17 +163,36 @@ fun OnAirVideoScreen(
                 decorFitsSystemWindows = false,
             ),
         ) {
-            val cover = (state as? VideoLoadingState.Success)?.info
-                ?.recommendedVideos?.firstOrNull()?.thumbUrl
+            val view = LocalView.current
+            DisposableEffect(view) {
+                val window = (view.parent as? DialogWindowProvider)?.window
+                if (window != null) {
+                    WindowCompat.setDecorFitsSystemWindows(window, false)
+                    val controller = WindowInsetsControllerCompat(window, view)
+                    controller.systemBarsBehavior =
+                        WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                    controller.hide(WindowInsetsCompat.Type.systemBars())
+                }
+                onDispose { }
+            }
+            val info = (state as? VideoLoadingState.Success)?.info
             OnAirVideoPlayer(
                 state = playerState,
                 isFullscreen = true,
+                player = exoPlayer,
+                title = info?.title.orEmpty(),
                 onPlayPause = playPauseToggle,
-                onSeek = { viewModel.onPositionUpdate(it, playerState.duration) },
+                onSeek = viewModel::seekTo,
+                onSeekBy = viewModel::seekBy,
+                onSeekConsumed = viewModel::consumeSeek,
                 onPositionUpdate = viewModel::onPositionUpdate,
                 onQualityChange = viewModel::selectQuality,
                 onSpeedChange = viewModel::setSpeed,
                 onToggleFullscreen = { viewModel.setFullscreen(false) },
+                onToggleMute = viewModel::toggleMute,
+                onToggleLoop = viewModel::toggleLoop,
+                onToggleLock = viewModel::toggleLock,
+                onEnded = viewModel::onPlaybackEnded,
                 onRetryQuality = { viewModel.selectQuality(it) },
                 onStreamUnavailable = viewModel::markStreamUnavailable,
                 onTokenExpired = {
@@ -147,7 +201,7 @@ fun OnAirVideoScreen(
                         "Session expired — sign in again to refresh stream URLs.",
                     )
                 },
-                coverUrl = cover,
+                coverUrl = info?.recommendedVideos?.firstOrNull()?.thumbUrl,
                 modifier = Modifier.fillMaxSize(),
             )
         }
@@ -203,12 +257,20 @@ fun OnAirVideoScreen(
                         OnAirVideoPlayer(
                             state = playerState,
                             isFullscreen = false,
+                            player = exoPlayer,
+                            title = detail.title,
                             onPlayPause = playPauseToggle,
-                            onSeek = { viewModel.onPositionUpdate(it, playerState.duration) },
+                            onSeek = viewModel::seekTo,
+                            onSeekBy = viewModel::seekBy,
+                            onSeekConsumed = viewModel::consumeSeek,
                             onPositionUpdate = viewModel::onPositionUpdate,
                             onQualityChange = viewModel::selectQuality,
                             onSpeedChange = viewModel::setSpeed,
                             onToggleFullscreen = { viewModel.setFullscreen(true) },
+                            onToggleMute = viewModel::toggleMute,
+                            onToggleLoop = viewModel::toggleLoop,
+                            onToggleLock = viewModel::toggleLock,
+                            onEnded = viewModel::onPlaybackEnded,
                             onRetryQuality = { viewModel.selectQuality(it) },
                             onStreamUnavailable = viewModel::markStreamUnavailable,
                             onTokenExpired = {

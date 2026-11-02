@@ -33,6 +33,17 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.Forward10
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.RepeatOne
+import androidx.compose.material.icons.filled.Replay10
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.AspectRatio
@@ -92,28 +103,45 @@ import kotlinx.coroutines.isActive
 fun OnAirVideoPlayer(
     state: OnAirPlayerState,
     isFullscreen: Boolean,
+    player: ExoPlayer,
     onPlayPause: () -> Unit,
     onSeek: (Long) -> Unit,
+    onSeekBy: (Long) -> Unit,
+    onSeekConsumed: () -> Unit,
     onPositionUpdate: (Long, Long) -> Unit,
     onQualityChange: (String) -> Unit,
     onSpeedChange: (Float) -> Unit,
     onToggleFullscreen: () -> Unit,
+    onToggleMute: () -> Unit,
+    onToggleLoop: () -> Unit,
+    onToggleLock: () -> Unit,
+    onEnded: () -> Unit,
     onRetryQuality: (String) -> Unit = { onQualityChange(it) },
-    onPlayerReady: (ExoPlayer) -> Unit = {},
     onTokenExpired: (() -> Unit)? = null,
     onStreamUnavailable: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier,
     coverUrl: String? = null,
+    title: String = "",
 ) {
     val context = LocalContext.current
-    var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
-    var currentUrl by remember { mutableStateOf<String?>(null) }
     var showControls by remember { mutableStateOf(true) }
-    var playbackState by remember { mutableIntStateOf(Player.STATE_IDLE) }
-    var hasRenderedFirstFrame by remember { mutableStateOf(false) }
+    var interaction by remember { mutableIntStateOf(0) }
+    var playbackState by remember(player) { mutableIntStateOf(player.playbackState) }
+    var hasRenderedFirstFrame by remember(player) {
+        mutableStateOf(player.playbackState == Player.STATE_READY)
+    }
     var rebuffering by remember { mutableStateOf(false) }
     var showQualityMenu by remember { mutableStateOf(false) }
     var showSpeedMenu by remember { mutableStateOf(false) }
+    var scrubbing by remember { mutableStateOf(false) }
+    var scrubFraction by remember { mutableStateOf(0f) }
+    var seekHint by remember { mutableStateOf<String?>(null) }
+
+    val currentState by rememberUpdatedState(state)
+    val currentOnPositionUpdate by rememberUpdatedState(onPositionUpdate)
+    val currentOnEnded by rememberUpdatedState(onEnded)
+    val currentOnTokenExpired by rememberUpdatedState(onTokenExpired)
+    val currentOnStreamUnavailable by rememberUpdatedState(onStreamUnavailable)
 
     val isExoReady = playbackState == Player.STATE_READY
     val url = state.activeUrl
@@ -125,16 +153,47 @@ fun OnAirVideoPlayer(
     val activeStream = state.activeStream
     val streamError = activeStream?.state == StreamState.Error
     val noStream = url.isNullOrBlank() && !state.isSwitchLoading
+    val menuOpen = showQualityMenu || showSpeedMenu
 
-    DisposableEffect(Unit) {
-        onDispose {
-            exoPlayer?.release()
-            exoPlayer = null
+    fun bump() { interaction++ }
+
+    // Player listener (the ExoPlayer itself is hoisted, so it survives fullscreen toggles).
+    DisposableEffect(player) {
+        val listener = object : Player.Listener {
+            override fun onPlaybackStateChanged(newState: Int) {
+                playbackState = newState
+                rebuffering = newState == Player.STATE_BUFFERING && hasRenderedFirstFrame
+                currentOnPositionUpdate(player.currentPosition, player.duration)
+                if (newState == Player.STATE_ENDED) currentOnEnded()
+            }
+
+            override fun onRenderedFirstFrame() {
+                hasRenderedFirstFrame = true
+                rebuffering = false
+            }
+
+            override fun onPlayerError(error: PlaybackException) {
+                val code = error.errorCode
+                val msg = error.cause?.message.orEmpty()
+                val whole = "${error.errorCodeName} $msg".lowercase()
+                val isForbidden = whole.contains("403") ||
+                        whole.contains("401") ||
+                        whole.contains("unauthorized") ||
+                        whole.contains("forbidden")
+                val quality = currentState.currentQuality
+                if (isForbidden) currentOnTokenExpired?.invoke()
+                else currentOnStreamUnavailable?.invoke(quality)
+            }
         }
+        player.addListener(listener)
+        onDispose { player.removeListener(listener) }
     }
 
+    // Load / switch media.
     LaunchedEffect(url) {
         if (url.isNullOrBlank()) return@LaunchedEffect
+        val loaded = player.currentMediaItem?.localConfiguration?.uri?.toString()
+        if (loaded == url) return@LaunchedEffect
 
         val base = OnAirNetwork.baseUrl
         val cookieHeader = OnAirCookieManager.cookiesRaw
@@ -144,9 +203,7 @@ fun OnAirVideoPlayer(
             "User-Agent" to "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 " +
                     "(KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36",
         )
-        if (cookieHeader.isNotBlank()) {
-            mediaHeaders["Cookie"] = cookieHeader
-        }
+        if (cookieHeader.isNotBlank()) mediaHeaders["Cookie"] = cookieHeader
 
         val httpFactory = DefaultHttpDataSource.Factory()
             .setDefaultRequestProperties(mediaHeaders)
@@ -159,104 +216,63 @@ fun OnAirVideoPlayer(
             ProgressiveMediaSource.Factory(dsFactory).createMediaSource(mediaItem)
         }
 
-        val existing = exoPlayer
-        if (existing == null) {
-            val player = ExoPlayer.Builder(context).build()
-            player.setMediaSource(mediaSource)
-            player.prepare()
-            player.setPlaybackSpeed(state.speed)
-            player.playWhenReady = false
-            player.addListener(object : Player.Listener {
-                override fun onPlaybackStateChanged(newState: Int) {
-                    playbackState = newState
-                    rebuffering = newState == Player.STATE_BUFFERING && hasRenderedFirstFrame
-                    onPositionUpdate(player.currentPosition, player.duration)
-                }
-
-                override fun onRenderedFirstFrame() {
-                    hasRenderedFirstFrame = true
-                    rebuffering = false
-                }
-
-                override fun onIsPlayingChanged(isPlaying: Boolean) {
-                    showControls = true
-                }
-
-                override fun onPlayerError(error: PlaybackException) {
-                    val code = error.errorCode
-                    val msg = error.cause?.message.orEmpty()
-                    val whole = "${error.errorCodeName} $msg".lowercase()
-
-                    val isForbidden = whole.contains("403") ||
-                            whole.contains("401") ||
-                            whole.contains("unauthorized") ||
-                            whole.contains("forbidden")
-
-                    val isUnsupported =
-                        code == PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED ||
-                                code == PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED ||
-                                code == PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED ||
-                                code == PlaybackException.ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED ||
-                                whole.contains("extractor") ||
-                                whole.contains("could read the stream") ||
-                                whole.contains("unrecognized")
-
-                    when {
-                        isForbidden -> onTokenExpired?.invoke()
-                        isUnsupported -> onStreamUnavailable?.invoke(state.currentQuality)
-                        else -> onStreamUnavailable?.invoke(state.currentQuality)
-                    }
-                }
-            })
-            exoPlayer = player
-            currentUrl = url
-            onPlayerReady(player)
-        } else if (currentUrl != url) {
-            val wasPlaying = existing.playWhenReady
-            val pos = existing.currentPosition
-            existing.stop()
-            existing.setMediaSource(mediaSource)
-            existing.prepare()
-            if (pos > 0) existing.seekTo(pos)
-            existing.playWhenReady = wasPlaying
-            currentUrl = url
-            hasRenderedFirstFrame = false
-            rebuffering = false
-        }
+        val startPos = if (loaded != null) player.currentPosition else state.position
+        hasRenderedFirstFrame = false
+        rebuffering = false
+        player.setMediaSource(mediaSource, startPos.coerceAtLeast(0L))
+        player.prepare()
+        player.setPlaybackSpeed(state.speed)
+        player.playWhenReady = state.playbackIntent == PlaybackIntent.Playing
     }
 
-    LaunchedEffect(state.playbackIntent, state.activeUrl, exoPlayer) {
-        val player = exoPlayer ?: return@LaunchedEffect
+    LaunchedEffect(state.playbackIntent, state.activeUrl, state.isSwitchLoading) {
         val shouldPlay = state.playbackIntent == PlaybackIntent.Playing &&
                 !state.isSwitchLoading &&
                 state.activeUrl != null
-        if (player.playWhenReady != shouldPlay) {
-            player.playWhenReady = shouldPlay
+        if (player.playWhenReady != shouldPlay) player.playWhenReady = shouldPlay
+    }
+
+    LaunchedEffect(state.speed) { player.setPlaybackSpeed(state.speed) }
+    LaunchedEffect(state.isMuted) { player.volume = if (state.isMuted) 0f else 1f }
+    LaunchedEffect(state.isLooping) {
+        player.repeatMode = if (state.isLooping) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+    }
+
+    // Real seeking (previously the slider only updated the stored position).
+    LaunchedEffect(state.pendingSeekMs) {
+        val target = state.pendingSeekMs
+        if (target >= 0) {
+            player.seekTo(target)
+            onSeekConsumed()
         }
     }
 
-    LaunchedEffect(state.speed, exoPlayer) {
-        exoPlayer?.setPlaybackSpeed(state.speed)
-    }
-
-    LaunchedEffect(exoPlayer, isExoReady, state.playbackIntent) {
-        val player = exoPlayer ?: return@LaunchedEffect
+    LaunchedEffect(player, isExoReady, state.playbackIntent) {
         if (state.playbackIntent != PlaybackIntent.Playing) {
             onPositionUpdate(player.currentPosition, player.duration)
             return@LaunchedEffect
         }
         while (isActive) {
             delay(500)
-            val pos = player.currentPosition
-            val dur = player.duration
-            onPositionUpdate(pos, if (dur > 0) dur else 0L)
+            if (!scrubbing) {
+                val dur = player.duration
+                onPositionUpdate(player.currentPosition, if (dur > 0) dur else 0L)
+            }
         }
     }
 
-    LaunchedEffect(showControls, state.playbackIntent) {
-        if (showControls && state.playbackIntent == PlaybackIntent.Playing) {
-            delay(3000)
+    // Auto-hide controls; any interaction restarts the timer.
+    LaunchedEffect(showControls, state.playbackIntent, interaction, menuOpen, scrubbing) {
+        if (showControls && state.playbackIntent == PlaybackIntent.Playing && !menuOpen && !scrubbing) {
+            delay(3500)
             showControls = false
+        }
+    }
+
+    LaunchedEffect(seekHint) {
+        if (seekHint != null) {
+            delay(700)
+            seekHint = null
         }
     }
 
@@ -265,9 +281,8 @@ fun OnAirVideoPlayer(
     fitState.stretched = stretched && isFullscreen
     var fitFrame by remember { mutableStateOf<FrameLayout?>(null) }
 
-    DisposableEffect(exoPlayer) {
-        val exo = exoPlayer
-        val listener = object : androidx.media3.common.Player.Listener {
+    DisposableEffect(player) {
+        val listener = object : Player.Listener {
             override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
                 fitState.updateFrom(videoSize)
                 fitFrame?.let { frame ->
@@ -275,9 +290,15 @@ fun OnAirVideoPlayer(
                 }
             }
         }
-        exo?.videoSize?.let { fitState.updateFrom(it) }
-        exo?.addListener(listener)
-        onDispose { exo?.removeListener(listener) }
+        fitState.updateFrom(player.videoSize)
+        player.addListener(listener)
+        onDispose { player.removeListener(listener) }
+    }
+
+    val handlePlayPause: () -> Unit = {
+        if (player.playbackState == Player.STATE_ENDED) player.seekTo(0L)
+        bump()
+        onPlayPause()
     }
 
     val containerModifier = if (isFullscreen) {
@@ -294,7 +315,7 @@ fun OnAirVideoPlayer(
             .clipToBounds(),
         contentAlignment = Alignment.Center,
     ) {
-        if (exoPlayer != null && !url.isNullOrBlank()) {
+        if (!url.isNullOrBlank()) {
             AndroidView(
                 factory = { ctx ->
                     FrameLayout(ctx).apply {
@@ -306,8 +327,7 @@ fun OnAirVideoPlayer(
                 },
                 modifier = Modifier.fillMaxSize(),
                 update = { view ->
-                    val player = exoPlayer
-                    if (player != null && view.childCount == 0) {
+                    if (view.childCount == 0) {
                         val surfaceView = android.view.SurfaceView(view.context).apply {
                             layoutParams = ViewGroup.LayoutParams(
                                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -316,29 +336,55 @@ fun OnAirVideoPlayer(
                         }
                         view.addView(surfaceView)
                         player.setVideoSurfaceView(surfaceView)
-                        (view as? FrameLayout)?.let {
-                            fitFrame = it
-                            installVideoFit(it, surfaceView, fitState)
-                        }
+                        fitFrame = view
+                        installVideoFit(view, surfaceView, fitState)
                     }
                     fitState.stretched = stretched && isFullscreen
                     view.getChildAt(0)?.let { fitVideoSurface(view, it, fitState) }
                 },
                 onRelease = { view ->
-                    exoPlayer?.setVideoSurfaceView(null)
+                    (view.getChildAt(0) as? android.view.SurfaceView)?.let {
+                        player.clearVideoSurfaceView(it)
+                    }
                     view.removeAllViews()
                 },
             )
 
+            // Tap = toggle controls, double-tap left/right = seek -/+10s.
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .pointerInput(Unit) {
-                        detectTapGestures(onTap = { showControls = !showControls })
+                    .pointerInput(state.isLocked) {
+                        detectTapGestures(
+                            onTap = { showControls = !showControls; bump() },
+                            onDoubleTap = { offset ->
+                                if (!state.isLocked && state.playbackIntent != PlaybackIntent.NotStarted) {
+                                    if (offset.x < size.width / 2f) {
+                                        onSeekBy(-SKIP_MS)
+                                        seekHint = "« 10s"
+                                    } else {
+                                        onSeekBy(SKIP_MS)
+                                        seekHint = "10s »"
+                                    }
+                                }
+                            },
+                        )
                     },
             )
 
-            if (isBuffering) {
+            seekHint?.let { hint ->
+                Text(
+                    text = hint,
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(24.dp))
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
+
+            if (isBuffering && !state.isSwitchLoading) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -403,41 +449,104 @@ fun OnAirVideoPlayer(
                 }
             }
 
+            // Locked: only an unlock button is shown.
             AnimatedVisibility(
-                visible = showControls && !isBuffering && !state.isSwitchLoading &&
+                visible = state.isLocked && showControls &&
+                        state.playbackIntent != PlaybackIntent.NotStarted,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.CenterStart),
+            ) {
+                IconButton(
+                    onClick = { onToggleLock(); bump() },
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .background(Color.Black.copy(alpha = 0.55f), CircleShape),
+                ) {
+                    Icon(Icons.Filled.Lock, contentDescription = "Unlock controls", tint = Color.White)
+                }
+            }
+
+            AnimatedVisibility(
+                visible = showControls && !state.isLocked && !state.isSwitchLoading &&
                         !streamError &&
                         state.playbackIntent != PlaybackIntent.NotStarted,
                 enter = fadeIn(),
                 exit = fadeOut(),
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
-                    IconButton(
-                        onClick = onPlayPause,
-                        modifier = Modifier
-                            .size(if (isFullscreen) 80.dp else 64.dp)
-                            .align(Alignment.Center)
-                            .background(Color.Black.copy(alpha = 0.55f), CircleShape),
+                    // Center: -10s / play-pause / +10s
+                    Row(
+                        modifier = Modifier.align(Alignment.Center),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(if (isFullscreen) 32.dp else 20.dp),
                     ) {
-                        Icon(
-                            imageVector = if (state.playbackIntent == PlaybackIntent.Playing) {
-                                Icons.Filled.Pause
-                            } else {
-                                Icons.Filled.PlayArrow
-                            },
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(if (isFullscreen) 48.dp else 40.dp),
-                        )
+                        IconButton(
+                            onClick = { bump(); onSeekBy(-SKIP_MS) },
+                            modifier = Modifier
+                                .size(if (isFullscreen) 56.dp else 44.dp)
+                                .background(Color.Black.copy(alpha = 0.45f), CircleShape),
+                        ) {
+                            Icon(Icons.Filled.Replay10, "Back 10 seconds", tint = Color.White)
+                        }
+                        IconButton(
+                            onClick = handlePlayPause,
+                            modifier = Modifier
+                                .size(if (isFullscreen) 80.dp else 56.dp)
+                                .background(Color.Black.copy(alpha = 0.55f), CircleShape),
+                        ) {
+                            Icon(
+                                imageVector = if (state.playbackIntent == PlaybackIntent.Playing) {
+                                    Icons.Filled.Pause
+                                } else {
+                                    Icons.Filled.PlayArrow
+                                },
+                                contentDescription = "Play / pause",
+                                tint = Color.White,
+                                modifier = Modifier.size(if (isFullscreen) 48.dp else 36.dp),
+                            )
+                        }
+                        IconButton(
+                            onClick = { bump(); onSeekBy(SKIP_MS) },
+                            modifier = Modifier
+                                .size(if (isFullscreen) 56.dp else 44.dp)
+                                .background(Color.Black.copy(alpha = 0.45f), CircleShape),
+                        ) {
+                            Icon(Icons.Filled.Forward10, "Forward 10 seconds", tint = Color.White)
+                        }
                     }
 
+                    // Top bar
                     Row(
                         modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            .align(Alignment.TopCenter)
+                            .fillMaxWidth()
+                            .then(if (isFullscreen) Modifier.statusBarsPadding() else Modifier)
+                            .background(Color.Black.copy(alpha = 0.35f))
+                            .padding(horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        if (isFullscreen) {
+                            IconButton(onClick = onToggleFullscreen) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Exit fullscreen",
+                                    tint = Color.White,
+                                )
+                            }
+                        }
+                        Text(
+                            text = if (isFullscreen) title else "",
+                            color = Color.White,
+                            style = MaterialTheme.typography.titleSmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                        if (!isFullscreen) Spacer(Modifier.weight(1f))
+
                         Box {
-                            IconButton(onClick = { showQualityMenu = true }) {
+                            IconButton(onClick = { showQualityMenu = true; bump() }) {
                                 Text(
                                     text = state.currentQuality.ifBlank { "Quality" },
                                     color = Color.White,
@@ -496,7 +605,7 @@ fun OnAirVideoPlayer(
                             }
                         }
                         Box {
-                            IconButton(onClick = { showSpeedMenu = true }) {
+                            IconButton(onClick = { showSpeedMenu = true; bump() }) {
                                 Text(
                                     text = "${state.speed}x",
                                     color = Color.White,
@@ -509,7 +618,23 @@ fun OnAirVideoPlayer(
                             ) {
                                 state.availableSpeeds.forEach { s ->
                                     DropdownMenuItem(
-                                        text = { Text("${s}x") },
+                                        text = {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            ) {
+                                                if (s == state.speed) {
+                                                    Icon(
+                                                        Icons.Filled.Check,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(16.dp),
+                                                    )
+                                                } else {
+                                                    Spacer(Modifier.width(16.dp))
+                                                }
+                                                Text("${s}x")
+                                            }
+                                        },
                                         onClick = {
                                             onSpeedChange(s)
                                             showSpeedMenu = false
@@ -518,8 +643,25 @@ fun OnAirVideoPlayer(
                                 }
                             }
                         }
+                        IconButton(onClick = { onToggleMute(); bump() }) {
+                            Icon(
+                                imageVector = if (state.isMuted) Icons.AutoMirrored.Filled.VolumeOff
+                                else Icons.AutoMirrored.Filled.VolumeUp,
+                                contentDescription = if (state.isMuted) "Unmute" else "Mute",
+                                tint = Color.White,
+                            )
+                        }
+                        IconButton(onClick = { onToggleLoop(); bump() }) {
+                            Icon(
+                                imageVector = if (state.isLooping) Icons.Filled.RepeatOne
+                                else Icons.Filled.Repeat,
+                                contentDescription = "Loop",
+                                tint = if (state.isLooping) MaterialTheme.colorScheme.primary
+                                else Color.White,
+                            )
+                        }
                         if (isFullscreen) {
-                            IconButton(onClick = { stretched = !stretched }) {
+                            IconButton(onClick = { stretched = !stretched; bump() }) {
                                 Icon(
                                     imageVector = Icons.Filled.AspectRatio,
                                     contentDescription = stringResource(R.string.stretch_to_fill),
@@ -527,46 +669,61 @@ fun OnAirVideoPlayer(
                                     else Color.White,
                                 )
                             }
-                        }
-                        IconButton(onClick = onToggleFullscreen) {
-                            Icon(
-                                imageVector = if (isFullscreen) {
-                                    Icons.Filled.FullscreenExit
-                                } else {
-                                    Icons.Filled.Fullscreen
-                                },
-                                contentDescription = "Fullscreen",
-                                tint = Color.White,
-                            )
+                            IconButton(onClick = { onToggleLock(); bump() }) {
+                                Icon(
+                                    Icons.Filled.LockOpen,
+                                    contentDescription = "Lock controls",
+                                    tint = Color.White,
+                                )
+                            }
+                        } else {
+                            IconButton(onClick = onToggleFullscreen) {
+                                Icon(
+                                    Icons.Filled.Fullscreen,
+                                    contentDescription = "Fullscreen",
+                                    tint = Color.White,
+                                )
+                            }
                         }
                     }
 
+                    // Bottom bar: time + seek slider
                     Column(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .fillMaxWidth()
                             .then(if (isFullscreen) Modifier.navigationBarsPadding() else Modifier)
                             .background(Color.Black.copy(alpha = 0.55f))
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                            .padding(horizontal = 12.dp, vertical = 4.dp),
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
+                            val shownPosition = if (scrubbing && state.duration > 0) {
+                                (scrubFraction * state.duration).toLong()
+                            } else state.position
                             Text(
-                                text = formatTime(state.position),
+                                text = formatTime(shownPosition),
                                 color = Color.White,
                                 style = MaterialTheme.typography.labelSmall,
                                 modifier = Modifier.width(52.dp),
                             )
                             Slider(
-                                value = if (state.duration > 0) {
-                                    state.position.toFloat() / state.duration
-                                } else {
-                                    0f
+                                value = if (scrubbing) scrubFraction
+                                else if (state.duration > 0) {
+                                    (state.position.toFloat() / state.duration).coerceIn(0f, 1f)
+                                } else 0f,
+                                onValueChange = { v ->
+                                    scrubbing = true
+                                    scrubFraction = v
                                 },
-                                onValueChange = { v -> onSeek((v * state.duration).toLong()) },
+                                onValueChangeFinished = {
+                                    if (state.duration > 0) onSeek((scrubFraction * state.duration).toLong())
+                                    scrubbing = false
+                                    bump()
+                                },
                                 modifier = Modifier.weight(1f),
                                 colors = SliderDefaults.colors(
                                     thumbColor = Color.White,
@@ -659,6 +816,8 @@ fun OnAirVideoPlayer(
         }
     }
 }
+
+private const val SKIP_MS = 10_000L
 
 private val QUALITY_ORDER = listOf("original", "720", "480", "360", "240", "144")
 

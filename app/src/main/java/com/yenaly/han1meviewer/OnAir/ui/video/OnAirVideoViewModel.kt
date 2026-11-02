@@ -35,7 +35,7 @@ data class OnAirPlayerState(
     val currentQuality: String = "",
     val pendingQuality: String? = null,
     val streamsByQuality: Map<String, QualityStream> = emptyMap(),
-    val availableSpeeds: List<Float> = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f),
+    val availableSpeeds: List<Float> = listOf(0.25f, 0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f, 2.5f, 3.0f),
     val speed: Float = 1.0f,
     val isPlaying: Boolean = false,
     val isReady: Boolean = false,
@@ -46,6 +46,10 @@ data class OnAirPlayerState(
     val hasError: Boolean = false,
     val errorMessage: String? = null,
     val playbackIntent: PlaybackIntent = PlaybackIntent.NotStarted,
+    val pendingSeekMs: Long = -1L,
+    val isMuted: Boolean = false,
+    val isLooping: Boolean = false,
+    val isLocked: Boolean = false,
 ) {
     val activeStream: QualityStream? get() = streamsByQuality[currentQuality]
     val activeUrl: String? get() = activeStream?.url?.takeIf { it.isNotBlank() }
@@ -317,13 +321,13 @@ class OnAirVideoViewModel(application: Application) : AndroidViewModel(applicati
 
     fun applyResume() {
         val pos = _resumePosition.value
-        if (pos > 0) _playerState.update { it.copy(position = pos) }
+        if (pos > 0) _playerState.update { it.copy(position = pos, pendingSeekMs = pos) }
         _showResumeBanner.value = false
     }
 
     fun startFromBeginning() {
         _resumePosition.value = 0L
-        _playerState.update { it.copy(position = 0L) }
+        _playerState.update { it.copy(position = 0L, pendingSeekMs = 0L) }
         _showResumeBanner.value = false
     }
 
@@ -525,7 +529,27 @@ class OnAirVideoViewModel(application: Application) : AndroidViewModel(applicati
     fun currentQualityLabel(): String = _playerState.value.currentQuality
 
     fun setSpeed(speed: Float) { _playerState.update { it.copy(speed = speed) } }
-    fun setFullscreen(fullscreen: Boolean) { _playerState.update { it.copy(isFullscreen = fullscreen) } }
+    fun setFullscreen(fullscreen: Boolean) {
+        _playerState.update { it.copy(isFullscreen = fullscreen, isLocked = false) }
+    }
+
+    fun seekTo(positionMs: Long) {
+        val max = _playerState.value.duration
+        val target = if (max > 0) positionMs.coerceIn(0L, max) else positionMs.coerceAtLeast(0L)
+        _playerState.update { it.copy(position = target, pendingSeekMs = target) }
+    }
+
+    fun seekBy(deltaMs: Long) = seekTo(_playerState.value.position + deltaMs)
+
+    fun consumeSeek() { _playerState.update { it.copy(pendingSeekMs = -1L) } }
+
+    fun toggleMute() { _playerState.update { it.copy(isMuted = !it.isMuted) } }
+    fun toggleLoop() { _playerState.update { it.copy(isLooping = !it.isLooping) } }
+    fun toggleLock() { _playerState.update { it.copy(isLocked = !it.isLocked) } }
+
+    fun onPlaybackEnded() {
+        _playerState.update { it.copy(playbackIntent = PlaybackIntent.Paused, isPlaying = false) }
+    }
 
     fun onPositionUpdate(position: Long, duration: Long) {
         _playerState.update {
