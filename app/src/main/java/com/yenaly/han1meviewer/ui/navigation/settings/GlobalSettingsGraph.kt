@@ -12,6 +12,11 @@ import com.yenaly.han1meviewer.ui.activity.MainActivity
 import com.yenaly.han1meviewer.ui.navigation.PendingVideoOpen
 import com.yenaly.han1meviewer.ui.navigation.main.DailyCheckInRoute
 import com.yenaly.han1meviewer.ui.navigation.main.DailyCheckInRouteScreen
+import com.yenaly.han1meviewer.ui.navigation.main.DownloadRoute
+import com.yenaly.han1meviewer.ui.navigation.main.DownloadRouteScreen
+import com.yenaly.han1meviewer.ui.navigation.main.VideoRoute
+import com.yenaly.han1meviewer.ui.navigation.main.VideoRouteScreen
+import androidx.navigation.toRoute
 import com.yenaly.han1meviewer.ui.navigation.navigateSafely
 import com.yenaly.han1meviewer.ui.screen.history.UnifiedHistoryScreen
 import kotlinx.serialization.Serializable
@@ -123,6 +128,25 @@ fun NavGraphBuilder.registerGlobalSettingsRoutes(
             onNavigateToVideo = openHanimeVideo,
         )
     }
+
+    // Download page available from every site's drawer.
+    composable<DownloadRoute> {
+        DownloadRouteScreen(
+            onBack = { navController.popBackStack() },
+            onNavigateToVideo = openHanimeVideo,
+            onNavigateToLocalVideo = { code, uri ->
+                navController.navigateSafely(VideoRoute(code, uri))
+            },
+        )
+    }
+
+    // Local (offline) playback of downloaded videos from inside a site graph.
+    composable<VideoRoute> {
+        VideoRouteScreen(
+            activity = activity,
+            route = it.toRoute(),
+        )
+    }
 }
 
 fun NavGraphBuilder.registerUnifiedHistoryRoute(
@@ -136,3 +160,5 @@ fun NavGraphBuilder.registerUnifiedHistoryRoute(
         )
     }
 }
+
+

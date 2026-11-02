@@ -53,6 +53,9 @@ object FapFolderSettingsRoute
 object FapFolderCookiesRoute
 
 @Serializable
+object FapFolderImageFolderRoute
+
+@Serializable
 object FapFolderLoginRoute
 
 @Serializable
@@ -75,3 +78,5 @@ object FapFolderFollowedCommunitiesRoute
 
 @Serializable
 object FapFolderSavedRoute
+
+

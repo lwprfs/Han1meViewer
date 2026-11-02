@@ -136,8 +136,20 @@ object HCacheManager {
                         else -> null
                     }
                 }.getOrNull()
+                // Downloads from other sites (MissAV, OnAir, ...) never write the Hanime
+                // cache-info file, which used to emit null here -> "video might not exist".
+                // Fall back to the data stored in the download entity itself.
+                val base = info ?: HanimeVideo(
+                    title = entity.title,
+                    coverUrl = entity.coverUri ?: entity.coverUrl,
+                    chineseTitle = null,
+                    introduction = null,
+                    uploadTime = null,
+                    videoUrls = linkedMapOf(),
+                    tags = emptyList(),
+                )
                 emit(
-                    info?.copy(
+                    base.copy(
                         videoUrls = linkedMapOf(
                             entity.quality to HanimeLink(
                                 entity.videoUri, HFileManager.DEF_VIDEO_TYPE
@@ -152,3 +164,5 @@ object HCacheManager {
         }.flowOn(Dispatchers.IO)
     }
 }
+
+

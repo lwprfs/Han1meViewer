@@ -6,6 +6,11 @@ import com.yenaly.han1meviewer.ui.component.SiteErrorContent
 import android.app.Activity
 import android.content.pm.ActivityInfo
 import androidx.activity.compose.BackHandler
+import android.content.Context
+import android.content.ContextWrapper
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -95,7 +100,7 @@ fun OnAirVideoScreen(
 
     // Landscape while fullscreen, restore afterwards.
     DisposableEffect(playerState.isFullscreen) {
-        val activity = context as? Activity
+        val activity = context.findActivity()
         if (playerState.isFullscreen) {
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         }
@@ -103,6 +108,25 @@ fun OnAirVideoScreen(
             if (playerState.isFullscreen) {
                 activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
             }
+        }
+    }
+
+    // Pause + save progress when the app goes to the background (previously audio kept playing),
+    // and save when leaving the screen (ViewModel.onCleared cannot launch coroutines).
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) {
+                if (viewModel.playerState.value.playbackIntent == PlaybackIntent.Playing) {
+                    viewModel.pausePlayback()
+                }
+                viewModel.persistProgress()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            viewModel.persistProgress()
         }
     }
 
@@ -116,7 +140,7 @@ fun OnAirVideoScreen(
     }
 
     LaunchedEffect(playerState.playbackIntent) {
-        if (playerState.playbackIntent == PlaybackIntent.Playing) {
+        if (playerState.playbackIntent != PlaybackIntent.NotStarted) {
             viewModel.persistProgress()
             viewModel.markCompletedIfNeeded()
         }
@@ -577,6 +601,12 @@ private fun VideoDetailContent(
             }
         }
     }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }
 
 private fun formatMillis(ms: Long): String {

@@ -2,6 +2,7 @@ package com.yenaly.han1meviewer.logic
 
 import android.util.Log
 import com.yenaly.han1meviewer.Preferences
+import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.logic.dao.DownloadDatabase
 import com.yenaly.han1meviewer.logic.dao.HistoryDatabase
 import com.yenaly.han1meviewer.logic.dao.MiscellanyDatabase
@@ -278,5 +279,58 @@ object DatabaseRepo {
 
         suspend fun updateGroup(group: DownloadGroupEntity)=
             downloadGroupDao.update(group)
+
+        private const val SITE_GROUP_ID_PREFIX = "download_site_group_id_"
+        private const val SITE_GROUPS_MIGRATED = "download_site_groups_migrated_v1"
+
+        fun siteGroupName(site: SiteType): String = when (site) {
+            SiteType.HANIME, SiteType.JAVCHU -> "Hanime1"
+            SiteType.MISSAV -> "MissAV"
+            SiteType.HENTAIMAMA -> "HentaiMama"
+            SiteType.ONAIR -> "OnAir"
+            SiteType.FAPFOLDER -> "FapFolder"
+        }
+
+        fun siteOfVideoCode(videoCode: String): SiteType =
+            SiteCheckIn.siteOfDishCode(videoCode) ?: SiteType.HANIME
+
+        /**
+         * Id of the default "site name" group. The id is remembered so renaming the group
+         * keeps working; if the group was deleted it is created again.
+         */
+        suspend fun siteGroupId(site: SiteType): Int {
+            val key = SITE_GROUP_ID_PREFIX + (if (site == SiteType.JAVCHU) SiteType.HANIME else site).name
+            val sp = Preferences.preferenceSp
+            val saved = sp.getInt(key, -1)
+            if (saved > 0 && downloadGroupDao.getGroupById(saved) != null) return saved
+            val name = siteGroupName(site)
+            val id = downloadGroupDao.getGroupByName(name)?.id ?: createNewGroup(name).toInt()
+            sp.edit().putInt(key, id).apply()
+            return id
+        }
+
+        suspend fun groupIdForVideoCode(videoCode: String): Int =
+            siteGroupId(siteOfVideoCode(videoCode))
+
+        /**
+         * One-time: create a group per site and move existing downloads that are still in the
+         * default group into their site's group. Later manual moves are never touched again.
+         */
+        suspend fun migrateToSiteGroupsOnce() {
+            val sp = Preferences.preferenceSp
+            if (sp.getBoolean(SITE_GROUPS_MIGRATED, false)) return
+            downloadGroupDao.insertDefaultGroup()
+            SiteType.entries.filter { it != SiteType.JAVCHU }.forEach { siteGroupId(it) }
+            hanimeDownloadDao.getAll()
+                .filter { it.groupId == DownloadGroupEntity.DEFAULT_GROUP_ID }
+                .map { it.videoCode }
+                .distinct()
+                .forEach { code ->
+                    hanimeDownloadDao.updateVideoGroup(code, groupIdForVideoCode(code))
+                }
+            sp.edit().putBoolean(SITE_GROUPS_MIGRATED, true).apply()
+        }
     }
 }
+
+

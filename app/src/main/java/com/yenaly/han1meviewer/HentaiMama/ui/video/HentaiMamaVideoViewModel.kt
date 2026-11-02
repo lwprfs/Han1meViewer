@@ -416,7 +416,10 @@ class HentaiMamaVideoViewModel(application: Application) : AndroidViewModel(appl
 
     fun setPosition(position: Long, duration: Long) {
         _playerState.update { state: HentaiMamaPlayerState ->
-            state.copy(position = position, duration = duration)
+            state.copy(
+                position = position,
+                duration = if (duration > 0) duration else state.duration,
+            )
         }
     }
 
@@ -451,3 +454,5 @@ class HentaiMamaVideoViewModel(application: Application) : AndroidViewModel(appl
         extractionJob?.cancel()
     }
 }
+
+

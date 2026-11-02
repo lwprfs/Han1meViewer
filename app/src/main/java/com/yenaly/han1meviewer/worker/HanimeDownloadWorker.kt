@@ -203,7 +203,8 @@ class HanimeDownloadWorker(
                 if (len > 0) {
 
                     val entity = HanimeDownloadEntity(
-                        groupId = groupId.takeIf { it > 0 } ?: DownloadGroupEntity.DEFAULT_GROUP_ID,
+                        groupId = groupId.takeIf { it > 0 }
+                            ?: DatabaseRepo.HanimeDownload.groupIdForVideoCode(videoCode),
                         coverUrl = coverUrl,
                         coverUri = null,
                         title = hanimeName,
@@ -327,7 +328,8 @@ class HanimeDownloadWorker(
             val safUri = SafFileManager.getDownloadVideoFileUri(context, videoCode, fileName)
             var entity = DatabaseRepo.HanimeDownload.find(videoCode, quality)
                 ?: HanimeDownloadEntity(
-                    groupId = groupId.takeIf { it > 0 } ?: DownloadGroupEntity.DEFAULT_GROUP_ID,
+                    groupId = groupId.takeIf { it > 0 }
+                        ?: DatabaseRepo.HanimeDownload.groupIdForVideoCode(videoCode),
                     coverUrl = coverUrl,
                     coverUri = null,
                     title = hanimeName,
@@ -818,3 +820,5 @@ class HanimeDownloadWorker(
         )
     }
 }
+
+

@@ -134,7 +134,9 @@ fun HentaiMamaVideoPlayer(
     }
 
     LaunchedEffect(state.url, exoPlayer) {
-        hasRenderedFirstFrame = false
+        // A re-created composable (inline <-> fullscreen) shares an already-playing player,
+        // which will not report the first frame again.
+        hasRenderedFirstFrame = exoPlayer?.playbackState == Player.STATE_READY
         isRebuffering = false
     }
 
@@ -244,7 +246,7 @@ fun HentaiMamaVideoPlayer(
                             override fun onSurfaceTextureDestroyed(
                                 surface: SurfaceTexture,
                             ): Boolean {
-                                exoPlayer.setVideoTextureView(null)
+                                exoPlayer.clearVideoTextureView(textureView)
                                 return true
                             }
 
@@ -286,7 +288,9 @@ fun HentaiMamaVideoPlayer(
                 },
                 onRelease = { view ->
                     Log.d(PLAYER_TAG, "AndroidView onRelease: detaching surface")
-                    exoPlayer.setVideoTextureView(null)
+                    (view as? ViewGroup)?.getChildAt(0)?.let { child ->
+                        (child as? TextureView)?.let { exoPlayer.clearVideoTextureView(it) }
+                    }
                     (view as? ViewGroup)?.removeAllViews()
                 },
             )
@@ -349,7 +353,7 @@ fun HentaiMamaVideoPlayer(
             }
 
             AnimatedVisibility(
-                visible = showControls && !isBuffering && !showResumeButton,
+                visible = showControls && !showResumeButton,
                 enter = fadeIn(),
                 exit = fadeOut(),
                 modifier = Modifier.fillMaxSize(),
@@ -478,12 +482,15 @@ private fun PlayerControls(
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.width(52.dp),
                 )
+                var scrub by remember { mutableStateOf<Float?>(null) }
                 Slider(
-                    value = if (state.duration > 0) {
-                        state.position.toFloat() / state.duration
+                    value = scrub ?: if (state.duration > 0) {
+                        (state.position.toFloat() / state.duration).coerceIn(0f, 1f)
                     } else 0f,
-                    onValueChange = { newValue: Float ->
-                        onSeek((newValue * state.duration).toLong())
+                    onValueChange = { newValue: Float -> scrub = newValue },
+                    onValueChangeFinished = {
+                        scrub?.let { if (state.duration > 0) onSeek((it * state.duration).toLong()) }
+                        scrub = null
                     },
                     modifier = Modifier.weight(1f),
                     colors = SliderDefaults.colors(
@@ -540,3 +547,5 @@ internal fun formatTime(ms: Long): String {
     val s: Long = total % 60
     return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
 }
+
+

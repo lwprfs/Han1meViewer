@@ -80,6 +80,8 @@ import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.ui.navigation.CrossSiteNavigator
 import com.yenaly.han1meviewer.ui.navigation.NavigationManager
 import com.yenaly.han1meviewer.ui.navigation.main.DailyCheckInRoute
+import com.yenaly.han1meviewer.ui.navigation.main.DownloadRoute
+import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderImageFolderRoute
 import com.yenaly.han1meviewer.ui.navigation.navigateSafely
 
 data class SiteDrawerEntry(
@@ -273,6 +275,7 @@ fun siteDrawerSections(context: Context, site: SiteType, loggedIn: Boolean): Lis
                 listOf(
                     entry(str(R.string.watch_history), history, FapFolderHistoryRoute),
                     entry(str(R.string.saved), R.drawable.ic_drawer_bookmark, FapFolderSavedRoute),
+                    entry("Image download folder", R.drawable.ic_baseline_image_24, FapFolderImageFolderRoute),
                     entry(str(R.string.drawer_followed_communities), R.drawable.ic_drawer_groups, FapFolderFollowedCommunitiesRoute),
                 ),
             ),
@@ -290,6 +293,7 @@ fun siteDrawerSections(context: Context, site: SiteType, loggedIn: Boolean): Lis
 }
 
 private fun appEntries(context: Context): List<SiteDrawerEntry> = listOf(
+    entry(context.getString(R.string.download), R.drawable.ic_baseline_download_24, DownloadRoute),
     entry(context.getString(R.string.settings), R.drawable.ic_baseline_settings_24, HomeSettingsRoute),
     entry(context.getString(R.string.player_settings), R.drawable.baseline_player_24, PlayerSettingsRoute),
     entry(context.getString(R.string.network_settings), R.drawable.baseline_mobile_data_24, NetworkSettingsRoute),
@@ -474,3 +478,5 @@ private fun SiteDrawerHeader(
         }
     }
 }
+
+

@@ -84,6 +84,48 @@ object DownloadLayout {
 
 enum class FapOwnerKind { GROUP, PROFILE }
 
+/** Dedicated SAF folder for FapFolder image downloads (separate from the video download path). */
+object FapFolderImageLocation {
+    private const val KEY = "fapfolder_image_download_uri"
+
+    /** Asked once per app session; see rememberFapFolderImageGate(). */
+    @Volatile
+    var confirmedThisSession = false
+
+    var uri: String?
+        get() = Preferences.preferenceSp.getString(KEY, null)?.takeIf { it.isNotBlank() }
+        set(value) {
+            Preferences.preferenceSp.edit().apply {
+                if (value.isNullOrBlank()) remove(KEY) else putString(KEY, value)
+            }.apply()
+        }
+
+    fun isReady(context: Context): Boolean {
+        val tree = uri?.let { runCatching { it.toUri() }.getOrNull() } ?: return false
+        return context.contentResolver.persistedUriPermissions.any {
+            it.uri == tree && it.isWritePermission
+        }
+    }
+
+    fun persist(context: Context, tree: android.net.Uri) {
+        runCatching {
+            context.contentResolver.takePersistableUriPermission(
+                tree,
+                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                        android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+            )
+        }
+        uri = tree.toString()
+    }
+
+    fun displayName(context: Context): String {
+        val tree = uri?.let { runCatching { it.toUri() }.getOrNull() } ?: return "Not set"
+        return runCatching { DocumentFile.fromTreeUri(context, tree)?.name }.getOrNull()
+            ?: tree.lastPathSegment
+            ?: tree.toString()
+    }
+}
+
 enum class DownloadFailureKind { TOR, COOKIES, NETWORK, STORAGE, EXPIRED, OTHER }
 
 data class DownloadFailure(val kind: DownloadFailureKind, val message: String)
@@ -170,23 +212,9 @@ object SiteImageSaver {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    fun isDownloadPermissionGranted(context: Context): Boolean {
-        val saf = Preferences.safDownloadPath
-        if (!saf.isNullOrBlank()) {
-            val uri = runCatching { saf.toUri() }.getOrNull() ?: return false
-            return context.contentResolver.persistedUriPermissions.any {
-                it.uri == uri && it.isWritePermission
-            }
-        }
-        if (Preferences.isUsePrivateStorage) return true
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            Environment.isExternalStorageManager()
-        } else {
-            ContextCompat.checkSelfPermission(
-                context, Manifest.permission.WRITE_EXTERNAL_STORAGE
-            ) == PackageManager.PERMISSION_GRANTED
-        }
-    }
+    /** Images use their own folder; true only when it is chosen and still writable. */
+    fun isDownloadPermissionGranted(context: Context): Boolean =
+        FapFolderImageLocation.isReady(context)
 
     private fun extensionOf(url: String): String {
         val path = url.substringBefore('?').substringBefore('#').lowercase()
@@ -207,25 +235,20 @@ object SiteImageSaver {
         fileName: String,
         mime: String,
     ): OutputStream? {
-        val safPath = Preferences.safDownloadPath
-        if (!safPath.isNullOrBlank()) {
-            val tree = DocumentFile.fromTreeUri(context, safPath.toUri()) ?: return null
-            var dir: DocumentFile = tree
-            for (seg in segments) {
-                dir = dir.findFile(seg)?.takeIf { it.isDirectory }
-                    ?: dir.createDirectory(seg)
-                    ?: return null
-            }
-            val existing = dir.findFile(fileName)
-            if (existing != null && existing.length() > 0L) return null
-            val target = existing ?: dir.createFile(mime, fileName) ?: return null
-            return context.contentResolver.openOutputStream(target.uri, "wt")
+        val treeUri = FapFolderImageLocation.uri ?: return null
+        val tree = DocumentFile.fromTreeUri(context, treeUri.toUri()) ?: return null
+        var dir: DocumentFile = tree
+        // The chosen folder is already the "FapFolder" images root.
+        val parts = if (segments.firstOrNull() == "FapFolder") segments.drop(1) else segments
+        for (seg in parts) {
+            dir = dir.findFile(seg)?.takeIf { it.isDirectory }
+                ?: dir.createDirectory(seg)
+                ?: return null
         }
-        val dir = File(HFileManager.getAppDownloadFolder(context), segments.joinToString("/"))
-        if (!dir.exists() && !dir.mkdirs()) return null
-        val file = File(dir, fileName)
-        if (file.exists() && file.length() > 0L) return null
-        return FileOutputStream(file)
+        val existing = dir.findFile(fileName)
+        if (existing != null && existing.length() > 0L) return null
+        val target = existing ?: dir.createFile(mime, fileName) ?: return null
+        return context.contentResolver.openOutputStream(target.uri, "wt")
     }
 
     private fun fetch(
@@ -270,7 +293,7 @@ object SiteImageSaver {
         onProgress: ((done: Int, total: Int) -> Unit)?,
     ): SaveResult = withContext(Dispatchers.IO) {
         if (!isDownloadPermissionGranted(context)) {
-            return@withContext SaveResult.Error("No permission to write to the download location.")
+            return@withContext SaveResult.Error("Choose an image download folder first.")
         }
         var saved = 0
         var skipped = 0
@@ -327,3 +350,5 @@ object SiteImageSaver {
         "User-Agent" to FapFolderConstants.USER_AGENT_FAPFOLDER,
     )
 }
+
+

@@ -93,6 +93,7 @@ internal fun LazyListScope.fapFolderImagePostItems(
     }
 
     item(key = "site_actions") {
+        val imageGate = com.yenaly.han1meviewer.FapFolder.ui.components.rememberFapFolderImageGate()
         SiteVideoActionBar(
             site = SiteType.FAPFOLDER,
             videoCode = post.postId.toString(),
@@ -105,7 +106,7 @@ internal fun LazyListScope.fapFolderImagePostItems(
                         "This post has no images to download.",
                         level = GlobalToasts.ToastLevel.WARNING,
                     )
-                } else {
+                } else imageGate {
                     GlobalToasts.show(
                         "Downloading ${images.size} image(s)…",
                         level = GlobalToasts.ToastLevel.INFO,
@@ -174,3 +175,5 @@ internal fun LazyListScope.fapFolderImagePostItems(
 
     fapFolderCommentItems(post, uiState, viewModel, onOpenProfile)
 }
+
+

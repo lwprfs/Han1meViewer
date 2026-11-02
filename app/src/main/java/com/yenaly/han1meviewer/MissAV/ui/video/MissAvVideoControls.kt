@@ -357,10 +357,10 @@ fun MissAvVideoPlayer(
                                             (player.currentPosition - 10000).coerceAtLeast(0)
                                         )
                                     } else {
-                                        player.seekTo(
-                                            (player.currentPosition + 10000)
-                                                .coerceAtMost(player.duration)
-                                        )
+                                        val dur = player.duration
+                                        val target = player.currentPosition + 10000
+                                        // duration is negative (TIME_UNSET) until the stream is prepared
+                                        player.seekTo(if (dur > 0) target.coerceAtMost(dur) else target)
                                     }
                                     return true
                                 }
@@ -379,7 +379,11 @@ fun MissAvVideoPlayer(
                     lastSurfaceView?.let { fitVideoSurface(frame, it, fitState) }
                 },
                 onRelease = { view ->
-                    exoPlayer?.setVideoSurfaceView(null)
+                    // Clear only this view's surface; a plain null would also detach the
+                    // new surface when switching between inline and fullscreen.
+                    (view as? ViewGroup)?.getChildAt(0)?.let { child ->
+                        (child as? SurfaceView)?.let { exoPlayer?.clearVideoSurfaceView(it) }
+                    }
                     onSurfaceReleased()
                     lastSurfaceView = null
                     (view as? ViewGroup)?.removeAllViews()
@@ -453,7 +457,7 @@ fun MissAvVideoPlayer(
             }
 
             AnimatedVisibility(
-                visible = showControls && !isBuffering && !showResumeButton,
+                visible = showControls && !showResumeButton,
                 enter = fadeIn(),
                 exit = fadeOut(),
             ) {
@@ -669,12 +673,15 @@ fun MissAvVideoPlayer(
                                 style = MaterialTheme.typography.labelSmall,
                                 modifier = Modifier.width(52.dp),
                             )
+                            var scrub by remember { mutableStateOf<Float?>(null) }
                             Slider(
-                                value = if (duration > 0) {
-                                    currentPosition.toFloat() / duration
+                                value = scrub ?: if (duration > 0) {
+                                    (currentPosition.toFloat() / duration).coerceIn(0f, 1f)
                                 } else 0f,
-                                onValueChange = { newValue ->
-                                    onSeek((newValue * duration).toLong())
+                                onValueChange = { newValue -> scrub = newValue },
+                                onValueChangeFinished = {
+                                    scrub?.let { if (duration > 0) onSeek((it * duration).toLong()) }
+                                    scrub = null
                                 },
                                 modifier = Modifier.weight(1f),
                                 colors = SliderDefaults.colors(
@@ -829,3 +836,5 @@ private fun SkipButton(
         }
     }
 }
+
+

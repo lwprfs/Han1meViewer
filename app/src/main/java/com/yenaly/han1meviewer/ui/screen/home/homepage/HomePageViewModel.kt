@@ -57,6 +57,7 @@ class HomePageViewModel: ViewModel() {
         viewModelScope.launch {
 
             DatabaseRepo.HanimeDownload.insertDefaultGroup()
+            runCatching { DatabaseRepo.HanimeDownload.migrateToSiteGroupsOnce() }
         }
     }
 
@@ -201,3 +202,5 @@ class HomePageViewModel: ViewModel() {
         }
     }
 }
+
+

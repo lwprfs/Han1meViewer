@@ -485,6 +485,12 @@ fun FapFolderNavHost(
             FapFolderPrivacySettingsScreen(onBack = { navController.popBackStack() })
         }
 
+        composable<FapFolderImageFolderRoute> {
+            com.yenaly.han1meviewer.FapFolder.ui.settings.FapFolderImageFolderScreen(
+                onBack = { navController.popBackStack() },
+            )
+        }
+
         registerGlobalSettingsRoutes(
             activity = activity,
             navController = navController,
@@ -817,3 +823,5 @@ private fun fapFolderHubEntries(
         )
     }
 }
+
+

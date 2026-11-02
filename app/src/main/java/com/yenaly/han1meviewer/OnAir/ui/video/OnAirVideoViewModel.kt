@@ -341,6 +341,7 @@ class OnAirVideoViewModel(application: Application) : AndroidViewModel(applicati
             }
             return
         }
+        _showResumeBanner.value = false
         _playerState.update {
             it.copy(playbackIntent = PlaybackIntent.Playing, isPlaying = true)
         }

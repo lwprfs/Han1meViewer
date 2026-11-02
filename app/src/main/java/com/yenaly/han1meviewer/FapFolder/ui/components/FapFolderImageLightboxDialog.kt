@@ -73,7 +73,7 @@ fun FapFolderImageLightboxDialog(
     if (images.isEmpty()) return
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val canSave = remember { SiteImageSaver.isDownloadPermissionGranted(context) }
+    val imageGate = rememberFapFolderImageGate()
     var saving by remember { mutableStateOf(false) }
 
     val pagerState = rememberPagerState(
@@ -156,12 +156,13 @@ fun FapFolderImageLightboxDialog(
                         )
                     }
 
-                    if (canSave) {
+                    run {
                         IconButton(
                             onClick = {
                                 if (saving) return@IconButton
                                 val image = images.getOrNull(pagerState.currentPage)
                                     ?: return@IconButton
+                                imageGate {
                                 saving = true
                                 scope.launch {
                                     val name = "photo_" + (image.photoId?.toString()
@@ -185,6 +186,7 @@ fun FapFolderImageLightboxDialog(
                                             level = GlobalToasts.ToastLevel.SUCCESS,
                                         )
                                     }
+                                }
                                 }
                             },
                             modifier = Modifier
@@ -308,3 +310,5 @@ private fun ZoomableImage(
         )
     }
 }
+
+

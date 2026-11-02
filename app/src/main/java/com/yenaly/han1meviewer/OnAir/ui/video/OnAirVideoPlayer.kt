@@ -193,7 +193,14 @@ fun OnAirVideoPlayer(
     LaunchedEffect(url) {
         if (url.isNullOrBlank()) return@LaunchedEffect
         val loaded = player.currentMediaItem?.localConfiguration?.uri?.toString()
-        if (loaded == url) return@LaunchedEffect
+        if (loaded == url) {
+            // Same URL after a player error (e.g. Retry): the player is stuck, re-prepare it.
+            if (player.playerError != null) {
+                player.prepare()
+                player.playWhenReady = state.playbackIntent == PlaybackIntent.Playing
+            }
+            return@LaunchedEffect
+        }
 
         val base = OnAirNetwork.baseUrl
         val cookieHeader = OnAirCookieManager.cookiesRaw

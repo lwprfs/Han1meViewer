@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.logic.SiteCheckIn
 import com.yenaly.han1meviewer.logic.dao.DownloadDatabase
 import com.yenaly.han1meviewer.logic.entity.download.HanimeDownloadEntity
 import com.yenaly.han1meviewer.logic.entity.download.VideoWithCategories
@@ -93,7 +94,12 @@ fun DownloadRouteScreen(
                 }
             }
 
-            is DownloadEvent.OnOpenDownloadedVideo -> onNavigateToVideo(event.video.video.videoCode)
+            is DownloadEvent.OnOpenDownloadedVideo -> {
+                val code = event.video.video.videoCode
+                // Only Hanime codes exist as online pages; other sites play from the local file.
+                if (SiteCheckIn.siteOfDishCode(code) == null) onNavigateToVideo(code)
+                else onNavigateToLocalVideo(code, event.video.video.videoUri)
+            }
             is DownloadEvent.OnLocalPlayback -> onNavigateToLocalVideo(
                 event.video.video.videoCode, event.video.video.videoUri
             )
@@ -308,3 +314,5 @@ fun DownloadRouteScreen(
         )
     }
 }
+
+

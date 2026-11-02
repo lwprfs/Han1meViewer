@@ -8,6 +8,11 @@ import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
 import com.yenaly.han1meviewer.ui.component.SiteErrorContent
 import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import android.content.pm.ActivityInfo
 import android.os.Build
 import android.util.Log
@@ -103,6 +108,12 @@ private const val DELTA_GUARD_MS = 10_000L
 private val EPISODE_SUFFIX_REGEX: Regex =
     Regex(""".*-episode-\d+/?$""", RegexOption.IGNORE_CASE)
 
+private tailrec fun Context.findHostActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findHostActivity()
+    else -> null
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HentaiMamaVideoScreen(
@@ -116,7 +127,7 @@ fun HentaiMamaVideoScreen(
     viewModel: HentaiMamaVideoViewModel = viewModel(),
 ) {
     val context = LocalContext.current
-    val activity = context as? Activity
+    val activity = remember(context) { context.findHostActivity() }
 
     val pageState by viewModel.pageState.collectAsStateWithLifecycle()
     val playerState by viewModel.playerState.collectAsStateWithLifecycle()
@@ -139,6 +150,33 @@ fun HentaiMamaVideoScreen(
     val currentMediaUrl = remember { mutableStateOf<String?>(null) }
 
     HentaiMamaHistoryRepo.init(context)
+
+    // Pause when the app is backgrounded; restore orientation/system bars if we leave while fullscreen.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP && viewModel.playerState.value.isPlaying) {
+                viewModel.setPlaying(false)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            if (viewModel.playerState.value.isFullscreen) {
+                activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    activity?.window?.insetsController?.show(
+                        android.view.WindowInsets.Type.statusBars() or
+                                android.view.WindowInsets.Type.navigationBars()
+                    )
+                } else {
+                    @Suppress("DEPRECATION")
+                    activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+                }
+                viewModel.setFullscreen(false)
+            }
+        }
+    }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -774,3 +812,5 @@ private fun SimilarGrid(
         }
     }
 }
+
+
