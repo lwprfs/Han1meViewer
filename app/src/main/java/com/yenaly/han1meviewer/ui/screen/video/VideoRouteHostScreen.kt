@@ -104,8 +104,7 @@ fun VideoRouteHostScreen(
     val commentViewModel: CommentViewModel = viewModel()
     val kernel = remember(route.videoCode) {
         val preferred = HMediaKernel.Type.fromString(Preferences.switchPlayerKernel)
-        // HentaiMama files are 10-bit H.264, which Android's MediaCodec (ExoPlayer/MediaPlayer)
-        // cannot decode; mpv can (software decode), so use it for those regardless of the setting.
+
         if (SiteCheckIn.siteOfDishCode(route.videoCode) == SiteType.HENTAIMAMA) {
             HMediaKernel.Type.MpvPlayer
         } else preferred
@@ -833,5 +832,3 @@ private class VideoRouteShell(
         videoTabsHost.disposeComposition()
     }
 }
-
-

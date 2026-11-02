@@ -416,5 +416,3 @@ internal fun formatTime(ms: Long): String {
     val s: Long = total % 60
     return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
 }
-
-

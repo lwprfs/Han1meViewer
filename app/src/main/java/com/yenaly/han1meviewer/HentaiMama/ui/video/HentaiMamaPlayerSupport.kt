@@ -11,23 +11,15 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 
-/**
- * HentaiMama's gdvid.info files are 10-bit H.264 (High 4:4:4 Predictive, e.g. avc1.F40028).
- * Android's hardware AVC decoders and the AOSP software decoder only handle 8-bit, so
- * MediaCodec fails with NO_EXCEEDS_CAPABILITIES. Downloading works (plain byte copy).
- */
-
-/** Use instead of `ExoPlayer.Builder(context).build()`. */
 @OptIn(UnstableApi::class)
 internal fun createHentaiMamaPlayer(context: Context): ExoPlayer {
     val renderers = DefaultRenderersFactory(context)
-        // Uses an FFmpeg renderer if one is on the classpath, otherwise a harmless no-op.
+
         .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
         .setEnableDecoderFallback(true)
     return ExoPlayer.Builder(context, renderers).build()
 }
 
-/** True when the device cannot decode the stream (as opposed to a network problem). */
 internal fun PlaybackException.isDecoderProblem(): Boolean = when (errorCode) {
     PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,
     PlaybackException.ERROR_CODE_DECODING_FAILED,
@@ -36,7 +28,6 @@ internal fun PlaybackException.isDecoderProblem(): Boolean = when (errorCode) {
     else -> false
 }
 
-/** Hands the stream to VLC / mpv / MX Player etc. */
 internal fun openInExternalPlayer(context: Context, url: String) {
     val view = Intent(Intent.ACTION_VIEW).setDataAndType(url.toUri(), "video/*")
     val chooser = Intent.createChooser(view, null)

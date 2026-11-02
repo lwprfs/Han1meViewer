@@ -831,5 +831,3 @@ private fun SimilarGrid(
         }
     }
 }
-
-
