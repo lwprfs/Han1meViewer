@@ -122,5 +122,3 @@ private fun buildPlayerSettingsUiState(context: Context): PlayerSettingsUiState 
         slideSensitivitySummary = toPrettySensitivityString(context, Preferences.slideSensitivity),
     )
 }
-
-

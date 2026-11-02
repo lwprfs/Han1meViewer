@@ -96,7 +96,7 @@ fun DownloadRouteScreen(
 
             is DownloadEvent.OnOpenDownloadedVideo -> {
                 val code = event.video.video.videoCode
-                // Only Hanime codes exist as online pages; other sites play from the local file.
+
                 if (SiteCheckIn.siteOfDishCode(code) == null) onNavigateToVideo(code)
                 else onNavigateToLocalVideo(code, event.video.video.videoUri)
             }
@@ -314,5 +314,3 @@ fun DownloadRouteScreen(
         )
     }
 }
-
-

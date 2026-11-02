@@ -424,10 +424,23 @@ fun MissAvVideoScreen(
         playerStarted = false
 
         MissAvHistoryRepo.getByVideoCode(videoCode)?.let { history ->
-            if (history.lastPosition > 5000) {
+            if (history.lastPosition > 5000 && com.yenaly.han1meviewer.ui.component.player.SitePlayerSettings.config(com.yenaly.han1meviewer.SiteType.MISSAV).resumePlayback) {
                 savedPosition = history.lastPosition
                 showResumeButton = true
             }
+        }
+    }
+
+    var autoPlayKicked by remember(videoCode) { mutableStateOf(false) }
+    LaunchedEffect(videoState, videoCode) {
+        if (!autoPlayKicked && videoState is VideoLoadingState.Success &&
+            com.yenaly.han1meviewer.ui.component.player.SitePlayerSettings.config(com.yenaly.han1meviewer.SiteType.MISSAV).autoPlay &&
+            !playerStarted && !isExtractingUrl && capturedUrl.isBlank()
+        ) {
+            autoPlayKicked = true
+            extractionFailed = false
+            isExtractingUrl = true
+            if (savedPosition > 0 && com.yenaly.han1meviewer.ui.component.player.SitePlayerSettings.config(com.yenaly.han1meviewer.SiteType.MISSAV).resumePlayback) showResumeButton = true
         }
     }
 
@@ -709,7 +722,7 @@ fun MissAvVideoScreen(
                                 capturedUrl = ""
                                 extractionFailed = false
                                 isExtractingUrl = true
-                                if (savedPosition > 0) showResumeButton = true
+                                if (savedPosition > 0 && com.yenaly.han1meviewer.ui.component.player.SitePlayerSettings.config(com.yenaly.han1meviewer.SiteType.MISSAV).resumePlayback) showResumeButton = true
                             },
                             onRetryExtraction = {
                                 extractionFailed = false
@@ -729,7 +742,9 @@ fun MissAvVideoScreen(
                             onWebViewRefChange = { webViewRef = it },
                             onUrlCaptured = { url ->
                                 if (capturedUrl.isBlank()) capturedUrl = url
-                            }
+                            },
+                            title = info.title,
+                            onBack = onBack,
                         )
                     }
 
@@ -756,8 +771,7 @@ fun MissAvVideoScreen(
                                     ?.let { qualityUrlFor(it, selectedQuality) },
                                 downloadQuality = selectedQuality,
                                 resolveDownloadUrl = {
-                                    // Already captured for playback: reuse it. Wiping it forced a
-                                    // second extraction that can never run while the player is up.
+
                                     if (capturedUrl.isNotBlank()) {
                                         return@SiteVideoActionBar qualityUrlFor(capturedUrl, selectedQuality)
                                     }
@@ -905,6 +919,8 @@ fun MissAvVideoScreen(
                     onWebViewRefChange = { webViewRef = it },
                     onUrlCaptured = { url -> if (capturedUrl.isBlank()) capturedUrl = url },
                     modifier = Modifier.fillMaxSize(),
+                    title = info.title,
+                    onBack = { exitFullscreen() },
                 )
             }
         }
@@ -932,5 +948,3 @@ private fun updateSubtitleForPosition(
         tv?.invalidate()
     }
 }
-
-

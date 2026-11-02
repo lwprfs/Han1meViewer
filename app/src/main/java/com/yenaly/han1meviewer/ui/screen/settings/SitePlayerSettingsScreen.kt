@@ -11,6 +11,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -30,7 +32,6 @@ import com.yenaly.han1meviewer.ui.component.SettingSliderItem
 import com.yenaly.han1meviewer.ui.component.SettingSwitchItem
 import com.yenaly.han1meviewer.ui.component.player.SitePlayerSettings
 
-/** Site selector shown above the player settings. Hanime1/Javchu are the in-app player itself. */
 @Composable
 fun PlayerSiteChips(
     selected: SiteType,
@@ -58,10 +59,11 @@ fun PlayerSiteChips(
 
 @Composable
 fun SitePlayerSettingsScreen(site: SiteType, modifier: Modifier = Modifier) {
-    // Reading revision makes this screen recompose after every write.
+
     @Suppress("UNUSED_VARIABLE") val rev = SitePlayerSettings.revision
     val synced = SitePlayerSettings.isSynced(site)
     var dialogSpec by rememberSaveable { mutableStateOf<String?>(null) }
+    var showCustomize by rememberSaveable { mutableStateOf(false) }
 
     val choiceSpec = dialogSpec?.let { SitePlayerSettings.spec(it) } as? SitePlayerSettings.Spec.Choice
     if (choiceSpec != null) {
@@ -74,6 +76,34 @@ fun SitePlayerSettingsScreen(site: SiteType, modifier: Modifier = Modifier) {
                 SitePlayerSettings.setString(site, choiceSpec.id, it)
                 dialogSpec = null
             },
+        )
+    }
+
+    if (showCustomize) {
+        AlertDialog(
+            onDismissRequest = { showCustomize = false },
+            title = { Text("Customize ${SitePlayerSettings.label(site)} settings") },
+            text = {
+                androidx.compose.foundation.layout.Column {
+                    Text(
+                        "Choose which settings are listed. Hidden settings keep their value.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    SitePlayerSettings.specs.forEach { spec ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                        ) {
+                            Checkbox(
+                                checked = SitePlayerSettings.isListed(site, spec.id),
+                                onCheckedChange = { SitePlayerSettings.setListed(site, spec.id, it) },
+                            )
+                            Text(spec.title)
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showCustomize = false }) { Text("Done") } },
         )
     }
 
@@ -93,7 +123,10 @@ fun SitePlayerSettingsScreen(site: SiteType, modifier: Modifier = Modifier) {
                 },
             )
         }
-        items(SitePlayerSettings.specs, key = { it.id }) { spec ->
+        items(
+            SitePlayerSettings.specs.filter { SitePlayerSettings.isListed(site, it.id) },
+            key = { it.id },
+        ) { spec ->
             when (spec) {
                 is SitePlayerSettings.Spec.Switch -> SettingSwitchItem(
                     title = spec.title,
@@ -126,7 +159,10 @@ fun SitePlayerSettingsScreen(site: SiteType, modifier: Modifier = Modifier) {
             }
         }
         item(key = "reset") {
-            Box(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+                TextButton(onClick = { showCustomize = true }) {
+                    Text("Customize settings", style = MaterialTheme.typography.labelLarge)
+                }
                 TextButton(
                     onClick = { SitePlayerSettings.resetToApp(site) },
                     enabled = !synced,

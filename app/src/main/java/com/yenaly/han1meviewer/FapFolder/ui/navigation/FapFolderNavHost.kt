@@ -823,5 +823,3 @@ private fun fapFolderHubEntries(
         )
     }
 }
-
-

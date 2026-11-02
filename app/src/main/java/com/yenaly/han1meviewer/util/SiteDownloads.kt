@@ -84,11 +84,9 @@ object DownloadLayout {
 
 enum class FapOwnerKind { GROUP, PROFILE }
 
-/** Dedicated SAF folder for FapFolder image downloads (separate from the video download path). */
 object FapFolderImageLocation {
     private const val KEY = "fapfolder_image_download_uri"
 
-    /** Asked once per app session; see rememberFapFolderImageGate(). */
     @Volatile
     var confirmedThisSession = false
 
@@ -170,7 +168,6 @@ object SiteDownloadClients {
             else -> ServiceCreator.downloadClient
         }
 
-    /** Sites whose CDN may refuse OkHttp while accepting the in-app player. */
     fun useUrlConnectionFallback(videoCode: String): Boolean =
         SiteCheckIn.siteOfDishCode(videoCode) == SiteType.MISSAV
 
@@ -223,7 +220,6 @@ object SiteImageSaver {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    /** Images use their own folder; true only when it is chosen and still writable. */
     fun isDownloadPermissionGranted(context: Context): Boolean =
         FapFolderImageLocation.isReady(context)
 
@@ -249,7 +245,7 @@ object SiteImageSaver {
         val treeUri = FapFolderImageLocation.uri ?: return null
         val tree = DocumentFile.fromTreeUri(context, treeUri.toUri()) ?: return null
         var dir: DocumentFile = tree
-        // The chosen folder is already the "FapFolder" images root.
+
         val parts = if (segments.firstOrNull() == "FapFolder") segments.drop(1) else segments
         for (seg in parts) {
             dir = dir.findFile(seg)?.takeIf { it.isDirectory }
@@ -361,7 +357,3 @@ object SiteImageSaver {
         "User-Agent" to FapFolderConstants.USER_AGENT_FAPFOLDER,
     )
 }
-
-
-
-

@@ -193,7 +193,7 @@ fun FapFolderVideoPlayerScreen(
     var controlsInteractionTick by remember { mutableLongStateOf(0L) }
     var isFullscreen by remember { mutableStateOf(false) }
     val fitState = remember { VideoFitState().also { it.aspect = initialAspect } }
-    var stretched by rememberSaveable { mutableStateOf(false) }
+    var stretched by rememberSaveable { mutableStateOf(com.yenaly.han1meviewer.ui.component.player.SitePlayerSettings.config(com.yenaly.han1meviewer.SiteType.FAPFOLDER).stretchFullscreen) }
     fitState.stretched = stretched && isFullscreen
     var fullscreenLandscape by remember { mutableStateOf(videoIsLandscape) }
     var reloadToken by remember { mutableStateOf(0) }
@@ -283,7 +283,7 @@ fun FapFolderVideoPlayerScreen(
         if (postId == null || postId <= 0L) return@LaunchedEffect
         if (resumeDialogForPostId != null) return@LaunchedEffect
 
-        val shouldOffer = runCatching {
+        val shouldOffer = com.yenaly.han1meviewer.ui.component.player.SitePlayerSettings.config(com.yenaly.han1meviewer.SiteType.FAPFOLDER).resumePlayback && runCatching {
             FapFolderHistoryRepo.shouldOfferResume(postId)
         }.getOrDefault(false)
         val existing = runCatching {
@@ -345,7 +345,8 @@ fun FapFolderVideoPlayerScreen(
         val player = ExoPlayer.Builder(context).build().apply {
             setMediaSource(mediaSource)
             prepare()
-            playWhenReady = autoStart && resumeDialogForPostId == null
+            playWhenReady = autoStart && com.yenaly.han1meviewer.ui.component.player.SitePlayerSettings.config(com.yenaly.han1meviewer.SiteType.FAPFOLDER).autoPlay &&
+                    resumeDialogForPostId == null
             setPlaybackSpeed(playbackSpeed)
             volume = if (muted) 0f else 1f
         }
@@ -696,188 +697,6 @@ fun FapFolderVideoPlayerScreen(
                 },
             )
 
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .pointerInput(controlsLocked) {
-                        if (controlsLocked) return@pointerInput
-
-                        var dragMode = 0
-                        var dragIsVolume = false
-                        var dragged = false
-
-                        detectDragGestures(
-                            onDragStart = { offset ->
-                                dragged = false
-                                dragMode = 0
-                                dragIsVolume = offset.x >= size.width / 2f
-                            },
-                            onDrag = { change, dragAmount ->
-                                change.consume()
-                                if (!dragged) {
-                                    if (abs(dragAmount.x) < TAP_SLOP_PX &&
-                                        abs(dragAmount.y) < TAP_SLOP_PX
-                                    ) {
-                                        return@detectDragGestures
-                                    }
-                                    dragged = true
-                                    revealControls()
-                                }
-                                if (dragMode == 0) {
-                                    dragMode =
-                                        if (abs(dragAmount.x) > abs(dragAmount.y)) 2 else 1
-                                }
-                                if (dragMode == 1) {
-                                    if (dragIsVolume) {
-                                        val cur = audioManager
-                                            ?.getStreamVolume(AudioManager.STREAM_MUSIC)
-                                            ?: 0
-                                        val delta = (-dragAmount.y /
-                                                size.height * maxVolume * 2f).toInt()
-                                        var newVol = cur + delta
-                                        if (newVol < 0) newVol = 0
-                                        if (newVol > maxVolume) newVol = maxVolume
-                                        audioManager?.setStreamVolume(
-                                            AudioManager.STREAM_MUSIC, newVol, 0
-                                        )
-                                        val fraction = if (maxVolume > 0)
-                                            newVol.toFloat() / maxVolume.toFloat() else 0f
-                                        flashOverlay(fraction, true)
-                                    } else {
-                                        val window = activity?.window
-                                        if (window != null) {
-                                            val attrs = window.attributes
-                                            val cur = if (attrs.screenBrightness < 0f)
-                                                0.5f else attrs.screenBrightness
-                                            var newB = cur - dragAmount.y / size.height
-                                            if (newB < 0.05f) newB = 0.05f
-                                            if (newB > 1f) newB = 1f
-                                            attrs.screenBrightness = newB
-                                            window.attributes = attrs
-                                            flashOverlay(newB, false)
-                                        }
-                                    }
-                                } else if (dragMode == 2) {
-                                    val dur = safeDuration(exoPlayer)
-                                    if (dur > 0L) {
-                                        val delta =
-                                            (dragAmount.x / size.width *
-                                                    dur.toFloat()).toLong()
-                                        seekBy(delta)
-                                    }
-                                }
-                            },
-                            onDragEnd = {
-                                if (dragged) revealControls()
-                                dragMode = 0
-                                dragged = false
-                            },
-                            onDragCancel = {
-                                dragMode = 0
-                                dragged = false
-                            },
-                        )
-                    }
-                    .pointerInput(controlsLocked) {
-                        if (controlsLocked) return@pointerInput
-                        detectTapGestures(
-                            onTap = {
-                                if (playbackError != null) return@detectTapGestures
-                                if (showControls) {
-                                    showControls = false
-                                } else {
-                                    revealControls()
-                                }
-                            },
-                            onDoubleTap = { offset ->
-                                if (playbackError != null) return@detectTapGestures
-                                val forward = offset.x >= size.width / 2f
-                                seekBy(if (forward) SEEK_STEP_MS else -SEEK_STEP_MS)
-                                flashDoubleTapSeek(if (forward) 1 else -1)
-                                revealControls()
-                            },
-                        )
-                    },
-            )
-
-            doubleTapSeek?.let { seek ->
-                val alignment = if (seek.direction > 0) Alignment.CenterEnd
-                else Alignment.CenterStart
-                Box(
-                    modifier = Modifier
-                        .align(alignment)
-                        .padding(horizontal = 32.dp)
-                        .background(Color.Black.copy(alpha = 0.55f), CircleShape)
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = if (seek.direction > 0)
-                                Icons.Filled.FastForward
-                            else Icons.Filled.FastRewind,
-                            contentDescription = null,
-                            tint = Color.White,
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = "${if (seek.direction > 0) "+" else "-"}10s",
-                            color = Color.White,
-                            style = MaterialTheme.typography.labelMedium,
-                        )
-                    }
-                }
-            }
-
-            if (brightnessOverlay >= 0f) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(16.dp)
-                        .background(
-                            Color.Black.copy(alpha = 0.6f),
-                            RoundedCornerShape(8.dp),
-                        )
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                ) {
-                    Text(
-                        text = "Brightness ${(brightnessOverlay * 100).toInt()}%",
-                        color = Color.White,
-                        style = MaterialTheme.typography.labelSmall,
-                    )
-                }
-            }
-
-            if (volumeOverlay >= 0f) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(16.dp)
-                        .background(
-                            Color.Black.copy(alpha = 0.6f),
-                            RoundedCornerShape(8.dp),
-                        )
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = if (volumeOverlay == 0f)
-                                Icons.AutoMirrored.Filled.VolumeOff
-                            else Icons.AutoMirrored.Filled.VolumeUp,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(16.dp),
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = "${(volumeOverlay * 100).toInt()}%",
-                            color = Color.White,
-                            style = MaterialTheme.typography.labelSmall,
-                        )
-                    }
-                }
-            }
-
             if (playbackError != null) {
                 Column(
                     modifier = Modifier
@@ -915,302 +734,56 @@ fun FapFolderVideoPlayerScreen(
                 )
             }
 
-            if (controlsLocked) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .padding(16.dp)
-                        .background(Color.Black.copy(alpha = 0.6f), CircleShape)
-                        .padding(8.dp),
-                ) {
-                    IconButton(onClick = {
-                        controlsLocked = false
-                        revealControls()
-                    }) {
-                        Icon(
-                            imageVector = Icons.Filled.Lock,
-                            contentDescription = "Unlock controls",
-                            tint = Color.White,
-                        )
-                    }
-                }
-            }
-
-            AnimatedVisibility(
-                visible = showControls && playbackError == null && !controlsLocked,
-                enter = fadeIn(),
-                exit = fadeOut(),
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                Box(modifier = Modifier.fillMaxSize()) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .align(Alignment.TopCenter)
-                            .background(
-                                androidx.compose.ui.graphics.Brush.verticalGradient(
-                                    listOf(
-                                        Color.Black.copy(alpha = 0.7f),
-                                        Color.Transparent,
-                                    )
-                                )
-                            )
-                            .then(if (isFullscreen) Modifier.systemBarsPadding() else Modifier)
-                            .padding(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        IconButton(onClick = {
-                            if (isFullscreen) {
-                                exitFullscreen()
-                            } else {
-                                onDismiss()
-                            }
-                        }) {
-                            Icon(
-                                imageVector = if (isFullscreen)
-                                    Icons.Filled.FullscreenExit
-                                else if (inline) Icons.Filled.Close
-                                else Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = if (isFullscreen)
-                                    "Exit fullscreen" else "Close",
-                                tint = Color.White,
-                            )
-                        }
-                        Spacer(Modifier.weight(1f))
-                        IconButton(onClick = { toggleMute() }) {
+            if (playbackError == null) {
+                com.yenaly.han1meviewer.ui.component.player.SitePlayerOverlay(
+                    config = com.yenaly.han1meviewer.ui.component.player.SitePlayerSettings
+                        .config(com.yenaly.han1meviewer.SiteType.FAPFOLDER),
+                    title = title,
+                    isPlaying = isPlaying,
+                    isBuffering = false,
+                    positionMs = positionMs.coerceAtLeast(0L),
+                    durationMs = durationMs.coerceAtLeast(0L),
+                    bufferedMs = exoPlayer?.bufferedPosition?.coerceAtLeast(0L) ?: 0L,
+                    qualityLabel = "",
+                    speed = playbackSpeed,
+                    isFullscreen = isFullscreen,
+                    onPlayPause = { togglePlayPause() },
+                    onSeekTo = { seekTo(it) },
+                    onSeekBy = { seekBy(it) },
+                    onToggleFullscreen = { if (isFullscreen) exitFullscreen() else enterFullscreen() },
+                    onBack = { if (isFullscreen) exitFullscreen() else onDismiss() },
+                    speedOptions = PLAYBACK_SPEEDS,
+                    onSpeedSelect = {
+                        playbackSpeed = it
+                        exoPlayer?.setPlaybackSpeed(it)
+                    },
+                    stretched = stretched,
+                    onToggleStretch = { stretched = !stretched },
+                    onTemporarySpeed = { exoPlayer?.setPlaybackSpeed(it ?: playbackSpeed) },
+                    extraActions = {
+                        IconButton(onClick = { toggleMute() }, modifier = Modifier.size(32.dp)) {
                             Icon(
                                 imageVector = if (muted) Icons.AutoMirrored.Filled.VolumeOff
                                 else Icons.AutoMirrored.Filled.VolumeUp,
-                                contentDescription =
-                                    if (muted) "Unmute" else "Mute",
+                                contentDescription = if (muted) "Unmute" else "Mute",
                                 tint = Color.White,
                             )
                         }
-                        Box {
-                            IconButton(onClick = {
-                                speedMenuOpen = true
-                                revealControls()
-                            }) {
-                                Text(
-                                    text = formatSpeed(playbackSpeed),
-                                    color = Color.White,
-                                    style = MaterialTheme.typography.labelSmall,
-                                )
-                            }
-                            DropdownMenu(
-                                expanded = speedMenuOpen,
-                                onDismissRequest = { speedMenuOpen = false },
+                        if (isFullscreen) {
+                            IconButton(
+                                onClick = { toggleFullscreenOrientation(!fullscreenLandscape) },
+                                modifier = Modifier.size(32.dp),
                             ) {
-                                PLAYBACK_SPEEDS.forEach { speed ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                text = formatSpeed(speed) +
-                                                        if (speed == playbackSpeed)
-                                                            " ✓" else ""
-                                            )
-                                        },
-                                        onClick = {
-                                            playbackSpeed = speed
-                                            exoPlayer?.setPlaybackSpeed(speed)
-                                            speedMenuOpen = false
-                                            revealControls()
-                                        },
-                                    )
-                                }
-                            }
-                        }
-                        IconButton(onClick = {
-                            controlsLocked = true
-                            revealControls()
-                        }) {
-                            Icon(
-                                imageVector = Icons.Filled.Lock,
-                                contentDescription = "Lock controls",
-                                tint = Color.White,
-                            )
-                        }
-                        IconButton(onClick = {
-                            toggleFullscreenOrientation(!fullscreenLandscape)
-                        }) {
-                            Icon(
-                                imageVector = if (fullscreenLandscape)
-                                    Icons.Filled.ScreenLockPortrait
-                                else Icons.Filled.ScreenLockLandscape,
-                                contentDescription = if (fullscreenLandscape)
-                                    "Rotate to portrait" else "Rotate to landscape",
-                                tint = Color.White,
-                            )
-                        }
-                    }
-
-                    Row(
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .padding(horizontal = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(20.dp),
-                    ) {
-                        IconButton(
-                            onClick = { seekBy(-SEEK_STEP_MS) },
-                            modifier = Modifier
-                                .size(56.dp)
-                                .background(
-                                    Color.Black.copy(alpha = 0.5f),
-                                    CircleShape,
-                                ),
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.FastRewind,
-                                contentDescription = "Rewind 10s",
-                                tint = Color.White,
-                                modifier = Modifier.size(28.dp),
-                            )
-                        }
-                        IconButton(
-                            onClick = { togglePlayPause() },
-                            modifier = Modifier
-                                .size(72.dp)
-                                .background(
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.92f),
-                                    CircleShape,
-                                ),
-                        ) {
-                            Icon(
-                                imageVector = if (isPlaying) Icons.Filled.Pause
-                                else Icons.Filled.PlayArrow,
-                                contentDescription = "Play/Pause",
-                                tint = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.size(42.dp),
-                            )
-                        }
-                        IconButton(
-                            onClick = { seekBy(SEEK_STEP_MS) },
-                            modifier = Modifier
-                                .size(56.dp)
-                                .background(
-                                    Color.Black.copy(alpha = 0.5f),
-                                    CircleShape,
-                                ),
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.FastForward,
-                                contentDescription = "Forward 10s",
-                                tint = Color.White,
-                                modifier = Modifier.size(28.dp),
-                            )
-                        }
-                    }
-
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .align(Alignment.BottomCenter)
-                            .then(
-                                if (isFullscreen) Modifier.navigationBarsPadding()
-                                else Modifier
-                            )
-                            .background(
-                                androidx.compose.ui.graphics.Brush.verticalGradient(
-                                    listOf(
-                                        Color.Transparent,
-                                        Color.Black.copy(alpha = 0.8f),
-                                    )
-                                )
-                            )
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            val safeDur = if (durationMs > 0L) durationMs else 0L
-                            val safePos = if (positionMs > 0L) positionMs else 0L
-
-                            val displayPosition = if (sliderDragging) {
-                                val ratio = sliderValue.toDouble()
-                                (ratio * safeDur.toDouble()).toLong()
-                            } else {
-                                safePos
-                            }
-
-                            Text(
-                                text = formatTime(displayPosition),
-                                color = Color.White,
-                                style = MaterialTheme.typography.labelSmall,
-                                modifier = Modifier.width(52.dp),
-                            )
-
-                            val sliderFraction = when {
-                                sliderDragging -> sliderValue
-                                safeDur > 0L -> {
-                                    val ratio = safePos.toFloat() /
-                                            safeDur.toFloat()
-                                    if (ratio < 0f) 0f
-                                    else if (ratio > 1f) 1f
-                                    else ratio
-                                }
-                                else -> 0f
-                            }
-
-                            Slider(
-                                value = sliderFraction,
-                                onValueChange = {
-                                    sliderDragging = true
-                                    sliderValue = it
-                                    revealControls()
-                                },
-                                onValueChangeFinished = {
-                                    val ratio = sliderValue.toDouble()
-                                    val target =
-                                        (ratio * safeDur.toDouble()).toLong()
-                                    seekTo(target)
-                                    sliderDragging = false
-                                    revealControls()
-                                },
-                                modifier = Modifier.weight(1f),
-                                colors = SliderDefaults.colors(
-                                    thumbColor = MaterialTheme.colorScheme.primary,
-                                    activeTrackColor =
-                                        MaterialTheme.colorScheme.primary,
-                                    inactiveTrackColor =
-                                        Color.White.copy(alpha = 0.3f),
-                                ),
-                            )
-
-                            Text(
-                                text = formatTime(safeDur),
-                                color = Color.White,
-                                style = MaterialTheme.typography.labelSmall,
-                                modifier = Modifier.width(52.dp),
-                            )
-
-                            if (isFullscreen) {
-                                IconButton(onClick = { stretched = !stretched }) {
-                                    Icon(
-                                        imageVector = Icons.Filled.AspectRatio,
-                                        contentDescription = stringResource(R.string.stretch_to_fill),
-                                        tint = if (stretched) MaterialTheme.colorScheme.primary
-                                        else Color.White,
-                                    )
-                                }
-                            }
-
-                            IconButton(onClick = {
-                                if (isFullscreen) exitFullscreen()
-                                else enterFullscreen()
-                            }) {
                                 Icon(
-                                    imageVector = if (isFullscreen)
-                                        Icons.Filled.FullscreenExit
-                                    else Icons.Filled.Fullscreen,
-                                    contentDescription = "Fullscreen",
+                                    imageVector = if (fullscreenLandscape) Icons.Filled.ScreenLockPortrait
+                                    else Icons.Filled.ScreenLockLandscape,
+                                    contentDescription = "Rotate",
                                     tint = Color.White,
                                 )
                             }
                         }
-                    }
-                }
+                    },
+                )
             }
         }
     }
@@ -1496,5 +1069,3 @@ private fun safePosition(player: ExoPlayer?): Long {
 private fun formatSpeed(speed: Float): String =
     if (speed == speed.toInt().toFloat()) "${speed.toInt()}.0x"
     else "${speed}x"
-
-

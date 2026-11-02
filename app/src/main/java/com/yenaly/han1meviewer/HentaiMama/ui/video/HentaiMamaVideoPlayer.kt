@@ -138,8 +138,7 @@ fun HentaiMamaVideoPlayer(
     }
 
     LaunchedEffect(state.url, exoPlayer) {
-        // A re-created composable (inline <-> fullscreen) shares an already-playing player,
-        // which will not report the first frame again.
+
         hasRenderedFirstFrame = exoPlayer?.playbackState == Player.STATE_READY
         isRebuffering = false
     }
@@ -170,7 +169,7 @@ fun HentaiMamaVideoPlayer(
     }
 
     val fitState = remember { VideoFitState() }
-    var stretched by rememberSaveable { mutableStateOf(false) }
+    var stretched by rememberSaveable { mutableStateOf(com.yenaly.han1meviewer.ui.component.player.SitePlayerSettings.config(com.yenaly.han1meviewer.SiteType.HENTAIMAMA).stretchFullscreen) }
     fitState.stretched = stretched && isFullscreen
     var fitFrame by remember { mutableStateOf<FrameLayout?>(null) }
 
@@ -380,7 +379,3 @@ internal fun formatTime(ms: Long): String {
     val s: Long = total % 60
     return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
 }
-
-
-
-

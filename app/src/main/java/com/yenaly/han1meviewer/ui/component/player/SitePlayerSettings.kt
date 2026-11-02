@@ -7,21 +7,8 @@ import androidx.core.content.edit
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.SiteType
 
-/**
- * Player settings that can be kept separate for every non-Hanime site.
- *
- * Rules:
- *  - Hanime1 / Javchu always use the in-app player settings (Settings > Player).
- *  - Every other site has a "Use in-app player settings" switch (on by default). While it is on,
- *    the site simply follows the in-app values, so the two stay in sync. Turn it off and the site
- *    keeps its own copy that you can change without touching the other sites.
- *
- * To add a new setting later, add ONE entry to [specs]. The settings screen, the storage and the
- * sync/separate behaviour are all driven by that list.
- */
 object SitePlayerSettings {
 
-    /** Sites that can own separate player settings. */
     val configurableSites: List<SiteType> = listOf(
         SiteType.MISSAV,
         SiteType.HENTAIMAMA,
@@ -37,8 +24,6 @@ object SitePlayerSettings {
         SiteType.ONAIR -> "OnAir"
         SiteType.FAPFOLDER -> "FapFolder"
     }
-
-    // ---- setting descriptors -------------------------------------------------------------------
 
     sealed class Spec(val id: String, val title: String, val summary: String?) {
         abstract fun appDefault(): String
@@ -77,6 +62,7 @@ object SitePlayerSettings {
     const val ID_GESTURES = "gestures_enabled"
     const val ID_RESUME = "resume_playback"
     const val ID_AUTO_PLAY = "auto_play"
+    const val ID_STRETCH = "stretch_fullscreen"
 
     private val speedOptions = listOf(
         "0.5x" to "0.5", "0.75x" to "0.75", "1.0x" to "1.0", "1.25x" to "1.25",
@@ -88,7 +74,6 @@ object SitePlayerSettings {
         "3.5x" to "3.5", "4.0x" to "4.0",
     )
 
-    /** Add new player settings here. */
     val specs: List<Spec> = listOf(
         Spec.Choice(
             ID_DEFAULT_SPEED, "Default playback speed", null, speedOptions,
@@ -118,11 +103,11 @@ object SitePlayerSettings {
         Spec.Switch(
             ID_AUTO_PLAY, "Auto play", "Start playing as soon as the video is ready",
         ) { true },
+        Spec.Switch(
+            ID_STRETCH, "Fill screen in fullscreen", "Stretch the video to fill the screen by default",
+        ) { false },
     )
 
-    // ---- storage -------------------------------------------------------------------------------
-
-    /** Bumped on every write so Compose screens that read settings recompose. */
     var revision by mutableIntStateOf(0)
         private set
 
@@ -142,6 +127,21 @@ object SitePlayerSettings {
 
     fun spec(id: String): Spec? = specs.firstOrNull { it.id == id }
 
+    private fun hiddenKey(site: SiteType) = key(site, "hidden_settings")
+
+    fun hiddenIds(site: SiteType): Set<String> {
+        @Suppress("UNUSED_VARIABLE") val rev = revision
+        return Preferences.preferenceSp.getStringSet(hiddenKey(site), emptySet()) ?: emptySet()
+    }
+
+    fun isListed(site: SiteType, id: String): Boolean = id !in hiddenIds(site)
+
+    fun setListed(site: SiteType, id: String, listed: Boolean) {
+        val next = hiddenIds(site).toMutableSet().apply { if (listed) remove(id) else add(id) }
+        Preferences.preferenceSp.edit { putStringSet(hiddenKey(site), next) }
+        revision++
+    }
+
     fun getString(site: SiteType, id: String): String {
         val spec = spec(id) ?: return ""
         if (isSynced(site)) return spec.appDefault()
@@ -149,14 +149,12 @@ object SitePlayerSettings {
     }
 
     fun setString(site: SiteType, id: String, value: String) {
-        // Writing a value while still synced would silently do nothing; make the site separate
-        // first (seeded with the current in-app values) so the edit is never lost.
+
         if (isSynced(site)) separate(site)
         Preferences.preferenceSp.edit { putString(key(site, id), value) }
         revision++
     }
 
-    /** Turns sync off, copying the current in-app values so nothing visibly changes. */
     fun separate(site: SiteType) {
         Preferences.preferenceSp.edit {
             specs.forEach { putString(key(site, it.id), it.appDefault()) }
@@ -165,7 +163,6 @@ object SitePlayerSettings {
         revision++
     }
 
-    /** Drops this site's own values and follows the in-app player again. */
     fun resetToApp(site: SiteType) {
         Preferences.preferenceSp.edit {
             specs.forEach { remove(key(site, it.id)) }
@@ -174,15 +171,13 @@ object SitePlayerSettings {
         revision++
     }
 
-    // ---- typed access --------------------------------------------------------------------------
-
     private fun bool(site: SiteType, id: String) = getString(site, id).toBooleanStrictOrNull() ?: true
     private fun int(site: SiteType, id: String, def: Int) = getString(site, id).toIntOrNull() ?: def
     private fun float(site: SiteType, id: String, def: Float) =
         getString(site, id).toFloatOrNull() ?: def
 
     fun config(site: SiteType): SitePlayerConfig {
-        // Read the revision so composables calling this recompose after a settings change.
+
         @Suppress("UNUSED_VARIABLE") val rev = revision
         return SitePlayerConfig(
             defaultSpeed = float(site, ID_DEFAULT_SPEED, 1f),
@@ -194,6 +189,7 @@ object SitePlayerSettings {
             controlsHideMs = int(site, ID_HIDE_DELAY, 3).coerceIn(2, 10) * 1000L,
             resumePlayback = bool(site, ID_RESUME),
             autoPlay = bool(site, ID_AUTO_PLAY),
+            stretchFullscreen = getString(site, ID_STRETCH).toBooleanStrictOrNull() ?: false,
         )
     }
 }
@@ -208,4 +204,5 @@ data class SitePlayerConfig(
     val controlsHideMs: Long = 3_000L,
     val resumePlayback: Boolean = true,
     val autoPlay: Boolean = true,
+    val stretchFullscreen: Boolean = false,
 )

@@ -89,14 +89,6 @@ internal fun formatPlayerTime(ms: Long): String {
 private fun formatSpeedLabel(speed: Float): String =
     if (speed % 1f == 0f) "${speed.toInt()}.0x" else "${speed}x"
 
-/**
- * Player controls that follow the Hanime1 / Javchu in-app player look: glass top bar with back,
- * title, speed chip and clock; centred play/pause; side lock button; glass bottom bar with
- * progress, time, quality and fullscreen; swipe + double-tap + long-press gestures.
- *
- * Behaviour (hide delay, double-tap skip, long-press speed, gestures, bottom progress) comes from
- * [config], which is read from [SitePlayerSettings] for the site that hosts the player.
- */
 @Composable
 fun SitePlayerOverlay(
     config: SitePlayerConfig,
@@ -153,7 +145,6 @@ fun SitePlayerOverlay(
         }
     }
 
-    // Hide the gesture bubble shortly after the last update.
     LaunchedEffect(indicatorTick) {
         if (indicatorVisible) {
             delay(600)
@@ -180,7 +171,6 @@ fun SitePlayerOverlay(
 
     Box(modifier = modifier.fillMaxSize()) {
 
-        // ---- gesture layer -------------------------------------------------------------------
         Box(
             modifier = Modifier
                 .matchParentSize()
@@ -217,7 +207,7 @@ fun SitePlayerOverlay(
                     if (locked || !config.gesturesEnabled) return@pointerInput
                     val factor = 0.5f + config.slideSensitivity * 0.15f
                     val audio = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
-                    var mode = 0 // 1 = seek, 2 = brightness, 3 = volume
+                    var mode = 0
                     var dx = 0f
                     var dy = 0f
                     var startPos = 0L
@@ -235,7 +225,7 @@ fun SitePlayerOverlay(
                             val current = w?.attributes?.screenBrightness ?: -1f
                             startBrightness = if (current < 0f) 0.5f else current
                             startVolume = audio?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: 0
-                            // Left half: brightness, right half: volume (vertical drags).
+
                             mode = if (offset.x < size.width / 2f) -2 else -3
                         },
                         onDragEnd = {
@@ -248,7 +238,7 @@ fun SitePlayerOverlay(
                             dx += drag.x
                             dy += drag.y
                             if (mode < 0) {
-                                // Not decided yet: pick the dominant axis once the finger moves.
+
                                 if (kotlin.math.abs(dx) > 24f && kotlin.math.abs(dx) > kotlin.math.abs(dy)) {
                                     mode = 1
                                 } else if (kotlin.math.abs(dy) > 24f) {
@@ -300,7 +290,6 @@ fun SitePlayerOverlay(
                 },
         )
 
-        // ---- gradients -----------------------------------------------------------------------
         AnimatedVisibility(
             visible = controlsVisible && !locked,
             enter = fadeIn(),
@@ -333,7 +322,6 @@ fun SitePlayerOverlay(
             }
         }
 
-        // ---- top bar -------------------------------------------------------------------------
         AnimatedVisibility(
             visible = controlsVisible && !locked,
             enter = fadeIn(),
@@ -409,7 +397,6 @@ fun SitePlayerOverlay(
             }
         }
 
-        // ---- centre: buffering / play / pause --------------------------------------------------
         if (isBuffering) {
             Box(Modifier.align(Alignment.Center)) {
                 CircularProgressIndicator(color = Color.White, modifier = Modifier.size(48.dp))
@@ -436,7 +423,6 @@ fun SitePlayerOverlay(
             }
         }
 
-        // ---- lock button ---------------------------------------------------------------------
         AnimatedVisibility(
             visible = controlsVisible,
             enter = fadeIn(),
@@ -463,7 +449,6 @@ fun SitePlayerOverlay(
             }
         }
 
-        // ---- bottom bar ----------------------------------------------------------------------
         AnimatedVisibility(
             visible = controlsVisible && !locked,
             enter = fadeIn(),
@@ -585,7 +570,6 @@ fun SitePlayerOverlay(
             }
         }
 
-        // ---- thin progress while controls are hidden ---------------------------------------------
         if (config.showBottomProgress && !controlsVisible && durationMs > 0) {
             Box(
                 modifier = Modifier
@@ -603,7 +587,6 @@ fun SitePlayerOverlay(
             }
         }
 
-        // ---- long-press speed chip -------------------------------------------------------------
         if (boosted) {
             Box(
                 modifier = Modifier
@@ -622,7 +605,6 @@ fun SitePlayerOverlay(
             }
         }
 
-        // ---- gesture bubble --------------------------------------------------------------------
         GestureIndicatorOverlay(
             visible = indicatorVisible,
             type = indicatorType,
@@ -669,7 +651,6 @@ private fun ChipText(text: String, onClick: () -> Unit) {
     }
 }
 
-/** Same visuals as the Hanime player slider, plus a "finished" callback so seeking happens on release. */
 @Composable
 fun SitePlayerSlider(
     value: Float,

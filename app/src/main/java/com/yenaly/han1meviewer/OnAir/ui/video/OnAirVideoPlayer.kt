@@ -122,8 +122,11 @@ fun OnAirVideoPlayer(
     modifier: Modifier = Modifier,
     coverUrl: String? = null,
     title: String = "",
+    onBack: () -> Unit = {},
 ) {
     val context = LocalContext.current
+    val playerConfig = com.yenaly.han1meviewer.ui.component.player.SitePlayerSettings
+        .config(com.yenaly.han1meviewer.SiteType.ONAIR)
     var showControls by remember { mutableStateOf(true) }
     var interaction by remember { mutableIntStateOf(0) }
     var playbackState by remember(player) { mutableIntStateOf(player.playbackState) }
@@ -157,7 +160,6 @@ fun OnAirVideoPlayer(
 
     fun bump() { interaction++ }
 
-    // Player listener (the ExoPlayer itself is hoisted, so it survives fullscreen toggles).
     DisposableEffect(player) {
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(newState: Int) {
@@ -189,12 +191,11 @@ fun OnAirVideoPlayer(
         onDispose { player.removeListener(listener) }
     }
 
-    // Load / switch media.
     LaunchedEffect(url) {
         if (url.isNullOrBlank()) return@LaunchedEffect
         val loaded = player.currentMediaItem?.localConfiguration?.uri?.toString()
         if (loaded == url) {
-            // Same URL after a player error (e.g. Retry): the player is stuck, re-prepare it.
+
             if (player.playerError != null) {
                 player.prepare()
                 player.playWhenReady = state.playbackIntent == PlaybackIntent.Playing
@@ -210,11 +211,19 @@ fun OnAirVideoPlayer(
             "User-Agent" to "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 " +
                     "(KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36",
         )
-        if (cookieHeader.isNotBlank()) mediaHeaders["Cookie"] = cookieHeader
 
+        val baseHost = runCatching { java.net.URI(base).host }.getOrNull()
         val httpFactory = DefaultHttpDataSource.Factory()
             .setDefaultRequestProperties(mediaHeaders)
-        val dsFactory = DefaultDataSource.Factory(context, httpFactory)
+        val cookieAwareFactory = androidx.media3.datasource.ResolvingDataSource.Factory(
+            httpFactory,
+            androidx.media3.datasource.ResolvingDataSource.Resolver { dataSpec ->
+                if (cookieHeader.isNotBlank() && baseHost != null && dataSpec.uri.host == baseHost) {
+                    dataSpec.withAdditionalHeaders(mapOf("Cookie" to cookieHeader))
+                } else dataSpec
+            },
+        )
+        val dsFactory = DefaultDataSource.Factory(context, cookieAwareFactory)
         val mediaItem = androidx.media3.common.MediaItem.Builder().setUri(url).build()
         val isHls = state.activeStream?.isHls == true || url.contains(".m3u8")
         val mediaSource = if (isHls) {
@@ -245,7 +254,6 @@ fun OnAirVideoPlayer(
         player.repeatMode = if (state.isLooping) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
     }
 
-    // Real seeking (previously the slider only updated the stored position).
     LaunchedEffect(state.pendingSeekMs) {
         val target = state.pendingSeekMs
         if (target >= 0) {
@@ -268,7 +276,6 @@ fun OnAirVideoPlayer(
         }
     }
 
-    // Auto-hide controls; any interaction restarts the timer.
     LaunchedEffect(showControls, state.playbackIntent, interaction, menuOpen, scrubbing) {
         if (showControls && state.playbackIntent == PlaybackIntent.Playing && !menuOpen && !scrubbing) {
             delay(3500)
@@ -284,7 +291,7 @@ fun OnAirVideoPlayer(
     }
 
     val fitState = remember { VideoFitState() }
-    var stretched by rememberSaveable { mutableStateOf(false) }
+    var stretched by rememberSaveable { mutableStateOf(com.yenaly.han1meviewer.ui.component.player.SitePlayerSettings.config(com.yenaly.han1meviewer.SiteType.ONAIR).stretchFullscreen) }
     fitState.stretched = stretched && isFullscreen
     var fitFrame by remember { mutableStateOf<FrameLayout?>(null) }
 
@@ -357,40 +364,6 @@ fun OnAirVideoPlayer(
                 },
             )
 
-            // Tap = toggle controls, double-tap left/right = seek -/+10s.
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .pointerInput(state.isLocked) {
-                        detectTapGestures(
-                            onTap = { showControls = !showControls; bump() },
-                            onDoubleTap = { offset ->
-                                if (!state.isLocked && state.playbackIntent != PlaybackIntent.NotStarted) {
-                                    if (offset.x < size.width / 2f) {
-                                        onSeekBy(-SKIP_MS)
-                                        seekHint = "« 10s"
-                                    } else {
-                                        onSeekBy(SKIP_MS)
-                                        seekHint = "10s »"
-                                    }
-                                }
-                            },
-                        )
-                    },
-            )
-
-            seekHint?.let { hint ->
-                Text(
-                    text = hint,
-                    color = Color.White,
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(24.dp))
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-            }
-
             if (isBuffering && !state.isSwitchLoading) {
                 Box(
                     modifier = Modifier
@@ -456,201 +429,42 @@ fun OnAirVideoPlayer(
                 }
             }
 
-            // Locked: only an unlock button is shown.
-            AnimatedVisibility(
-                visible = state.isLocked && showControls &&
-                        state.playbackIntent != PlaybackIntent.NotStarted,
-                enter = fadeIn(),
-                exit = fadeOut(),
-                modifier = Modifier.align(Alignment.CenterStart),
+            if (!state.isSwitchLoading && !streamError &&
+                state.playbackIntent != PlaybackIntent.NotStarted
             ) {
-                IconButton(
-                    onClick = { onToggleLock(); bump() },
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .background(Color.Black.copy(alpha = 0.55f), CircleShape),
-                ) {
-                    Icon(Icons.Filled.Lock, contentDescription = "Unlock controls", tint = Color.White)
+                val orderedQualities = remember(state.streamsByQuality) {
+                    QUALITY_ORDER.filter { it in state.streamsByQuality } +
+                            state.streamsByQuality.keys.filter { it !in QUALITY_ORDER }
                 }
-            }
-
-            AnimatedVisibility(
-                visible = showControls && !state.isLocked && !state.isSwitchLoading &&
-                        !streamError &&
-                        state.playbackIntent != PlaybackIntent.NotStarted,
-                enter = fadeIn(),
-                exit = fadeOut(),
-            ) {
-                Box(modifier = Modifier.fillMaxSize()) {
-                    // Center: -10s / play-pause / +10s
-                    Row(
-                        modifier = Modifier.align(Alignment.Center),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(if (isFullscreen) 32.dp else 20.dp),
-                    ) {
-                        IconButton(
-                            onClick = { bump(); onSeekBy(-SKIP_MS) },
-                            modifier = Modifier
-                                .size(if (isFullscreen) 56.dp else 44.dp)
-                                .background(Color.Black.copy(alpha = 0.45f), CircleShape),
-                        ) {
-                            Icon(Icons.Filled.Replay10, "Back 10 seconds", tint = Color.White)
+                com.yenaly.han1meviewer.ui.component.player.SitePlayerOverlay(
+                    config = playerConfig,
+                    title = title,
+                    isPlaying = state.playbackIntent == PlaybackIntent.Playing,
+                    isBuffering = false,
+                    positionMs = state.position,
+                    durationMs = state.duration,
+                    bufferedMs = player.bufferedPosition.coerceAtLeast(0L),
+                    qualityLabel = if (state.currentQuality.isBlank()) "" else qualityLabel(state.currentQuality),
+                    speed = state.speed,
+                    isFullscreen = isFullscreen,
+                    onPlayPause = handlePlayPause,
+                    onSeekTo = onSeek,
+                    onSeekBy = onSeekBy,
+                    onToggleFullscreen = onToggleFullscreen,
+                    onBack = if (isFullscreen) onToggleFullscreen else onBack,
+                    speedOptions = state.availableSpeeds,
+                    onSpeedSelect = onSpeedChange,
+                    qualityOptions = orderedQualities.map { qualityLabel(it) },
+                    onQualitySelect = { label ->
+                        orderedQualities.firstOrNull { qualityLabel(it) == label }?.let { q ->
+                            if (q != state.currentQuality) onQualityChange(q)
                         }
-                        IconButton(
-                            onClick = handlePlayPause,
-                            modifier = Modifier
-                                .size(if (isFullscreen) 80.dp else 56.dp)
-                                .background(Color.Black.copy(alpha = 0.55f), CircleShape),
-                        ) {
-                            Icon(
-                                imageVector = if (state.playbackIntent == PlaybackIntent.Playing) {
-                                    Icons.Filled.Pause
-                                } else {
-                                    Icons.Filled.PlayArrow
-                                },
-                                contentDescription = "Play / pause",
-                                tint = Color.White,
-                                modifier = Modifier.size(if (isFullscreen) 48.dp else 36.dp),
-                            )
-                        }
-                        IconButton(
-                            onClick = { bump(); onSeekBy(SKIP_MS) },
-                            modifier = Modifier
-                                .size(if (isFullscreen) 56.dp else 44.dp)
-                                .background(Color.Black.copy(alpha = 0.45f), CircleShape),
-                        ) {
-                            Icon(Icons.Filled.Forward10, "Forward 10 seconds", tint = Color.White)
-                        }
-                    }
-
-                    // Top bar
-                    Row(
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .fillMaxWidth()
-                            .then(if (isFullscreen) Modifier.statusBarsPadding() else Modifier)
-                            .background(Color.Black.copy(alpha = 0.35f))
-                            .padding(horizontal = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        if (isFullscreen) {
-                            IconButton(onClick = onToggleFullscreen) {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Exit fullscreen",
-                                    tint = Color.White,
-                                )
-                            }
-                        }
-                        Text(
-                            text = if (isFullscreen) title else "",
-                            color = Color.White,
-                            style = MaterialTheme.typography.titleSmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f),
-                        )
-                        if (!isFullscreen) Spacer(Modifier.weight(1f))
-
-                        Box {
-                            IconButton(onClick = { showQualityMenu = true; bump() }) {
-                                Text(
-                                    text = state.currentQuality.ifBlank { "Quality" },
-                                    color = Color.White,
-                                    style = MaterialTheme.typography.labelSmall,
-                                )
-                            }
-                            DropdownMenu(
-                                expanded = showQualityMenu,
-                                onDismissRequest = { showQualityMenu = false },
-                            ) {
-                                val ordered = QUALITY_ORDER.filter { it in state.streamsByQuality } +
-                                        state.streamsByQuality.keys.filter { it !in QUALITY_ORDER }
-                                ordered.forEach { q ->
-                                    val stream = state.streamsByQuality[q]
-                                    val isLoading = stream?.state == StreamState.Loading ||
-                                            state.pendingQuality == q
-                                    val isError = stream?.state == StreamState.Error
-                                    val isCurrent = q == state.currentQuality
-                                    DropdownMenuItem(
-                                        text = {
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                            ) {
-                                                when {
-                                                    isLoading -> CircularProgressIndicator(
-                                                        modifier = Modifier.size(14.dp),
-                                                        strokeWidth = 2.dp,
-                                                    )
-
-                                                    isError -> Icon(
-                                                        Icons.Filled.Warning,
-                                                        contentDescription = null,
-                                                        tint = MaterialTheme.colorScheme.error,
-                                                        modifier = Modifier.size(16.dp),
-                                                    )
-
-                                                    isCurrent -> Icon(
-                                                        Icons.Filled.Check,
-                                                        contentDescription = null,
-                                                        modifier = Modifier.size(16.dp),
-                                                    )
-
-                                                    else -> Spacer(Modifier.width(16.dp))
-                                                }
-                                                Text(qualityLabel(q))
-                                            }
-                                        },
-                                        onClick = {
-                                            showQualityMenu = false
-                                            if (!isCurrent) onQualityChange(q)
-                                        },
-                                        enabled = !isLoading && !isCurrent,
-                                    )
-                                }
-                            }
-                        }
-                        Box {
-                            IconButton(onClick = { showSpeedMenu = true; bump() }) {
-                                Text(
-                                    text = "${state.speed}x",
-                                    color = Color.White,
-                                    style = MaterialTheme.typography.labelSmall,
-                                )
-                            }
-                            DropdownMenu(
-                                expanded = showSpeedMenu,
-                                onDismissRequest = { showSpeedMenu = false },
-                            ) {
-                                state.availableSpeeds.forEach { s ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                            ) {
-                                                if (s == state.speed) {
-                                                    Icon(
-                                                        Icons.Filled.Check,
-                                                        contentDescription = null,
-                                                        modifier = Modifier.size(16.dp),
-                                                    )
-                                                } else {
-                                                    Spacer(Modifier.width(16.dp))
-                                                }
-                                                Text("${s}x")
-                                            }
-                                        },
-                                        onClick = {
-                                            onSpeedChange(s)
-                                            showSpeedMenu = false
-                                        },
-                                    )
-                                }
-                            }
-                        }
-                        IconButton(onClick = { onToggleMute(); bump() }) {
+                    },
+                    stretched = stretched,
+                    onToggleStretch = { stretched = !stretched },
+                    onTemporarySpeed = { player.setPlaybackSpeed(it ?: state.speed) },
+                    extraActions = {
+                        IconButton(onClick = onToggleMute, modifier = Modifier.size(32.dp)) {
                             Icon(
                                 imageVector = if (state.isMuted) Icons.AutoMirrored.Filled.VolumeOff
                                 else Icons.AutoMirrored.Filled.VolumeUp,
@@ -658,7 +472,7 @@ fun OnAirVideoPlayer(
                                 tint = Color.White,
                             )
                         }
-                        IconButton(onClick = { onToggleLoop(); bump() }) {
+                        IconButton(onClick = onToggleLoop, modifier = Modifier.size(32.dp)) {
                             Icon(
                                 imageVector = if (state.isLooping) Icons.Filled.RepeatOne
                                 else Icons.Filled.Repeat,
@@ -667,86 +481,8 @@ fun OnAirVideoPlayer(
                                 else Color.White,
                             )
                         }
-                        if (isFullscreen) {
-                            IconButton(onClick = { stretched = !stretched; bump() }) {
-                                Icon(
-                                    imageVector = Icons.Filled.AspectRatio,
-                                    contentDescription = stringResource(R.string.stretch_to_fill),
-                                    tint = if (stretched) MaterialTheme.colorScheme.primary
-                                    else Color.White,
-                                )
-                            }
-                            IconButton(onClick = { onToggleLock(); bump() }) {
-                                Icon(
-                                    Icons.Filled.LockOpen,
-                                    contentDescription = "Lock controls",
-                                    tint = Color.White,
-                                )
-                            }
-                        } else {
-                            IconButton(onClick = onToggleFullscreen) {
-                                Icon(
-                                    Icons.Filled.Fullscreen,
-                                    contentDescription = "Fullscreen",
-                                    tint = Color.White,
-                                )
-                            }
-                        }
-                    }
-
-                    // Bottom bar: time + seek slider
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .fillMaxWidth()
-                            .then(if (isFullscreen) Modifier.navigationBarsPadding() else Modifier)
-                            .background(Color.Black.copy(alpha = 0.55f))
-                            .padding(horizontal = 12.dp, vertical = 4.dp),
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            val shownPosition = if (scrubbing && state.duration > 0) {
-                                (scrubFraction * state.duration).toLong()
-                            } else state.position
-                            Text(
-                                text = formatTime(shownPosition),
-                                color = Color.White,
-                                style = MaterialTheme.typography.labelSmall,
-                                modifier = Modifier.width(52.dp),
-                            )
-                            Slider(
-                                value = if (scrubbing) scrubFraction
-                                else if (state.duration > 0) {
-                                    (state.position.toFloat() / state.duration).coerceIn(0f, 1f)
-                                } else 0f,
-                                onValueChange = { v ->
-                                    scrubbing = true
-                                    scrubFraction = v
-                                },
-                                onValueChangeFinished = {
-                                    if (state.duration > 0) onSeek((scrubFraction * state.duration).toLong())
-                                    scrubbing = false
-                                    bump()
-                                },
-                                modifier = Modifier.weight(1f),
-                                colors = SliderDefaults.colors(
-                                    thumbColor = Color.White,
-                                    activeTrackColor = MaterialTheme.colorScheme.primary,
-                                    inactiveTrackColor = Color.White.copy(alpha = 0.3f),
-                                ),
-                            )
-                            Text(
-                                text = formatTime(state.duration),
-                                color = Color.White,
-                                style = MaterialTheme.typography.labelSmall,
-                                modifier = Modifier.width(52.dp),
-                            )
-                        }
-                    }
-                }
+                    },
+                )
             }
         } else {
             Column(

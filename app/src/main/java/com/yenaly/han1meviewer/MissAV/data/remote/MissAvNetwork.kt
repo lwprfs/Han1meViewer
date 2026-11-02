@@ -90,11 +90,6 @@ object MissAvNetwork {
             .build()
     }
 
-    /**
-     * Client for HLS downloads. It deliberately does NOT use the page client above, which forces
-     * `Accept: text/html...` and a 30s no-cache profile onto every segment request; CDNs can
-     * reject that while the player (which sends none of it) works fine.
-     */
     val downloadOkHttpClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
@@ -113,5 +108,3 @@ object MissAvNetwork {
         _okHttpClient = null
     }
 }
-
-

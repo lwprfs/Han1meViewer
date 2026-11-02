@@ -91,14 +91,12 @@ fun OnAirVideoScreen(
     val showResumeBanner by viewModel.showResumeBanner.collectAsStateWithLifecycle()
     val resumePosition by viewModel.resumePosition.collectAsStateWithLifecycle()
 
-    // One ExoPlayer for the whole screen so it survives the inline <-> fullscreen switch.
     val context = LocalContext.current
     val exoPlayer = remember { ExoPlayer.Builder(context).build() }
     DisposableEffect(exoPlayer) {
         onDispose { exoPlayer.release() }
     }
 
-    // Landscape while fullscreen, restore afterwards.
     DisposableEffect(playerState.isFullscreen) {
         val activity = context.findActivity()
         if (playerState.isFullscreen) {
@@ -111,8 +109,6 @@ fun OnAirVideoScreen(
         }
     }
 
-    // Pause + save progress when the app goes to the background (previously audio kept playing),
-    // and save when leaving the screen (ViewModel.onCleared cannot launch coroutines).
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -135,6 +131,19 @@ fun OnAirVideoScreen(
             com.yenaly.han1meviewer.ui.component.player.SitePlayerSettings
                 .config(com.yenaly.han1meviewer.SiteType.ONAIR).defaultSpeed
         )
+    }
+
+    val onAirConfig = com.yenaly.han1meviewer.ui.component.player.SitePlayerSettings.config(com.yenaly.han1meviewer.SiteType.ONAIR)
+    var autoKicked by remember(videoId) { mutableStateOf(false) }
+    LaunchedEffect(videoId, playerState.activeUrl, playerState.playbackIntent, state) {
+        if (!onAirConfig.autoPlay || playerState.playbackIntent != PlaybackIntent.NotStarted) return@LaunchedEffect
+        if (state !is VideoLoadingState.Success) return@LaunchedEffect
+        if (showResumeBanner && onAirConfig.resumePlayback) return@LaunchedEffect
+        if (!autoKicked || !playerState.activeUrl.isNullOrBlank()) {
+            autoKicked = true
+            delay(400)
+            viewModel.startPlayback()
+        }
     }
 
     LaunchedEffect(videoId) {
@@ -290,6 +299,7 @@ fun OnAirVideoScreen(
                             isFullscreen = false,
                             player = exoPlayer,
                             title = detail.title,
+                            onBack = onBack,
                             onPlayPause = playPauseToggle,
                             onSeek = viewModel::seekTo,
                             onSeekBy = viewModel::seekBy,
@@ -322,7 +332,7 @@ fun OnAirVideoScreen(
                         }
                     }
 
-                    if (showResumeBanner) {
+                    if (showResumeBanner && com.yenaly.han1meviewer.ui.component.player.SitePlayerSettings.config(com.yenaly.han1meviewer.SiteType.ONAIR).resumePlayback) {
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -623,5 +633,3 @@ private fun formatMillis(ms: Long): String {
     val s = total % 60
     return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
 }
-
-

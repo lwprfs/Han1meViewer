@@ -454,5 +454,3 @@ class HentaiMamaVideoViewModel(application: Application) : AndroidViewModel(appl
         extractionJob?.cancel()
     }
 }
-
-

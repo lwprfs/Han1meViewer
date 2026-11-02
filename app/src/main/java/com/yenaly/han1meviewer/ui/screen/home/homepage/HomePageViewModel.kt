@@ -202,5 +202,3 @@ class HomePageViewModel: ViewModel() {
         }
     }
 }
-
-

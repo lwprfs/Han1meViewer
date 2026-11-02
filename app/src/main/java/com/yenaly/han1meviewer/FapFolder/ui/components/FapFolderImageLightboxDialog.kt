@@ -310,5 +310,3 @@ private fun ZoomableImage(
         )
     }
 }
-
-

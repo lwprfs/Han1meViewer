@@ -129,7 +129,6 @@ fun NavGraphBuilder.registerGlobalSettingsRoutes(
         )
     }
 
-    // Download page available from every site's drawer.
     composable<DownloadRoute> {
         DownloadRouteScreen(
             onBack = { navController.popBackStack() },
@@ -140,7 +139,6 @@ fun NavGraphBuilder.registerGlobalSettingsRoutes(
         )
     }
 
-    // Local (offline) playback of downloaded videos from inside a site graph.
     composable<VideoRoute> {
         VideoRouteScreen(
             activity = activity,
@@ -160,5 +158,3 @@ fun NavGraphBuilder.registerUnifiedHistoryRoute(
         )
     }
 }
-
-

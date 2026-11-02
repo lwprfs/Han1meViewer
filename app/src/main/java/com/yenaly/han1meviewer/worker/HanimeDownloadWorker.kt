@@ -476,9 +476,7 @@ class HanimeDownloadWorker(
 
             val targetGroupId = groupId.takeIf { it > 0 }
             if (targetGroupId != null && entity.groupId != targetGroupId) {
-                // Only (re)assign videos that are still "ungrouped" (default group or their
-                // automatic site group). A group the user picked by hand is never overridden
-                // by stale task arguments.
+
                 val siteGroupId = DatabaseRepo.HanimeDownload.groupIdForVideoCode(videoCode)
                 if (entity.groupId == DownloadGroupEntity.DEFAULT_GROUP_ID ||
                     entity.groupId == siteGroupId
@@ -730,8 +728,7 @@ class HanimeDownloadWorker(
             if (isSuccess && uri != null) {
                 val coverUriStr = uri.toString()
                 withContext(Dispatchers.IO) {
-                    // Only the cover column: a full-row update from this stale copy would
-                    // overwrite the progress/state the download loop keeps writing.
+
                     DatabaseRepo.HanimeDownload.updateCoverUri(entity.id, coverUriStr)
                 }
                 entity.coverUri = coverUriStr
@@ -832,9 +829,3 @@ class HanimeDownloadWorker(
         )
     }
 }
-
-
-
-
-
-

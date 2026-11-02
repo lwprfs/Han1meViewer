@@ -283,5 +283,3 @@ private fun formatViews(views: Long): String = when {
     views >= 1_000 -> "%.1fK".format(views / 1_000.0)
     else -> views.toString()
 }
-
-

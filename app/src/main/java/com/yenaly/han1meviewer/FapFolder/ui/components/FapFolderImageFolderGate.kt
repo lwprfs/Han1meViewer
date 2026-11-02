@@ -16,14 +16,6 @@ import com.yenaly.han1meviewer.util.FapFolderImageLocation
 
 private enum class ImageGateDialog { None, NeedFolder, ConfirmFolder }
 
-/**
- * Gate in front of every FapFolder image download.
- *
- * - No folder chosen (or access lost): asks the user to pick a folder and grant access.
- * - Folder already chosen: asks (once per app session) whether to use it or change it.
- *
- * Usage: `val gate = rememberFapFolderImageGate()` then `gate { startDownload() }`.
- */
 @Composable
 fun rememberFapFolderImageGate(): (onReady: () -> Unit) -> Unit {
     val context = LocalContext.current

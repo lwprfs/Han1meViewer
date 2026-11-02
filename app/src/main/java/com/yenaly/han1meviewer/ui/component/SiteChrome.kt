@@ -657,5 +657,3 @@ fun SiteIconBadge(
         )
     }
 }
-
-

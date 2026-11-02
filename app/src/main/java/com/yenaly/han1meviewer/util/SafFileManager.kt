@@ -447,10 +447,7 @@ object SafFileManager {
     }
 
     fun deleteDownloadVideoFolder(context: Context, videoCode: String) {
-        // Where a video lives depends on its site (see DownloadLayout.segmentsFor): Hanime keeps
-        // "hanime_download/<code>", every other site has its own "<Site>/<...>" folder. The old
-        // code always looked in hanime_download, so videos from other sites were never removed
-        // from disk when deleted in the download page.
+
         val segments = DownloadLayout.segmentsFor(videoCode)
 
         runCatching {

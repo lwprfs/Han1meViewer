@@ -245,7 +245,7 @@ class VideoRouteActions(
         seriesCodes.forEach { videoCode ->
             val entity = DatabaseRepo.HanimeDownload.find(videoCode) ?: return@forEach
             val siteGroupId = DatabaseRepo.HanimeDownload.groupIdForVideoCode(videoCode)
-            // "Ungrouped" = still in the default group or in its automatic site group.
+
             if (entity.groupId != DownloadGroupEntity.DEFAULT_GROUP_ID &&
                 entity.groupId != siteGroupId
             ) return@forEach
@@ -263,5 +263,3 @@ class VideoRouteActions(
         })
     }
 }
-
-

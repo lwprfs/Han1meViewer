@@ -151,7 +151,7 @@ internal fun LazyListScope.fapFolderImagePostItems(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 val hasGroupPhotos = !groupSlug.isNullOrBlank() || !username.isNullOrBlank()
-                // Opening the post's photos goes to the group's / profile's grouped photos.
+
                 if (hasGroupPhotos) {
                     FilledTonalButton(
                         onClick = {
@@ -175,7 +175,7 @@ internal fun LazyListScope.fapFolderImagePostItems(
                         )
                     }
                 }
-                // The album screen itself only opens from "See album".
+
                 if (!albumId.isNullOrBlank()) {
                     FilledTonalButton(
                         onClick = { onOpenAlbum(albumId) },
@@ -191,7 +191,3 @@ internal fun LazyListScope.fapFolderImagePostItems(
 
     fapFolderCommentItems(post, uiState, viewModel, onOpenProfile)
 }
-
-
-
-

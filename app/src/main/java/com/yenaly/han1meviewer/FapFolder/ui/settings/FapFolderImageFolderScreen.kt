@@ -4,6 +4,24 @@ import android.content.Context
 import android.net.Uri
 import android.provider.DocumentsContract
 import androidx.activity.compose.BackHandler
+import android.content.ClipData
+import android.content.Intent
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChanged
+import androidx.compose.ui.geometry.Offset
+import kotlinx.coroutines.launch
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -105,7 +123,6 @@ private fun listChildren(context: Context, tree: Uri, parentDocId: String): List
     return out
 }
 
-/** All images below [rootDocId], newest first, capped so a huge library can't freeze the screen. */
 private fun listAllImages(context: Context, tree: Uri, rootDocId: String, cap: Int = 4000): List<PhotoEntry> {
     val result = ArrayList<PhotoEntry>()
     val queue = ArrayDeque<String>()
@@ -120,10 +137,6 @@ private fun listAllImages(context: Context, tree: Uri, rootDocId: String, cap: I
     return result.sortedByDescending { it.modified }
 }
 
-/**
- * Downloaded FapFolder photos: browse the download folder, view every photo, or flatten the whole
- * library. The download-folder settings live here too (gear icon).
- */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun FapFolderImageFolderScreen(onBack: () -> Unit) {
@@ -321,6 +334,38 @@ fun FapFolderImageFolderScreen(onBack: () -> Unit) {
         }
     }
 
+    val scope = rememberCoroutineScope()
+    var deleteTarget by remember { mutableStateOf<PhotoEntry?>(null) }
+
+    deleteTarget?.let { target ->
+        AlertDialog(
+            onDismissRequest = { deleteTarget = null },
+            title = { Text("Delete photo?") },
+            text = { Text("\"${target.name}\" will be removed from your device.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    deleteTarget = null
+                    scope.launch {
+                        val ok = withContext(Dispatchers.IO) {
+                            runCatching {
+                                DocumentsContract.deleteDocument(context.contentResolver, target.uri)
+                            }.getOrDefault(false)
+                        }
+                        if (ok) {
+                            viewerIndex = null
+                            refresh++
+                        } else {
+                            android.widget.Toast.makeText(
+                                context, "Couldn't delete this photo", android.widget.Toast.LENGTH_SHORT,
+                            ).show()
+                        }
+                    }
+                }) { Text("Delete") }
+            },
+            dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text("Cancel") } },
+        )
+    }
+
     val startIndex = viewerIndex
     if (startIndex != null && photos.isNotEmpty()) {
         Dialog(
@@ -331,29 +376,135 @@ fun FapFolderImageFolderScreen(onBack: () -> Unit) {
                 initialPage = startIndex.coerceIn(0, photos.lastIndex),
                 pageCount = { photos.size },
             )
+            var zoomed by remember { mutableStateOf(false) }
+            var chromeVisible by remember { mutableStateOf(true) }
+            val current = photos.getOrNull(pagerState.currentPage)
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black)
-                    .clickable { viewerIndex = null },
+                    .background(Color.Black),
             ) {
-                HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
-                    AsyncImage(
-                        model = photos[page].uri,
-                        contentDescription = photos[page].name,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize(),
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize(),
+                    userScrollEnabled = !zoomed,
+                ) { page ->
+                    ZoomableViewerImage(
+                        uri = photos[page].uri,
+                        name = photos[page].name,
+                        onZoomChanged = { zoomed = it },
+                        onTap = { chromeVisible = !chromeVisible },
                     )
                 }
-                Text(
-                    text = "${pagerState.currentPage + 1} / ${photos.size}",
-                    color = Color.White,
-                    style = MaterialTheme.typography.labelLarge,
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(16.dp),
-                )
+                if (chromeVisible) {
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .fillMaxWidth()
+                            .background(Color.Black.copy(alpha = 0.45f))
+                            .padding(horizontal = 4.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        IconButton(onClick = { viewerIndex = null }) {
+                            Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                        }
+                        Text(
+                            text = "${pagerState.currentPage + 1} / ${photos.size}",
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelLarge,
+                            modifier = Modifier.weight(1f),
+                        )
+                        IconButton(onClick = {
+                            current?.let { photo ->
+                                val send = Intent(Intent.ACTION_SEND).apply {
+                                    type = "image/*"
+                                    putExtra(Intent.EXTRA_STREAM, photo.uri)
+                                    clipData = ClipData.newRawUri("", photo.uri)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                runCatching {
+                                    context.startActivity(
+                                        Intent.createChooser(send, "Share photo")
+                                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    )
+                                }
+                            }
+                        }) {
+                            Icon(Icons.Default.Share, contentDescription = "Share", tint = Color.White)
+                        }
+                        IconButton(onClick = { deleteTarget = current }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.White)
+                        }
+                    }
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun ZoomableViewerImage(
+    uri: Uri,
+    name: String,
+    onZoomChanged: (Boolean) -> Unit,
+    onTap: () -> Unit,
+) {
+    var scale by remember { mutableStateOf(1f) }
+    var offset by remember { mutableStateOf(Offset.Zero) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = { onTap() },
+                    onDoubleTap = {
+                        if (scale > 1f) {
+                            scale = 1f
+                            offset = Offset.Zero
+                        } else {
+                            scale = 2.5f
+                        }
+                        onZoomChanged(scale > 1f)
+                    },
+                )
+            }
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false)
+                    do {
+                        val event = awaitPointerEvent()
+                        val multiTouch = event.changes.size > 1
+                        if (multiTouch || scale > 1f) {
+                            val zoom = event.calculateZoom()
+                            val pan = event.calculatePan()
+                            scale = (scale * zoom).coerceIn(1f, 5f)
+                            val maxX = size.width * (scale - 1f) / 2f
+                            val maxY = size.height * (scale - 1f) / 2f
+                            offset = if (scale <= 1f) Offset.Zero else Offset(
+                                (offset.x + pan.x).coerceIn(-maxX, maxX),
+                                (offset.y + pan.y).coerceIn(-maxY, maxY),
+                            )
+                            onZoomChanged(scale > 1f)
+                            event.changes.forEach { if (it.positionChanged()) it.consume() }
+                        }
+                    } while (event.changes.any { it.pressed })
+                }
+            },
+    ) {
+        AsyncImage(
+            model = uri,
+            contentDescription = name,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer(
+                    scaleX = scale,
+                    scaleY = scale,
+                    translationX = offset.x,
+                    translationY = offset.y,
+                ),
+        )
     }
 }

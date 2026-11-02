@@ -118,11 +118,6 @@ private tailrec fun Context.findHostActivity(): Activity? = when (this) {
     else -> null
 }
 
-/**
- * Builds the media source with the app's HentaiMama OkHttp client (cookies, user agent,
- * Cloudflare handling) plus Referer/Origin. The plain DefaultHttpDataSource used before sent none
- * of the cookies, which is why files could download fine yet refuse to load in the player.
- */
 private fun buildHentaiMamaMediaSource(context: Context, url: String): MediaSource {
     val base = HentaiMamaNetwork.baseUrl.trimEnd('/')
     val http = OkHttpDataSource.Factory(HentaiMamaNetwork.sharedOkHttpClient)
@@ -178,7 +173,6 @@ fun HentaiMamaVideoScreen(
 
     HentaiMamaHistoryRepo.init(context)
 
-    // Pause when the app is backgrounded; restore orientation/system bars if we leave while fullscreen.
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -243,14 +237,13 @@ fun HentaiMamaVideoScreen(
         }
     }
 
-    // Player settings for this site (follow the in-app player unless separated in Settings > Player).
     val playerConfig = SitePlayerSettings.config(SiteType.HENTAIMAMA)
     LaunchedEffect(playerConfig.defaultSpeed) {
         viewModel.setSpeed(playerConfig.defaultSpeed)
     }
     LaunchedEffect(playerState.isReady, playerState.url, playerConfig.autoPlay) {
         if (playerConfig.autoPlay && playerState.isReady && playerState.url.isNotBlank()) {
-            // Give the resume-history lookup a moment so we never start over a resume prompt.
+
             delay(500)
             if (!showResumeDialog && !viewModel.playerState.value.isPlaying) {
                 viewModel.setPlaying(true)
@@ -274,7 +267,7 @@ fun HentaiMamaVideoScreen(
                     history.lastPosition > RESUME_THRESHOLD_MS -> history.lastPosition
             else -> 0L
         }
-        if (pendingResume > 0L) showResumeDialog = true
+        if (pendingResume > 0L && com.yenaly.han1meviewer.ui.component.player.SitePlayerSettings.config(com.yenaly.han1meviewer.SiteType.HENTAIMAMA).resumePlayback) showResumeDialog = true
     }
 
     LaunchedEffect(playerState.duration, pendingResume, exoPlayer.value) {
@@ -637,8 +630,7 @@ fun HentaiMamaVideoScreen(
                                         ?: playerState.url.takeIf { it.isNotBlank() },
                                     downloadQuality = activeLink?.quality.orEmpty(),
                                     resolveDownloadUrl = {
-                                        // Prefer what the player already resolved; only wait for
-                                        // mirror links when nothing is playing yet.
+
                                         viewModel.playerState.value.url.takeIf { it.isNotBlank() }
                                             ?: kotlinx.coroutines.withTimeoutOrNull(20_000L) {
                                                 viewModel.mirrorLinks.first { it.isNotEmpty() }
@@ -839,7 +831,3 @@ private fun SimilarGrid(
         }
     }
 }
-
-
-
-

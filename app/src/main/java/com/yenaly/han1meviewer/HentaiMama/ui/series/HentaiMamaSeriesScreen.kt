@@ -580,5 +580,3 @@ private fun formatViewsSeries(views: Long): String = when {
     views >= 1_000 -> "%.1fK views".format(views / 1_000.0)
     else -> "$views views"
 }
-
-

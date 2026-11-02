@@ -78,5 +78,3 @@ object FapFolderFollowedCommunitiesRoute
 
 @Serializable
 object FapFolderSavedRoute
-
-

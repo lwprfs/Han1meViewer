@@ -242,7 +242,6 @@ object DatabaseRepo {
         suspend fun update(entity: HanimeDownloadEntity) =
             hanimeDownloadDao.update(entity)
 
-        /** Like [update] but never changes the group the video currently belongs to. */
         suspend fun updateKeepingGroup(entity: HanimeDownloadEntity) =
             hanimeDownloadDao.updateKeepingGroup(entity)
 
@@ -289,8 +288,6 @@ object DatabaseRepo {
         suspend fun updateGroup(group: DownloadGroupEntity)=
             downloadGroupDao.update(group)
 
-        // Several downloads (and the one-time migration) can ask for the same site group at the
-        // same moment; without this two "MissAV" groups could be created.
         private val siteGroupMutex = Mutex()
 
         private const val SITE_GROUP_ID_PREFIX = "download_site_group_id_"
@@ -307,10 +304,6 @@ object DatabaseRepo {
         fun siteOfVideoCode(videoCode: String): SiteType =
             SiteCheckIn.siteOfDishCode(videoCode) ?: SiteType.HANIME
 
-        /**
-         * Id of the default "site name" group. The id is remembered so renaming the group
-         * keeps working; if the group was deleted it is created again.
-         */
         suspend fun siteGroupId(site: SiteType): Int = siteGroupMutex.withLock {
             val key = SITE_GROUP_ID_PREFIX + (if (site == SiteType.JAVCHU) SiteType.HANIME else site).name
             val sp = Preferences.preferenceSp
@@ -325,10 +318,6 @@ object DatabaseRepo {
         suspend fun groupIdForVideoCode(videoCode: String): Int =
             siteGroupId(siteOfVideoCode(videoCode))
 
-        /**
-         * One-time: create a group per site and move existing downloads that are still in the
-         * default group into their site's group. Later manual moves are never touched again.
-         */
         suspend fun migrateToSiteGroupsOnce() {
             val sp = Preferences.preferenceSp
             if (sp.getBoolean(SITE_GROUPS_MIGRATED, false)) return
@@ -345,7 +334,3 @@ object DatabaseRepo {
         }
     }
 }
-
-
-
-

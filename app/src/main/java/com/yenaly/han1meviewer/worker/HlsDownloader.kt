@@ -20,11 +20,7 @@ class HlsHttpException(val code: Int, message: String) : IOException(message)
 class HlsDownloader(
     private val client: OkHttpClient,
     private val headers: Map<String, String>,
-    /**
-     * When the OkHttp request is rejected (403/401/429/5xx or a network error), retry the same
-     * request the way the in-app player does (plain HttpURLConnection + Referer/Origin). Some
-     * CDNs accept the player but reject OkHttp's fingerprint, so a video can play yet not download.
-     */
+
     private val urlConnectionFallback: Boolean = false,
 ) {
 
@@ -75,7 +71,7 @@ class HlsDownloader(
         } catch (e: HlsHttpException) {
             throw e
         } catch (e: IOException) {
-            // Report the first failure; it is usually the more informative one.
+
             throw if (original is IOException) original else e
         } finally {
             conn?.disconnect()
@@ -274,5 +270,3 @@ class HlsDownloader(
         }
     }
 }
-
-
