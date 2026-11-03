@@ -41,10 +41,6 @@ import com.yenaly.han1meviewer.util.DownloadLayout
 import com.yenaly.han1meviewer.util.FapOwnerKind
 import kotlinx.coroutines.flow.first
 
-/**
- * Details list shown under the (collapsible) player, Hanime1 style, on ONE page:
- * profile -> expandable details -> other media -> reactions / actions -> tags -> comments.
- */
 internal fun LazyListScope.fapFolderVideoDetailItems(
     post: FapFolderPost,
     video: FapFolderMedia.Video,

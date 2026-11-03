@@ -20,10 +20,6 @@ data class ImageDownloadJob(
     val progress: Float get() = if (total <= 0) 0f else (done.toFloat() / total).coerceIn(0f, 1f)
 }
 
-/**
- * In-memory list of running image downloads, shown as small progress rows in the
- * "Downloading" tab. A job disappears when it finishes; it is never added to "Downloaded".
- */
 object ImageDownloadTracker {
     private val ids = AtomicLong(0)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -43,7 +39,7 @@ object ImageDownloadTracker {
     fun finish(id: Long) {
         scope.launch {
             update(id, _jobs.value.firstOrNull { it.id == id }?.total ?: 0)
-            delay(800) // let the bar visibly reach 100%
+            delay(800)
             _jobs.update { list -> list.filterNot { it.id == id } }
         }
     }

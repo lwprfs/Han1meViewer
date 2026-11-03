@@ -85,7 +85,6 @@ fun DownloadingScreen(
     }
 }
 
-/** Compact progress row for a running image download; removed automatically when finished. */
 @Composable
 private fun ImageDownloadRow(job: ImageDownloadJob) {
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {

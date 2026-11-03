@@ -404,7 +404,7 @@ fun SitePlayerOverlay(
                 }
             }
         } else if (isBuffering || controlsVisible || !isPlaying) {
-            // The loading ring is merged into the play/pause button instead of replacing it.
+
             Box(
                 modifier = Modifier
                     .align(Alignment.Center)

@@ -7,7 +7,6 @@ import com.yenaly.han1meviewer.ui.component.player.createSitePlayer
 import com.yenaly.han1meviewer.ui.component.player.isDecoderProblem
 import com.yenaly.han1meviewer.ui.component.player.openInExternalPlayer
 
-/** Thin wrappers over the shared helpers in `ui.component.player.PlayerCompat`. */
 internal fun createHentaiMamaPlayer(context: Context): ExoPlayer = createSitePlayer(context)
 
 internal fun PlaybackException.isHentaiMamaDecoderProblem(): Boolean = isDecoderProblem()

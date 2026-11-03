@@ -406,10 +406,6 @@ class HJzvdStd @JvmOverloads constructor(
         setUp(jzDataSource, screen, kernel.clazz)
     }
 
-    /**
-     * Re-starts the current video with the mpv kernel (used when MediaCodec can't decode the
-     * stream). Returns false if mpv is already in use or there is nothing to play.
-     */
     fun fallbackToMpv(): Boolean {
         if (mediaInterface is MpvMediaKernel) return false
         val ds = jzDataSource ?: return false

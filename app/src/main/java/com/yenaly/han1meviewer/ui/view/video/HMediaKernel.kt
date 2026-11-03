@@ -352,7 +352,7 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
     override fun onPlayerError(error: PlaybackException) {
         Log.e(TAG, "onPlayerError: $error")
         handler?.post {
-            // Device can't decode this stream (e.g. 10-bit H.264): switch to mpv automatically.
+
             if (error.isDecoderProblem() && (jzvd as? HJzvdStd)?.fallbackToMpv() == true) {
                 return@post
             }

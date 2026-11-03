@@ -16,22 +16,6 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.unit.Constraints
 import kotlin.math.roundToInt
 
-/**
- * Compose version of the Hanime1 video page behaviour
- * (`AppBarLayout` + `SCROLL_FLAG_SCROLL | EXIT_UNTIL_COLLAPSED`):
- *
- *  - scrolling the details list up first slides the player away,
- *    then the list scrolls;
- *  - the player only comes back once the list is scrolled to the very top.
- *
- * The player composable stays composed while collapsed, so playback (audio)
- * keeps running exactly like on the Hanime1 page.
- *
- * @param player the player area (any height, usually 16:9 full width).
- *   Pass an empty composable (e.g. while fullscreen) to give the list all the space.
- * @param content the scrollable details (a `LazyColumn`). It is automatically
- *   wired to the collapse behaviour through nested scrolling.
- */
 @Composable
 fun CollapsingPlayerLayout(
     modifier: Modifier = Modifier,
@@ -76,7 +60,7 @@ fun CollapsingPlayerLayout(
             .clipToBounds()
             .nestedScroll(connection),
         content = {
-            // Always exactly two children so an empty player slot (fullscreen) is safe.
+
             Box { player() }
             Box { content() }
         },

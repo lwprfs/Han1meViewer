@@ -135,7 +135,7 @@ fun HentaiMamaVideoPlayer(
                 Log.e(PLAYER_TAG, "onPlayerError code=${error.errorCodeName}", error)
                 playbackError = error
                 if (error.isHentaiMamaDecoderProblem()) {
-                    // This device can't decode the stream: let the bundled mpv player take over.
+
                     val base = com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
                         .baseUrl.trimEnd('/')
                     com.yenaly.han1meviewer.ui.component.player.StreamFallback

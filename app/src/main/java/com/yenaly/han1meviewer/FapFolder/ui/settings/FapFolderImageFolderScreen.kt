@@ -190,7 +190,6 @@ fun FapFolderImageFolderScreen(onBack: () -> Unit) {
 
     val photos = remember(entries) { entries.filter { !it.isDir } }
 
-    // Drop selections that no longer exist / belong to another folder view.
     LaunchedEffect(entries) {
         val valid = entries.mapTo(HashSet()) { it.docId }
         selected.removeAll { it !in valid }
