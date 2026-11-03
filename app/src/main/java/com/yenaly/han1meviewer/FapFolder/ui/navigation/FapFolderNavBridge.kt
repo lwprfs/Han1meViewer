@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.FapFolder.ui.navigation
 
+import com.yenaly.han1meviewer.ui.navigation.popBackStackSafely
 import android.util.Log
 import androidx.navigation.NavHostController
 import com.yenaly.han1meviewer.FapFolder.FapFolderSiteType
@@ -153,7 +154,7 @@ object FapFolderNavBridge {
 
     fun popBackStack(): Boolean {
         val nav = currentNavController ?: return false
-        return runCatching { nav.popBackStack() }.getOrDefault(false)
+        return runCatching { nav.popBackStackSafely() }.getOrDefault(false)
     }
 
     fun isOnAnyRoute(): Boolean = currentNavController?.currentBackStackEntry != null

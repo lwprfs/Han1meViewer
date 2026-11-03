@@ -87,6 +87,8 @@ import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.source.MediaSource
 import com.yenaly.han1meviewer.HentaiMama.settings.HentaiMamaCardSettings
+import com.yenaly.han1meviewer.HentaiMama.ui.components.HentaiMamaSeriesCardView
+import com.yenaly.han1meviewer.HentaiMama.data.model.SeriesCard
 import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaImageLoader
 import com.yenaly.han1meviewer.ui.component.player.SitePlayerSettings
 import androidx.media3.exoplayer.ExoPlayer
@@ -793,41 +795,43 @@ internal fun SimilarGrid(
     items: List<SimilarCard>,
     onOpen: (SimilarCard) -> Unit,
 ) {
-    val context = LocalContext.current
-    val imageLoader = remember(context) { HentaiMamaImageLoader.get(context) }
+    LaunchedEffect(Unit) { HentaiMamaCardSettings.load() }
     val uniqueItems = remember(items) { items.distinctBy { it.slug } }
-    val cardAspectRatio by HentaiMamaCardSettings.effectiveAspectRatioState
+    val cardMultiplier by HentaiMamaCardSettings.cardMultiplierState
+    val widthMultiplier by HentaiMamaCardSettings.widthMultiplierState
 
     Column(verticalArrangement = Arrangement.spacedBy(SpacingNormal)) {
         SiteVideoSectionHeader(title = "Similar titles")
+
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-            val spacing = SpacingNormal
-            val columns = maxOf(
-                2,
-                ((maxWidth + spacing) /
-                    ((VideoSimplifiedCardMinWidth / HentaiMamaCardSettings.effectiveCardCount(1f)
-                        .coerceAtLeast(0.5f)) + spacing)).toInt(),
-            )
-            val itemWidth = ((maxWidth - (spacing * (columns - 1))) / columns) - 0.5.dp
+            val gap = 8.dp
+            val gridWidth = maxWidth
+            val baseColumns = (gridWidth.value / 150f).toInt().coerceAtLeast(2)
+            val effectiveCount = (baseColumns * cardMultiplier).coerceAtLeast(1f)
+            val cardWidth = (((gridWidth - SpacingNormal * (effectiveCount - 1)) / effectiveCount) *
+                    widthMultiplier).coerceAtLeast(80.dp)
+            val columns = ((gridWidth + gap) / (cardWidth + gap)).toInt().coerceAtLeast(1)
+            val itemWidth = (gridWidth - gap * (columns - 1)) / columns - 0.5.dp
             FlowRow(
                 modifier = Modifier.fillMaxWidth(),
                 maxItemsInEachRow = columns,
-                horizontalArrangement = Arrangement.spacedBy(spacing),
-                verticalArrangement = Arrangement.spacedBy(spacing),
+                horizontalArrangement = Arrangement.spacedBy(gap),
+                verticalArrangement = Arrangement.spacedBy(gap),
             ) {
                 uniqueItems.forEach { sim ->
-                    SiteVideoCard(
+                    HentaiMamaSeriesCardView(
                         modifier = Modifier.width(itemWidth),
-                        title = sim.name,
-                        coverUrl = sim.poster,
-                        aspectRatio = cardAspectRatio,
-                        placeholder = androidx.compose.ui.graphics.painter.ColorPainter(
-                            MaterialTheme.colorScheme.surfaceVariant
+                        card = SeriesCard(
+                            url = sim.url,
+                            slug = sim.slug,
+                            title = sim.name,
+                            thumbSmall = sim.posterSmall,
+                            thumbFull = sim.poster,
+                            rating = sim.rating,
+                            year = sim.year,
+                            views = sim.views,
+                            episodeCount = sim.episodeCount,
                         ),
-                        duration = sim.episodeCount?.takeIf { it > 0 }?.let { "$it EP" },
-                        reviews = sim.rating?.let { "★ %.1f".format(it) },
-                        uploadTime = sim.year?.toString(),
-                        imageLoader = imageLoader,
                         onClick = { onOpen(sim) },
                     )
                 }

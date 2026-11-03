@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.FapFolder.ui.navigation
 
+import com.yenaly.han1meviewer.ui.navigation.popBackStackSafely
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Spacer
@@ -227,7 +228,7 @@ fun FapFolderNavHost(
             FapFolderPostDetailScreen(
                 slugOrId = route.slugOrId,
                 autoPlay = route.autoPlay,
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStackSafely() },
                 onOpenHashtag = { tag ->
                     navController.navigateSafely(FapFolderHashtagRoute(tag))
                 },
@@ -258,7 +259,7 @@ fun FapFolderNavHost(
                 initialQuery = route.query,
                 initialHashtag = route.isHashtag,
                 initialTab = route.tab,
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStackSafely() },
                 onOpenPost = { slug -> navController.navigateSafely(FapFolderPostRoute(slug)) },
                 onOpenHashtag = { tag -> navController.navigateSafely(FapFolderHashtagRoute(tag)) },
                 onOpenGroup = { slug -> navController.navigateSafely(FapFolderGroupRoute(slug)) },
@@ -270,7 +271,7 @@ fun FapFolderNavHost(
 
         composable<FapFolderSearchHistoryRoute> {
             FapFolderSearchHistoryScreen(
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStackSafely() },
                 onRunSearch = { query, isHashtag, tab ->
                     if (isHashtag) {
                         navController.navigateSafely(FapFolderHashtagRoute(query))
@@ -287,7 +288,7 @@ fun FapFolderNavHost(
             val route = entry.toRoute<FapFolderHashtagRoute>()
             FapFolderHashtagScreen(
                 tag = route.tag,
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStackSafely() },
                 onOpenPost = { slug -> navController.navigateSafely(FapFolderPostRoute(slug)) },
                 onOpenVideoPost = { slug ->
                     navController.navigateSafely(FapFolderPostRoute(slug, autoPlay = true))
@@ -305,7 +306,7 @@ fun FapFolderNavHost(
             FapFolderGroupScreen(
                 slug = route.slug,
                 initialTab = route.tab,
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStackSafely() },
                 onOpenPost = { slug -> navController.navigateSafely(FapFolderPostRoute(slug)) },
                 onOpenVideoPost = { slug ->
                     navController.navigateSafely(FapFolderPostRoute(slug, autoPlay = true))
@@ -327,7 +328,7 @@ fun FapFolderNavHost(
             FapFolderProfileScreen(
                 username = route.username,
                 initialTab = route.tab,
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStackSafely() },
                 onOpenPost = { slug -> navController.navigateSafely(FapFolderPostRoute(slug)) },
                 onOpenGroup = { slug -> navController.navigateSafely(FapFolderGroupRoute(slug)) },
                 onOpenAlbum = { albumId ->
@@ -349,14 +350,14 @@ fun FapFolderNavHost(
             val route = entry.toRoute<FapFolderAlbumRoute>()
             FapFolderAlbumScreen(
                 albumId = route.albumId,
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStackSafely() },
                 onOpenPost = { slug -> navController.navigateSafely(FapFolderPostRoute(slug)) },
             )
         }
 
         composable<FapFolderHistoryRoute> {
             FapFolderHistoryScreen(
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStackSafely() },
                 onOpenPost = { slug -> navController.navigateSafely(FapFolderPostRoute(slug)) },
             )
         }
@@ -367,7 +368,7 @@ fun FapFolderNavHost(
                 activity = activity,
                 site = SiteType.FAPFOLDER,
                 siteEntries = fapFolderHubEntries(navController, isLoggedIn = loggedIn, full = true),
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStackSafely() },
                 onOpenAppSettings = { navController.navigateSafely(HomeSettingsRoute) },
                 onOpenPlayerSettings = { navController.navigateSafely(PlayerSettingsRoute) },
                 onOpenNetworkSettings = { navController.navigateSafely(NetworkSettingsRoute) },
@@ -377,7 +378,7 @@ fun FapFolderNavHost(
 
         composable<FapFolderFollowedCommunitiesRoute> {
             FapFolderFollowedCommunitiesScreen(
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStackSafely() },
                 onOpenGroup = { slug ->
                     navController.navigateSafely(FapFolderGroupRoute(slug))
                 },
@@ -386,7 +387,7 @@ fun FapFolderNavHost(
 
         composable<FapFolderSavedRoute> {
             FapFolderSavedScreen(
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStackSafely() },
                 onOpenPost = { slug ->
                     navController.navigateSafely(FapFolderPostRoute(slug))
                 },
@@ -407,13 +408,13 @@ fun FapFolderNavHost(
 
         composable<FapFolderCookiesRoute> {
             FapFolderCookiesScreen(
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStackSafely() },
                 onOpenLogin = { navController.navigateSafely(FapFolderLoginRoute) },
                 onOpenRegister = { navController.navigateSafely(FapFolderRegisterRoute) },
                 onSwitchSite = { activity.requestSiteSwitch() },
                 onCookiesSaved = {
                     retryTick = System.currentTimeMillis()
-                    navController.popBackStack()
+                    navController.popBackStackSafely()
                 },
                 onLoggedOut = {
                     retryTick = System.currentTimeMillis()
@@ -424,7 +425,7 @@ fun FapFolderNavHost(
 
         composable<FapFolderLoginRoute> {
             FapFolderLoginScreen(
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStackSafely() },
                 onLoginSuccess = {
                     retryTick = System.currentTimeMillis()
                     navController.popBackStack(FapFolderHomeRoute, inclusive = false)
@@ -440,13 +441,13 @@ fun FapFolderNavHost(
 
         composable<FapFolderRegisterRoute> {
             FapFolderRegisterScreen(
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStackSafely() },
                 onRegistered = {
                     retryTick = System.currentTimeMillis()
                     navController.popBackStack(FapFolderHomeRoute, inclusive = false)
                 },
                 onOpenLogin = {
-                    navController.popBackStack()
+                    navController.popBackStackSafely()
                     navController.navigateSafely(FapFolderLoginRoute)
                 },
             )
@@ -454,7 +455,7 @@ fun FapFolderNavHost(
 
         composable<FapFolderAccountRoute> {
             FapFolderAccountScreen(
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStackSafely() },
                 onOpenLogin = { navController.navigateSafely(FapFolderLoginRoute) },
                 onOpenRegister = { navController.navigateSafely(FapFolderRegisterRoute) },
                 onOpenCookies = { navController.navigateSafely(FapFolderCookiesRoute) },
@@ -478,16 +479,16 @@ fun FapFolderNavHost(
         }
 
         composable<FapFolderAccountSettingsRoute> {
-            FapFolderAccountSettingsScreen(onBack = { navController.popBackStack() })
+            FapFolderAccountSettingsScreen(onBack = { navController.popBackStackSafely() })
         }
 
         composable<FapFolderPrivacyRoute> {
-            FapFolderPrivacySettingsScreen(onBack = { navController.popBackStack() })
+            FapFolderPrivacySettingsScreen(onBack = { navController.popBackStackSafely() })
         }
 
         composable<FapFolderImageFolderRoute> {
             com.yenaly.han1meviewer.FapFolder.ui.settings.FapFolderImageFolderScreen(
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStackSafely() },
             )
         }
 
@@ -562,7 +563,7 @@ private fun GateErrorHost(
                 activity = activity,
                 site = SiteType.FAPFOLDER,
                 siteEntries = fapFolderHubEntries(navController, isLoggedIn = false, full = false),
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStackSafely() },
                 onOpenAppSettings = { navController.navigateSafely(HomeSettingsRoute) },
                 onOpenPlayerSettings = { navController.navigateSafely(PlayerSettingsRoute) },
                 onOpenNetworkSettings = { navController.navigateSafely(NetworkSettingsRoute) },
@@ -576,7 +577,7 @@ private fun GateErrorHost(
         )
         composable<FapFolderCookiesRoute> {
             FapFolderCookiesScreen(
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStackSafely() },
                 onOpenLogin = {
                     navController.navigateSafely(FapFolderLoginRoute)
                 },
@@ -591,7 +592,7 @@ private fun GateErrorHost(
         }
         composable<FapFolderLoginRoute> {
             FapFolderLoginScreen(
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStackSafely() },
                 onLoginSuccess = onRetry,
                 onOpenCookies = {
                     navController.navigateSafely(FapFolderCookiesRoute)
@@ -603,10 +604,10 @@ private fun GateErrorHost(
         }
         composable<FapFolderRegisterRoute> {
             FapFolderRegisterScreen(
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStackSafely() },
                 onRegistered = onRetry,
                 onOpenLogin = {
-                    navController.popBackStack()
+                    navController.popBackStackSafely()
                     navController.navigateSafely(FapFolderLoginRoute)
                 },
             )

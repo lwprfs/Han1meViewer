@@ -141,6 +141,9 @@ fun OnAirVideoPlayer(
     var scrubbing by remember { mutableStateOf(false) }
     var scrubFraction by remember { mutableStateOf(0f) }
     var seekHint by remember { mutableStateOf<String?>(null) }
+    var mpvUrl by remember(state.activeUrl) {
+        mutableStateOf(state.activeUrl?.takeIf { StreamFallback.shouldUseMpv(it) })
+    }
 
     val currentState by rememberUpdatedState(state)
     val currentOnPositionUpdate by rememberUpdatedState(onPositionUpdate)
@@ -178,9 +181,13 @@ fun OnAirVideoPlayer(
 
             override fun onPlayerError(error: PlaybackException) {
                 val failingUrl = currentState.activeUrl
-                if (error.isDecoderProblem() && failingUrl != null &&
-                    StreamFallback.playInMpv(context, failingUrl, OnAirNetwork.baseUrl)
-                ) return
+                if (error.isDecoderProblem() && failingUrl != null) {
+
+                    StreamFallback.markMpv(failingUrl)
+                    player.pause()
+                    mpvUrl = failingUrl
+                    return
+                }
                 val code = error.errorCode
                 val msg = error.cause?.message.orEmpty()
                 val whole = "${error.errorCodeName} $msg".lowercase()
@@ -551,6 +558,18 @@ fun OnAirVideoPlayer(
                     }
                 }
             }
+        }
+
+        mpvUrl?.let { mpv ->
+            com.yenaly.han1meviewer.ui.component.player.MpvInlinePlayer(
+                url = mpv,
+                modifier = Modifier.fillMaxSize(),
+                referer = OnAirNetwork.baseUrl,
+                startPositionMs = state.position.coerceAtLeast(0L),
+                isFullscreen = isFullscreen,
+                onToggleFullscreen = onToggleFullscreen,
+                onPositionUpdate = onPositionUpdate,
+            )
         }
     }
 }

@@ -1,4 +1,5 @@
 package com.yenaly.han1meviewer.MissAV.ui.navigation
+import com.yenaly.han1meviewer.ui.navigation.popBackStackSafely
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
@@ -131,7 +132,7 @@ fun MissAvNavHost(
                         onClick = { navController.navigateSafely(MissAvHistoryRoute) },
                     ),
                 ),
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStackSafely() },
                 onOpenAppSettings = { navController.navigateSafely(HomeSettingsRoute) },
                 onOpenPlayerSettings = { navController.navigateSafely(PlayerSettingsRoute) },
                 onOpenNetworkSettings = { navController.navigateSafely(NetworkSettingsRoute) },
@@ -142,13 +143,13 @@ fun MissAvNavHost(
         composable<MissAvHomeCategoriesRoute> {
             MissAvHomeSettingsScreen(
                 viewModel = sharedHomeViewModel,
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStackSafely() },
             )
         }
 
         composable<MissAvHostSettingsRoute> {
             MissAvHostSettingsScreen(
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStackSafely() },
             )
         }
 
@@ -156,7 +157,7 @@ fun MissAvNavHost(
             val route = it.toRoute<MissAvSearchRoute>()
             MissAvSearchScreen(
                 initialQuery = route.query,
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStackSafely() },
                 onNavigateToVideo = { code, path ->
                     navController.navigateSafely(MissAvVideoRoute(code, path))
                 },
@@ -169,7 +170,7 @@ fun MissAvNavHost(
             MissAvVideoScreen(
                 videoCode = route.videoCode,
                 path = route.path,
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStackSafely() },
                 onNavigateToVideo = { code, path ->
                     navController.navigateSafely(MissAvVideoRoute(code, "/$code"))
                 },
@@ -188,7 +189,7 @@ fun MissAvNavHost(
                 onNavigateToVideo = { code, path ->
                     navController.navigateSafely(MissAvVideoRoute(code, path))
                 },
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStackSafely() },
             )
         }
 

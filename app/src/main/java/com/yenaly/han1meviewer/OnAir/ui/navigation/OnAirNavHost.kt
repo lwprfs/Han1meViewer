@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.OnAir.ui.navigation
 
+import com.yenaly.han1meviewer.ui.navigation.popBackStackSafely
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
@@ -207,7 +208,7 @@ fun OnAirNavHost(
                 }
                 OnAirSearchScreen(
                     viewModel = vm,
-                    onBack = { navController.popBackStack() },
+                    onBack = { navController.popBackStackSafely() },
                     onOpenVideo = { id -> navController.navigateSafely(OnAirVideoRoute(id)) },
                     onOpenTag = { t -> navController.navigateSafely(OnAirTagRoute(t)) },
                     onOpenUser = { u -> navController.navigateSafely(OnAirUserRoute(u)) },
@@ -219,7 +220,7 @@ fun OnAirNavHost(
                 val route = entry.toRoute<OnAirTagRoute>()
                 OnAirTagScreen(
                     tagName = route.tagName,
-                    onBack = { navController.popBackStack() },
+                    onBack = { navController.popBackStackSafely() },
                     onOpenVideo = { id -> navController.navigateSafely(OnAirVideoRoute(id)) },
                     onLoadFailure = recoverableError,
                 )
@@ -227,7 +228,7 @@ fun OnAirNavHost(
 
             composable<OnAirTagsIndexRoute> {
                 OnAirTagsIndexScreen(
-                    onBack = { navController.popBackStack() },
+                    onBack = { navController.popBackStackSafely() },
                     onOpenTag = { t -> navController.navigateSafely(OnAirTagRoute(t)) },
                     onLoadFailure = recoverableError,
                 )
@@ -235,7 +236,7 @@ fun OnAirNavHost(
 
             composable<OnAirPicturesRoute> {
                 OnAirPicturesScreen(
-                    onBack = { navController.popBackStack() },
+                    onBack = { navController.popBackStackSafely() },
                     onOpenUser = { u -> navController.navigateSafely(OnAirUserRoute(u)) },
                     onLoadFailure = recoverableError,
                 )
@@ -245,7 +246,7 @@ fun OnAirNavHost(
                 val route = entry.toRoute<OnAirUserRoute>()
                 OnAirUserScreen(
                     username = route.username,
-                    onBack = { navController.popBackStack() },
+                    onBack = { navController.popBackStackSafely() },
                     onOpenVideo = { id -> navController.navigateSafely(OnAirVideoRoute(id)) },
                     onLoadFailure = recoverableError,
                 )
@@ -253,18 +254,18 @@ fun OnAirNavHost(
 
             composable<OnAirHistoryRoute> {
                 OnAirHistoryScreen(
-                    onBack = { navController.popBackStack() },
+                    onBack = { navController.popBackStackSafely() },
                     onOpenVideo = { id, _ -> navController.navigateSafely(OnAirVideoRoute(id)) },
                 )
             }
 
             composable<OnAirAnnouncementsRoute> {
-                OnAirAnnouncementsScreen(onBack = { navController.popBackStack() })
+                OnAirAnnouncementsScreen(onBack = { navController.popBackStackSafely() })
             }
 
             composable<OnAirChatRoute> {
                 OnAirChatScreen(
-                    onBack = { navController.popBackStack() },
+                    onBack = { navController.popBackStackSafely() },
                     onOpenUser = { u -> navController.navigateSafely(OnAirUserRoute(u)) },
                 )
             }
@@ -274,7 +275,7 @@ fun OnAirNavHost(
                     activity = activity,
                     site = SiteType.ONAIR,
                     siteEntries = onAirHubEntries(navController, signedInContent = true),
-                    onBack = { navController.popBackStack() },
+                    onBack = { navController.popBackStackSafely() },
                     onOpenAppSettings = { navController.navigateSafely(HomeSettingsRoute) },
                     onOpenPlayerSettings = { navController.navigateSafely(PlayerSettingsRoute) },
                     onOpenNetworkSettings = { navController.navigateSafely(NetworkSettingsRoute) },
@@ -284,7 +285,7 @@ fun OnAirNavHost(
 
             composable<OnAirAccountSettingsRoute> {
                 OnAirSettingsScreen(
-                    onBack = { navController.popBackStack() },
+                    onBack = { navController.popBackStackSafely() },
                     onOpenCookies = { navController.navigateSafely(OnAirCookieRoute) },
                     onOpenLogin = { navController.navigateSafely(OnAirLoginRoute) },
                     onOpenAnnouncements = { navController.navigateSafely(OnAirAnnouncementsRoute) },
@@ -306,7 +307,7 @@ fun OnAirNavHost(
 
             composable<OnAirCookieRoute> {
                 OnAirCookieSettingsScreen(
-                    onBack = { navController.popBackStack() },
+                    onBack = { navController.popBackStackSafely() },
                     onOpenLogin = { navController.navigateSafely(OnAirLoginRoute) },
                     onOpenRegister = { navController.navigateSafely(OnAirRegisterRoute) },
                     onSwitchSite = { activity.requestSiteSwitch() },
@@ -317,7 +318,7 @@ fun OnAirNavHost(
 
             composable<OnAirLoginRoute> {
                 OnAirLoginScreen(
-                    onBack = { navController.popBackStack() },
+                    onBack = { navController.popBackStackSafely() },
                     onOpenRegister = { navController.navigateSafely(OnAirRegisterRoute) },
                     onSuccess = {
                         OnAirProfileCache.invalidate()
@@ -329,7 +330,7 @@ fun OnAirNavHost(
 
             composable<OnAirRegisterRoute> {
                 OnAirRegisterScreen(
-                    onBack = { navController.popBackStack() },
+                    onBack = { navController.popBackStackSafely() },
                     onOpenLogin = { navController.navigateSafely(OnAirLoginRoute) },
                     onSuccess = {
                         OnAirProfileCache.invalidate()
@@ -346,7 +347,7 @@ fun OnAirNavHost(
                     videoId = route.videoId,
                     preferredQuality = route.preferredQuality,
                     viewModel = vm,
-                    onBack = { navController.popBackStack() },
+                    onBack = { navController.popBackStackSafely() },
                     onOpenVideo = { id ->
                         if (id != route.videoId) {
                             navController.navigateSafely(OnAirVideoRoute(id))
@@ -388,7 +389,7 @@ fun OnAirNavHost(
                     activity = activity,
                     site = SiteType.ONAIR,
                     siteEntries = onAirHubEntries(navController, signedInContent = false),
-                    onBack = { navController.popBackStack() },
+                    onBack = { navController.popBackStackSafely() },
                     onOpenAppSettings = { navController.navigateSafely(HomeSettingsRoute) },
                     onOpenPlayerSettings = { navController.navigateSafely(PlayerSettingsRoute) },
                     onOpenNetworkSettings = { navController.navigateSafely(NetworkSettingsRoute) },
@@ -402,7 +403,7 @@ fun OnAirNavHost(
             )
             composable<OnAirCookieRoute> {
                 OnAirCookieSettingsScreen(
-                    onBack = { navController.popBackStack() },
+                    onBack = { navController.popBackStackSafely() },
                     onOpenLogin = {
                         navController.navigate(OnAirLoginRoute) { launchSingleTop = true }
                     },
@@ -417,7 +418,7 @@ fun OnAirNavHost(
             }
             composable<OnAirLoginRoute> {
                 OnAirLoginScreen(
-                    onBack = { navController.popBackStack() },
+                    onBack = { navController.popBackStackSafely() },
                     onOpenRegister = {
                         navController.navigate(OnAirRegisterRoute) { launchSingleTop = true }
                     },
@@ -426,7 +427,7 @@ fun OnAirNavHost(
             }
             composable<OnAirRegisterRoute> {
                 OnAirRegisterScreen(
-                    onBack = { navController.popBackStack() },
+                    onBack = { navController.popBackStackSafely() },
                     onOpenLogin = {
                         navController.navigate(OnAirLoginRoute) { launchSingleTop = true }
                     },

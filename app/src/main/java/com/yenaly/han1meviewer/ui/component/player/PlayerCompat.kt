@@ -38,6 +38,10 @@ object StreamFallback {
 
     fun shouldUseMpv(url: String?): Boolean = url != null && url in mpvUrls
 
+    fun markMpv(url: String) {
+        mpvUrls += url
+    }
+
     fun refererFor(url: String?): String? = url?.let { referers[it] }
 
     fun playInMpv(context: Context, url: String, referer: String? = null): Boolean {

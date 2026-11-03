@@ -109,6 +109,10 @@ fun HentaiMamaVideoPlayer(
     var hasRenderedFirstFrame by remember { mutableStateOf(false) }
     var isRebuffering by remember { mutableStateOf(false) }
     var playbackError by remember(state.url) { mutableStateOf<PlaybackException?>(null) }
+    var useMpv by remember(state.url) {
+        mutableStateOf(com.yenaly.han1meviewer.ui.component.player.StreamFallback.shouldUseMpv(state.url))
+    }
+    var resumeAtMs by remember(state.url) { mutableLongStateOf(0L) }
     val context = LocalContext.current
 
     val sourceReady = state.isReady && state.url.isNotBlank()
@@ -136,10 +140,10 @@ fun HentaiMamaVideoPlayer(
                 playbackError = error
                 if (error.isHentaiMamaDecoderProblem()) {
 
-                    val base = com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
-                        .baseUrl.trimEnd('/')
-                    com.yenaly.han1meviewer.ui.component.player.StreamFallback
-                        .playInMpv(context, state.url, "$base/")
+                    resumeAtMs = exo?.currentPosition ?: 0L
+                    exo?.pause()
+                    com.yenaly.han1meviewer.ui.component.player.StreamFallback.markMpv(state.url)
+                    useMpv = true
                 }
             }
 
@@ -387,6 +391,20 @@ fun HentaiMamaVideoPlayer(
                     stretched = stretched,
                     onToggleStretch = { stretched = !stretched },
                     onTemporarySpeed = { tempSpeed = it },
+                )
+            }
+
+            if (useMpv) {
+                com.yenaly.han1meviewer.ui.component.player.MpvInlinePlayer(
+                    url = state.url,
+                    modifier = Modifier.fillMaxSize(),
+                    referer = com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
+                        .baseUrl.trimEnd('/') + "/",
+                    startPositionMs = resumeAtMs.takeIf { it > 0L }
+                        ?: state.position.coerceAtLeast(0L),
+                    isFullscreen = isFullscreen,
+                    onToggleFullscreen = onToggleFullscreen,
+                    onPositionUpdate = onPositionUpdate,
                 )
             }
         } else {

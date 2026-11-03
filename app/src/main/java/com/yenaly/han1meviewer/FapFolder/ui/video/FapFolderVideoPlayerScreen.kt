@@ -195,6 +195,7 @@ fun FapFolderVideoPlayerScreen(
     var controlsLocked by remember { mutableStateOf(false) }
     var controlsInteractionTick by remember { mutableLongStateOf(0L) }
     var isFullscreen by remember { mutableStateOf(false) }
+    var mpvUrl by remember(playerKey) { mutableStateOf<String?>(null) }
     val fitState = remember { VideoFitState().also { it.aspect = initialAspect } }
     var stretched by rememberSaveable { mutableStateOf(com.yenaly.han1meviewer.ui.component.player.SitePlayerSettings.config(com.yenaly.han1meviewer.SiteType.FAPFOLDER).stretchFullscreen) }
     fitState.stretched = stretched && isFullscreen
@@ -391,11 +392,14 @@ fun FapFolderVideoPlayerScreen(
             }
 
             override fun onPlayerError(error: PlaybackException) {
-                if (error.isDecoderProblem() &&
-                    StreamFallback.playInMpv(
-                        context, playableUrl, FapFolderConstants.HEADER_REFERER,
-                    )
-                ) return
+                if (error.isDecoderProblem()) {
+
+                    StreamFallback.markMpv(playableUrl)
+                    player.pause()
+                    isBuffering = false
+                    mpvUrl = playableUrl
+                    return
+                }
                 val badStatus =
                     error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS
                 val expired = video.isExpired() || badStatus
@@ -785,6 +789,21 @@ fun FapFolderVideoPlayerScreen(
                                 )
                             }
                         }
+                    },
+                )
+            }
+
+            mpvUrl?.let { mpv ->
+                com.yenaly.han1meviewer.ui.component.player.MpvInlinePlayer(
+                    url = mpv,
+                    modifier = Modifier.fillMaxSize(),
+                    referer = FapFolderConstants.HEADER_REFERER,
+                    startPositionMs = positionMs.coerceAtLeast(0L),
+                    isFullscreen = isFullscreen,
+                    onToggleFullscreen = { if (isFullscreen) exitFullscreen() else enterFullscreen() },
+                    onPositionUpdate = { pos, dur ->
+                        positionMs = pos
+                        if (dur > 0L) durationMs = dur
                     },
                 )
             }

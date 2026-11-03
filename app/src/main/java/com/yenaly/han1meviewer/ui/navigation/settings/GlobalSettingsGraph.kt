@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.ui.navigation.settings
 
+import com.yenaly.han1meviewer.ui.navigation.popBackStackSafely
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -124,14 +125,14 @@ fun NavGraphBuilder.registerGlobalSettingsRoutes(
     composable<DailyCheckInRoute> {
         DailyCheckInRouteScreen(
             activity = activity,
-            onBack = { navController.popBackStack() },
+            onBack = { navController.popBackStackSafely() },
             onNavigateToVideo = openHanimeVideo,
         )
     }
 
     composable<DownloadRoute> {
         DownloadRouteScreen(
-            onBack = { navController.popBackStack() },
+            onBack = { navController.popBackStackSafely() },
             onNavigateToVideo = openHanimeVideo,
             onNavigateToLocalVideo = { code, uri ->
                 navController.navigateSafely(VideoRoute(code, uri))
@@ -154,7 +155,7 @@ fun NavGraphBuilder.registerUnifiedHistoryRoute(
     composable<UnifiedHistoryRoute> {
         UnifiedHistoryScreen(
             activity = activity,
-            onBack = { navController.popBackStack() },
+            onBack = { navController.popBackStackSafely() },
         )
     }
 }

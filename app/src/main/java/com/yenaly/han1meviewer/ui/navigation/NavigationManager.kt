@@ -151,7 +151,7 @@ object NavigationManager {
     }
 
     fun navigateBack() {
-        currentNavController?.popBackStack()
+        currentNavController?.popBackStackSafely()
     }
 
     fun clearBackStack() {
