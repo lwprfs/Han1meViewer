@@ -2,6 +2,7 @@ package com.yenaly.han1meviewer.MissAV.ui.video
 import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteVideoActionBar
+import com.yenaly.han1meviewer.ui.component.CollapsingPlayerLayout
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
 import com.yenaly.han1meviewer.ui.component.SiteErrorContent
@@ -590,11 +591,11 @@ fun MissAvVideoScreen(
                 val baseUrl = Preferences.missAvBaseUrl
                 val videoPageUrl = baseUrl.trimEnd('/') + normalizedPath
 
-                Column(
+                CollapsingPlayerLayout(
                     modifier = modifier
                         .fillMaxSize()
-                        .padding(paddingValues)
-                ) {
+                        .padding(paddingValues),
+                    player = {
                     if (isFullscreen) {
                         Box(
                             modifier = Modifier
@@ -747,7 +748,8 @@ fun MissAvVideoScreen(
                             onBack = onBack,
                         )
                     }
-
+                    },
+                    content = {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
@@ -806,7 +808,8 @@ fun MissAvVideoScreen(
                             )
                         }
                     }
-                }
+                    },
+                )
             }
 
             is VideoLoadingState.Error -> SiteErrorContent(

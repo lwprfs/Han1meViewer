@@ -88,6 +88,7 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
     private var itemsJob: Job? = null
     private var membersJob: Job? = null
     private var joinJob: Job? = null
+    private var loadedRouteTab: FapFolderGroupTab? = null
 
     private val seenPostIds = mutableSetOf<Long>()
     private val seenPhotoIds = mutableSetOf<Long>()
@@ -99,10 +100,13 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
         val cleanSlug = slug.trim('/')
         if (cleanSlug.isBlank()) return
         val tab = FapFolderGroupTab.fromParam(initialTab)
+        // Re-entering the screen (e.g. coming back from a video) calls load() again with the
+        // ORIGINAL route tab. That must not reset a tab the user switched to, nor its scroll.
         val sameLoad = _uiState.value.slug == cleanSlug &&
-                _uiState.value.activeTab == tab &&
+                (_uiState.value.activeTab == tab || loadedRouteTab == tab) &&
                 _uiState.value.group != null
         if (sameLoad) return
+        loadedRouteTab = tab
 
         headerJob?.cancel()
         itemsJob?.cancel()
@@ -313,7 +317,9 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
         if (slug.isBlank()) return
         val tab = _uiState.value.activeTab
         _uiState.update { it.copy(slug = "") }
+        val routeTab = loadedRouteTab
         load(slug, tab.param)
+        loadedRouteTab = routeTab
     }
 
     fun loadMoreItems() = loadMoreItemsInternal(forceAfterError = false)

@@ -347,7 +347,7 @@ fun MissAvVideoPlayer(
                         }
                         addView(subtitleText)
 
-                        val player = exoPlayer ?: ExoPlayer.Builder(ctx).build().also {
+                        val player = exoPlayer ?: com.yenaly.han1meviewer.ui.component.player.createSitePlayer(ctx).also {
                             onPlayerCreated(it)
                         }
                         player.setVideoSurfaceView(surface)
@@ -369,20 +369,6 @@ fun MissAvVideoPlayer(
                     (view as? ViewGroup)?.removeAllViews()
                 },
             )
-
-            if (isBuffering) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.35f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator(
-                        color = Color.White,
-                        modifier = Modifier.size(56.dp),
-                    )
-                }
-            }
 
             if (showResumeButton && !isPlaying) {
                 Box(
@@ -444,7 +430,7 @@ fun MissAvVideoPlayer(
                 com.yenaly.han1meviewer.ui.component.player.SitePlayerOverlay(
                     config = playerConfig,
                     title = title,
-                    isPlaying = effectiveIsPlaying,
+                    isPlaying = isPlaying,
                     isBuffering = isBuffering,
                     positionMs = currentPosition,
                     durationMs = duration,

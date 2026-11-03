@@ -11,6 +11,9 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -42,7 +45,7 @@ import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.SiteVideoSectionHeader
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
 
-private const val COLLAPSED_PREVIEW_COUNT = 6
+private val PREVIEW_THUMB_WIDTH = 150.dp
 
 @Composable
 fun HentaiMamaEpisodeGallery(
@@ -55,11 +58,7 @@ fun HentaiMamaEpisodeGallery(
     val context = LocalContext.current
     val imageLoader = remember(context) { HentaiMamaImageLoader.get(context) }
 
-    var expandedGallery by remember { mutableStateOf(false) }
     var fullscreenIndex by remember { mutableStateOf<Int?>(null) }
-
-    val visible = if (expandedGallery) previewUrls else previewUrls.take(COLLAPSED_PREVIEW_COUNT)
-    val safeColumns = columns.coerceIn(2, 6)
 
     Column(
         modifier = modifier,
@@ -68,43 +67,29 @@ fun HentaiMamaEpisodeGallery(
 
         SiteVideoSectionHeader(title = "Previews")
 
-        visible.chunked(safeColumns).forEach { rowItems ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                rowItems.forEachIndexed { index, url ->
-                    val realIndex = visible.indexOf(url)
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .aspectRatio(2f / 3f)
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable { fullscreenIndex = realIndex },
-                    ) {
-                        RetryableImage(
-                            model = url,
-                            contentDescription = null,
-                            modifier = Modifier.fillMaxWidth(),
-                            placeholder = painterResource(R.drawable.h_chan_loading),
-                            error = painterResource(R.drawable.h_chan_load_failed),
-                            contentScale = ContentScale.Crop,
-                            imageLoader = imageLoader,
-                        )
-                    }
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            itemsIndexed(items = previewUrls) { index, url ->
+                Box(
+                    modifier = Modifier
+                        .width(PREVIEW_THUMB_WIDTH)
+                        .aspectRatio(2f / 3f)
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable { fullscreenIndex = index },
+                ) {
+                    RetryableImage(
+                        model = url,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        placeholder = painterResource(R.drawable.h_chan_loading),
+                        error = painterResource(R.drawable.h_chan_load_failed),
+                        contentScale = ContentScale.Crop,
+                        imageLoader = imageLoader,
+                    )
                 }
-                repeat(safeColumns - rowItems.size) {
-                    Box(modifier = Modifier.weight(1f))
-                }
-            }
-        }
-
-        if (!expandedGallery && previewUrls.size > COLLAPSED_PREVIEW_COUNT) {
-            TextButton(
-                onClick = { expandedGallery = true },
-                modifier = Modifier.align(Alignment.CenterHorizontally),
-            ) {
-                Text("View all ${previewUrls.size} previews")
             }
         }
     }

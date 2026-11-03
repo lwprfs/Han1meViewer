@@ -27,6 +27,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -146,6 +149,9 @@ fun FapFolderImageFolderScreen(onBack: () -> Unit) {
     var showAll by remember { mutableStateOf(false) }
     var viewerIndex by remember { mutableStateOf<Int?>(null) }
     val crumbs = remember { mutableStateListOf<FolderCrumb>() }
+    val selected = remember { mutableStateListOf<String>() }
+    var confirmBatchDelete by remember { mutableStateOf(false) }
+    val selecting = selected.isNotEmpty()
 
     val picker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
@@ -184,8 +190,16 @@ fun FapFolderImageFolderScreen(onBack: () -> Unit) {
 
     val photos = remember(entries) { entries.filter { !it.isDir } }
 
-    BackHandler(enabled = viewerIndex != null || crumbs.isNotEmpty()) {
+    // Drop selections that no longer exist / belong to another folder view.
+    LaunchedEffect(entries) {
+        val valid = entries.mapTo(HashSet()) { it.docId }
+        selected.removeAll { it !in valid }
+    }
+    LaunchedEffect(currentDocId, showAll) { selected.clear() }
+
+    BackHandler(enabled = selecting || viewerIndex != null || crumbs.isNotEmpty()) {
         when {
+            selecting -> selected.clear()
             viewerIndex != null -> viewerIndex = null
             crumbs.isNotEmpty() -> crumbs.removeAt(crumbs.lastIndex)
         }
@@ -196,19 +210,38 @@ fun FapFolderImageFolderScreen(onBack: () -> Unit) {
             SiteTopAppBar(
                 title = {
                     Text(
-                        text = crumbs.lastOrNull()?.name ?: "Downloaded photos",
+                        text = if (selecting) "${selected.size} selected"
+                        else crumbs.lastOrNull()?.name ?: "Downloaded photos",
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                 },
                 navigationIcon = {
-                    SiteBackButton(onClick = {
-                        if (crumbs.isNotEmpty()) crumbs.removeAt(crumbs.lastIndex) else onBack()
-                    })
+                    if (selecting) {
+                        IconButton(onClick = { selected.clear() }) {
+                            Icon(Icons.Default.Close, contentDescription = "Cancel selection")
+                        }
+                    } else {
+                        SiteBackButton(onClick = {
+                            if (crumbs.isNotEmpty()) crumbs.removeAt(crumbs.lastIndex) else onBack()
+                        })
+                    }
                 },
                 actions = {
-                    IconButton(onClick = { showSettings = !showSettings }) {
-                        Icon(Icons.Default.Settings, contentDescription = "Photo download settings")
+                    if (selecting) {
+                        IconButton(onClick = {
+                            selected.clear()
+                            selected.addAll(photos.map { it.docId })
+                        }) {
+                            Icon(Icons.Default.SelectAll, contentDescription = "Select all")
+                        }
+                        IconButton(onClick = { confirmBatchDelete = true }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete selected")
+                        }
+                    } else {
+                        IconButton(onClick = { showSettings = !showSettings }) {
+                            Icon(Icons.Default.Settings, contentDescription = "Photo download settings")
+                        }
                     }
                 },
             )
@@ -309,17 +342,62 @@ fun FapFolderImageFolderScreen(onBack: () -> Unit) {
                             }
                         }
                         items(photos, key = { "p:" + it.docId }) { photo ->
-                            AsyncImage(
-                                model = photo.uri,
-                                contentDescription = photo.name,
-                                contentScale = ContentScale.Crop,
+                            val isSelected = photo.docId in selected
+                            val toggle = {
+                                if (isSelected) selected.remove(photo.docId) else selected.add(photo.docId)
+                                Unit
+                            }
+                            Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .aspectRatio(1f)
                                     .clip(RoundedCornerShape(10.dp))
                                     .background(MaterialTheme.colorScheme.surfaceVariant)
-                                    .clickable { viewerIndex = photos.indexOf(photo) },
-                            )
+                                    .combinedClickable(
+                                        onClick = {
+                                            if (selecting) toggle()
+                                            else viewerIndex = photos.indexOf(photo)
+                                        },
+                                        onLongClick = { toggle() },
+                                    ),
+                            ) {
+                                AsyncImage(
+                                    model = photo.uri,
+                                    contentDescription = photo.name,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                                if (isSelected) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
+                                    )
+                                }
+                                if (selecting) {
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .padding(6.dp)
+                                            .size(22.dp)
+                                            .clip(androidx.compose.foundation.shape.CircleShape)
+                                            .background(
+                                                if (isSelected) MaterialTheme.colorScheme.primary
+                                                else Color.Black.copy(alpha = 0.45f)
+                                            ),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        if (isSelected) {
+                                            Icon(
+                                                Icons.Default.Check,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onPrimary,
+                                                modifier = Modifier.size(16.dp),
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                     if (loading) {
@@ -336,6 +414,40 @@ fun FapFolderImageFolderScreen(onBack: () -> Unit) {
 
     val scope = rememberCoroutineScope()
     var deleteTarget by remember { mutableStateOf<PhotoEntry?>(null) }
+
+    if (confirmBatchDelete && selecting) {
+        val count = selected.size
+        AlertDialog(
+            onDismissRequest = { confirmBatchDelete = false },
+            title = { Text("Delete $count photo${if (count == 1) "" else "s"}?") },
+            text = { Text("The selected photos will be removed from your device.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmBatchDelete = false
+                    val targets = photos.filter { it.docId in selected }
+                    scope.launch {
+                        val deleted = withContext(Dispatchers.IO) {
+                            targets.count { t ->
+                                runCatching {
+                                    DocumentsContract.deleteDocument(context.contentResolver, t.uri)
+                                }.getOrDefault(false)
+                            }
+                        }
+                        selected.clear()
+                        refresh++
+                        val failed = targets.size - deleted
+                        android.widget.Toast.makeText(
+                            context,
+                            if (failed == 0) "Deleted $deleted photo(s)"
+                            else "Deleted $deleted, $failed failed",
+                            android.widget.Toast.LENGTH_SHORT,
+                        ).show()
+                    }
+                }) { Text("Delete") }
+            },
+            dismissButton = { TextButton(onClick = { confirmBatchDelete = false }) { Text("Cancel") } },
+        )
+    }
 
     deleteTarget?.let { target ->
         AlertDialog(

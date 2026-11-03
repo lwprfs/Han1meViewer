@@ -419,6 +419,10 @@ class MainActivity : FrameActivity(), PermissionRequester {
 
         _siteChanged.value = System.currentTimeMillis()
 
+        if (siteType == SiteType.HANIME || siteType == SiteType.JAVCHU) {
+            viewModel.getHomePage(force = true)
+        }
+
         Handler(Looper.getMainLooper()).postDelayed({
             if (Preferences.siteType == siteType) {
                 Log.d(TAG, "Emitting siteSwitchState=$siteType after settle delay")

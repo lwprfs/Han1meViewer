@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.OnAir.ui.video
 
+import com.yenaly.han1meviewer.ui.component.player.StreamFallback
+import com.yenaly.han1meviewer.ui.component.player.isDecoderProblem
 import com.yenaly.han1meviewer.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -175,6 +177,10 @@ fun OnAirVideoPlayer(
             }
 
             override fun onPlayerError(error: PlaybackException) {
+                val failingUrl = currentState.activeUrl
+                if (error.isDecoderProblem() && failingUrl != null &&
+                    StreamFallback.playInMpv(context, failingUrl, OnAirNetwork.baseUrl)
+                ) return
                 val code = error.errorCode
                 val msg = error.cause?.message.orEmpty()
                 val whole = "${error.errorCodeName} $msg".lowercase()
@@ -364,17 +370,6 @@ fun OnAirVideoPlayer(
                 },
             )
 
-            if (isBuffering && !state.isSwitchLoading) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.3f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator(color = Color.White)
-                }
-            }
-
             if (state.isSwitchLoading) {
                 Box(
                     modifier = Modifier
@@ -440,7 +435,7 @@ fun OnAirVideoPlayer(
                     config = playerConfig,
                     title = title,
                     isPlaying = state.playbackIntent == PlaybackIntent.Playing,
-                    isBuffering = false,
+                    isBuffering = isBuffering && !state.isSwitchLoading,
                     positionMs = state.position,
                     durationMs = state.duration,
                     bufferedMs = player.bufferedPosition.coerceAtLeast(0L),

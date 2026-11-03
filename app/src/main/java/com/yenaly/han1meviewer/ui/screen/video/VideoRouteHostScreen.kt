@@ -102,10 +102,12 @@ fun VideoRouteHostScreen(
     val scope = rememberCoroutineScope()
     val viewModel: VideoViewModel = viewModel()
     val commentViewModel: CommentViewModel = viewModel()
-    val kernel = remember(route.videoCode) {
+    val kernel = remember(route.videoCode, route.localUri) {
         val preferred = HMediaKernel.Type.fromString(Preferences.switchPlayerKernel)
 
-        if (SiteCheckIn.siteOfDishCode(route.videoCode) == SiteType.HENTAIMAMA) {
+        if (SiteCheckIn.siteOfDishCode(route.videoCode) == SiteType.HENTAIMAMA ||
+            com.yenaly.han1meviewer.ui.component.player.StreamFallback.shouldUseMpv(route.localUri)
+        ) {
             HMediaKernel.Type.MpvPlayer
         } else preferred
     }

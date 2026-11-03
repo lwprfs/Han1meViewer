@@ -61,11 +61,13 @@ class HomePageViewModel: ViewModel() {
         }
     }
 
-    fun getHomePage(isRefresh: Boolean = false){
+    fun getHomePage(isRefresh: Boolean = false, force: Boolean = false){
         homePageJob?.cancel()
         homePageJob = viewModelScope.launch {
             val current = _homePageFlow.value
-            if (isRefresh && current is PageState.Success) {
+            if (force) {
+                _homePageFlow.value = PageState.Loading
+            } else if (isRefresh && current is PageState.Success) {
                 _homePageFlow.value = current.copy(isRefreshing = true)
             } else if (isRefresh && current is PageState.Error && current.cachedInfo != null) {
                 _homePageFlow.value = PageState.Success(info = current.cachedInfo, isRefreshing = true)

@@ -94,7 +94,7 @@ fun OnAirVideoScreen(
     val resumePosition by viewModel.resumePosition.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
-    val exoPlayer = remember { ExoPlayer.Builder(context).build() }
+    val exoPlayer = remember { com.yenaly.han1meviewer.ui.component.player.createSitePlayer(context) }
     DisposableEffect(exoPlayer) {
         onDispose { exoPlayer.release() }
     }

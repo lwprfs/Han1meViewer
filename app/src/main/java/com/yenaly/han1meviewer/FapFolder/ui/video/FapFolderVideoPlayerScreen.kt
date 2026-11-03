@@ -107,6 +107,8 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.media3.common.MediaItem
+import com.yenaly.han1meviewer.ui.component.player.StreamFallback
+import com.yenaly.han1meviewer.ui.component.player.isDecoderProblem
 import androidx.media3.common.Player
 import androidx.media3.common.PlaybackException
 import androidx.media3.datasource.DefaultDataSource
@@ -161,6 +163,7 @@ fun FapFolderVideoPlayerScreen(
     inline: Boolean = false,
 
     autoStart: Boolean = false,
+    minInlineAspect: Float = 0f,
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
@@ -342,7 +345,7 @@ fun FapFolderVideoPlayerScreen(
         val mediaSource = ProgressiveMediaSource.Factory(dataSourceFactory)
             .createMediaSource(mediaItem)
 
-        val player = ExoPlayer.Builder(context).build().apply {
+        val player = com.yenaly.han1meviewer.ui.component.player.createSitePlayer(context).apply {
             setMediaSource(mediaSource)
             prepare()
             playWhenReady = autoStart && com.yenaly.han1meviewer.ui.component.player.SitePlayerSettings.config(com.yenaly.han1meviewer.SiteType.FAPFOLDER).autoPlay &&
@@ -388,6 +391,11 @@ fun FapFolderVideoPlayerScreen(
             }
 
             override fun onPlayerError(error: PlaybackException) {
+                if (error.isDecoderProblem() &&
+                    StreamFallback.playInMpv(
+                        context, playableUrl, FapFolderConstants.HEADER_REFERER,
+                    )
+                ) return
                 val badStatus =
                     error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS
                 val expired = video.isExpired() || badStatus
@@ -727,11 +735,6 @@ fun FapFolderVideoPlayerScreen(
                         Text("Retry")
                     }
                 }
-            } else if (isBuffering) {
-                CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.Center),
-                    color = Color.White,
-                )
             }
 
             if (playbackError == null) {
@@ -740,7 +743,7 @@ fun FapFolderVideoPlayerScreen(
                         .config(com.yenaly.han1meviewer.SiteType.FAPFOLDER),
                     title = title,
                     isPlaying = isPlaying,
-                    isBuffering = false,
+                    isBuffering = isBuffering,
                     positionMs = positionMs.coerceAtLeast(0L),
                     durationMs = durationMs.coerceAtLeast(0L),
                     bufferedMs = exoPlayer?.bufferedPosition?.coerceAtLeast(0L) ?: 0L,
@@ -793,7 +796,7 @@ fun FapFolderVideoPlayerScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(initialAspect)
+                    .aspectRatio(maxOf(initialAspect, minInlineAspect))
                     .background(Color.Black),
             ) {
                 if (!isFullscreen) playerContent()

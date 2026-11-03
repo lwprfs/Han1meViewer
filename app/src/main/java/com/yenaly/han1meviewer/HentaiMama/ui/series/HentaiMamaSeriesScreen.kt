@@ -71,6 +71,7 @@ import com.yenaly.han1meviewer.HentaiMama.data.model.SeriesHero
 import com.yenaly.han1meviewer.HentaiMama.data.model.SimilarCard
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
 import com.yenaly.han1meviewer.HentaiMama.ui.home.HentaiMamaViewModel
+import com.yenaly.han1meviewer.HentaiMama.ui.video.SimilarGrid
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
@@ -272,31 +273,11 @@ private fun SeriesDetailContent(
 
         if (page.similar.isNotEmpty()) {
             item(key = "similar") {
-                Column(
-                    modifier = Modifier.padding(top = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(SpacingNormal),
-                ) {
-                    SiteVideoSectionHeader(title = "Similar titles")
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(SpacingNormal),
-                    ) {
-                        items(
-                            items = page.similar,
-                            key = { sim: SimilarCard -> sim.slug },
-                        ) { sim: SimilarCard ->
-                            SiteVideoCard(
-                                modifier = Modifier.width(120.dp),
-                                title = sim.name,
-                                coverUrl = sim.poster,
-                                aspectRatio = 2f / 3f,
-                                duration = sim.episodeCount?.takeIf { it > 0 }?.let { "$it EP" },
-                                reviews = sim.rating?.let { "★ %.1f".format(it) },
-                                uploadTime = sim.year?.toString(),
-                                onClick = { onOpenRelatedSeries(sim.slug) },
-                            )
-                        }
-                    }
+                Box(modifier = Modifier.padding(top = 8.dp)) {
+                    SimilarGrid(
+                        items = page.similar,
+                        onOpen = { sim: SimilarCard -> onOpenRelatedSeries(sim.slug) },
+                    )
                 }
             }
         }

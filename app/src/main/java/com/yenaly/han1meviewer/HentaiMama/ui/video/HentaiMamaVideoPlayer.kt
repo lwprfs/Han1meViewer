@@ -134,6 +134,13 @@ fun HentaiMamaVideoPlayer(
             override fun onPlayerError(error: PlaybackException) {
                 Log.e(PLAYER_TAG, "onPlayerError code=${error.errorCodeName}", error)
                 playbackError = error
+                if (error.isHentaiMamaDecoderProblem()) {
+                    // This device can't decode the stream: let the bundled mpv player take over.
+                    val base = com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
+                        .baseUrl.trimEnd('/')
+                    com.yenaly.han1meviewer.ui.component.player.StreamFallback
+                        .playInMpv(context, state.url, "$base/")
+                }
             }
 
             override fun onRenderedFirstFrame() {
@@ -309,7 +316,7 @@ fun HentaiMamaVideoPlayer(
                     verticalArrangement = Arrangement.Center,
                 ) {
                     Text(
-                        text = if (err.isDecoderProblem())
+                        text = if (err.isHentaiMamaDecoderProblem())
                             "This phone can't decode this video (10-bit H.264)."
                         else "Playback failed: ${err.errorCodeName}",
                         color = Color.White,
@@ -317,7 +324,7 @@ fun HentaiMamaVideoPlayer(
                     )
                     Spacer(Modifier.size(12.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Button(onClick = { openInExternalPlayer(context, state.url) }) {
+                        Button(onClick = { openHentaiMamaExternal(context, state.url) }) {
                             Text("Open in external player")
                         }
                         Button(onClick = {
@@ -360,7 +367,7 @@ fun HentaiMamaVideoPlayer(
                 SitePlayerOverlay(
                     config = config,
                     title = title,
-                    isPlaying = effectiveIsPlaying,
+                    isPlaying = state.isPlaying,
                     isBuffering = isBuffering,
                     positionMs = state.position,
                     durationMs = state.duration,

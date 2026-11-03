@@ -16,6 +16,8 @@ import androidx.annotation.OptIn
 import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
+import com.yenaly.han1meviewer.ui.component.player.StreamFallback
+import com.yenaly.han1meviewer.ui.component.player.isDecoderProblem
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
@@ -349,7 +351,13 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
 
     override fun onPlayerError(error: PlaybackException) {
         Log.e(TAG, "onPlayerError: $error")
-        handler?.post { jzvd.onError(1000, 1000) }
+        handler?.post {
+            // Device can't decode this stream (e.g. 10-bit H.264): switch to mpv automatically.
+            if (error.isDecoderProblem() && (jzvd as? HJzvdStd)?.fallbackToMpv() == true) {
+                return@post
+            }
+            jzvd.onError(1000, 1000)
+        }
     }
 
     override fun onPositionDiscontinuity(
@@ -569,6 +577,10 @@ class MpvMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd) {
             }
         } catch (e: Exception){
             GlobalToasts.show(e.message.orEmpty(), level = GlobalToasts.ToastLevel.ERROR)
+        }
+
+        StreamFallback.refererFor(jzvd.jzDataSource?.currentUrl?.toString())?.let {
+            MPVLib.setOptionString("referrer", it)
         }
 
         observedProperties.forEach { (name, type) ->

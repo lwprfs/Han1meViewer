@@ -406,6 +406,21 @@ class HJzvdStd @JvmOverloads constructor(
         setUp(jzDataSource, screen, kernel.clazz)
     }
 
+    /**
+     * Re-starts the current video with the mpv kernel (used when MediaCodec can't decode the
+     * stream). Returns false if mpv is already in use or there is nothing to play.
+     */
+    fun fallbackToMpv(): Boolean {
+        if (mediaInterface is MpvMediaKernel) return false
+        val ds = jzDataSource ?: return false
+        val resumeAt = runCatching { currentPositionWhenPlaying }.getOrDefault(0L)
+        runCatching { mediaInterface?.release() }
+        setUp(ds, screen, MpvMediaKernel::class.java)
+        if (resumeAt > 0) savedProgress = resumeAt
+        startVideo()
+        return true
+    }
+
     fun setControlsVisible(visible: Boolean) {
         findViewById<View>(R.id.tv_speed)?.isVisible = visible
         findViewById<View>(R.id.tv_keyframe)?.isVisible = visible

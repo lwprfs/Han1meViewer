@@ -45,6 +45,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderMedia
 import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderImageLightboxDialog
+import com.yenaly.han1meviewer.ui.component.CollapsingPlayerLayout
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import com.yenaly.han1meviewer.util.DownloadLayout
@@ -154,31 +155,48 @@ fun FapFolderPostDetailScreen(
 
                 else -> {
                     val video = post.primaryVideo
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(vertical = 8.dp),
-                    ) {
-                        if (video != null) {
-                            fapFolderVideoPostItems(
-                                post = post,
-                                video = video,
-                                slugOrId = slugOrId,
-                                uiState = uiState,
-                                viewModel = viewModel,
-                                playing = playing,
-                                onPlayingChange = { playing = it },
-                                onVideoExpired = { v ->
-                                    val pid = v.videoId ?: v.onPlayId
-                                    playing = false
-                                    if (pid != null) viewModel.requestAutoPlayAfterRefresh(pid)
-                                    viewModel.refresh()
-                                },
-                                onOpenHashtag = onOpenHashtag,
-                                onOpenGroup = onOpenGroup,
-                                onOpenProfile = onOpenProfile,
-                            )
-                        } else {
+                    if (video != null) {
+                        CollapsingPlayerLayout(
+                            modifier = Modifier.fillMaxSize(),
+                            player = {
+                                InlineVideoSlot(
+                                    post = post,
+                                    video = video,
+                                    playing = playing,
+                                    onPlayingChange = { playing = it },
+                                    onExpired = {
+                                        val pid = video.videoId ?: video.onPlayId
+                                        playing = false
+                                        if (pid != null) viewModel.requestAutoPlayAfterRefresh(pid)
+                                        viewModel.refresh()
+                                    },
+                                )
+                            },
+                            content = {
+                                LazyColumn(
+                                    state = listState,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentPadding = PaddingValues(bottom = 8.dp),
+                                ) {
+                                    fapFolderVideoDetailItems(
+                                        post = post,
+                                        video = video,
+                                        slugOrId = slugOrId,
+                                        uiState = uiState,
+                                        viewModel = viewModel,
+                                        onOpenHashtag = onOpenHashtag,
+                                        onOpenGroup = onOpenGroup,
+                                        onOpenProfile = onOpenProfile,
+                                    )
+                                }
+                            },
+                        )
+                    } else {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(vertical = 8.dp),
+                        ) {
                             fapFolderImagePostItems(
                                 post = post,
                                 slugOrId = slugOrId,

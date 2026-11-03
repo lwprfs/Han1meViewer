@@ -3,6 +3,7 @@ package com.yenaly.han1meviewer.HentaiMama.ui.video
 import com.yenaly.han1meviewer.SiteType
 import kotlinx.coroutines.flow.first
 import com.yenaly.han1meviewer.ui.component.SiteVideoActionBar
+import com.yenaly.han1meviewer.ui.component.CollapsingPlayerLayout
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
@@ -435,9 +436,11 @@ fun HentaiMamaVideoScreen(
                     )
                 } else {
                     val info = page.info
-                    Column(modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)) {
+                    CollapsingPlayerLayout(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues),
+                        player = {
                         if (!playerState.isFullscreen) {
                             HentaiMamaVideoPlayer(
                                 state = playerState,
@@ -470,11 +473,11 @@ fun HentaiMamaVideoScreen(
                                 onQualitySelect = { viewModel.setQuality(it) },
                             )
                         }
+                        },
+                        content = {
                         LazyColumn(
                             state = listState,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f),
+                            modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(
                                 start = 6.dp,
                                 top = 12.dp,
@@ -694,7 +697,8 @@ fun HentaiMamaVideoScreen(
                                 }
                             }
                         }
-                    }
+                        },
+                    )
                 }
             }
         }
@@ -785,7 +789,7 @@ private fun EpisodeSidebarRow(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun SimilarGrid(
+internal fun SimilarGrid(
     items: List<SimilarCard>,
     onOpen: (SimilarCard) -> Unit,
 ) {

@@ -397,17 +397,23 @@ fun SitePlayerOverlay(
             }
         }
 
-        if (isBuffering) {
-            Box(Modifier.align(Alignment.Center)) {
-                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(48.dp))
+        if (locked) {
+            if (isBuffering) {
+                Box(Modifier.align(Alignment.Center)) {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(48.dp))
+                }
             }
-        } else if ((controlsVisible && !locked) || !isPlaying) {
-            if (!locked) {
+        } else if (isBuffering || controlsVisible || !isPlaying) {
+            // The loading ring is merged into the play/pause button instead of replacing it.
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(if (isPlaying) 60.dp else 72.dp),
+                contentAlignment = Alignment.Center,
+            ) {
                 FilledIconButton(
                     onClick = onPlayPause,
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .size(if (isPlaying) 60.dp else 72.dp),
+                    modifier = Modifier.fillMaxSize(),
                     colors = IconButtonDefaults.filledIconButtonColors(
                         containerColor = if (isPlaying) Color.Black.copy(alpha = 0.45f)
                         else MaterialTheme.colorScheme.primary.copy(alpha = 0.92f),
@@ -418,6 +424,13 @@ fun SitePlayerOverlay(
                         contentDescription = if (isPlaying) "Pause" else "Play",
                         tint = Color.White,
                         modifier = Modifier.size(if (isPlaying) 34.dp else 42.dp),
+                    )
+                }
+                if (isBuffering) {
+                    CircularProgressIndicator(
+                        color = Color.White,
+                        strokeWidth = 3.dp,
+                        modifier = Modifier.fillMaxSize(),
                     )
                 }
             }

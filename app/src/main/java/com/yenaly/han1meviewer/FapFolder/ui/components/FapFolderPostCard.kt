@@ -176,7 +176,7 @@ fun FapFolderPostCard(
 }
 
 @Composable
-private fun PostHeaderRow(
+internal fun PostHeaderRow(
     author: FapFolderAuthor,
     uploaderUsername: String?,
     uploaderIsGold: Boolean,
@@ -336,7 +336,7 @@ private fun SelectionText(text: String) {
 }
 
 @Composable
-private fun HashtagRow(
+internal fun HashtagRow(
     hashtags: List<String>,
     onClickHashtag: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -366,7 +366,7 @@ private fun HashtagRow(
 }
 
 @Composable
-private fun PostMediaSection(
+internal fun PostMediaSection(
     media: List<FapFolderMedia>,
     isPollPending: Boolean,
     onClickVideo: (FapFolderMedia.Video) -> Unit,
@@ -866,7 +866,7 @@ private fun JobBlock(job: FapFolderMedia.Job) {
 }
 
 @Composable
-private fun PostInteractionRow(
+internal fun PostInteractionRow(
     reactions: com.yenaly.han1meviewer.FapFolder.data.model.ReactionCount,
     comments: Int,
     shares: Int,

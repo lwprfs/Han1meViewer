@@ -306,6 +306,8 @@ object SiteImageSaver {
         var skipped = 0
         var failed = 0
         var lastError: String? = null
+        val jobId = ImageDownloadTracker.start(segments.lastOrNull() ?: baseName, urls.size)
+        try {
         val pad = urls.size.toString().length.coerceAtLeast(2)
         urls.forEachIndexed { index, url ->
             val ext = extensionOf(url)
@@ -329,11 +331,15 @@ object SiteImageSaver {
                 failed++
                 lastError = e.message
             }
+            ImageDownloadTracker.update(jobId, index + 1)
             onProgress?.invoke(index + 1, urls.size)
         }
         if (saved == 0 && skipped == 0 && failed > 0) {
             SaveResult.Error(lastError ?: "Download failed.")
         } else SaveResult.Saved(saved, skipped, failed)
+        } finally {
+            ImageDownloadTracker.finish(jobId)
+        }
     }
 
     fun saveBatchInBackground(
