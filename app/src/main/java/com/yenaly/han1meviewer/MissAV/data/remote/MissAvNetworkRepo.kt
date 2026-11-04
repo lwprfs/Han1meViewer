@@ -445,7 +445,7 @@ object MissAvApiHelper {
             put("path", "/recomms/items/$entryId/items/")
             putJsonObject("params") {
                 put("targetUserId", uuid)
-                put("count", 24)
+                put("count", 16)
                 put("scenario", scenario)
                 put("returnProperties", true)
                 putJsonArray("includedProperties") {
@@ -458,8 +458,7 @@ object MissAvApiHelper {
 
         return buildJsonObject {
             putJsonArray("requests") {
-                add(buildRequestObject("desktop-watch-next-side"))
-                add(buildRequestObject("desktop-watch-next-bottom"))
+                add(buildRequestObject("mobile-watch-next"))
             }
             put("distinctRecomms", true)
         }.toString()

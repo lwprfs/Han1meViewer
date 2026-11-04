@@ -94,6 +94,7 @@ fun MissAvVideoScreen(
     modifier: Modifier = Modifier,
 ) {
     val videoState by viewModel.videoFlow.collectAsStateWithLifecycle()
+    val relatedState by viewModel.relatedFlow.collectAsStateWithLifecycle()
     val historyViewModel: MissAvHistoryViewModel = viewModel()
     val normalizedPath = if (path.startsWith("/")) path else "/$path"
 
@@ -418,6 +419,7 @@ fun MissAvVideoScreen(
         subtitleTextView?.visibility = android.view.View.GONE
 
         viewModel.getVideoDetail(normalizedPath)
+        viewModel.getRelatedVideos(videoCode)
         wasPlayed = false
         isFirstPlay = true
         showResumeButton = false
@@ -807,6 +809,14 @@ fun MissAvVideoScreen(
                                     currentPosition = exoPlayer?.currentPosition ?: 0L
                                 },
                                 context = context
+                            )
+                        }
+                        item(key = "related") {
+                            MissAvRelatedVideos(
+                                state = relatedState,
+                                fallback = info.relatedVideos,
+                                currentCode = videoCode,
+                                onNavigateToVideo = onNavigateToVideo,
                             )
                         }
                     }

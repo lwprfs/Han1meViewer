@@ -36,6 +36,12 @@ class MissAvViewModel(application: Application) : AndroidViewModel(application) 
         MutableStateFlow<VideoLoadingState<MissAvVideoInfo>>(VideoLoadingState.Loading)
     val videoFlow = _videoFlow.asStateFlow()
 
+    private val _relatedFlow =
+        MutableStateFlow<WebsiteState<List<HanimeInfo>>>(WebsiteState.Loading)
+    val relatedFlow = _relatedFlow.asStateFlow()
+
+    private var relatedJob: Job? = null
+
     private val _searchFlow =
         MutableStateFlow<PageLoadingState<MutableList<HanimeInfo>>?>(null)
     val searchFlow = _searchFlow.asStateFlow()
@@ -237,6 +243,22 @@ class MissAvViewModel(application: Application) : AndroidViewModel(application) 
             }.onFailure { e ->
                 Log.e(TAG, "Video detail exception", e)
                 _videoFlow.value = VideoLoadingState.Error(e)
+            }
+        }
+    }
+
+    fun getRelatedVideos(videoCode: String) {
+        relatedJob?.cancel()
+        _relatedFlow.value = WebsiteState.Loading
+        relatedJob = viewModelScope.launch {
+            runCatching {
+                MissAvNetworkRepo.getRelatedVideos(videoCode).collect { state ->
+                    if (!isActive) return@collect
+                    _relatedFlow.value = state
+                }
+            }.onFailure { e ->
+                Log.e(TAG, "Related videos exception", e)
+                _relatedFlow.value = WebsiteState.Error(e)
             }
         }
     }
