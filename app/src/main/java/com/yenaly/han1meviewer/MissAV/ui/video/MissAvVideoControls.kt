@@ -88,6 +88,7 @@ import java.io.File
 import java.io.InputStream
 import java.nio.charset.StandardCharsets
 
+import com.yenaly.han1meviewer.MissAV.data.remote.MISSAV_QUALITY_AUTO
 import com.yenaly.han1meviewer.MissAV.data.remote.MissAvVideoUtils
 
 data class SubtitleCue(
@@ -192,6 +193,11 @@ object SubtitleParser {
     }
 }
 
+private val MISSAV_MASTER_PLAYLIST = Regex("/[0-9a-fA-F-]{36}/playlist\\.m3u8", RegexOption.IGNORE_CASE)
+
+private fun isMissAvStreamUrl(url: String): Boolean =
+    url.contains("video.m3u8", ignoreCase = true) || MISSAV_MASTER_PLAYLIST.containsMatchIn(url)
+
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun MissAvVideoPlayer(
@@ -252,6 +258,7 @@ fun MissAvVideoPlayer(
         .config(com.yenaly.han1meviewer.SiteType.MISSAV)
 
     var isBuffering by remember { mutableStateOf(false) }
+    var playingHeight by remember { mutableStateOf(0) }
     var hasRenderedFirstFrame by remember { mutableStateOf(false) }
     var lastSurfaceView by remember { mutableStateOf<SurfaceView?>(null) }
     val fitState = remember { VideoFitState() }
@@ -274,6 +281,7 @@ fun MissAvVideoPlayer(
             }
 
             override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
+                playingHeight = videoSize.height
                 fitState.updateFrom(videoSize)
                 val frame = lastSurfaceView?.parent as? FrameLayout
                 if (frame != null) lastSurfaceView?.let { fitVideoSurface(frame, it, fitState) }
@@ -435,7 +443,12 @@ fun MissAvVideoPlayer(
                     positionMs = currentPosition,
                     durationMs = duration,
                     bufferedMs = exoPlayer?.bufferedPosition?.coerceAtLeast(0L) ?: 0L,
-                    qualityLabel = if (selectedQuality == QUALITY_UNAVAILABLE) "" else selectedQuality,
+                    qualityLabel = when {
+                        selectedQuality == QUALITY_UNAVAILABLE -> ""
+                        selectedQuality == MISSAV_QUALITY_AUTO && playingHeight > 0 ->
+                            "$MISSAV_QUALITY_AUTO · ${playingHeight}p"
+                        else -> selectedQuality
+                    },
                     speed = currentSpeed,
                     isFullscreen = isFullscreen,
                     onPlayPause = onPlayPause,
@@ -465,6 +478,14 @@ fun MissAvVideoPlayer(
                     },
                 )
             }
+        } else if (isExtractingUrl && capturedUrl.isNotBlank()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator()
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Loading resolutions...", style = MaterialTheme.typography.bodySmall)
+                }
+            }
         } else if (isExtractingUrl) {
             AndroidView(
                 factory = { ctx ->
@@ -482,7 +503,7 @@ fun MissAvVideoPlayer(
                                 request: WebResourceRequest?,
                             ): WebResourceResponse? {
                                 val url = request?.url?.toString() ?: ""
-                                if (url.contains("video.m3u8", ignoreCase = true)) {
+                                if (isMissAvStreamUrl(url)) {
                                     onUrlCaptured(url)
                                 }
                                 return null
@@ -494,7 +515,7 @@ fun MissAvVideoPlayer(
                                 view: WebView?,
                                 url: String?,
                             ): WebResourceResponse? {
-                                if (url != null && url.contains("video.m3u8", ignoreCase = true)) {
+                                if (url != null && isMissAvStreamUrl(url)) {
                                     onUrlCaptured(url)
                                 }
                                 return null
@@ -502,7 +523,7 @@ fun MissAvVideoPlayer(
 
                             override fun onLoadResource(view: WebView?, url: String?) {
                                 super.onLoadResource(view, url)
-                                if (url != null && url.contains("video.m3u8", ignoreCase = true)) {
+                                if (url != null && isMissAvStreamUrl(url)) {
                                     onUrlCaptured(url)
                                 }
                             }

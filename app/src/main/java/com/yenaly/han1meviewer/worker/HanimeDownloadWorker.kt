@@ -185,7 +185,7 @@ class HanimeDownloadWorker(
 
     override suspend fun doWork(): Result {
         if (fastPathCancel) return Result.success()
-        // Queue placeholders and delete jobs are not downloads: no "Downloading..." notification.
+
         if (!isInWaitingQueue && !shouldDelete) {
             setForeground(createForegroundInfo())
         }
@@ -327,7 +327,7 @@ class HanimeDownloadWorker(
             val fileName = createVideoName(hanimeName, quality, videoType)
             if (shouldRedownload || shouldDelete) {
                 if (shouldDelete) {
-                    // also removes the partial file when a custom (SAF) folder is used
+
                     SafFileManager.deleteDownloadVideoFolder(context, videoCode)
                 } else {
                     HFileManager.getDownloadVideoFolder(context, videoCode).deleteRecursively()
@@ -403,7 +403,7 @@ class HanimeDownloadWorker(
                             length = estimated.coerceAtLeast(bytes),
                             downloadedLength = bytes,
                         )
-                        // Guarded write: never revives a row the user already paused.
+
                         DatabaseRepo.HanimeDownload.updateProgress(
                             entity.id, entity.downloadedLength, entity.length
                         )
@@ -413,7 +413,7 @@ class HanimeDownloadWorker(
                 showSuccessNotification()
                 result = Result.success(workDataOf(DownloadState.STATE to DownloadState.Finished.mask))
             } catch (e: Exception) {
-                // Anything thrown while WorkManager is stopping us is part of the stop, not a failure.
+
                 cancelled = e is CancellationException || isStopped || e.isStoppedCancellation()
                 result = if (cancelled) {
                     cancelDownloadNotification()
@@ -442,7 +442,7 @@ class HanimeDownloadWorker(
                 )
                 withContext(NonCancellable) {
                     if (cancelled) {
-                        // The manager owns Paused/Queued; only remember how far we got.
+
                         DatabaseRepo.HanimeDownload.updateDownloadedLength(
                             entity.id, entity.downloadedLength
                         )
@@ -468,7 +468,7 @@ class HanimeDownloadWorker(
 
             if (shouldRedownload || shouldDelete) {
                 if (shouldDelete) {
-                    // also removes the partial file when a custom (SAF) folder is used
+
                     SafFileManager.deleteDownloadVideoFolder(context, videoCode)
                 } else {
                     HFileManager.getDownloadVideoFolder(context, videoCode).deleteRecursively()
@@ -581,8 +581,7 @@ class HanimeDownloadWorker(
                     if (requestNeedRange) requestBuilder.header("Range", "bytes=$downloadedLength-")
                     val request = requestBuilder.build()
                     val call = siteClient().newCall(request)
-                    // A blocking socket read ignores coroutine cancellation. This watchdog aborts the
-                    // call the moment the worker is stopped, so Pause takes effect immediately.
+
                     val watchdog = launch {
                         try {
                             awaitCancellation()
@@ -621,7 +620,7 @@ class HanimeDownloadWorker(
                                     val progress = (downloadedLength * 100 / entity.length).coerceAtMost(100)
                                     setProgress(workDataOf(PROGRESS to progress.toInt()))
                                     updateDownloadNotification(progress.toInt())
-                                    // Guarded write: never revives a row the user already paused.
+
                                     DatabaseRepo.HanimeDownload.updateProgress(
                                         entity.id, downloadedLength, entity.length
                                     )
@@ -659,7 +658,7 @@ class HanimeDownloadWorker(
                 )
 
             } catch (e: Exception) {
-                // Anything thrown while WorkManager is stopping us is part of the stop, not a failure.
+
                 cancelled = e is CancellationException || isStopped || e.isStoppedCancellation()
                 result = if (cancelled) {
                     cancelDownloadNotification()
@@ -692,7 +691,7 @@ class HanimeDownloadWorker(
                 )
                 withContext(NonCancellable) {
                     if (cancelled) {
-                        // The manager owns Paused/Queued; only remember how far we got.
+
                         DatabaseRepo.HanimeDownload.updateDownloadedLength(entity.id, downloadedLength)
                     } else {
                         DatabaseRepo.HanimeDownload.updateKeepingGroup(

@@ -89,11 +89,6 @@ abstract class HanimeDownloadDao {
     @Query("UPDATE HanimeDownloadEntity SET coverUri = :coverUri WHERE id = :id")
     abstract suspend fun updateCoverUri(id: Int, coverUri: String?)
 
-    /**
-     * Progress write used by the worker. It only touches rows that are still queued/downloading,
-     * so a late write from a cancelled worker can never flip a paused/failed/finished row back to
-     * "downloading".
-     */
     @Query(
         "UPDATE HanimeDownloadEntity SET `downloadedLength` = :downloaded, `length` = :length, " +
                 "`state` = ${DownloadState.Mask.DOWNLOADING} WHERE `id` = :id AND `state` IN " +
@@ -104,15 +99,12 @@ abstract class HanimeDownloadDao {
     @Query("UPDATE HanimeDownloadEntity SET downloadedLength = :downloaded WHERE id = :id AND state != ${DownloadState.Mask.FINISHED}")
     abstract suspend fun updateDownloadedLength(id: Int, downloaded: Long): Int
 
-    /** Marks a row as downloading unless it is already finished. */
     @Query("UPDATE HanimeDownloadEntity SET state = ${DownloadState.Mask.DOWNLOADING} WHERE videoCode = :videoCode AND state != ${DownloadState.Mask.FINISHED}")
     abstract suspend fun markDownloading(videoCode: String): Int
 
-    /** Marks a row as queued unless it is already finished. */
     @Query("UPDATE HanimeDownloadEntity SET state = ${DownloadState.Mask.QUEUED} WHERE videoCode = :videoCode AND state != ${DownloadState.Mask.FINISHED}")
     abstract suspend fun markQueued(videoCode: String): Int
 
-    /** Pauses only rows that are actually active; failed/finished rows keep their state. */
     @Query(
         "UPDATE HanimeDownloadEntity SET state = ${DownloadState.Mask.PAUSED} WHERE videoCode = :videoCode AND state IN " +
                 "(${DownloadState.Mask.UNKNOWN}, ${DownloadState.Mask.QUEUED}, ${DownloadState.Mask.DOWNLOADING})"

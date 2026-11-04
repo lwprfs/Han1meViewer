@@ -109,6 +109,10 @@ object Preferences {
     val missAvBaseUrl: String
         get() = preferenceSp.getString("missav_base_url", MissAvConstants.MISSAV_URL[0]) ?: MissAvConstants.MISSAV_URL[0]
 
+    var missAvPreferredQuality: String
+        get() = preferenceSp.getString("missav_preferred_quality", "auto") ?: "auto"
+        set(value) = preferenceSp.edit { putString("missav_preferred_quality", value) }
+
     val hentaiMamaBaseUrl: String
         get() = preferenceSp.getString("hentaimama_base_url", HentaiMamaConstants.BASE_URL) ?: HentaiMamaConstants.BASE_URL
 

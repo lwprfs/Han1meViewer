@@ -109,20 +109,48 @@ object MissAvParser {
         return element.select("div.text-secondary > a[href*=$urlPart]").eachText().joinToString().takeIf(String::isNotBlank)
     }
 
+    private val PACKED_SCRIPT = Regex(
+        """\}\('((?:[^'\\]|\\.)*)',\s*(\d+),\s*(\d+),\s*'((?:[^'\\]|\\.)*)'\.split\('\|'\)"""
+    )
+    private val WORD = Regex("""\b\w+\b""")
+    private val M3U8_URL = Regex("""https?://[^"'\s<>\\]+\.m3u8[^"'\s<>\\]*""")
+    private val SOURCE_ASSIGNMENT = Regex("""source\s*=\s*['"](https?://[^'"]+\.m3u8[^'"]*)['"]""")
+
+    private fun unpackScripts(script: String): List<String> =
+        PACKED_SCRIPT.findAll(script).mapNotNull { m ->
+            runCatching {
+                val payload = m.groupValues[1].replace("\\'", "'").replace("\\\\", "\\")
+                val radix = m.groupValues[2].toInt()
+                val count = m.groupValues[3].toInt()
+                val dict = m.groupValues[4].split("|")
+                if (radix < 2) return@runCatching null
+                fun encode(c: Int): String {
+                    val prefix = if (c < radix) "" else encode(c / radix)
+                    val r = c % radix
+                    return prefix + if (r > 35) (r + 29).toChar().toString() else r.toString(36)
+                }
+                val lookup = HashMap<String, String>(count * 2)
+                for (i in 0 until count) {
+                    val key = encode(i)
+                    lookup[key] = dict.getOrNull(i)?.takeIf { it.isNotEmpty() } ?: key
+                }
+                WORD.replace(payload) { lookup[it.value] ?: it.value }
+            }.getOrNull()
+        }.toList()
+
     private fun extractVideoUrl(document: Element): String? {
-        val scripts = document.select("script")
-        for (script in scripts) {
+        val candidates = mutableListOf<String>()
+        for (script in document.select("script")) {
             val data = script.data()
             if (data.isBlank()) continue
-
-            val m3u8Regex = Regex("""https?://[^"'\s<>]+\.m3u8[^"'\s<>]*""")
-            val match = m3u8Regex.find(data)
-            if (match != null) return match.value
-
-            val videoRegex = Regex("""["'](https?://[^"'\s<>]+\.(?:mp4|m3u8)[^"'\s<>]*)["']""")
-            val videoMatch = videoRegex.find(data)
-            if (videoMatch != null) return videoMatch.groupValues[1]
+            unpackScripts(data).forEach { unpacked ->
+                SOURCE_ASSIGNMENT.find(unpacked)?.groupValues?.get(1)?.let { candidates += it }
+                M3U8_URL.findAll(unpacked).forEach { candidates += it.value }
+            }
+            M3U8_URL.findAll(data).forEach { candidates += it.value }
         }
-        return null
+        if (candidates.isEmpty()) return null
+        return candidates.firstOrNull { it.contains("playlist.m3u8", ignoreCase = true) }
+            ?: candidates.first()
     }
 }

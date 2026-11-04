@@ -70,17 +70,13 @@ import kotlinx.coroutines.isActive
 import java.io.File
 import kotlinx.coroutines.flow.first
 
+import com.yenaly.han1meviewer.MissAV.data.remote.MISSAV_QUALITY_AUTO
+import com.yenaly.han1meviewer.MissAV.data.remote.MissAvStreamResolver
+import com.yenaly.han1meviewer.MissAV.data.remote.MissAvStreams
 import com.yenaly.han1meviewer.MissAV.data.repository.MissAvHistoryRepo
 import com.yenaly.han1meviewer.MissAV.ui.history.MissAvHistoryViewModel
 import com.yenaly.han1meviewer.MissAV.viewmodel.MissAvViewModel
 internal const val QUALITY_UNAVAILABLE = "Unavailable"
-
-private val RESOLUTION_SEGMENT = Regex("/(\\d+)p/")
-
-private fun qualityUrlFor(url: String, quality: String): String {
-    if (quality == QUALITY_UNAVAILABLE || !RESOLUTION_SEGMENT.containsMatchIn(url)) return url
-    return url.replace(RESOLUTION_SEGMENT, "/" + quality.lowercase() + "/")
-}
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
@@ -110,7 +106,8 @@ fun MissAvVideoScreen(
     var currentPosition by remember { mutableStateOf(0L) }
     var duration by remember { mutableStateOf(0L) }
     var showControls by remember { mutableStateOf(true) }
-    var selectedQuality by remember { mutableStateOf("720P") }
+    var selectedQuality by remember { mutableStateOf("") }
+    var streams by remember { mutableStateOf<MissAvStreams?>(null) }
     var isFullscreen by remember { mutableStateOf(false) }
     var subtitleUri by remember { mutableStateOf<Uri?>(null) }
     var hasSubtitle by remember { mutableStateOf(false) }
@@ -135,25 +132,22 @@ fun MissAvVideoScreen(
     val context = LocalContext.current
     val activity = context as? Activity
 
-    val qualityMap = remember(capturedUrl) {
-        if (capturedUrl.isBlank()) {
-            emptyMap()
-        } else {
-            val resolutionSegment = Regex("/(\\d+)p/")
-            if (resolutionSegment.containsMatchIn(capturedUrl)) {
-                val qualities = listOf("360p", "480p", "720p", "1080p")
-                linkedMapOf<String, String>().apply {
-                    qualities.forEach { quality ->
-                        put(
-                            quality.uppercase(),
-                            capturedUrl.replace(resolutionSegment, "/$quality/")
-                        )
-                    }
-                }
+    val qualityMap: Map<String, String> = remember(streams, capturedUrl) {
+        streams?.qualityMap
+            ?: if (capturedUrl.isBlank()) {
+                emptyMap()
             } else {
-                linkedMapOf(QUALITY_UNAVAILABLE to capturedUrl)
+                linkedMapOf(MISSAV_QUALITY_AUTO to MissAvStreamResolver.toMasterUrl(capturedUrl))
             }
+    }
+
+    fun startExtraction() {
+        extractionFailed = false
+        val direct = (videoState as? VideoLoadingState.Success)?.info?.videoUrl
+        if (!direct.isNullOrBlank() && capturedUrl.isBlank()) {
+            capturedUrl = MissAvStreamResolver.toMasterUrl(direct)
         }
+        isExtractingUrl = true
     }
 
     val currentUrl = remember(selectedQuality, qualityMap) {
@@ -443,8 +437,7 @@ fun MissAvVideoScreen(
             !playerStarted && !isExtractingUrl && capturedUrl.isBlank()
         ) {
             autoPlayKicked = true
-            extractionFailed = false
-            isExtractingUrl = true
+            startExtraction()
             if (savedPosition > 0 && com.yenaly.han1meviewer.ui.component.player.SitePlayerSettings.config(com.yenaly.han1meviewer.SiteType.MISSAV).resumePlayback) showResumeButton = true
         }
     }
@@ -483,8 +476,13 @@ fun MissAvVideoScreen(
         }
     }
 
-    LaunchedEffect(capturedUrl) {
+    LaunchedEffect(capturedUrl, isExtractingUrl) {
         if (capturedUrl.isNotBlank() && isExtractingUrl) {
+            val resolved = MissAvStreamResolver.resolve(capturedUrl)
+            streams = resolved
+            selectedQuality = MissAvStreamResolver.pickLabel(
+                Preferences.missAvPreferredQuality, resolved
+            )
             isExtractingUrl = false
             if (!pendingDownload) playerStarted = true
             webViewRef?.let { wv ->
@@ -725,14 +723,12 @@ fun MissAvVideoScreen(
                             },
                             onPlayClick = {
                                 capturedUrl = ""
-                                extractionFailed = false
-                                isExtractingUrl = true
+                                startExtraction()
                                 if (savedPosition > 0 && com.yenaly.han1meviewer.ui.component.player.SitePlayerSettings.config(com.yenaly.han1meviewer.SiteType.MISSAV).resumePlayback) showResumeButton = true
                             },
                             onRetryExtraction = {
-                                extractionFailed = false
                                 capturedUrl = ""
-                                isExtractingUrl = true
+                                startExtraction()
                             },
                             onPositionUpdate = { position, total ->
                                 currentPosition = position
@@ -746,7 +742,9 @@ fun MissAvVideoScreen(
                             webViewRef = webViewRef,
                             onWebViewRefChange = { webViewRef = it },
                             onUrlCaptured = { url ->
-                                if (capturedUrl.isBlank()) capturedUrl = url
+                                if (capturedUrl.isBlank()) {
+                                    capturedUrl = MissAvStreamResolver.toMasterUrl(url)
+                                }
                             },
                             title = info.title,
                             onBack = onBack,
@@ -773,25 +771,24 @@ fun MissAvVideoScreen(
                                 title = info.title,
                                 coverUrl = info.coverUrl,
                                 webUrl = Preferences.missAvBaseUrl.trimEnd('/') + normalizedPath,
-                                downloadUrl = capturedUrl.takeIf { it.isNotBlank() }
-                                    ?.let { qualityUrlFor(it, selectedQuality) },
-                                downloadQuality = selectedQuality,
+                                downloadUrl = streams?.downloadUrlFor(selectedQuality),
+                                downloadQuality = streams?.downloadLabelFor(selectedQuality)
+                                    ?: selectedQuality,
                                 resolveDownloadUrl = {
 
-                                    if (capturedUrl.isNotBlank()) {
-                                        return@SiteVideoActionBar qualityUrlFor(capturedUrl, selectedQuality)
+                                    streams?.let {
+                                        return@SiteVideoActionBar it.downloadUrlFor(selectedQuality)
                                     }
                                     pendingDownload = true
                                     capturedUrl = ""
-                                    extractionFailed = false
-                                    isExtractingUrl = true
+                                    startExtraction()
                                     val ok = kotlinx.coroutines.withTimeoutOrNull(30_000L) {
                                         androidx.compose.runtime.snapshotFlow {
-                                            capturedUrl.isNotBlank() to extractionFailed
-                                        }.first { (url, failed) -> url || failed }
+                                            (streams != null) to extractionFailed
+                                        }.first { (ready, failed) -> ready || failed }
                                     }
                                     pendingDownload = false
-                                    if (ok?.first == true) qualityUrlFor(capturedUrl, selectedQuality)
+                                    if (ok?.first == true) streams?.downloadUrlFor(selectedQuality)
                                     else {
                                         isExtractingUrl = false
                                         null
@@ -932,7 +929,9 @@ fun MissAvVideoScreen(
                     },
                     webViewRef = webViewRef,
                     onWebViewRefChange = { webViewRef = it },
-                    onUrlCaptured = { url -> if (capturedUrl.isBlank()) capturedUrl = url },
+                    onUrlCaptured = { url ->
+                        if (capturedUrl.isBlank()) capturedUrl = MissAvStreamResolver.toMasterUrl(url)
+                    },
                     modifier = Modifier.fillMaxSize(),
                     title = info.title,
                     onBack = { exitFullscreen() },

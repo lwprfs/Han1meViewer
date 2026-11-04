@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Dns
+import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.History
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -35,6 +36,7 @@ import kotlinx.serialization.Serializable
 import com.yenaly.han1meviewer.MissAV.ui.home.MissAvHomeScreen
 import com.yenaly.han1meviewer.MissAV.ui.home.MissAvHomeSettingsScreen
 import com.yenaly.han1meviewer.MissAV.ui.home.MissAvHostSettingsScreen
+import com.yenaly.han1meviewer.MissAV.ui.home.MissAvQualitySettingsScreen
 import com.yenaly.han1meviewer.MissAV.ui.search.MissAvSearchScreen
 import com.yenaly.han1meviewer.MissAV.ui.video.MissAvVideoScreen
 import com.yenaly.han1meviewer.MissAV.ui.history.MissAvHistoryScreen
@@ -52,6 +54,9 @@ object MissAvHomeCategoriesRoute
 
 @Serializable
 object MissAvHostSettingsRoute
+
+@Serializable
+object MissAvQualitySettingsRoute
 
 @Serializable
 data class MissAvSearchRoute(val query: String? = null)
@@ -127,6 +132,13 @@ fun MissAvNavHost(
                         onClick = { navController.navigateSafely(MissAvHostSettingsRoute) },
                     ),
                     SiteSettingsEntry(
+                        key = "video_quality",
+                        title = "Video Resolution",
+                        subtitle = "Choose Auto or a fixed starting resolution",
+                        icon = Icons.Default.HighQuality,
+                        onClick = { navController.navigateSafely(MissAvQualitySettingsRoute) },
+                    ),
+                    SiteSettingsEntry(
                         key = "history",
                         title = stringResource(R.string.missav_history_title),
                         subtitle = stringResource(R.string.missav_history_subtitle),
@@ -151,6 +163,12 @@ fun MissAvNavHost(
 
         composable<MissAvHostSettingsRoute> {
             MissAvHostSettingsScreen(
+                onBack = { navController.popBackStackSafely() },
+            )
+        }
+
+        composable<MissAvQualitySettingsRoute> {
+            MissAvQualitySettingsScreen(
                 onBack = { navController.popBackStackSafely() },
             )
         }

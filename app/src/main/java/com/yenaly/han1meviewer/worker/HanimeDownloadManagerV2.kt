@@ -24,18 +24,6 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 
-/**
- * Single owner of the download queue.
- *
- * Rules that keep the UI and the real work in sync:
- *  - Only this manager decides what runs. Every message is handled one at a time by a single
- *    consumer coroutine, so [slots] and [waitingQueue] are never touched concurrently.
- *  - A slot stays occupied until WorkManager reports the work as finished, so the concurrency
- *    limit is never exceeded while a paused worker is still shutting down.
- *  - The manager writes the user-visible state (Queued / Downloading / Paused) itself, immediately,
- *    instead of waiting for the worker to get around to it. The worker only writes progress and
- *    terminal results (Finished / Failed / retry-wait).
- */
 object HanimeDownloadManagerV2 {
 
     private const val TAG = "HanimeDownloadManager"
@@ -50,7 +38,6 @@ object HanimeDownloadManagerV2 {
             val state: DownloadState = DownloadState.Unknown,
         ) : DownloadMsg()
 
-        /** [preempt]: if all slots are busy, push the oldest running task back to the queue. */
         data class Resume(
             val args: HanimeDownloadWorker.Args,
             val preempt: Boolean,
@@ -85,7 +72,6 @@ object HanimeDownloadManagerV2 {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    // Only touched from the consumer coroutine below.
     private val slots = linkedMapOf<String, Slot>()
     private val waitingQueue = ArrayDeque<HanimeDownloadWorker.Args>()
     private val redownloadPending = hashSetOf<String>()
@@ -133,7 +119,7 @@ object HanimeDownloadManagerV2 {
 
         val slot = slots[code]
         if (slot != null) {
-            // Already running. If it is currently being stopped, bring it back afterwards.
+
             if (slot.exit == Exit.PAUSE) {
                 slot.exit = Exit.REQUEUE
                 markQueued(args, redownload = false)
@@ -201,10 +187,10 @@ object HanimeDownloadManagerV2 {
         } else {
             waitingQueue.removeAll { it.videoCode == code }
             redownloadPending -= code
-            // a not-yet-finished "create queue row" placeholder must not appear afterwards
+
             cancelWork(args)
         }
-        // Instant feedback. Late progress writes from the dying worker are ignored by the DAO.
+
         DatabaseRepo.HanimeDownload.markPaused(code)
     }
 
@@ -213,7 +199,7 @@ object HanimeDownloadManagerV2 {
         waitingQueue.removeAll { it.videoCode == code }
         redownloadPending -= code
         slots[code]?.exit = Exit.DELETE
-        // REPLACE cancels whatever is running for this code, then the delete worker cleans up.
+
         startWork(args, delete = true)
     }
 
@@ -234,8 +220,7 @@ object HanimeDownloadManagerV2 {
             Exit.DELETE -> Unit
 
             Exit.NONE -> {
-                // Worker is gone. If the row still claims to be active although nothing runs it
-                // (cancelled from outside, crashed...), do not leave a fake "downloading" behind.
+
                 val entity = DatabaseRepo.HanimeDownload.find(msg.videoCode, slot.args.quality.orEmpty())
                     ?: DatabaseRepo.HanimeDownload.find(msg.videoCode)
                 if (entity != null &&
@@ -262,7 +247,7 @@ object HanimeDownloadManagerV2 {
         Log.d(TAG, "start ${args.videoCode}")
         slot.job = scope.launch {
             try {
-                // Show "Downloading" right away instead of after the worker's first progress tick.
+
                 DatabaseRepo.HanimeDownload.markDownloading(args.videoCode)
                 val workId = startWork(args, redownload)
                 awaitWorkCompletion(workId)
@@ -276,11 +261,6 @@ object HanimeDownloadManagerV2 {
         }
     }
 
-    /**
-     * Cancels leftovers from the previous process. WorkManager restarts interrupted work on its
-     * own; those workers are invisible to the queue and are the ones that kept downloading while
-     * the UI said "queued" or "paused".
-     */
     private suspend fun cancelStrayWork() {
         try {
             workManager.cancelAllWorkByTag(HanimeDownloadWorker.TAG).await()
@@ -302,7 +282,7 @@ object HanimeDownloadManagerV2 {
         Log.d(TAG, "init")
         cancelStrayWork()
         val pending = DownloadDatabase.instance.hanimeDownloadDao.loadAllDownloadingHanimeOnce()
-        // Things that were actually running go first, then the queue, both oldest first.
+
         val ordered = pending.sortedWith(
             compareBy<HanimeDownloadEntity> { if (it.state == DownloadState.Downloading) 0 else 1 }
                 .thenBy { it.id }
@@ -323,14 +303,12 @@ object HanimeDownloadManagerV2 {
         downloadChannel.trySend(DownloadMsg.Add(args, redownload))
     }
 
-    /** Start a single item now. If every slot is busy the oldest running one is moved back to the queue. */
     fun resumeTask(entity: HanimeDownloadEntity) {
         downloadChannel.trySend(
             DownloadMsg.Resume(HanimeDownloadWorker.Args.fromEntity(entity), preempt = true)
         )
     }
 
-    /** Put every paused/failed item back in the queue in order, without kicking anything out. */
     fun resumeAll(entities: List<HanimeDownloadEntity>) {
         entities.filter { it.state == DownloadState.Paused || it.state == DownloadState.Unknown }
             .sortedBy { it.id }
@@ -345,7 +323,6 @@ object HanimeDownloadManagerV2 {
         downloadChannel.trySend(DownloadMsg.Stop(HanimeDownloadWorker.Args.fromEntity(entity)))
     }
 
-    /** Pauses everything that is running or waiting. */
     fun pauseAll(entities: List<HanimeDownloadEntity>) {
         entities.filter {
             it.state == DownloadState.Downloading ||
@@ -396,10 +373,6 @@ object HanimeDownloadManagerV2 {
         }
     }
 
-    /**
-     * Marks the row as queued. A brand-new task has no row yet, so a tiny "waiting" worker creates
-     * it; that way the item shows up in the list as "Queued" instead of being invisible.
-     */
     private suspend fun markQueued(args: HanimeDownloadWorker.Args, redownload: Boolean) {
         val entity = DatabaseRepo.HanimeDownload.find(args.videoCode, args.quality.orEmpty())
         if (entity == null) {

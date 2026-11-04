@@ -205,8 +205,7 @@ fun DownloadScreen(
         onBack = onBack,
         actions = {
             if (uiState.currentPage == 0) {
-                // One button, always in sync with the real state: pause while anything is
-                // running/queued, otherwise start everything that is paused.
+
                 val hasActive = uiState.downloadingItems.any {
                     it.state == DownloadState.Downloading || it.state == DownloadState.Queued
                 }

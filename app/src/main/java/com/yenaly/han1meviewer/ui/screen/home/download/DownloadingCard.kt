@@ -183,7 +183,7 @@ fun DownloadingItemCard(
                     }
 
                     when (item.state) {
-                        // Running or waiting for a slot: the only sensible action is "pause".
+
                         DownloadState.Downloading,
                         DownloadState.Queued -> {
                             FilledTonalIconButton(

@@ -90,7 +90,6 @@ fun DownloadingScreen(
     }
 }
 
-/** One-line overview of what the queue is doing, e.g. "1 downloading · 2 queued · 1 paused". */
 @Composable
 private fun DownloadStatusSummary(items: List<HanimeDownloadEntity>) {
     if (items.isEmpty()) return
