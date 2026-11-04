@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
@@ -37,6 +38,7 @@ import com.yenaly.han1meviewer.MissAV.ui.home.MissAvHomeScreen
 import com.yenaly.han1meviewer.MissAV.ui.home.MissAvHomeSettingsScreen
 import com.yenaly.han1meviewer.MissAV.ui.home.MissAvHostSettingsScreen
 import com.yenaly.han1meviewer.MissAV.ui.home.MissAvQualitySettingsScreen
+import com.yenaly.han1meviewer.MissAV.ui.home.MissAvSubtitleSettingsScreen
 import com.yenaly.han1meviewer.MissAV.ui.search.MissAvSearchScreen
 import com.yenaly.han1meviewer.MissAV.ui.video.MissAvVideoScreen
 import com.yenaly.han1meviewer.MissAV.ui.history.MissAvHistoryScreen
@@ -57,6 +59,9 @@ object MissAvHostSettingsRoute
 
 @Serializable
 object MissAvQualitySettingsRoute
+
+@Serializable
+object MissAvSubtitleSettingsRoute
 
 @Serializable
 data class MissAvSearchRoute(val query: String? = null)
@@ -139,6 +144,13 @@ fun MissAvNavHost(
                         onClick = { navController.navigateSafely(MissAvQualitySettingsRoute) },
                     ),
                     SiteSettingsEntry(
+                        key = "video_subtitle",
+                        title = "Video Subtitle",
+                        subtitle = "Choose the subtitle source and language",
+                        icon = Icons.Default.Subtitles,
+                        onClick = { navController.navigateSafely(MissAvSubtitleSettingsRoute) },
+                    ),
+                    SiteSettingsEntry(
                         key = "history",
                         title = stringResource(R.string.missav_history_title),
                         subtitle = stringResource(R.string.missav_history_subtitle),
@@ -169,6 +181,12 @@ fun MissAvNavHost(
 
         composable<MissAvQualitySettingsRoute> {
             MissAvQualitySettingsScreen(
+                onBack = { navController.popBackStackSafely() },
+            )
+        }
+
+        composable<MissAvSubtitleSettingsRoute> {
+            MissAvSubtitleSettingsScreen(
                 onBack = { navController.popBackStackSafely() },
             )
         }

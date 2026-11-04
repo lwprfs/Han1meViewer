@@ -36,6 +36,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
+import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.SiteVideoSectionHeader
 import com.yenaly.han1meviewer.USER_AGENT
@@ -301,6 +302,68 @@ object MissAvSubtitleHelper {
         }
     }
 
+    private const val SUBDOG_BASE = "https://api.sub-dog.top"
+
+    suspend fun subDogExists(videoCode: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val id = videoCode.trim().uppercase()
+            if (id.isBlank()) return@withContext false
+            val request = Request.Builder()
+                .url("$SUBDOG_BASE/api/subtitles/exists/${Uri.encode(id)}")
+                .header("User-Agent", USER_AGENT)
+                .build()
+            val body = requireClient().newCall(request).execute().use { r ->
+                if (r.isSuccessful) r.body.string() else null
+            } ?: return@withContext false
+            org.json.JSONObject(body).optBoolean("exists", false)
+        } catch (e: Exception) {
+            Log.w(TAG, "Sub-Dog exists check failed: ${e.message}")
+            false
+        }
+    }
+
+    suspend fun downloadSubDogSubtitle(
+        context: Context,
+        videoCode: String,
+        fileName: String,
+    ): Uri? = withContext(Dispatchers.IO) {
+        try {
+            val id = videoCode.trim().uppercase()
+            if (id.isBlank()) return@withContext null
+            val request = Request.Builder()
+                .url("$SUBDOG_BASE/api/subtitles/${Uri.encode(id)}")
+                .header("User-Agent", USER_AGENT)
+                .build()
+            val raw = requireClient().newCall(request).execute().use { r ->
+                if (r.isSuccessful) r.body.string() else null
+            } ?: return@withContext null
+            if (!raw.contains("-->")) return@withContext null
+
+            val srt = vttToSrt(raw)
+            val dir = File(context.getExternalFilesDir("subtitles"), "missav")
+            if (!dir.exists() && !dir.mkdirs()) return@withContext null
+            val file = File(dir, fileName.replace(Regex("""[\\/:*?"<>|]"""), "_"))
+            file.writeText(srt, Charsets.UTF_8)
+            if (file.length() == 0L) return@withContext null
+            FileProvider.getUriForFile(context, "${context.packageName}.fileProvider", file)
+        } catch (e: Exception) {
+            Log.e(TAG, "Sub-Dog download error: ${e.message}")
+            null
+        }
+    }
+
+    private fun vttToSrt(text: String): String {
+        if (!text.trimStart().startsWith("WEBVTT")) return text
+        val timing = Regex("""(?m)^(?:(\d{2}):)?(\d{2}):(\d{2})\.(\d{3})\s*-->\s*(?:(\d{2}):)?(\d{2}):(\d{2})\.(\d{3}).*$""")
+        return text.replace(Regex("""(?m)^WEBVTT.*$"""), "")
+            .replace(timing) { m ->
+                val g = m.groupValues
+                "${g[1].ifEmpty { "00" }}:${g[2]}:${g[3]},${g[4]} --> " +
+                    "${g[5].ifEmpty { "00" }}:${g[6]}:${g[7]},${g[8]}"
+            }
+            .trim()
+    }
+
     private fun buildFullUrl(href: String): String = when {
         href.startsWith("http://") || href.startsWith("https://") -> href
         href.startsWith("/") -> "$SUBTITLE_CAT_BASE$href"
@@ -310,6 +373,82 @@ object MissAvSubtitleHelper {
 
 @Composable
 fun MissAvSubtitleSection(
+    videoCode: String,
+    onSubtitleDownloaded: (Uri) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (Preferences.missAvSubtitleSource == "subdog") {
+        MissAvSubDogSubtitleSection(videoCode, onSubtitleDownloaded, modifier)
+    } else {
+        MissAvSubtitleCatSection(videoCode, onSubtitleDownloaded, modifier)
+    }
+}
+
+@Composable
+private fun MissAvSubDogSubtitleSection(
+    videoCode: String,
+    onSubtitleDownloaded: (Uri) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    remember(context) {
+        MissAvSubtitleHelper.init(context)
+        true
+    }
+    val scope = rememberCoroutineScope()
+    var busy by remember { mutableStateOf(false) }
+    var status by remember { mutableStateOf<String?>(null) }
+    var isError by remember { mutableStateOf(false) }
+
+    fun fetch() {
+        if (busy || videoCode.isBlank()) return
+        busy = true
+        isError = false
+        status = "Looking for a Sub-Dog subtitle…"
+        scope.launch {
+            try {
+                if (!MissAvSubtitleHelper.subDogExists(videoCode)) {
+                    isError = true
+                    status = "Sub-Dog has no subtitle for this video"
+                    return@launch
+                }
+                val uri = MissAvSubtitleHelper.downloadSubDogSubtitle(
+                    context, videoCode, "${videoCode}_subdog.srt",
+                )
+                if (uri != null) {
+                    onSubtitleDownloaded(uri)
+                    status = "Chinese subtitle loaded"
+                } else {
+                    isError = true
+                    status = "Could not download the Sub-Dog subtitle"
+                }
+            } finally {
+                busy = false
+            }
+        }
+    }
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        SiteVideoSectionHeader(
+            title = "Subtitles (Sub-Dog, Chinese)",
+            actionText = if (busy) "Working…" else "Get subtitle",
+            onActionClick = { fetch() },
+        )
+        Text(
+            text = status ?: "Tap Get subtitle to load the Sub-Dog subtitle",
+            style = MaterialTheme.typography.bodySmall,
+            color = if (isError) MaterialTheme.colorScheme.error
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(vertical = 4.dp),
+        )
+    }
+}
+
+@Composable
+private fun MissAvSubtitleCatSection(
     videoCode: String,
     onSubtitleDownloaded: (Uri) -> Unit,
     modifier: Modifier = Modifier,
