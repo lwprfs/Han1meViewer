@@ -124,6 +124,7 @@ fun SiteVideoActionBar(
             .padding(horizontal = 4.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        val gettingLinkText = stringResource(R.string.site_getting_the_download_link)
         SiteVideoActionButton(
             iconRes = R.drawable.ic_baseline_check_circle_24,
             label = checkInLabel,
@@ -141,7 +142,7 @@ fun SiteVideoActionBar(
                     ?.let { "${it.trim('/')}/$videoCode" } ?: videoCode
                 if (downloadUrl.isNullOrBlank() && resolveDownloadUrl != null) {
                     GlobalToasts.show(
-                        stringResource(R.string.site_getting_the_download_link),
+                        gettingLinkText,
                         level = GlobalToasts.ToastLevel.INFO,
                     )
                     scope.launch {

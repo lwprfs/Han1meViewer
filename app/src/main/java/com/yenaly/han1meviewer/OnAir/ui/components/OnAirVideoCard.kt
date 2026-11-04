@@ -57,6 +57,7 @@ fun OnAirVideoCardItem(
 ) {
     val clipboard = LocalClipboard.current
     val clipboardScope = rememberCoroutineScope()
+    val linkCopiedText = stringResource(R.string.onair_video_link_copied)
     val defaultLongClick: (OnAirVideoCard) -> Unit = { c ->
         val link = OnAirUrlUtils.normalizeVideoUrl(
             "${OnAirNetwork.baseUrl.trimEnd('/')}/watch/${c.videoId}"
@@ -67,7 +68,7 @@ fun OnAirVideoCardItem(
                 )
             }
         GlobalToasts.show(
-            stringResource(R.string.onair_video_link_copied),
+            linkCopiedText,
             level = GlobalToasts.ToastLevel.SUCCESS,
         )
     }

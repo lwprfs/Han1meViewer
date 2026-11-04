@@ -209,8 +209,9 @@ fun OnAirSearchScreen(
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
         val filterChips = buildList {
-            if (tagFilter != null) {
-                add(stringResource(R.string.onair_tag, tagFilter) to {
+            val currentTag = tagFilter
+            if (currentTag != null) {
+                add(stringResource(R.string.onair_tag, currentTag) to {
                     viewModel.setTagFilter(null)
                     runSearch()
                 })

@@ -429,7 +429,7 @@ fun MissAvSearchScreen(
                                                 onNavigateToVideo,
                                             )
                                             Text(
-                                                text = stringResource(R.string.missav_failed_to_load_more, state.throwable.message),
+                                                text = stringResource(R.string.missav_failed_to_load_more, state.throwable.message.orEmpty()),
                                                 color = MaterialTheme.colorScheme.error,
                                                 modifier = Modifier.padding(16.dp),
                                             )
@@ -730,7 +730,7 @@ private fun GenreSearchSheet(
                 ) {
                     AdvancedChip(
                         title = if (genre != null) {
-                            stringResource(R.string.site_genre_2, MissAvOptions.genreLabel(genre) ?: genre)
+                            stringResource(R.string.site_genre_2, MissAvOptions.genreLabel(genre) ?: genre.orEmpty())
                         } else stringResource(R.string.site_genre),
                         checked = genre != null,
                         modifier = Modifier.weight(1f),
@@ -741,7 +741,7 @@ private fun GenreSearchSheet(
                     )
                     AdvancedChip(
                         title = if (sort != null) {
-                            stringResource(R.string.site_sort_3, MissAvOptions.displayName(MissAvGroup.SORT, sort) ?: sort)
+                            stringResource(R.string.site_sort_3, MissAvOptions.displayName(MissAvGroup.SORT, sort) ?: sort.orEmpty())
                         } else stringResource(R.string.site_sort_2),
                         checked = sort != null,
                         modifier = Modifier.weight(1f),
@@ -752,7 +752,7 @@ private fun GenreSearchSheet(
                     )
                     AdvancedChip(
                         title = if (filter != null) {
-                            stringResource(R.string.missav_filter, MissAvOptions.displayName(MissAvGroup.FILTER, filter) ?: filter)
+                            stringResource(R.string.missav_filter, MissAvOptions.displayName(MissAvGroup.FILTER, filter) ?: filter.orEmpty())
                         } else stringResource(R.string.site_filter),
                         checked = filter != null,
                         modifier = Modifier.weight(1f),
@@ -854,7 +854,7 @@ private fun SortFilterDialog(
                 ) {
                     AdvancedChip(
                         title = if (genre != null) {
-                            stringResource(R.string.site_genre_2, MissAvOptions.genreLabel(genre) ?: genre)
+                            stringResource(R.string.site_genre_2, MissAvOptions.genreLabel(genre) ?: genre.orEmpty())
                         } else stringResource(R.string.site_genre),
                         checked = genre != null,
                         modifier = Modifier.weight(1f),
@@ -865,7 +865,7 @@ private fun SortFilterDialog(
                     )
                     AdvancedChip(
                         title = if (sort != null) {
-                            stringResource(R.string.site_sort_3, MissAvOptions.displayName(MissAvGroup.SORT, sort) ?: sort)
+                            stringResource(R.string.site_sort_3, MissAvOptions.displayName(MissAvGroup.SORT, sort) ?: sort.orEmpty())
                         } else stringResource(R.string.site_sort_2),
                         checked = sort != null,
                         modifier = Modifier.weight(1f),
@@ -876,7 +876,7 @@ private fun SortFilterDialog(
                     )
                     AdvancedChip(
                         title = if (filter != null) {
-                            stringResource(R.string.missav_filter, MissAvOptions.displayName(MissAvGroup.FILTER, filter) ?: filter)
+                            stringResource(R.string.missav_filter, MissAvOptions.displayName(MissAvGroup.FILTER, filter) ?: filter.orEmpty())
                         } else stringResource(R.string.site_filter),
                         checked = filter != null,
                         modifier = Modifier.weight(1f),
