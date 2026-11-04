@@ -30,6 +30,7 @@ import com.yenaly.han1meviewer.HentaiMama.ui.navigation.HentaiMamaHomeSettingsRo
 import com.yenaly.han1meviewer.HentaiMama.ui.navigation.HentaiMamaVideoSettingsRoute
 import com.yenaly.han1meviewer.MissAV.ui.navigation.MissAvHomeCategoriesRoute
 import com.yenaly.han1meviewer.MissAV.ui.navigation.MissAvHostSettingsRoute
+import com.yenaly.han1meviewer.MissAV.ui.navigation.MissAvQualitySettingsRoute
 import com.yenaly.han1meviewer.OnAir.data.local.OnAirProfileCache
 import com.yenaly.han1meviewer.OnAir.ui.navigation.OnAirAccountSettingsRoute
 import com.yenaly.han1meviewer.OnAir.ui.navigation.OnAirCookieRoute
@@ -203,6 +204,7 @@ fun siteDrawerSections(context: Context, site: SiteType, loggedIn: Boolean): Lis
                 listOf(
                     entry(str(R.string.drawer_home_categories), R.drawable.baseline_grid_24, MissAvHomeCategoriesRoute),
                     entry(str(R.string.drawer_host_mirror), R.drawable.baseline_domain_24, MissAvHostSettingsRoute),
+                    entry("Video Resolution", R.drawable.ic_video_quilty, MissAvQualitySettingsRoute),
                 ),
             ),
         )

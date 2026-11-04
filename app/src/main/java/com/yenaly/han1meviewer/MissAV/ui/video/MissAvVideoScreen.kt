@@ -132,9 +132,9 @@ fun MissAvVideoScreen(
     val context = LocalContext.current
     val activity = context as? Activity
 
-    val qualityMap: Map<String, String> = remember(streams, capturedUrl) {
+    val qualityMap: Map<String, String> = remember(streams, capturedUrl, isExtractingUrl) {
         streams?.qualityMap
-            ?: if (capturedUrl.isBlank()) {
+            ?: if (capturedUrl.isBlank() || isExtractingUrl) {
                 emptyMap()
             } else {
                 linkedMapOf(MISSAV_QUALITY_AUTO to MissAvStreamResolver.toMasterUrl(capturedUrl))
@@ -156,7 +156,10 @@ fun MissAvVideoScreen(
 
     LaunchedEffect(qualityMap) {
         if (qualityMap.isNotEmpty() && selectedQuality !in qualityMap.keys) {
-            selectedQuality = qualityMap.keys.first()
+            selectedQuality = streams
+                ?.let { MissAvStreamResolver.pickLabel(Preferences.missAvPreferredQuality, it) }
+                ?.takeIf { it in qualityMap.keys }
+                ?: qualityMap.keys.first()
         }
     }
 
@@ -335,6 +338,7 @@ fun MissAvVideoScreen(
 
     fun changeQuality(quality: String) {
         if (selectedQuality == quality) return
+        if (Preferences.missAvLockQuality) return
         val currentPos = exoPlayer?.currentPosition ?: 0L
         val wasPlaying = exoPlayer?.playWhenReady ?: true
         val savedSubtitleUri = subtitleUri

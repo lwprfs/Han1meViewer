@@ -458,7 +458,11 @@ fun MissAvVideoPlayer(
                     onBack = if (isFullscreen) onExitFullscreen else onBack,
                     speedOptions = availableSpeeds,
                     onSpeedSelect = onSpeedChange,
-                    qualityOptions = realQualities,
+                    qualityOptions = if (com.yenaly.han1meviewer.Preferences.missAvLockQuality) {
+                        emptyList()
+                    } else {
+                        realQualities
+                    },
                     onQualitySelect = onQualityChange,
                     stretched = stretched,
                     onToggleStretch = { stretched = !stretched },

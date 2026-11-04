@@ -15,6 +15,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -61,6 +62,7 @@ fun MissAvQualitySettingsScreen(
     onBack: () -> Unit,
 ) {
     var current by remember { mutableStateOf(MissAvQualityRepo.current()) }
+    var locked by remember { mutableStateOf(Preferences.missAvLockQuality) }
 
     Scaffold(
         topBar = {
@@ -77,12 +79,39 @@ fun MissAvQualitySettingsScreen(
         ) {
             Text(
                 text = "Resolution a MissAV video starts in. If a video doesn't offer " +
-                    "the chosen resolution, the closest lower one is used. You can " +
-                    "still switch resolution from the player at any time.",
+                    "the chosen resolution, the closest lower one is used. Unless " +
+                    "locked, you can still switch resolution from the player.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Lock resolution",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = "Always play the selected resolution and disable switching in the player",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = locked,
+                    onCheckedChange = {
+                        locked = it
+                        Preferences.missAvLockQuality = it
+                    },
+                )
+            }
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(MissAvQualityRepo.options, key = { it.value }) { option ->
                     QualityOptionRow(

@@ -109,6 +109,10 @@ object Preferences {
     val missAvBaseUrl: String
         get() = preferenceSp.getString("missav_base_url", MissAvConstants.MISSAV_URL[0]) ?: MissAvConstants.MISSAV_URL[0]
 
+    var missAvLockQuality: Boolean
+        get() = preferenceSp.getBoolean("missav_lock_quality", false)
+        set(value) = preferenceSp.edit { putBoolean("missav_lock_quality", value) }
+
     var missAvPreferredQuality: String
         get() = preferenceSp.getString("missav_preferred_quality", "auto") ?: "auto"
         set(value) = preferenceSp.edit { putString("missav_preferred_quality", value) }
