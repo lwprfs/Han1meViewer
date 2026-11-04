@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.HentaiMama.ui.video
 
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -65,7 +66,7 @@ fun HentaiMamaEpisodeGallery(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
 
-        SiteVideoSectionHeader(title = "Previews")
+        SiteVideoSectionHeader(title = stringResource(R.string.hm_previews))
 
         LazyRow(
             modifier = Modifier.fillMaxWidth(),
@@ -164,7 +165,7 @@ private fun GalleryFullscreenDialog(
                 IconButton(onClick = onDismiss) {
                     Icon(
                         imageVector = Icons.Filled.Close,
-                        contentDescription = "Close",
+                        contentDescription = stringResource(R.string.close),
                         tint = Color.White,
                     )
                 }
@@ -176,7 +177,7 @@ private fun GalleryFullscreenDialog(
             }
 
             Text(
-                text = "Tap to close",
+                text = stringResource(R.string.hm_tap_to_close),
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(24.dp),

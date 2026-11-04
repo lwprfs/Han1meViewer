@@ -1,5 +1,8 @@
 package com.yenaly.han1meviewer.FapFolder.ui.group
 
+import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.R
+import androidx.annotation.StringRes
 import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
@@ -27,10 +30,12 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-enum class FapFolderGroupTab(val label: String, val param: String) {
-    POSTS("Posts", "posts"),
-    PHOTOS("Photos", "photos"),
-    VIDEOS("Videos", "videos");
+enum class FapFolderGroupTab(@StringRes val labelRes: Int, val param: String) {
+    POSTS(R.string.fap_tab_posts, "posts"),
+    PHOTOS(R.string.fap_tab_photos, "photos"),
+    VIDEOS(R.string.fap_tab_videos, "videos");
+
+    val label: String get() = applicationContext.getString(labelRes)
 
     companion object {
         fun fromParam(value: String?): FapFolderGroupTab =
@@ -100,7 +105,8 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
         val cleanSlug = slug.trim('/')
         if (cleanSlug.isBlank()) return
         val tab = FapFolderGroupTab.fromParam(initialTab)
-
+        // Re-entering the screen (e.g. coming back from a video) calls load() again with the
+        // ORIGINAL route tab. That must not reset a tab the user switched to, nor its scroll.
         val sameLoad = _uiState.value.slug == cleanSlug &&
                 (_uiState.value.activeTab == tab || loadedRouteTab == tab) &&
                 _uiState.value.group != null
@@ -154,7 +160,7 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
         return when (groupState) {
             null -> {
                 _uiState.update {
-                    it.copy(isLoading = false, headerError = "Failed to load group.")
+                    it.copy(isLoading = false, headerError = applicationContext.getString(R.string.fap_group_load_failed))
                 }
                 false
             }
@@ -169,7 +175,7 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        headerError = msg ?: "Failed to load group.",
+                        headerError = msg ?: applicationContext.getString(R.string.fap_group_load_failed),
                         sessionExpired = msg?.contains("session", true) == true,
                     )
                 }
@@ -177,7 +183,7 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
             }
             is VideoLoadingState.NoContent -> {
                 _uiState.update {
-                    it.copy(isLoading = false, headerError = "Group not found.")
+                    it.copy(isLoading = false, headerError = applicationContext.getString(R.string.fap_group_not_found))
                 }
                 false
             }
@@ -205,7 +211,7 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        itemsError = "HTTP ${response.code()}",
+                        itemsError = applicationContext.getString(R.string.fap_http_error, response.code()),
                     )
                 }
                 return
@@ -240,7 +246,7 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
         } catch (e: Exception) {
             Log.e(TAG, "loadFirstPostPage failed", e)
             _uiState.update {
-                it.copy(isLoading = false, itemsError = e.message ?: "Load failed.")
+                it.copy(isLoading = false, itemsError = e.message ?: applicationContext.getString(R.string.fap_load_failed))
             }
         }
     }
@@ -255,7 +261,7 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        itemsError = "HTTP ${response.code()}",
+                        itemsError = applicationContext.getString(R.string.fap_http_error, response.code()),
                     )
                 }
                 return
@@ -268,7 +274,7 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
         } catch (e: Exception) {
             Log.e(TAG, "loadFirstMediaPage($tab) failed", e)
             _uiState.update {
-                it.copy(isLoading = false, itemsError = e.message ?: "Load failed.")
+                it.copy(isLoading = false, itemsError = e.message ?: applicationContext.getString(R.string.fap_load_failed))
             }
         }
     }
@@ -404,7 +410,7 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
                         it.copy(
                             joining = false,
                             joinError = result.throwable.message
-                                ?: "Failed to update membership.",
+                                ?: applicationContext.getString(R.string.fap_membership_update_failed),
                         )
                     }
                 }

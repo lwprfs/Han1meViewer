@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.HentaiMama.ui.series
 
+import com.yenaly.yenaly_libs.utils.applicationContext
+import androidx.compose.ui.res.stringResource
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
@@ -105,7 +107,7 @@ fun HentaiMamaSeriesScreen(
                         ?.info
                         ?.hero
                         ?.title
-                        ?: "Series"
+                        ?: stringResource(R.string.hm_series)
                     Text(
                         text = title,
                         maxLines = 1,
@@ -126,12 +128,12 @@ fun HentaiMamaSeriesScreen(
                 is VideoLoadingState.Loading -> SiteLoadingContent()
 
                 is VideoLoadingState.Error -> SiteErrorContent(
-                    message = state.throwable.message ?: "Failed to load series",
+                    message = state.throwable.message ?: stringResource(R.string.hm_series_load_failed),
                     onRetry = { viewModel.getSeriesDetail(seriesUrl) },
                 )
 
                 is VideoLoadingState.NoContent -> SiteErrorContent(
-                    message = "Series not found",
+                    message = stringResource(R.string.hm_series_not_found),
                     onRetry = { viewModel.getSeriesDetail(seriesUrl) },
                 )
 
@@ -189,10 +191,10 @@ private fun SeriesDetailContent(
                     modifier = Modifier.padding(top = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(SpacingNormal),
                 ) {
-                    SiteVideoSectionHeader(title = "Cast")
+                    SiteVideoSectionHeader(title = stringResource(R.string.hm_cast))
                     nonEmptyCastGroups.forEachIndexed { index, group ->
                         SeriesCastRow(
-                            label = if (index == 0) "Creator" else "Cast",
+                            label = if (index == 0) stringResource(R.string.hm_creator) else stringResource(R.string.hm_cast),
                             members = group,
                         )
                     }
@@ -206,7 +208,7 @@ private fun SeriesDetailContent(
                     modifier = Modifier.padding(top = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(SpacingNormal),
                 ) {
-                    SiteVideoSectionHeader(title = "Trailer")
+                    SiteVideoSectionHeader(title = stringResource(R.string.hm_trailer))
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(
@@ -226,7 +228,7 @@ private fun SeriesDetailContent(
                                 tint = MaterialTheme.colorScheme.primary,
                             )
                             Text(
-                                text = "Watch trailer",
+                                text = stringResource(R.string.hm_watch_trailer),
                                 style = MaterialTheme.typography.titleSmall,
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
@@ -238,7 +240,7 @@ private fun SeriesDetailContent(
 
         item(key = "episodes_header") {
             SiteVideoSectionHeader(
-                title = "Episodes (${page.totalEpisodes})",
+                title = stringResource(R.string.hm_episodes_count, page.totalEpisodes),
                 modifier = Modifier.padding(top = 8.dp),
             )
         }
@@ -252,7 +254,7 @@ private fun SeriesDetailContent(
                     ),
                 ) {
                     Text(
-                        text = "No episodes available yet.",
+                        text = stringResource(R.string.hm_no_episodes),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(12.dp),
@@ -377,10 +379,10 @@ private fun SeriesHeroCard(
                     SeriesMetaInfoItem(icon = Icons.Rounded.Schedule, text = duration)
                 }
                 if (aired != null) {
-                    SeriesMetaInfoItem(icon = Icons.Rounded.Schedule, text = "Aired $aired")
+                    SeriesMetaInfoItem(icon = Icons.Rounded.Schedule, text = stringResource(R.string.hm_aired, aired))
                 }
                 if (episodeCount != null) {
-                    SeriesMetaInfoItem(icon = null, text = "$episodeCount episodes")
+                    SeriesMetaInfoItem(icon = null, text = stringResource(R.string.hm_episode_count, episodeCount))
                 }
                 if (studio != null) {
                     SeriesMetaInfoItem(icon = null, text = studio)
@@ -405,7 +407,7 @@ private fun SeriesHeroCard(
                 modifier = Modifier.size(20.dp),
             )
             Spacer(Modifier.width(8.dp))
-            Text(text = "Watch Ep 1")
+            Text(text = stringResource(R.string.hm_watch_ep1))
         }
 
         val statusChips: List<String> = hero.statusChips
@@ -545,8 +547,8 @@ private fun SeriesEpisodeRow(
                 }
                 Text(
                     text = episode.episodeNumber
-                        ?.let { n: Float -> "EP ${n.toInt()}" }
-                        ?: "EP",
+                        ?.let { n: Float -> stringResource(R.string.hm_ep_number, n.toInt()) }
+                        ?: stringResource(R.string.hm_ep),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -556,8 +558,8 @@ private fun SeriesEpisodeRow(
 }
 
 private fun formatViewsSeries(views: Long): String = when {
-    views >= 1_000_000_000 -> "%.1fB views".format(views / 1_000_000_000.0)
-    views >= 1_000_000 -> "%.1fM views".format(views / 1_000_000.0)
-    views >= 1_000 -> "%.1fK views".format(views / 1_000.0)
-    else -> "$views views"
+    views >= 1_000_000_000 -> applicationContext.getString(R.string.hm_views_count, "%.1fB".format(views / 1_000_000_000.0))
+    views >= 1_000_000 -> applicationContext.getString(R.string.hm_views_count, "%.1fM".format(views / 1_000_000.0))
+    views >= 1_000 -> applicationContext.getString(R.string.hm_views_count, "%.1fK".format(views / 1_000.0))
+    else -> applicationContext.getString(R.string.hm_views_count, views.toString())
 }

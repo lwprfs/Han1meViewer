@@ -139,7 +139,8 @@ fun HentaiMamaVideoPlayer(
                 Log.e(PLAYER_TAG, "onPlayerError code=${error.errorCodeName}", error)
                 playbackError = error
                 if (error.isHentaiMamaDecoderProblem()) {
-
+                    // This device can't decode the stream: switch to the bundled mpv decoder
+                    // INSIDE this page (same UI) instead of opening another video page.
                     resumeAtMs = exo?.currentPosition ?: 0L
                     exo?.pause()
                     com.yenaly.han1meviewer.ui.component.player.StreamFallback.markMpv(state.url)
@@ -321,20 +322,20 @@ fun HentaiMamaVideoPlayer(
                 ) {
                     Text(
                         text = if (err.isHentaiMamaDecoderProblem())
-                            "This phone can't decode this video (10-bit H.264)."
-                        else "Playback failed: ${err.errorCodeName}",
+                            stringResource(R.string.site_decode_unsupported)
+                        else stringResource(R.string.site_playback_failed, err.errorCodeName),
                         color = Color.White,
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Spacer(Modifier.size(12.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Button(onClick = { openHentaiMamaExternal(context, state.url) }) {
-                            Text("Open in external player")
+                            Text(stringResource(R.string.site_open_external_player))
                         }
                         Button(onClick = {
                             playbackError = null
                             exoPlayer.prepare()
-                        }) { Text("Retry") }
+                        }) { Text(stringResource(R.string.retry)) }
                     }
                 }
             }
@@ -351,16 +352,16 @@ fun HentaiMamaVideoPlayer(
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
                         Text(
-                            text = "Resume from ${formatTime(savedPosition)}?",
+                            text = stringResource(R.string.site_resume_from, formatTime(savedPosition)),
                             style = MaterialTheme.typography.titleMedium,
                             color = Color.White,
                         )
                         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                             Button(onClick = onResumeFromSaved) {
-                                Text("Resume")
+                                Text(stringResource(R.string.site_resume))
                             }
                             Button(onClick = onStartFromBeginning) {
-                                Text("Start Over")
+                                Text(stringResource(R.string.site_start_over))
                             }
                         }
                     }
@@ -376,7 +377,7 @@ fun HentaiMamaVideoPlayer(
                     positionMs = state.position,
                     durationMs = state.duration,
                     bufferedMs = exoPlayer.bufferedPosition.coerceAtLeast(0L),
-                    qualityLabel = state.quality.ifBlank { "Auto" },
+                    qualityLabel = state.quality.ifBlank { stringResource(R.string.site_quality_auto) },
                     speed = state.speed,
                     isFullscreen = isFullscreen,
                     onPlayPause = onPlayPause,
@@ -425,7 +426,7 @@ fun HentaiMamaVideoPlayer(
                     modifier = Modifier.size(48.dp),
                 )
                 Text(
-                    text = "Fetching video link…",
+                    text = stringResource(R.string.site_fetching_video_link),
                     color = Color.White,
                     style = MaterialTheme.typography.bodyMedium,
                 )

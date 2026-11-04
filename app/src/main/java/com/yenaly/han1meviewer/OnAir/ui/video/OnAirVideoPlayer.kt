@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.OnAir.ui.video
 
+import com.yenaly.yenaly_libs.utils.applicationContext
 import com.yenaly.han1meviewer.ui.component.player.StreamFallback
 import com.yenaly.han1meviewer.ui.component.player.isDecoderProblem
 import com.yenaly.han1meviewer.R
@@ -182,7 +183,7 @@ fun OnAirVideoPlayer(
             override fun onPlayerError(error: PlaybackException) {
                 val failingUrl = currentState.activeUrl
                 if (error.isDecoderProblem() && failingUrl != null) {
-
+                    // Keep the OnAir UI: decode with the bundled mpv inside this page.
                     StreamFallback.markMpv(failingUrl)
                     player.pause()
                     mpvUrl = failingUrl
@@ -390,7 +391,7 @@ fun OnAirVideoPlayer(
                     ) {
                         CircularProgressIndicator(color = Color.White)
                         Text(
-                            text = "Loading ${state.pendingQuality ?: ""} stream…",
+                            text = stringResource(R.string.site_loading_stream, state.pendingQuality ?: ""),
                             color = Color.White,
                             style = MaterialTheme.typography.bodyMedium,
                         )
@@ -417,13 +418,13 @@ fun OnAirVideoPlayer(
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.PlayArrow,
-                                contentDescription = "Play",
+                                contentDescription = stringResource(R.string.site_play),
                                 tint = Color.White,
                                 modifier = Modifier.size(48.dp),
                             )
                         }
                         Text(
-                            text = "Play (${state.currentQuality})",
+                            text = stringResource(R.string.site_play_quality, state.currentQuality),
                             color = Color.White,
                             style = MaterialTheme.typography.labelLarge,
                         )
@@ -470,7 +471,7 @@ fun OnAirVideoPlayer(
                             Icon(
                                 imageVector = if (state.isMuted) Icons.AutoMirrored.Filled.VolumeOff
                                 else Icons.AutoMirrored.Filled.VolumeUp,
-                                contentDescription = if (state.isMuted) "Unmute" else "Mute",
+                                contentDescription = if (state.isMuted) stringResource(R.string.site_unmute) else stringResource(R.string.site_mute),
                                 tint = Color.White,
                             )
                         }
@@ -478,7 +479,7 @@ fun OnAirVideoPlayer(
                             Icon(
                                 imageVector = if (state.isLooping) Icons.Filled.RepeatOne
                                 else Icons.Filled.Repeat,
-                                contentDescription = "Loop",
+                                contentDescription = stringResource(R.string.site_loop),
                                 tint = if (state.isLooping) MaterialTheme.colorScheme.primary
                                 else Color.White,
                             )
@@ -503,19 +504,19 @@ fun OnAirVideoPlayer(
                         Text(
                             text = activeStream?.errorMessage
                                 ?: state.errorMessage
-                                ?: "Failed to load video",
+                                ?: stringResource(R.string.site_load_video_failed),
                             color = Color.White,
                             style = MaterialTheme.typography.bodyMedium,
                         )
                         Button(onClick = { onRetryQuality(state.currentQuality) }) {
-                            Text("Retry")
+                            Text(stringResource(R.string.retry))
                         }
                     }
 
                     state.isSwitchLoading -> {
                         CircularProgressIndicator(color = Color.White)
                         Text(
-                            text = "Loading ${state.pendingQuality ?: ""} stream…",
+                            text = stringResource(R.string.site_loading_stream, state.pendingQuality ?: ""),
                             color = Color.White,
                             style = MaterialTheme.typography.bodySmall,
                         )
@@ -529,12 +530,12 @@ fun OnAirVideoPlayer(
                             modifier = Modifier.size(36.dp),
                         )
                         Text(
-                            text = "No stream for ${qualityLabel(state.currentQuality)}",
+                            text = stringResource(R.string.site_no_stream_for, qualityLabel(state.currentQuality)),
                             color = Color.White,
                             style = MaterialTheme.typography.bodyMedium,
                         )
                         Button(onClick = { onRetryQuality(state.currentQuality) }) {
-                            Text("Retry")
+                            Text(stringResource(R.string.retry))
                         }
                     }
 
@@ -551,7 +552,7 @@ fun OnAirVideoPlayer(
                         }
                         CircularProgressIndicator(color = Color.White)
                         Text(
-                            text = "Loading video…",
+                            text = stringResource(R.string.site_loading_video),
                             color = Color.White,
                             style = MaterialTheme.typography.bodySmall,
                         )
@@ -579,7 +580,7 @@ private const val SKIP_MS = 10_000L
 private val QUALITY_ORDER = listOf("original", "720", "480", "360", "240", "144")
 
 private fun qualityLabel(quality: String): String =
-    if (quality == "original") "Original" else "${quality}p"
+    if (quality == "original") applicationContext.getString(R.string.site_quality_original) else "${quality}p"
 
 private fun formatTime(ms: Long): String {
     val total = (ms / 1000).coerceAtLeast(0)
@@ -616,7 +617,7 @@ fun OnAirStreamUrlBar(
                 )
             }
                     GlobalToasts.show(
-                        "Stream URL copied",
+                        applicationContext.getString(R.string.site_stream_url_copied),
                         level = GlobalToasts.ToastLevel.SUCCESS,
                     )
                 },
@@ -657,7 +658,7 @@ fun OnAirStreamUrlBar(
                 )
             }
                 GlobalToasts.show(
-                    "Stream URL copied",
+                    applicationContext.getString(R.string.site_stream_url_copied),
                     level = GlobalToasts.ToastLevel.SUCCESS,
                 )
             },
@@ -665,7 +666,7 @@ fun OnAirStreamUrlBar(
         ) {
             Icon(
                 imageVector = Icons.Filled.ContentCopy,
-                contentDescription = "Copy stream URL",
+                contentDescription = stringResource(R.string.site_copy_stream_url),
                 modifier = Modifier.size(16.dp),
             )
         }

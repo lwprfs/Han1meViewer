@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.FapFolder.ui.video
 
+import com.yenaly.yenaly_libs.utils.applicationContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.saveable.rememberSaveable
 import android.widget.FrameLayout
@@ -248,14 +249,14 @@ fun FapFolderVideoPlayerScreen(
         if (expiryHandled) return@LaunchedEffect
         if (video.isExpired() && onExpired != null) {
             expiryHandled = true
-            playbackError = "Video link expired. Refreshing…"
+            playbackError = applicationContext.getString(R.string.fap_video_link_expired)
             onExpired()
         }
     }
 
     LaunchedEffect(video.playUrl, reloadToken) {
         if (video.playUrl.isBlank()) {
-            resolvingError = "Empty video URL"
+            resolvingError = applicationContext.getString(R.string.fap_empty_video_url)
             return@LaunchedEffect
         }
         resolvedUrl = null
@@ -277,7 +278,7 @@ fun FapFolderVideoPlayerScreen(
             }
         }
         if (resolvedUrl == null) {
-            resolvingError = lastError ?: "Could not resolve video URL"
+            resolvingError = lastError ?: applicationContext.getString(R.string.fap_resolve_url_failed)
             playbackError = resolvingError
             isBuffering = false
         }
@@ -393,7 +394,7 @@ fun FapFolderVideoPlayerScreen(
 
             override fun onPlayerError(error: PlaybackException) {
                 if (error.isDecoderProblem()) {
-
+                    // Keep the FapFolder UI: decode with the bundled mpv inside this page.
                     StreamFallback.markMpv(playableUrl)
                     player.pause()
                     isBuffering = false
@@ -406,7 +407,7 @@ fun FapFolderVideoPlayerScreen(
 
                 if (expired && onExpired != null && !expiryHandled) {
                     expiryHandled = true
-                    playbackError = "Video link expired. Refreshing…"
+                    playbackError = applicationContext.getString(R.string.fap_video_link_expired)
                     isBuffering = false
                     isReady = false
                     onExpired()
@@ -416,7 +417,7 @@ fun FapFolderVideoPlayerScreen(
                 if (badStatus && reloadAttempts < MAX_RELOAD_ATTEMPTS) {
                     reloadAttempts++
                     playbackError =
-                        "Stream error. Retrying ($reloadAttempts/$MAX_RELOAD_ATTEMPTS)…"
+                        applicationContext.getString(R.string.fap_stream_error_retrying, reloadAttempts, MAX_RELOAD_ATTEMPTS)
                     isBuffering = false
                     isReady = false
                     reloadToken++
@@ -424,9 +425,9 @@ fun FapFolderVideoPlayerScreen(
                 }
 
                 playbackError = if (badStatus) {
-                    "Stream error. Please try again later."
+                    applicationContext.getString(R.string.fap_stream_error_later)
                 } else {
-                    error.message ?: "Playback error"
+                    error.message ?: applicationContext.getString(R.string.fap_playback_error)
                 }
                 isBuffering = false
                 isReady = false
@@ -736,7 +737,7 @@ fun FapFolderVideoPlayerScreen(
                     }) {
                         Icon(Icons.Filled.Refresh, contentDescription = null)
                         Spacer(Modifier.width(6.dp))
-                        Text("Retry")
+                        Text(stringResource(R.string.retry))
                     }
                 }
             }
@@ -772,7 +773,7 @@ fun FapFolderVideoPlayerScreen(
                             Icon(
                                 imageVector = if (muted) Icons.AutoMirrored.Filled.VolumeOff
                                 else Icons.AutoMirrored.Filled.VolumeUp,
-                                contentDescription = if (muted) "Unmute" else "Mute",
+                                contentDescription = if (muted) stringResource(R.string.site_unmute) else stringResource(R.string.site_mute),
                                 tint = Color.White,
                             )
                         }
@@ -784,7 +785,7 @@ fun FapFolderVideoPlayerScreen(
                                 Icon(
                                     imageVector = if (fullscreenLandscape) Icons.Filled.ScreenLockPortrait
                                     else Icons.Filled.ScreenLockLandscape,
-                                    contentDescription = "Rotate",
+                                    contentDescription = stringResource(R.string.site_rotate),
                                     tint = Color.White,
                                 )
                             }
@@ -878,7 +879,7 @@ fun FapFolderVideoPlayerScreen(
                             IconButton(onClick = onDismiss) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Close",
+                                    contentDescription = stringResource(R.string.close),
                                     tint = Color.White,
                                 )
                             }
@@ -942,14 +943,13 @@ fun FapFolderVideoPlayerScreen(
             },
             title = {
                 Text(
-                    "Resume playback?",
+                    stringResource(R.string.site_resume_playback),
                     fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                 )
             },
             text = {
                 Text(
-                    "Resume from ${formatTime(pendingResumeMs)} " +
-                            "or start from the beginning?"
+                    stringResource(R.string.site_resume_or_start, formatTime(pendingResumeMs))
                 )
             },
             confirmButton = {
@@ -961,7 +961,7 @@ fun FapFolderVideoPlayerScreen(
                         exoPlayer?.seekTo(target)
                         exoPlayer?.play()
                     }
-                }) { Text("Resume") }
+                }) { Text(stringResource(R.string.site_resume)) }
             },
             dismissButton = {
                 TextButton(onClick = {
@@ -971,7 +971,7 @@ fun FapFolderVideoPlayerScreen(
                         exoPlayer?.seekTo(0L)
                         exoPlayer?.play()
                     }
-                }) { Text("Start over") }
+                }) { Text(stringResource(R.string.site_start_over)) }
             },
         )
     }
@@ -1005,7 +1005,7 @@ private fun StreamUrlRow(
                         as? ClipboardManager
                     cm?.setPrimaryClip(ClipData.newPlainText("stream_url", url))
                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                    Toast.makeText(context, "Stream URL copied", Toast.LENGTH_SHORT)
+                    Toast.makeText(context, context.getString(R.string.site_stream_url_copied), Toast.LENGTH_SHORT)
                         .show()
                     copied = true
                 },
@@ -1034,7 +1034,7 @@ private fun StreamUrlRow(
                 modifier = Modifier.weight(1f),
             )
             Text(
-                text = if (copied) "Copied" else "Hold to copy",
+                text = if (copied) stringResource(R.string.site_copied) else stringResource(R.string.site_hold_to_copy),
                 color = if (copied) MaterialTheme.colorScheme.primary
                 else Color.White.copy(alpha = 0.5f),
                 style = MaterialTheme.typography.labelSmall,

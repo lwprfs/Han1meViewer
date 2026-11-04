@@ -1,5 +1,8 @@
 package com.yenaly.han1meviewer.OnAir.ui.navigation
 
+import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.R
+import androidx.compose.ui.res.stringResource
 import com.yenaly.han1meviewer.ui.navigation.popBackStackSafely
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -89,14 +92,13 @@ fun OnAirNavHost(
         if (!tor.isTorExit) {
             val message = when (tor.failure) {
                 TorFailure.Timeout ->
-                    "Tor check timed out. Make sure the Tor daemon is running, then retry."
+                    applicationContext.getString(R.string.onair_tor_timeout)
                 TorFailure.NetworkUnreachable ->
-                    "Cannot reach the Tor check service. Connect to Tor before opening OnAir."
+                    applicationContext.getString(R.string.onair_tor_unreachable)
                 TorFailure.NonTorExit ->
-                    "This device is not exiting through the Tor network. " +
-                            "Enable Tor and try again."
+                    applicationContext.getString(R.string.onair_tor_non_exit)
                 else ->
-                    tor.message.ifBlank { "Tor is required to access OnAir." }
+                    tor.message.ifBlank { applicationContext.getString(R.string.onair_tor_required) }
             }
             gateState = OnAirGateState.TorBlocked(
                 reason = message,
@@ -131,12 +133,11 @@ fun OnAirNavHost(
     if (showTorModal) {
         AlertDialog(
             onDismissRequest = { },
-            title = { Text("Tor not connected") },
+            title = { Text(stringResource(R.string.onair_tor_not_connected)) },
             text = {
                 Text(
                     torModalReason.ifBlank {
-                        "OnAir is only reachable via the Tor network. " +
-                                "Enable Tor and retry, or switch to a different site."
+                        stringResource(R.string.onair_tor_modal_default)
                     }
                 )
             },
@@ -144,18 +145,18 @@ fun OnAirNavHost(
                 TextButton(onClick = {
                     showTorModal = false
                     retryTick = System.currentTimeMillis()
-                }) { Text("Retry") }
+                }) { Text(stringResource(R.string.retry)) }
             },
             dismissButton = {
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     TextButton(onClick = {
                         showTorModal = false
                         activity.requestSiteSwitch()
-                    }) { Text("Switch site") }
+                    }) { Text(stringResource(R.string.site_switch_site)) }
                     TextButton(onClick = {
                         showTorModal = false
                         navController.navigate(OnAirCookieRoute) { launchSingleTop = true }
-                    }) { Text("Cancel") }
+                    }) { Text(stringResource(R.string.cancel)) }
                 }
             },
         )
@@ -294,7 +295,7 @@ fun OnAirNavHost(
                     onLoggedOut = {
                         OnAirProfileCache.invalidate()
                         gateState = OnAirGateState.ContentError(
-                            reason = "You signed out of OnAir.",
+                            reason = applicationContext.getString(R.string.onair_signed_out),
                             suggestRelogin = true,
                         )
                         navController.popBackStack(OnAirHomeRoute, inclusive = true)
@@ -446,8 +447,8 @@ private fun onAirHubEntries(
         add(
             SiteSettingsEntry(
                 key = "account",
-                title = "Account, host & session",
-                subtitle = "Profile, OnAir host, sign out and clear OnAir history",
+                title = applicationContext.getString(R.string.drawer_account_session),
+                subtitle = applicationContext.getString(R.string.onair_account_subtitle),
                 icon = Icons.Default.Person,
                 onClick = { navController.navigateSafely(OnAirAccountSettingsRoute) },
             )
@@ -456,8 +457,8 @@ private fun onAirHubEntries(
     add(
         SiteSettingsEntry(
             key = "cookies",
-            title = "Cookies & sign in",
-            subtitle = "Manage the OnAir session cookies, log in or register",
+            title = applicationContext.getString(R.string.drawer_cookies_sign_in),
+            subtitle = applicationContext.getString(R.string.onair_cookies_subtitle),
             icon = Icons.Default.Lock,
             onClick = { navController.navigateSafely(OnAirCookieRoute) },
         )
@@ -466,8 +467,8 @@ private fun onAirHubEntries(
         add(
             SiteSettingsEntry(
                 key = "tags",
-                title = "Tags",
-                subtitle = "Browse every OnAir tag",
+                title = applicationContext.getString(R.string.drawer_tags),
+                subtitle = applicationContext.getString(R.string.onair_tags_subtitle),
                 icon = Icons.Default.Label,
                 onClick = { navController.navigateSafely(OnAirTagsIndexRoute) },
             )
@@ -475,8 +476,8 @@ private fun onAirHubEntries(
         add(
             SiteSettingsEntry(
                 key = "announcements",
-                title = "Announcements",
-                subtitle = "News from the OnAir administrators",
+                title = applicationContext.getString(R.string.onair_announcements_title),
+                subtitle = applicationContext.getString(R.string.onair_announcements_subtitle),
                 icon = Icons.Default.Campaign,
                 onClick = { navController.navigateSafely(OnAirAnnouncementsRoute) },
             )
@@ -484,8 +485,8 @@ private fun onAirHubEntries(
         add(
             SiteSettingsEntry(
                 key = "chat",
-                title = "Chat",
-                subtitle = "Community chat room",
+                title = applicationContext.getString(R.string.drawer_chat),
+                subtitle = applicationContext.getString(R.string.onair_chat_subtitle),
                 icon = Icons.Default.Chat,
                 onClick = { navController.navigateSafely(OnAirChatRoute) },
             )
@@ -493,8 +494,8 @@ private fun onAirHubEntries(
         add(
             SiteSettingsEntry(
                 key = "history",
-                title = "OnAir history",
-                subtitle = "Videos you've watched on OnAir",
+                title = applicationContext.getString(R.string.onair_history_title),
+                subtitle = applicationContext.getString(R.string.onair_history_subtitle),
                 icon = Icons.Default.History,
                 onClick = { navController.navigateSafely(OnAirHistoryRoute) },
             )

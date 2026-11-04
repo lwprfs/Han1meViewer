@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.FapFolder.ui.post
 
+import com.yenaly.han1meviewer.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -119,7 +121,7 @@ fun FapFolderPostDetailScreen(
             SiteTopAppBar(
                 title = {
                     Text(
-                        text = if (uiState.post?.primaryVideo != null) "Video" else "Post",
+                        text = if (uiState.post?.primaryVideo != null) stringResource(R.string.video) else stringResource(R.string.fap_post),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -129,7 +131,7 @@ fun FapFolderPostDetailScreen(
                     IconButton(onClick = { viewModel.refresh() }) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
-                            contentDescription = "Refresh",
+                            contentDescription = stringResource(R.string.site_refresh),
                         )
                     }
                 },
@@ -143,15 +145,15 @@ fun FapFolderPostDetailScreen(
         ) {
             val post = uiState.post
             when {
-                uiState.postLoading && post == null -> LoadingBlock("Loading post…")
+                uiState.postLoading && post == null -> LoadingBlock(stringResource(R.string.fap_loading_post))
 
                 post == null && uiState.postError != null -> PostErrorBlock(
-                    title = "Failed to load post",
-                    message = uiState.postError ?: "Unknown error",
+                    title = stringResource(R.string.fap_load_post_failed),
+                    message = uiState.postError ?: stringResource(R.string.site_unknown_error),
                     onRetry = { viewModel.refresh() },
                 )
 
-                post == null -> EmptyBlock("Post not found")
+                post == null -> EmptyBlock(stringResource(R.string.fap_post_not_found))
 
                 else -> {
                     val video = post.primaryVideo
@@ -309,7 +311,7 @@ internal fun PostErrorBlock(title: String, message: String, onRetry: () -> Unit)
                     modifier = Modifier.size(18.dp),
                 )
                 Spacer(Modifier.width(8.dp))
-                Text("Retry")
+                Text(stringResource(R.string.retry))
             }
         }
     }

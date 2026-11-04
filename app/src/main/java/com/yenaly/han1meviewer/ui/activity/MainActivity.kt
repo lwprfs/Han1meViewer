@@ -434,9 +434,9 @@ class MainActivity : FrameActivity(), PermissionRequester {
 
         Handler(Looper.getMainLooper()).postDelayed({
             val urlDisplay = when (siteType) {
-                SiteType.JAVCHU -> "Javchu (Fixed: https://javchu.com)"
-                SiteType.ONAIR -> "OnAir (${OnAirSitePreferences.currentHostname()})"
-                SiteType.FAPFOLDER -> "FapFolder (${Preferences.displayUrl})"
+                SiteType.JAVCHU -> getString(R.string.site_label_javchu)
+                SiteType.ONAIR -> getString(R.string.site_label_onair, OnAirSitePreferences.currentHostname())
+                SiteType.FAPFOLDER -> getString(R.string.site_label_fapfolder, Preferences.displayUrl)
                 else -> Preferences.displayUrl
             }
             GlobalToasts.show(

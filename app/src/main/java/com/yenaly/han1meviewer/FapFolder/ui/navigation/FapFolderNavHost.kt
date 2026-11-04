@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.FapFolder.ui.navigation
 
+import com.yenaly.yenaly_libs.utils.applicationContext
+import androidx.compose.ui.res.stringResource
 import com.yenaly.han1meviewer.ui.navigation.popBackStackSafely
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.Image
@@ -133,17 +135,17 @@ fun FapFolderNavHost(
             probe.failure == FapFolderProbeFailure.NoCookies -> FapFolderGateState.Passed
             probe.suggestRelogin || probe.failure == FapFolderProbeFailure.SessionExpired ->
                 FapFolderGateState.ContentError(
-                    reason = probe.userMessage ?: "Session expired. Please re-authenticate.",
+                    reason = probe.userMessage ?: applicationContext.getString(R.string.fap_gate_session_expired),
                     suggestRelogin = true,
                 )
             probe.failure == FapFolderProbeFailure.CloudflareChallenge ->
                 FapFolderGateState.ContentError(
-                    reason = probe.userMessage ?: "Cloudflare challenge. Wait and retry.",
+                    reason = probe.userMessage ?: applicationContext.getString(R.string.fap_gate_cloudflare),
                     suggestWait = true,
                 )
             probe.failure == FapFolderProbeFailure.SiteDown ->
                 FapFolderGateState.ContentError(
-                    reason = probe.userMessage ?: "FapFolder appears to be down.",
+                    reason = probe.userMessage ?: applicationContext.getString(R.string.fap_gate_down),
                     suggestSwitchSite = true,
                 )
             else -> FapFolderGateState.Passed
@@ -159,11 +161,11 @@ fun FapFolderNavHost(
 
     when (state) {
         is FapFolderGateState.Initializing -> {
-            GatePlaceholder("Preparing…")
+            GatePlaceholder(stringResource(R.string.fap_gate_preparing))
             return
         }
         is FapFolderGateState.Probing -> {
-            GatePlaceholder("Validating session…")
+            GatePlaceholder(stringResource(R.string.fap_gate_validating))
             return
         }
         is FapFolderGateState.ContentError -> {
@@ -625,10 +627,10 @@ private fun GateErrorScreen(
     onOpenSettings: () -> Unit,
 ) {
     val headline = when {
-        state.suggestRelogin -> "Session expired"
-        state.suggestWait -> "Please wait a moment"
-        state.suggestSwitchSite -> "Site unavailable"
-        else -> "FapFolder is not ready"
+        state.suggestRelogin -> stringResource(R.string.fap_headline_session_expired)
+        state.suggestWait -> stringResource(R.string.fap_headline_wait)
+        state.suggestSwitchSite -> stringResource(R.string.fap_headline_unavailable)
+        else -> stringResource(R.string.fap_headline_not_ready)
     }
     Box(
         modifier = Modifier
@@ -679,16 +681,16 @@ private fun GateErrorScreen(
                 Button(
                     onClick = onOpenLogin,
                     modifier = Modifier.fillMaxWidth(),
-                ) { GateButtonLabel(Icons.AutoMirrored.Filled.Login, "Sign in") }
+                ) { GateButtonLabel(Icons.AutoMirrored.Filled.Login, stringResource(R.string.site_sign_in)) }
                 FilledTonalButton(
                     onClick = onRetry,
                     modifier = Modifier.fillMaxWidth(),
-                ) { GateButtonLabel(Icons.Default.Refresh, "Retry") }
+                ) { GateButtonLabel(Icons.Default.Refresh, stringResource(R.string.retry)) }
             } else {
                 Button(
                     onClick = onRetry,
                     modifier = Modifier.fillMaxWidth(),
-                ) { GateButtonLabel(Icons.Default.Refresh, if (state.suggestWait) "Retry later" else "Retry") }
+                ) { GateButtonLabel(Icons.Default.Refresh, if (state.suggestWait) stringResource(R.string.site_retry_later) else stringResource(R.string.retry)) }
             }
 
             Row(
@@ -698,14 +700,14 @@ private fun GateErrorScreen(
                 OutlinedButton(
                     onClick = onOpenCookies,
                     modifier = Modifier.weight(1f),
-                ) { GateButtonLabel(Icons.Default.Cookie, "Cookies") }
+                ) { GateButtonLabel(Icons.Default.Cookie, stringResource(R.string.site_cookies)) }
                 OutlinedButton(
                     onClick = onSwitchSite,
                     modifier = Modifier.weight(1f),
-                ) { GateButtonLabel(Icons.Default.SwapHoriz, "Switch site") }
+                ) { GateButtonLabel(Icons.Default.SwapHoriz, stringResource(R.string.site_switch_site)) }
             }
             TextButton(onClick = onOpenSettings) {
-                GateButtonLabel(Icons.Default.Settings, "Settings")
+                GateButtonLabel(Icons.Default.Settings, stringResource(R.string.site_settings))
             }
         }
     }
@@ -726,8 +728,8 @@ private fun fapFolderHubEntries(
     add(
         SiteSettingsEntry(
             key = "cookies",
-            title = "Cookies",
-            subtitle = "Import, view or clear the FapFolder session cookies",
+            title = applicationContext.getString(R.string.site_cookies),
+            subtitle = applicationContext.getString(R.string.fap_cookies_subtitle),
             icon = Icons.Default.Cookie,
             onClick = { navController.navigateSafely(FapFolderCookiesRoute) },
         )
@@ -736,8 +738,8 @@ private fun fapFolderHubEntries(
         add(
             SiteSettingsEntry(
                 key = "login",
-                title = "Sign in",
-                subtitle = "Log in to FapFolder",
+                title = applicationContext.getString(R.string.site_sign_in),
+                subtitle = applicationContext.getString(R.string.fap_signin_subtitle),
                 icon = Icons.AutoMirrored.Filled.Login,
                 onClick = { navController.navigateSafely(FapFolderLoginRoute) },
             )
@@ -745,8 +747,8 @@ private fun fapFolderHubEntries(
         add(
             SiteSettingsEntry(
                 key = "register",
-                title = "Create account",
-                subtitle = "Sign up for a free FapFolder account",
+                title = applicationContext.getString(R.string.site_create_account),
+                subtitle = applicationContext.getString(R.string.fap_create_account_subtitle),
                 icon = Icons.Default.PersonAdd,
                 onClick = { navController.navigateSafely(FapFolderRegisterRoute) },
             )
@@ -756,11 +758,11 @@ private fun fapFolderHubEntries(
         add(
             SiteSettingsEntry(
                 key = "account",
-                title = "My account",
+                title = applicationContext.getString(R.string.site_my_account),
                 subtitle = if (isLoggedIn) {
-                    "Profile, account settings and privacy"
+                    applicationContext.getString(R.string.fap_account_subtitle_in)
                 } else {
-                    "Sign in or create an account"
+                    applicationContext.getString(R.string.fap_account_subtitle_out)
                 },
                 icon = Icons.Default.AccountCircle,
                 onClick = { navController.navigateSafely(FapFolderAccountRoute) },
@@ -770,8 +772,8 @@ private fun fapFolderHubEntries(
             add(
                 SiteSettingsEntry(
                     key = "privacy",
-                    title = "Privacy",
-                    subtitle = "Who can see your info, photos and groups",
+                    title = applicationContext.getString(R.string.site_privacy),
+                    subtitle = applicationContext.getString(R.string.fap_privacy_subtitle),
                     icon = Icons.Default.Lock,
                     onClick = { navController.navigateSafely(FapFolderPrivacyRoute) },
                 )
@@ -780,8 +782,8 @@ private fun fapFolderHubEntries(
         add(
             SiteSettingsEntry(
                 key = "history",
-                title = "FapFolder history",
-                subtitle = "Posts and videos you've opened on FapFolder",
+                title = applicationContext.getString(R.string.fap_history_title),
+                subtitle = applicationContext.getString(R.string.fap_history_subtitle),
                 icon = Icons.Default.History,
                 onClick = { navController.navigateSafely(FapFolderHistoryRoute) },
             )
@@ -789,8 +791,8 @@ private fun fapFolderHubEntries(
         add(
             SiteSettingsEntry(
                 key = "search",
-                title = "Search",
-                subtitle = "Search posts, people and groups",
+                title = applicationContext.getString(R.string.site_search),
+                subtitle = applicationContext.getString(R.string.fap_search_subtitle),
                 icon = Icons.Default.Search,
                 onClick = { navController.navigateSafely(FapFolderSearchRoute()) },
             )
@@ -798,8 +800,8 @@ private fun fapFolderHubEntries(
         add(
             SiteSettingsEntry(
                 key = "search_history",
-                title = "Search history",
-                subtitle = "Previous FapFolder searches",
+                title = applicationContext.getString(R.string.drawer_search_history),
+                subtitle = applicationContext.getString(R.string.fap_search_history_subtitle),
                 icon = Icons.Default.History,
                 onClick = { navController.navigateSafely(FapFolderSearchHistoryRoute) },
             )
@@ -807,8 +809,8 @@ private fun fapFolderHubEntries(
         add(
             SiteSettingsEntry(
                 key = "followed",
-                title = "Followed communities",
-                subtitle = "Groups you follow",
+                title = applicationContext.getString(R.string.drawer_followed_communities),
+                subtitle = applicationContext.getString(R.string.fap_followed_subtitle),
                 icon = Icons.Default.Groups,
                 onClick = { navController.navigateSafely(FapFolderFollowedCommunitiesRoute) },
             )
@@ -816,8 +818,8 @@ private fun fapFolderHubEntries(
         add(
             SiteSettingsEntry(
                 key = "saved",
-                title = "Saved posts",
-                subtitle = "Posts you bookmarked",
+                title = applicationContext.getString(R.string.fap_saved_posts_title),
+                subtitle = applicationContext.getString(R.string.fap_saved_posts_subtitle),
                 icon = Icons.Default.Bookmark,
                 onClick = { navController.navigateSafely(FapFolderSavedRoute) },
             )

@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.HentaiMama.ui.navigation
 
+import com.yenaly.han1meviewer.R
+import androidx.compose.ui.res.stringResource
 import com.yenaly.han1meviewer.ui.navigation.popBackStackSafely
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -399,43 +401,43 @@ fun HentaiMamaNavHost(
                 siteEntries = listOf(
                     SiteSettingsEntry(
                         key = "video",
-                        title = "Video & card size",
-                        subtitle = "Preferred server & quality, resume playback, card count / size",
+                        title = stringResource(R.string.drawer_video_card_size),
+                        subtitle = stringResource(R.string.hm_video_card_subtitle),
                         icon = Icons.Default.PlayCircleOutline,
                         onClick = { open(HentaiMamaVideoSettingsRoute(target = "all")) },
                     ),
                     SiteSettingsEntry(
                         key = "home_categories",
-                        title = "Home Categories",
-                        subtitle = "Reorder, hide, edit, add or delete home sections",
+                        title = stringResource(R.string.drawer_home_categories),
+                        subtitle = stringResource(R.string.site_home_categories_subtitle),
                         icon = Icons.Default.Category,
                         onClick = { open(HentaiMamaHomeSettingsRoute) },
                     ),
                     SiteSettingsEntry(
                         key = "history",
-                        title = "HentaiMama history",
-                        subtitle = "Series you've watched, resume from where you left off",
+                        title = stringResource(R.string.hm_history_title),
+                        subtitle = stringResource(R.string.hm_history_subtitle),
                         icon = Icons.Default.History,
                         onClick = { open(HentaiMamaHistoryRoute) },
                     ),
                     SiteSettingsEntry(
                         key = "playlists",
-                        title = "Playlists",
-                        subtitle = "Browse public playlists curated by the community",
+                        title = stringResource(R.string.hm_playlists_title),
+                        subtitle = stringResource(R.string.hm_playlists_subtitle),
                         icon = Icons.Default.QueueMusic,
                         onClick = { open(HentaiMamaPlaylistsRoute) },
                     ),
                     SiteSettingsEntry(
                         key = "recent_episodes",
-                        title = "Recent Episodes",
-                        subtitle = "Newest episode releases across all series",
+                        title = stringResource(R.string.drawer_recent_episodes),
+                        subtitle = stringResource(R.string.hm_recent_episodes_subtitle),
                         icon = Icons.Default.VideoLibrary,
                         onClick = { open(HentaiMamaRecentEpisodesRoute) },
                     ),
                     SiteSettingsEntry(
                         key = "upcoming",
-                        title = "Upcoming",
-                        subtitle = "Browse upcoming episodes by month",
+                        title = stringResource(R.string.drawer_upcoming),
+                        subtitle = stringResource(R.string.hm_upcoming_subtitle),
                         icon = Icons.Default.CalendarMonth,
                         onClick = { open(HentaiMamaUpcomingRoute) },
                     ),

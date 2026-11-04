@@ -1,4 +1,6 @@
 package com.yenaly.han1meviewer.MissAV.ui.video
+import com.yenaly.han1meviewer.R
+import androidx.compose.ui.res.stringResource
 import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteVideoActionBar
@@ -237,7 +239,7 @@ fun MissAvVideoScreen(
             if (uri.scheme == "file") {
                 val file = File(uri.path ?: "")
                 if (!file.exists() || file.length() == 0L) {
-                    Toast.makeText(context, "Subtitle file missing or empty", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.site_subtitle_missing), Toast.LENGTH_SHORT).show()
                     return
                 }
             }
@@ -250,18 +252,18 @@ fun MissAvVideoScreen(
                 updateSubtitleForPosition(pos, cues, subtitleTextView, currentSubtitleText) {
                     currentSubtitleText = it
                 }
-                Toast.makeText(context, "Loaded ${cues.size} subtitles", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.site_subtitle_loaded, cues.size), Toast.LENGTH_SHORT).show()
             } else {
                 subtitleCues = emptyList()
                 hasSubtitle = false
                 subtitleUri = null
-                Toast.makeText(context, "No subtitles found", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, context.getString(R.string.site_subtitle_none), Toast.LENGTH_LONG).show()
             }
         } catch (e: Exception) {
             subtitleCues = emptyList()
             hasSubtitle = false
             subtitleUri = null
-            Toast.makeText(context, "Failed to load subtitle: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, context.getString(R.string.site_subtitle_load_failed, e.message.orEmpty()), Toast.LENGTH_LONG).show()
         }
     }
 
@@ -272,7 +274,7 @@ fun MissAvVideoScreen(
         currentSubtitleText = ""
         subtitleTextView?.text = ""
         subtitleTextView?.visibility = android.view.View.GONE
-        Toast.makeText(context, "Subtitle removed", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.site_subtitle_removed), Toast.LENGTH_SHORT).show()
     }
 
     val subtitleFilePickerLauncher = rememberLauncherForActivityResult(
@@ -285,7 +287,7 @@ fun MissAvVideoScreen(
                     subtitleUri = uri
                     loadSubtitles(uri)
                 } else {
-                    Toast.makeText(context, "Only .srt is supported", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.site_subtitle_srt_only), Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -567,7 +569,7 @@ fun MissAvVideoScreen(
     Scaffold(
         topBar = {
             SiteTopAppBar(
-                title = { Text("Video", maxLines = 1) },
+                title = { Text(stringResource(R.string.video), maxLines = 1) },
                 navigationIcon = { SiteBackButton(onClick = onBack) },
                 actions = {
                     IconButton(onClick = {
@@ -575,7 +577,7 @@ fun MissAvVideoScreen(
                     }) {
                         Icon(
                             if (hasSubtitle) Icons.Filled.ClosedCaption else Icons.Filled.Subtitles,
-                            contentDescription = "Subtitle",
+                            contentDescription = stringResource(R.string.site_subtitle),
                             tint = if (hasSubtitle) Color.Green else Color.White
                         )
                     }
@@ -813,13 +815,13 @@ fun MissAvVideoScreen(
             }
 
             is VideoLoadingState.Error -> SiteErrorContent(
-                message = state.throwable.message ?: "Failed",
+                message = state.throwable.message ?: stringResource(R.string.site_failed),
                 onRetry = { viewModel.getVideoDetail(normalizedPath) },
                 modifier = Modifier.padding(paddingValues)
             )
 
             is VideoLoadingState.NoContent -> SiteErrorContent(
-                message = "No content",
+                message = stringResource(R.string.site_no_content),
                 onRetry = { viewModel.getVideoDetail(normalizedPath) },
                 modifier = Modifier.padding(paddingValues)
             )

@@ -1,4 +1,6 @@
 package com.yenaly.han1meviewer.MissAV.ui.navigation
+import com.yenaly.han1meviewer.R
+import androidx.compose.ui.res.stringResource
 import com.yenaly.han1meviewer.ui.navigation.popBackStackSafely
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -112,22 +114,22 @@ fun MissAvNavHost(
                 siteEntries = listOf(
                     SiteSettingsEntry(
                         key = "home_categories",
-                        title = "Home Categories",
-                        subtitle = "Reorder, hide, edit, add or delete home sections",
+                        title = stringResource(R.string.drawer_home_categories),
+                        subtitle = stringResource(R.string.site_home_categories_subtitle),
                         icon = Icons.Default.Category,
                         onClick = { navController.navigateSafely(MissAvHomeCategoriesRoute) },
                     ),
                     SiteSettingsEntry(
                         key = "host",
-                        title = "Host / Mirror",
-                        subtitle = "Choose which MissAV hostname to load",
+                        title = stringResource(R.string.drawer_host_mirror),
+                        subtitle = stringResource(R.string.missav_host_subtitle),
                         icon = Icons.Default.Dns,
                         onClick = { navController.navigateSafely(MissAvHostSettingsRoute) },
                     ),
                     SiteSettingsEntry(
                         key = "history",
-                        title = "MissAV history",
-                        subtitle = "Videos you've watched on MissAV",
+                        title = stringResource(R.string.missav_history_title),
+                        subtitle = stringResource(R.string.missav_history_subtitle),
                         icon = Icons.Default.History,
                         onClick = { navController.navigateSafely(MissAvHistoryRoute) },
                     ),

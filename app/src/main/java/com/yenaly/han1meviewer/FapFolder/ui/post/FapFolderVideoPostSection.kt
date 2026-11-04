@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.FapFolder.ui.post
 
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -41,6 +42,10 @@ import com.yenaly.han1meviewer.util.DownloadLayout
 import com.yenaly.han1meviewer.util.FapOwnerKind
 import kotlinx.coroutines.flow.first
 
+/**
+ * Details list shown under the (collapsible) player, Hanime1 style, on ONE page:
+ * profile -> expandable details -> other media -> reactions / actions -> tags -> comments.
+ */
 internal fun LazyListScope.fapFolderVideoDetailItems(
     post: FapFolderPost,
     video: FapFolderMedia.Video,
@@ -192,7 +197,7 @@ internal fun InlineVideoSlot(
         if (!poster.isNullOrBlank()) {
             RetryableImage(
                 model = poster,
-                contentDescription = "Video",
+                contentDescription = stringResource(R.string.video),
                 modifier = Modifier.fillMaxSize(),
                 placeholder = painterResource(R.drawable.h_chan_loading),
                 error = painterResource(R.drawable.h_chan_load_failed),
@@ -208,7 +213,7 @@ internal fun InlineVideoSlot(
         ) {
             Icon(
                 imageVector = Icons.Filled.PlayArrow,
-                contentDescription = "Play",
+                contentDescription = stringResource(R.string.site_play),
                 tint = MaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier.size(34.dp),
             )

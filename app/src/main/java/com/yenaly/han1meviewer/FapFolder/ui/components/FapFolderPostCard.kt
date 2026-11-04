@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.FapFolder.ui.components
 
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -238,7 +239,7 @@ internal fun PostHeaderRow(
                     Spacer(Modifier.width(4.dp))
                     Icon(
                         imageVector = Icons.Filled.Star,
-                        contentDescription = "Gold",
+                        contentDescription = stringResource(R.string.fap_gold),
                         tint = Color(0xFFE4B036),
                         modifier = Modifier.size(14.dp),
                     )
@@ -249,7 +250,7 @@ internal fun PostHeaderRow(
                         onClick = onClickAuthor,
                         label = {
                             Text(
-                                text = "Premium",
+                                text = stringResource(R.string.fap_premium),
                                 style = MaterialTheme.typography.labelSmall,
                             )
                         },
@@ -282,7 +283,7 @@ internal fun PostHeaderRow(
             if (!uploaderUsername.isNullOrBlank()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "by $uploaderUsername",
+                        text = stringResource(R.string.fap_by_user, uploaderUsername),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary,
                         maxLines = 1,
@@ -425,7 +426,7 @@ private fun VideoMediaBlock(
         if (!poster.isNullOrBlank()) {
             RetryableImage(
                 model = poster,
-                contentDescription = "Video",
+                contentDescription = stringResource(R.string.video),
                 modifier = Modifier.fillMaxSize(),
                 placeholder = painterResource(R.drawable.h_chan_loading),
                 error = painterResource(R.drawable.h_chan_load_failed),
@@ -441,7 +442,7 @@ private fun VideoMediaBlock(
         ) {
             Icon(
                 imageVector = Icons.Filled.PlayArrow,
-                contentDescription = "Play",
+                contentDescription = stringResource(R.string.site_play),
                 tint = MaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier.size(30.dp),
             )
@@ -603,7 +604,7 @@ private fun EmbedMediaBlock(embed: FapFolderMedia.Embed) {
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = embed.provider ?: "Embedded",
+                    text = embed.provider ?: stringResource(R.string.fap_embedded),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -707,7 +708,7 @@ private fun PollMediaBlock(
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text(
-                text = "${poll.totalVotes} votes",
+                text = stringResource(R.string.fap_poll_votes, poll.totalVotes),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -743,7 +744,7 @@ private fun PollMediaBlock(
             }
             if (isPending) {
                 Text(
-                    text = "Submitting vote…",
+                    text = stringResource(R.string.fap_submitting_vote),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -765,7 +766,7 @@ private fun FileBlock(file: FapFolderMedia.FileAttachment) {
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
-                text = file.name ?: "Attachment",
+                text = file.name ?: stringResource(R.string.fap_attachment),
                 style = MaterialTheme.typography.titleSmall,
             )
             if (!file.sizeLabel.isNullOrBlank()) {
@@ -970,7 +971,7 @@ internal fun PostInteractionRow(
 
         PostActionButton(
             icon = Icons.Filled.Star,
-            label = if (saved) "Saved" else "Save",
+            label = if (saved) stringResource(R.string.fap_saved) else stringResource(R.string.fap_save),
             tint = if (saved) Color(0xFFE4B036)
             else MaterialTheme.colorScheme.onSurfaceVariant,
             enabled = true,

@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.HentaiMama.ui.video
 
+import androidx.compose.ui.res.stringResource
 import com.yenaly.han1meviewer.SiteType
 import kotlinx.coroutines.flow.first
 import com.yenaly.han1meviewer.ui.component.SiteVideoActionBar
@@ -406,7 +407,7 @@ fun HentaiMamaVideoScreen(
             SiteTopAppBar(
                 title = {
                     val videoInfo = (pageState as? VideoLoadingState.Success)?.info
-                    val title = videoInfo?.page?.info?.title ?: videoInfo?.title ?: "Video"
+                    val title = videoInfo?.page?.info?.title ?: videoInfo?.title ?: stringResource(R.string.video)
                     Text(text = title, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 },
                 navigationIcon = { SiteBackButton(onClick = onBack) },
@@ -417,12 +418,12 @@ fun HentaiMamaVideoScreen(
         when (state) {
             is VideoLoadingState.Loading -> SiteLoadingContent(modifier = Modifier.padding(paddingValues))
             is VideoLoadingState.Error -> SiteErrorContent(
-                message = state.throwable.message ?: "Failed",
+                message = state.throwable.message ?: stringResource(R.string.site_failed),
                 onRetry = { viewModel.loadEpisodePage(normalizedUrl, force = true) },
                 modifier = Modifier.padding(paddingValues),
             )
             is VideoLoadingState.NoContent -> SiteErrorContent(
-                message = "No content",
+                message = stringResource(R.string.site_no_content),
                 onRetry = { viewModel.loadEpisodePage(normalizedUrl, force = true) },
                 modifier = Modifier.padding(paddingValues),
             )
@@ -432,7 +433,7 @@ fun HentaiMamaVideoScreen(
                 val page = videoInfo.page
                 if (page == null) {
                     SiteErrorContent(
-                        message = "Episode page data missing",
+                        message = stringResource(R.string.hm_episode_data_missing),
                         onRetry = { viewModel.loadEpisodePage(normalizedUrl, force = true) },
                         modifier = Modifier.padding(paddingValues),
                     )
@@ -547,7 +548,7 @@ fun HentaiMamaVideoScreen(
                                             strokeWidth = 2.dp,
                                         )
                                         Text(
-                                            text = "Loading mirror ${selectedMirrorLabel ?: ""}…",
+                                            text = stringResource(R.string.hm_loading_mirror, selectedMirrorLabel ?: ""),
                                             style = MaterialTheme.typography.bodySmall,
                                         )
                                     }
@@ -565,7 +566,7 @@ fun HentaiMamaVideoScreen(
                                     ) {
                                         Column(modifier = Modifier.padding(12.dp)) {
                                             Text(
-                                                text = "Mirror failed",
+                                                text = stringResource(R.string.hm_mirror_failed),
                                                 color = MaterialTheme.colorScheme.onErrorContainer,
                                                 style = MaterialTheme.typography.titleSmall,
                                             )
@@ -575,7 +576,7 @@ fun HentaiMamaVideoScreen(
                                                 style = MaterialTheme.typography.bodySmall,
                                             )
                                             TextButton(onClick = { viewModel.retryExtraction() }) {
-                                                Text("Retry")
+                                                Text(stringResource(R.string.retry))
                                             }
                                         }
                                     }
@@ -585,7 +586,7 @@ fun HentaiMamaVideoScreen(
                             if (mirrorLinks.size > 1) {
                                 item(key = "sources") {
                                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        SiteVideoSectionHeader(title = "Sources (${mirrorLinks.size})")
+                                        SiteVideoSectionHeader(title = stringResource(R.string.hm_sources_count, mirrorLinks.size))
                                         mirrorLinks.forEach { link ->
                                             val selected = link.quality == playerState.quality
                                             Surface(
@@ -673,7 +674,7 @@ fun HentaiMamaVideoScreen(
                                 item(key = "sidebar") {
                                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                         SiteVideoSectionHeader(
-                                            title = "Episodes ${page.seriesSidebarCount ?: ""}".trim(),
+                                            title = stringResource(R.string.hm_episodes_label, page.seriesSidebarCount ?: "").trim(),
                                         )
                                         page.seriesSidebar.forEach { episode ->
                                             EpisodeSidebarRow(
@@ -743,7 +744,7 @@ private fun EpisodeSidebarRow(
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = episode.episodeNumber?.let { "EP ${it.toInt()}" } ?: "EP",
+                        text = episode.episodeNumber?.let { stringResource(R.string.hm_ep_number, it.toInt()) } ?: stringResource(R.string.hm_ep),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
@@ -801,8 +802,8 @@ internal fun SimilarGrid(
     val widthMultiplier by HentaiMamaCardSettings.widthMultiplierState
 
     Column(verticalArrangement = Arrangement.spacedBy(SpacingNormal)) {
-        SiteVideoSectionHeader(title = "Similar titles")
-
+        SiteVideoSectionHeader(title = stringResource(R.string.hm_similar_titles))
+        // Same sizing rules as the search results grid: vertical, wraps down the page.
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val gap = 8.dp
             val gridWidth = maxWidth
