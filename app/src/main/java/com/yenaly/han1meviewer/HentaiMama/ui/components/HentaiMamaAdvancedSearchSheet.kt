@@ -45,13 +45,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaOptions
 import com.yenaly.han1meviewer.HentaiMama.data.local.HentaiMamaSearchHistoryEntry
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.lazy.LazyColumn
+import com.yenaly.yenaly_libs.utils.applicationContext
 
 private data class AdvancedOption(val key: String, val label: String)
 
@@ -210,7 +213,7 @@ fun HentaiMamaAdvancedSearchSheet(
             ) {
                 item {
                     Text(
-                        text = "Advanced Search",
+                        text = stringResource(R.string.advanced_search),
                         style = MaterialTheme.typography.headlineSmall,
                     )
                 }
@@ -219,7 +222,7 @@ fun HentaiMamaAdvancedSearchSheet(
                     item {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(
-                                text = "Recent Combinations",
+                                text = stringResource(R.string.site_recent_combinations),
                                 style = MaterialTheme.typography.titleMedium,
                             )
                             LazyColumn(
@@ -251,7 +254,7 @@ fun HentaiMamaAdvancedSearchSheet(
                                 checked = order != null,
                                 onClick = {
                                     activeDialog = ActiveDialog(
-                                        title = "Order",
+                                        title = applicationContext.getString(R.string.hm_order),
                                         options = orderOptions,
                                         selectedKey = order,
                                         searchable = false,
@@ -279,7 +282,7 @@ fun HentaiMamaAdvancedSearchSheet(
                                 checked = year != null,
                                 onClick = {
                                     activeDialog = ActiveDialog(
-                                        title = "Year",
+                                        title = applicationContext.getString(R.string.site_year),
                                         options = yearOptions,
                                         selectedKey = year,
                                         searchable = true,
@@ -296,7 +299,7 @@ fun HentaiMamaAdvancedSearchSheet(
                                 checked = producer != null,
                                 onClick = {
                                     activeDialog = ActiveDialog(
-                                        title = "Producer",
+                                        title = applicationContext.getString(R.string.hm_producer),
                                         options = producerOptions,
                                         selectedKey = producer,
                                         searchable = true,
@@ -313,7 +316,7 @@ fun HentaiMamaAdvancedSearchSheet(
                                 checked = !slug.isNullOrBlank(),
                                 onClick = {
                                     activeDialog = ActiveDialog(
-                                        title = "Genre Page",
+                                        title = applicationContext.getString(R.string.hm_genre_page),
                                         options = slugOptions,
                                         selectedKey = slug,
                                         searchable = true,
@@ -354,7 +357,7 @@ fun HentaiMamaAdvancedSearchSheet(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         Text(
-                            text = "Long-press a chip to clear that filter.",
+                            text = stringResource(R.string.hm_long_press_a_chip_to_clear),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -373,7 +376,7 @@ fun HentaiMamaAdvancedSearchSheet(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Search,
-                                contentDescription = "Search",
+                                contentDescription = stringResource(R.string.search),
                             )
                         }
                     }
@@ -408,7 +411,7 @@ private fun GenreGroupPickerDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Genre") },
+        title = { Text(stringResource(R.string.site_genre)) },
         text = {
             Column(
                 modifier = Modifier.heightIn(max = 520.dp),
@@ -422,14 +425,14 @@ private fun GenreGroupPickerDialog(
                         .clip(RoundedCornerShape(50)),
                     singleLine = true,
                     shape = RoundedCornerShape(50),
-                    placeholder = { Text("Search genres…") },
+                    placeholder = { Text(stringResource(R.string.site_search_genres)) },
                     leadingIcon = {
                         Icon(Icons.Default.Search, contentDescription = null)
                     },
                     trailingIcon = {
                         if (query.isNotEmpty()) {
                             IconButton(onClick = { query = "" }) {
-                                Icon(Icons.Default.Clear, contentDescription = "Clear")
+                                Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.site_clear))
                             }
                         }
                     },
@@ -484,7 +487,7 @@ private fun GenreGroupPickerDialog(
                                             },
                                         )
                                         Text(
-                                            text = "${HentaiMamaOptions.genresInGroup(group).size} genres",
+                                            text = stringResource(R.string.site_genres, HentaiMamaOptions.genresInGroup(group).size),
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
@@ -501,7 +504,7 @@ private fun GenreGroupPickerDialog(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = "No genres match \"$query\"",
+                            text = stringResource(R.string.site_no_genres_match, query),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -567,10 +570,10 @@ private fun GenreGroupPickerDialog(
         dismissButton = {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(onClick = onReset) {
-                    Text("Reset")
+                    Text(stringResource(R.string.reset))
                 }
                 TextButton(onClick = onDismiss) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         },
@@ -595,7 +598,7 @@ private fun GenreGroupContentDialog(
                 IconButton(onClick = onBack) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back to groups",
+                        contentDescription = stringResource(R.string.site_back_to_groups),
                     )
                 }
                 Spacer(modifier = Modifier.size(4.dp))
@@ -654,10 +657,10 @@ private fun GenreGroupContentDialog(
         dismissButton = {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(onClick = onReset) {
-                    Text("Reset")
+                    Text(stringResource(R.string.reset))
                 }
                 TextButton(onClick = onDismiss) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         },
@@ -745,7 +748,7 @@ private fun AdvancedChoiceDialog(
                             .clip(RoundedCornerShape(50)),
                         singleLine = true,
                         shape = RoundedCornerShape(50),
-                        placeholder = { Text("Search…") },
+                        placeholder = { Text(stringResource(R.string.hm_search)) },
                     )
                 }
                 visible.forEach { option ->
@@ -785,10 +788,10 @@ private fun AdvancedChoiceDialog(
         dismissButton = {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(onClick = onReset) {
-                    Text("Reset")
+                    Text(stringResource(R.string.reset))
                 }
                 TextButton(onClick = onDismiss) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         },
@@ -802,11 +805,11 @@ private fun HistoryCard(
     onDelete: () -> Unit,
 ) {
     val conditions = buildList {
-        entry.order?.let { add("Order: $it") }
-        entry.genre?.let { add("Genre: $it") }
-        entry.year?.let { add("Year: $it") }
-        entry.producer?.let { add("Producer: $it") }
-        entry.genreSlug?.let { add("Genre Page: $it") }
+        entry.order?.let { add(stringResource(R.string.hm_order_2, it)) }
+        entry.genre?.let { add(stringResource(R.string.site_genre_2, it)) }
+        entry.year?.let { add(stringResource(R.string.hm_year, it)) }
+        entry.producer?.let { add(stringResource(R.string.hm_producer_2, it)) }
+        entry.genreSlug?.let { add(stringResource(R.string.hm_genre_page_2, it)) }
     }.joinToString(" || ")
 
     Surface(
@@ -843,7 +846,7 @@ private fun HistoryCard(
             IconButton(onClick = onDelete) {
                 Icon(
                     imageVector = Icons.Default.Clear,
-                    contentDescription = "Remove",
+                    contentDescription = stringResource(R.string.remove),
                 )
             }
         }
@@ -851,19 +854,19 @@ private fun HistoryCard(
 }
 
 private fun orderChipLabel(key: String?): String {
-    if (key == null) return "Order"
+    if (key == null) return applicationContext.getString(R.string.hm_order)
     val name = HentaiMamaOptions.orders.firstOrNull { it.value == key }?.name ?: key
-    return "Order: $name"
+    return applicationContext.getString(R.string.hm_order_2, name)
 }
 
 private fun genreChipLabel(key: String?): String =
-    if (key == null) "Genre" else "Genre: $key"
+    if (key == null) applicationContext.getString(R.string.site_genre) else applicationContext.getString(R.string.site_genre_2, key)
 
 private fun yearChipLabel(key: String?): String =
-    if (key == null) "Year" else "Year: $key"
+    if (key == null) applicationContext.getString(R.string.site_year) else applicationContext.getString(R.string.hm_year, key)
 
 private fun producerChipLabel(key: String?): String =
-    if (key == null) "Producer" else "Producer: ${key.take(24)}"
+    if (key == null) applicationContext.getString(R.string.hm_producer) else applicationContext.getString(R.string.hm_producer_2, key.take(24))
 
 private fun slugChipLabel(key: String?): String =
-    if (key.isNullOrBlank()) "Genre Page" else "Page: $key"
+    if (key.isNullOrBlank()) applicationContext.getString(R.string.hm_genre_page) else applicationContext.getString(R.string.hm_page, key)

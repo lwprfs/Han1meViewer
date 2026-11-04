@@ -83,6 +83,7 @@ import com.yenaly.han1meviewer.util.DownloadLayout
 import com.yenaly.han1meviewer.util.FapOwnerKind
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -173,7 +174,7 @@ fun FapFolderProfileScreen(
                     IconButton(onClick = { viewModel.refresh() }) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
-                            contentDescription = "Refresh",
+                            contentDescription = stringResource(R.string.site_refresh),
                         )
                     }
                 },
@@ -192,7 +193,7 @@ fun FapFolderProfileScreen(
                 ) { CircularProgressIndicator() }
 
                 uiState.headerError != null && uiState.profile == null -> ProfileError(
-                    title = "Failed to load profile",
+                    title = stringResource(R.string.fap_failed_to_load_profile),
                     message = uiState.headerError ?: "",
                     onRetry = { viewModel.refresh() },
                 )
@@ -322,7 +323,7 @@ private fun ProfileTimelineTab(
 
             uiState.itemsError != null && uiState.items.isEmpty() -> item("items_error") {
                 ProfileError(
-                    title = "Failed to load",
+                    title = applicationContext.getString(R.string.site_failed_to_load),
                     message = uiState.itemsError ,
                     onRetry = onRetry,
                     compact = true,
@@ -337,7 +338,7 @@ private fun ProfileTimelineTab(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "No posts yet.",
+                        text = stringResource(R.string.fap_no_posts_yet),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -493,7 +494,7 @@ private fun ProfileGridTab(
                 span = { GridItemSpan(maxLineSpan) },
             ) {
                 ProfileError(
-                    title = "Failed to load",
+                    title = stringResource(R.string.site_failed_to_load),
                     message = uiState.itemsError ,
                     onRetry = onRetry,
                     compact = true,
@@ -512,9 +513,9 @@ private fun ProfileGridTab(
                 ) {
                     Text(
                         text = when (uiState.activeTab) {
-                            FapFolderProfileTab.PHOTOS -> "No photos yet."
-                            FapFolderProfileTab.VIDEOS -> "No videos yet."
-                            else -> "Nothing here yet."
+                            FapFolderProfileTab.PHOTOS -> stringResource(R.string.fap_no_photos_yet)
+                            FapFolderProfileTab.VIDEOS -> stringResource(R.string.fap_no_videos_yet)
+                            else -> stringResource(R.string.fap_nothing_here_yet)
                         },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -586,7 +587,7 @@ private fun ProfileGridTab(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Filled.PlayArrow,
-                                        contentDescription = "Play",
+                                        contentDescription = stringResource(R.string.site_play),
                                         tint = MaterialTheme.colorScheme.onPrimary,
                                     )
                                 }
@@ -654,7 +655,7 @@ private fun ProfileGridTab(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Filled.PlayArrow,
-                                        contentDescription = "Play",
+                                        contentDescription = stringResource(R.string.site_play),
                                         tint = MaterialTheme.colorScheme.onPrimary,
                                     )
                                 }
@@ -897,7 +898,7 @@ private fun ProfileHeader(
                                 strokeWidth = 2.dp,
                             )
                         } else {
-                            Text("Following", fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(R.string.site_following), fontWeight = FontWeight.SemiBold)
                         }
                     }
                 } else {
@@ -916,7 +917,7 @@ private fun ProfileHeader(
                                 strokeWidth = 2.dp,
                             )
                         } else {
-                            Text("Follow", fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(R.string.fap_follow), fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }
@@ -935,7 +936,7 @@ private fun ProfileHeader(
 
         if (!profile.joinedLabel.isNullOrBlank()) {
             Text(
-                text = "Joined ${profile.joinedLabel}",
+                text = stringResource(R.string.fap_joined_2, profile.joinedLabel),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
@@ -975,25 +976,25 @@ private fun ProfileCountsRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         ProfileCountItem(
-            label = "Followers",
+            label = stringResource(R.string.site_followers),
             value = counts.followers,
             modifier = Modifier.weight(1f),
             onClick = null,
         )
         ProfileCountItem(
-            label = "Posts",
+            label = stringResource(R.string.fap_tab_posts),
             value = counts.posts,
             modifier = Modifier.weight(1f),
             onClick = { onOpenTab(FapFolderProfileTab.TIMELINE) },
         )
         ProfileCountItem(
-            label = "Photos",
+            label = stringResource(R.string.fap_tab_photos),
             value = counts.photos,
             modifier = Modifier.weight(1f),
             onClick = { onOpenTab(FapFolderProfileTab.PHOTOS) },
         )
         ProfileCountItem(
-            label = "Videos",
+            label = stringResource(R.string.fap_tab_videos),
             value = counts.videos,
             modifier = Modifier.weight(1f),
             onClick = { onOpenTab(FapFolderProfileTab.VIDEOS) },
@@ -1109,7 +1110,7 @@ private fun ProfileError(
                     modifier = Modifier.size(18.dp),
                 )
                 Spacer(Modifier.width(8.dp))
-                Text("Retry")
+                Text(stringResource(R.string.retry))
             }
         }
     }

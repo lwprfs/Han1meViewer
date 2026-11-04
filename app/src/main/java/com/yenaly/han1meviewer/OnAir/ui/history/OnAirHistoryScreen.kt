@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.OnAir.ui.history
 
+import androidx.compose.ui.res.stringResource
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import com.yenaly.han1meviewer.ui.component.SiteEmptyContent
@@ -60,6 +61,7 @@ import com.yenaly.han1meviewer.OnAir.data.local.OnAirHistoryEntity
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
 import com.yenaly.han1meviewer.util.formatRelativeTime
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
@@ -100,12 +102,12 @@ fun OnAirHistoryScreen(
     Scaffold(
         topBar = {
             SiteTopAppBar(
-                title = { Text("History") },
+                title = { Text(stringResource(R.string.site_history)) },
                 navigationIcon = { SiteBackButton(onClick = onBack) },
                 actions = {
                     if (uiState.items.isNotEmpty()) {
                         IconButton(onClick = { showDeleteAllDialog = true }) {
-                            Icon(Icons.Default.DeleteSweep, contentDescription = "Delete all")
+                            Icon(Icons.Default.DeleteSweep, contentDescription = stringResource(R.string.site_delete_all))
                         }
                     }
                 },
@@ -128,14 +130,14 @@ fun OnAirHistoryScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(uiState.error?.message ?: "Failed")
-                        TextButton(onClick = { viewModel.refresh() }) { Text("Retry") }
+                        Text(uiState.error?.message ?: stringResource(R.string.site_failed))
+                        TextButton(onClick = { viewModel.refresh() }) { Text(stringResource(R.string.retry)) }
                     }
                 }
                 uiState.items.isEmpty() -> Box(
                     Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
-                ) { SiteEmptyContent(hint = "No watch history") }
+                ) { SiteEmptyContent(hint = stringResource(R.string.onair_no_watch_history)) }
                 else -> LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
@@ -173,7 +175,7 @@ fun OnAirHistoryScreen(
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(
-                                    text = "No more history",
+                                    text = stringResource(R.string.site_no_more_history),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -188,17 +190,17 @@ fun OnAirHistoryScreen(
     pendingDeleteId?.let { id ->
         AlertDialog(
             onDismissRequest = { pendingDeleteId = null },
-            title = { Text("Delete history") },
-            text = { Text("Remove this video from your history?") },
+            title = { Text(stringResource(R.string.onair_delete_history)) },
+            text = { Text(stringResource(R.string.onair_remove_this_video_from_your_history)) },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteItem(id)
                     pendingDeleteId = null
-                    scope.launch { snackbarHostState.showSnackbar("Removed") }
-                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                    scope.launch { snackbarHostState.showSnackbar(applicationContext.getString(R.string.onair_removed)) }
+                }) { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
-                TextButton(onClick = { pendingDeleteId = null }) { Text("Cancel") }
+                TextButton(onClick = { pendingDeleteId = null }) { Text(stringResource(R.string.cancel)) }
             },
         )
     }
@@ -206,17 +208,17 @@ fun OnAirHistoryScreen(
     if (showDeleteAllDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteAllDialog = false },
-            title = { Text("Delete all history") },
-            text = { Text("This will remove every entry. This cannot be undone.") },
+            title = { Text(stringResource(R.string.site_delete_all_history)) },
+            text = { Text(stringResource(R.string.onair_this_will_remove_every_entry_this)) },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteAll()
                     showDeleteAllDialog = false
-                    scope.launch { snackbarHostState.showSnackbar("Cleared") }
-                }) { Text("Delete all", color = MaterialTheme.colorScheme.error) }
+                    scope.launch { snackbarHostState.showSnackbar(applicationContext.getString(R.string.onair_cleared)) }
+                }) { Text(stringResource(R.string.site_delete_all), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteAllDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showDeleteAllDialog = false }) { Text(stringResource(R.string.cancel)) }
             },
         )
     }
@@ -292,7 +294,7 @@ private fun OnAirHistoryRow(
                     )
                 } else if (item.completed) {
                     Text(
-                        text = "✓ Completed",
+                        text = stringResource(R.string.site_completed),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary,
                     )
@@ -301,7 +303,7 @@ private fun OnAirHistoryRow(
             IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete",
+                    contentDescription = stringResource(R.string.delete),
                     modifier = Modifier.size(18.dp),
                     tint = MaterialTheme.colorScheme.error,
                 )

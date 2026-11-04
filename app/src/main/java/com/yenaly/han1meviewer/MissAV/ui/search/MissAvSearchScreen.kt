@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.MissAV.ui.search
 
+import androidx.compose.ui.res.stringResource
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.SiteErrorContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
@@ -238,7 +240,7 @@ fun MissAvSearchScreen(
         selectedGenre?.let { key ->
             val label = MissAvOptions.genreLabel(key) ?: key
             add(
-                ActiveChip("Genre: $label") {
+                ActiveChip(stringResource(R.string.site_genre_2, label)) {
                     viewModel.setGenre(null)
                     runSearch()
                 }
@@ -247,7 +249,7 @@ fun MissAvSearchScreen(
         selectedSort?.let { key ->
             val label = MissAvOptions.displayName(MissAvGroup.SORT, key) ?: key
             add(
-                ActiveChip("Sort: $label") {
+                ActiveChip(stringResource(R.string.site_sort_3, label)) {
                     viewModel.setSort(null)
                     runSearch()
                 }
@@ -256,7 +258,7 @@ fun MissAvSearchScreen(
         selectedFilter?.let { key ->
             val label = MissAvOptions.displayName(MissAvGroup.FILTER, key) ?: key
             add(
-                ActiveChip("Filter: $label") {
+                ActiveChip(stringResource(R.string.missav_filter, label)) {
                     viewModel.setFilter(null)
                     runSearch()
                 }
@@ -309,7 +311,7 @@ fun MissAvSearchScreen(
                             trailingIcon = {
                                 Icon(
                                     Icons.Default.Clear,
-                                    contentDescription = "Remove",
+                                    contentDescription = stringResource(R.string.remove),
                                     modifier = Modifier.size(14.dp),
                                 )
                             },
@@ -327,7 +329,7 @@ fun MissAvSearchScreen(
                                 viewModel.resetSearch()
                                 coroutineScope.launch { gridState.scrollToItem(0) }
                             },
-                            label = { Text("Clear all") },
+                            label = { Text(stringResource(R.string.watch_history_clear_all)) },
                             colors = AssistChipDefaults.assistChipColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceVariant,
                             ),
@@ -396,7 +398,7 @@ fun MissAvSearchScreen(
                                             contentAlignment = Alignment.Center,
                                         ) {
                                             Text(
-                                                text = "No results found",
+                                                text = stringResource(R.string.search_no_results),
                                                 style = MaterialTheme.typography.bodyLarge,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
@@ -415,7 +417,7 @@ fun MissAvSearchScreen(
                                     if (allVideos.isEmpty()) {
                                         SiteErrorContent(
                                             message = state.throwable.message
-                                                ?: "Failed to load results",
+                                                ?: stringResource(R.string.site_failed_to_load_results),
                                             onRetry = { viewModel.performSearch(resetPage = true) },
                                         )
                                     } else {
@@ -427,7 +429,7 @@ fun MissAvSearchScreen(
                                                 onNavigateToVideo,
                                             )
                                             Text(
-                                                text = "Failed to load more: ${state.throwable.message}",
+                                                text = stringResource(R.string.missav_failed_to_load_more, state.throwable.message),
                                                 color = MaterialTheme.colorScheme.error,
                                                 modifier = Modifier.padding(16.dp),
                                             )
@@ -447,7 +449,7 @@ fun MissAvSearchScreen(
                                 ) {
                                     Icon(
                                         Icons.Default.KeyboardArrowUp,
-                                        contentDescription = "Scroll to top",
+                                        contentDescription = stringResource(R.string.site_scroll_to_top),
                                     )
                                 }
                             }
@@ -486,7 +488,7 @@ private fun SearchTopBar(
             IconButton(onClick = onBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
+                    contentDescription = stringResource(R.string.back),
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
@@ -519,7 +521,7 @@ private fun SearchTopBar(
                         ) {
                             if (query.isEmpty()) {
                                 Text(
-                                    text = "Search videos…",
+                                    text = stringResource(R.string.search_video_hint),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -534,7 +536,7 @@ private fun SearchTopBar(
                 IconButton(onClick = onClear) {
                     Icon(
                         imageVector = Icons.Default.Clear,
-                        contentDescription = "Clear",
+                        contentDescription = stringResource(R.string.site_clear),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -543,7 +545,7 @@ private fun SearchTopBar(
             IconButton(onClick = onSearch) {
                 Icon(
                     imageVector = Icons.Default.Search,
-                    contentDescription = "Search",
+                    contentDescription = stringResource(R.string.search),
                     tint = MaterialTheme.colorScheme.primary,
                 )
             }
@@ -552,7 +554,7 @@ private fun SearchTopBar(
                 IconButton(onClick = onOpenGenre) {
                     Icon(
                         imageVector = Icons.Default.Category,
-                        contentDescription = "Advanced search (genre)",
+                        contentDescription = stringResource(R.string.missav_advanced_search_genre),
                         tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
@@ -561,7 +563,7 @@ private fun SearchTopBar(
             IconButton(onClick = onOpenSortFilter) {
                 Icon(
                     imageVector = Icons.Default.FilterList,
-                    contentDescription = "Sort & Filter",
+                    contentDescription = stringResource(R.string.site_sort_filter),
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
@@ -582,7 +584,7 @@ private fun LandingPage(
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                text = "Type to search, or use the filter icons above",
+                text = stringResource(R.string.missav_type_to_search_or_use_the),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(32.dp),
@@ -604,12 +606,12 @@ private fun LandingPage(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Recent Combinations",
+                    text = stringResource(R.string.site_recent_combinations),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f),
                 )
                 TextButton(onClick = onClearHistory) {
-                    Text("Clear")
+                    Text(stringResource(R.string.site_clear))
                 }
             }
         }
@@ -655,7 +657,7 @@ private fun GenreSearchSheet(
         )
 
         AdvancedPicker.Sort -> SimplePickerDialog(
-            title = "Sort",
+            title = stringResource(R.string.site_sort_2),
             options = MissAvOptions.sortOptions,
             selectedKey = sort,
             onSelect = { sort = it },
@@ -663,7 +665,7 @@ private fun GenreSearchSheet(
         )
 
         AdvancedPicker.Filter -> SimplePickerDialog(
-            title = "Filter",
+            title = stringResource(R.string.site_filter),
             options = MissAvOptions.filterOptions,
             selectedKey = filter,
             onSelect = { filter = it },
@@ -686,7 +688,7 @@ private fun GenreSearchSheet(
         ) {
             item(key = "title") {
                 Text(
-                    text = "Advanced Search",
+                    text = stringResource(R.string.advanced_search),
                     style = MaterialTheme.typography.headlineSmall,
                 )
             }
@@ -698,12 +700,12 @@ private fun GenreSearchSheet(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = "Recent Combinations",
+                            text = stringResource(R.string.site_recent_combinations),
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.weight(1f),
                         )
                         TextButton(onClick = onClearHistory) {
-                            Text("Clear")
+                            Text(stringResource(R.string.site_clear))
                         }
                     }
                 }
@@ -728,8 +730,8 @@ private fun GenreSearchSheet(
                 ) {
                     AdvancedChip(
                         title = if (genre != null) {
-                            "Genre: ${MissAvOptions.genreLabel(genre) ?: genre}"
-                        } else "Genre",
+                            stringResource(R.string.site_genre_2, MissAvOptions.genreLabel(genre) ?: genre)
+                        } else stringResource(R.string.site_genre),
                         checked = genre != null,
                         modifier = Modifier.weight(1f),
                         onLongClick = if (genre != null) {
@@ -739,8 +741,8 @@ private fun GenreSearchSheet(
                     )
                     AdvancedChip(
                         title = if (sort != null) {
-                            "Sort: ${MissAvOptions.displayName(MissAvGroup.SORT, sort) ?: sort}"
-                        } else "Sort",
+                            stringResource(R.string.site_sort_3, MissAvOptions.displayName(MissAvGroup.SORT, sort) ?: sort)
+                        } else stringResource(R.string.site_sort_2),
                         checked = sort != null,
                         modifier = Modifier.weight(1f),
                         onLongClick = if (sort != null) {
@@ -750,10 +752,8 @@ private fun GenreSearchSheet(
                     )
                     AdvancedChip(
                         title = if (filter != null) {
-                            "Filter: ${
-                                MissAvOptions.displayName(MissAvGroup.FILTER, filter) ?: filter
-                            }"
-                        } else "Filter",
+                            stringResource(R.string.missav_filter, MissAvOptions.displayName(MissAvGroup.FILTER, filter) ?: filter)
+                        } else stringResource(R.string.site_filter),
                         checked = filter != null,
                         modifier = Modifier.weight(1f),
                         onLongClick = if (filter != null) {
@@ -774,7 +774,7 @@ private fun GenreSearchSheet(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Text(
-                        text = "Long-press a chip to clear it",
+                        text = stringResource(R.string.missav_long_press_a_chip_to_clear),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -784,7 +784,7 @@ private fun GenreSearchSheet(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Search,
-                            contentDescription = "Search",
+                            contentDescription = stringResource(R.string.search),
                         )
                     }
                 }
@@ -818,7 +818,7 @@ private fun SortFilterDialog(
         )
 
         SortFilterPicker.Sort -> SimplePickerDialog(
-            title = "Sort",
+            title = stringResource(R.string.site_sort_2),
             options = MissAvOptions.sortOptions,
             selectedKey = sort,
             onSelect = { sort = it },
@@ -826,7 +826,7 @@ private fun SortFilterDialog(
         )
 
         SortFilterPicker.Filter -> SimplePickerDialog(
-            title = "Filter",
+            title = stringResource(R.string.site_filter),
             options = MissAvOptions.filterOptions,
             selectedKey = filter,
             onSelect = { filter = it },
@@ -838,7 +838,7 @@ private fun SortFilterDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Sort & Filter") },
+        title = { Text(stringResource(R.string.site_sort_filter)) },
         text = {
             Column(
                 modifier = Modifier
@@ -854,8 +854,8 @@ private fun SortFilterDialog(
                 ) {
                     AdvancedChip(
                         title = if (genre != null) {
-                            "Genre: ${MissAvOptions.genreLabel(genre) ?: genre}"
-                        } else "Genre",
+                            stringResource(R.string.site_genre_2, MissAvOptions.genreLabel(genre) ?: genre)
+                        } else stringResource(R.string.site_genre),
                         checked = genre != null,
                         modifier = Modifier.weight(1f),
                         onLongClick = if (genre != null) {
@@ -865,8 +865,8 @@ private fun SortFilterDialog(
                     )
                     AdvancedChip(
                         title = if (sort != null) {
-                            "Sort: ${MissAvOptions.displayName(MissAvGroup.SORT, sort) ?: sort}"
-                        } else "Sort",
+                            stringResource(R.string.site_sort_3, MissAvOptions.displayName(MissAvGroup.SORT, sort) ?: sort)
+                        } else stringResource(R.string.site_sort_2),
                         checked = sort != null,
                         modifier = Modifier.weight(1f),
                         onLongClick = if (sort != null) {
@@ -876,10 +876,8 @@ private fun SortFilterDialog(
                     )
                     AdvancedChip(
                         title = if (filter != null) {
-                            "Filter: ${
-                                MissAvOptions.displayName(MissAvGroup.FILTER, filter) ?: filter
-                            }"
-                        } else "Filter",
+                            stringResource(R.string.missav_filter, MissAvOptions.displayName(MissAvGroup.FILTER, filter) ?: filter)
+                        } else stringResource(R.string.site_filter),
                         checked = filter != null,
                         modifier = Modifier.weight(1f),
                         onLongClick = if (filter != null) {
@@ -891,7 +889,7 @@ private fun SortFilterDialog(
                 }
 
                 Text(
-                    text = "Long-press a chip to clear it",
+                    text = stringResource(R.string.missav_long_press_a_chip_to_clear),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -905,15 +903,15 @@ private fun SortFilterDialog(
                     filter = null
                     onApply(null, null, null)
                 }) {
-                    Text("Reset")
+                    Text(stringResource(R.string.reset))
                 }
                 TextButton(onClick = { onApply(genre, sort, filter) }) {
-                    Text("Apply")
+                    Text(stringResource(R.string.site_apply))
                 }
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         },
     )
 }
@@ -948,14 +946,14 @@ private fun SimplePickerDialog(
                     onValueChange = { query = it },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    placeholder = { Text("Search ${title.lowercase()}…") },
+                    placeholder = { Text(stringResource(R.string.missav_search, title.lowercase())) },
                     leadingIcon = {
                         Icon(Icons.Default.Search, contentDescription = null)
                     },
                     trailingIcon = {
                         if (query.isNotEmpty()) {
                             IconButton(onClick = { query = "" }) {
-                                Icon(Icons.Default.Clear, contentDescription = "Clear")
+                                Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.site_clear))
                             }
                         }
                     },
@@ -990,10 +988,10 @@ private fun SimplePickerDialog(
         confirmButton = {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(onClick = { onSelect(null) }) {
-                    Text("Reset")
+                    Text(stringResource(R.string.reset))
                 }
                 TextButton(onClick = onDismiss) {
-                    Text("Done")
+                    Text(stringResource(R.string.site_done))
                 }
             }
         },
@@ -1035,7 +1033,7 @@ private fun GenrePickerDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (openGroup == null) "Genre" else openGroup.orEmpty()) },
+        title = { Text(if (openGroup == null) stringResource(R.string.site_genre) else openGroup.orEmpty()) },
         text = {
             Column(
                 modifier = Modifier
@@ -1048,14 +1046,14 @@ private fun GenrePickerDialog(
                     onValueChange = { query = it },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    placeholder = { Text("Search genres…") },
+                    placeholder = { Text(stringResource(R.string.site_search_genres)) },
                     leadingIcon = {
                         Icon(Icons.Default.Search, contentDescription = null)
                     },
                     trailingIcon = {
                         if (query.isNotEmpty()) {
                             IconButton(onClick = { query = "" }) {
-                                Icon(Icons.Default.Clear, contentDescription = "Clear")
+                                Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.site_clear))
                             }
                         }
                     },
@@ -1071,7 +1069,7 @@ private fun GenrePickerDialog(
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(
-                                    text = "No genres match \"$query\"",
+                                    text = stringResource(R.string.site_no_genres_match, query),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -1123,7 +1121,7 @@ private fun GenrePickerDialog(
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(
-                                    text = "No groups found",
+                                    text = stringResource(R.string.missav_no_groups_found),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -1170,9 +1168,7 @@ private fun GenrePickerDialog(
                                                     } else FontWeight.Normal,
                                                 )
                                                 Text(
-                                                    text = "${
-                                                        genresByGroup[group].orEmpty().size
-                                                    } genres",
+                                                    text = stringResource(R.string.site_genres, genresByGroup[group].orEmpty().size),
                                                     style = MaterialTheme.typography.labelSmall,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 )
@@ -1197,7 +1193,7 @@ private fun GenrePickerDialog(
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(
-                                    text = "No genres in this group",
+                                    text = stringResource(R.string.missav_no_genres_in_this_group),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -1237,23 +1233,23 @@ private fun GenrePickerDialog(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (openGroup != null && query.isBlank()) {
                     TextButton(onClick = { openGroup = null }) {
-                        Text("Back")
+                        Text(stringResource(R.string.back))
                     }
                 } else {
                     TextButton(onClick = {
                         selected = null
                         onApply(null)
                     }) {
-                        Text("Reset")
+                        Text(stringResource(R.string.reset))
                     }
                 }
                 TextButton(onClick = { onApply(selected) }) {
-                    Text("Apply")
+                    Text(stringResource(R.string.site_apply))
                 }
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         },
     )
 }
@@ -1308,9 +1304,9 @@ private fun HistoryCard(
     onDelete: () -> Unit,
 ) {
     val conditions = buildList {
-        entry.sort?.let { add("Sort: $it") }
-        entry.filter?.let { add("Filter: $it") }
-        entry.genre?.let { add("Genre: ${MissAvOptions.genreLabel(it) ?: it}") }
+        entry.sort?.let { add(stringResource(R.string.site_sort_3, it)) }
+        entry.filter?.let { add(stringResource(R.string.missav_filter, it)) }
+        entry.genre?.let { add(stringResource(R.string.site_genre_2, MissAvOptions.genreLabel(it) ?: it)) }
     }.joinToString(" || ")
 
     Surface(
@@ -1347,7 +1343,7 @@ private fun HistoryCard(
             IconButton(onClick = onDelete) {
                 Icon(
                     imageVector = Icons.Default.Clear,
-                    contentDescription = "Remove",
+                    contentDescription = stringResource(R.string.remove),
                 )
             }
         }

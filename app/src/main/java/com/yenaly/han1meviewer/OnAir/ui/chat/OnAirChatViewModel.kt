@@ -6,6 +6,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.yenaly.han1meviewer.OnAir.data.model.OnAirChatMessage
 import com.yenaly.han1meviewer.OnAir.data.remote.OnAirChatRepo
+import com.yenaly.han1meviewer.R
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -67,7 +69,7 @@ class OnAirChatViewModel(application: Application) : AndroidViewModel(applicatio
                     it.copy(
                         isLoading = false,
                         isRefreshing = false,
-                        loadError = e.message ?: "Failed to load chat",
+                        loadError = e.message ?: applicationContext.getString(R.string.onair_failed_to_load_chat),
                     )
                 }
             }
@@ -93,7 +95,7 @@ class OnAirChatViewModel(application: Application) : AndroidViewModel(applicatio
                     _uiState.update {
                         it.copy(
                             isSending = false,
-                            sendError = "Your session expired. Sign in again.",
+                            sendError = applicationContext.getString(R.string.onair_your_session_expired_sign_in_again),
                         )
                     }
                 }
@@ -101,7 +103,7 @@ class OnAirChatViewModel(application: Application) : AndroidViewModel(applicatio
                     _uiState.update {
                         it.copy(
                             isSending = false,
-                            sendError = result.throwable.message ?: "Network error",
+                            sendError = result.throwable.message ?: applicationContext.getString(R.string.onair_network_error),
                         )
                     }
                 }

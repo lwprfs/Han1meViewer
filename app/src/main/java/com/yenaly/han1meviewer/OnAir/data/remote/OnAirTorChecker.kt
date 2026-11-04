@@ -1,8 +1,10 @@
 package com.yenaly.han1meviewer.OnAir.data.remote
 
 import android.util.Log
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.network.HDns
 import com.yenaly.han1meviewer.logic.network.HProxySelector
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -51,7 +53,7 @@ object OnAirTorChecker {
                         connected = false,
                         isTorExit = false,
                         ip = null,
-                        message = "check.torproject.org returned HTTP ${response.code}",
+                        message = applicationContext.getString(R.string.onair_check_torproject_org_returned_http, response.code),
                         failure = TorFailure.NetworkUnreachable,
                     )
                 }
@@ -65,7 +67,7 @@ object OnAirTorChecker {
                         connected = true,
                         isTorExit = false,
                         ip = ip,
-                        message = "Not routed through Tor (${ip ?: "unknown IP"})",
+                        message = applicationContext.getString(R.string.onair_not_routed_through_tor, ip ?: "unknown IP"),
                         failure = TorFailure.NonTorExit,
                     )
                 } else {
@@ -73,7 +75,7 @@ object OnAirTorChecker {
                         connected = true,
                         isTorExit = true,
                         ip = ip,
-                        message = "Connected through Tor${ip?.let { " ($it)" } ?: ""}",
+                        message = applicationContext.getString(R.string.onair_connected_through_tor, ip?.let { " ($it)" } ?: ""),
                     )
                 }
             }
@@ -101,7 +103,7 @@ object OnAirTorChecker {
                 connected = false,
                 isTorExit = false,
                 ip = null,
-                message = "Tor check failed: ${e.message ?: e.javaClass.simpleName}",
+                message = applicationContext.getString(R.string.onair_tor_check_failed, e.message ?: e.javaClass.simpleName),
                 failure = TorFailure.Unknown,
             )
         }

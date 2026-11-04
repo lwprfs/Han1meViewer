@@ -11,8 +11,10 @@ import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderSearchResult
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderSearchTab
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderFeedPaging
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetworkRepo
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -83,7 +85,7 @@ class FapFolderHashtagViewModel(application: Application) : AndroidViewModel(app
                         it.copy(
                             isLoading = false,
                             errorMessage = result.throwable.message
-                                ?: "Failed to load #$normalised",
+                                ?: applicationContext.getString(R.string.fap_failed_to_load_2, normalised),
                         )
                     }
                 }

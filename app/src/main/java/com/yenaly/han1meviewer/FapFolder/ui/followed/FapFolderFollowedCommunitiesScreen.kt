@@ -91,7 +91,7 @@ fun FapFolderFollowedCommunitiesScreen(
             SiteTopAppBar(
                 title = {
                     Text(
-                        text = "Followed Communities",
+                        text = stringResource(R.string.drawer_followed_communities),
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -102,7 +102,7 @@ fun FapFolderFollowedCommunitiesScreen(
                     IconButton(onClick = { viewModel.refresh() }) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
-                            contentDescription = "Refresh",
+                            contentDescription = stringResource(R.string.site_refresh),
                         )
                     }
                 },
@@ -125,7 +125,7 @@ fun FapFolderFollowedCommunitiesScreen(
                     ) {
                         CircularProgressIndicator(strokeWidth = 3.dp)
                         Text(
-                            text = "Loading your communities…",
+                            text = stringResource(R.string.fap_loading_your_communities),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -157,7 +157,7 @@ fun FapFolderFollowedCommunitiesScreen(
                                 )
                             }
                             Text(
-                                text = "Failed to load",
+                                text = stringResource(R.string.site_failed_to_load),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
                             )
@@ -178,7 +178,7 @@ fun FapFolderFollowedCommunitiesScreen(
                                     modifier = Modifier.size(18.dp),
                                 )
                                 Spacer(Modifier.width(8.dp))
-                                Text("Retry")
+                                Text(stringResource(R.string.retry))
                             }
                         }
                     }
@@ -208,12 +208,12 @@ fun FapFolderFollowedCommunitiesScreen(
                             )
                         }
                         Text(
-                            text = "No communities yet",
+                            text = stringResource(R.string.fap_no_communities_yet),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                         )
                         Text(
-                            text = "You have not followed any communities yet.",
+                            text = stringResource(R.string.fap_you_have_not_followed_any_communities),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
@@ -242,7 +242,7 @@ fun FapFolderFollowedCommunitiesScreen(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
                                 Text(
-                                    text = "Communities you follow",
+                                    text = stringResource(R.string.fap_communities_you_follow),
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,

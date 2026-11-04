@@ -63,8 +63,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.screen.video.GestureIndicatorOverlay
 import com.yenaly.han1meviewer.ui.screen.video.GestureIndicatorType
 import kotlinx.coroutines.delay
@@ -344,7 +346,7 @@ fun SitePlayerOverlay(
                     IconButton(onClick = onBack, modifier = Modifier.size(32.dp)) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.back),
                             tint = Color.White,
                             modifier = Modifier.size(20.dp),
                         )
@@ -421,7 +423,7 @@ fun SitePlayerOverlay(
                 ) {
                     Icon(
                         imageVector = if (isPlaying) Icons.Outlined.Pause else Icons.Outlined.PlayArrow,
-                        contentDescription = if (isPlaying) "Pause" else "Play",
+                        contentDescription = if (isPlaying) stringResource(R.string.site_pause) else stringResource(R.string.site_play),
                         tint = Color.White,
                         modifier = Modifier.size(if (isPlaying) 34.dp else 42.dp),
                     )
@@ -456,7 +458,7 @@ fun SitePlayerOverlay(
             ) {
                 Icon(
                     imageVector = if (locked) Icons.Outlined.Lock else Icons.Outlined.LockOpen,
-                    contentDescription = if (locked) "Unlock" else "Lock",
+                    contentDescription = if (locked) stringResource(R.string.site_unlock) else stringResource(R.string.site_lock),
                     tint = Color.White,
                 )
             }
@@ -563,7 +565,7 @@ fun SitePlayerOverlay(
                             IconButton(onClick = onToggleStretch, modifier = Modifier.size(28.dp)) {
                                 Icon(
                                     imageVector = Icons.Outlined.AspectRatio,
-                                    contentDescription = "Stretch",
+                                    contentDescription = stringResource(R.string.site_stretch),
                                     tint = if (stretched) MaterialTheme.colorScheme.primary else Color.White,
                                     modifier = Modifier.size(18.dp),
                                 )
@@ -573,7 +575,7 @@ fun SitePlayerOverlay(
                             Icon(
                                 imageVector = if (isFullscreen) Icons.Outlined.FullscreenExit
                                 else Icons.Outlined.Fullscreen,
-                                contentDescription = "Fullscreen",
+                                contentDescription = stringResource(R.string.site_fullscreen),
                                 tint = Color.White,
                                 modifier = Modifier.size(18.dp),
                             )

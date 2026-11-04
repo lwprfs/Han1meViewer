@@ -67,6 +67,7 @@ import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
 import com.yenaly.han1meviewer.ui.component.SiteSwitchButton
 import com.yenaly.han1meviewer.ui.theme.SpacingLarge
 import com.yenaly.han1meviewer.ui.theme.SpacingNormal
+import com.yenaly.yenaly_libs.utils.applicationContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -99,7 +100,7 @@ fun HentaiMamaHomeScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             SiteSearchTopBar(
-                hint = "Search HentaiMama",
+                hint = applicationContext.getString(R.string.hm_search_hentaimama),
                 onSearchClick = { onNavigateToSearch(null) },
                 leading = {
                     SiteBarIconButton(
@@ -328,7 +329,7 @@ private fun HomeLoadingState(
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 48.dp),
         ) {
-            Text("Tap to retry")
+            Text(stringResource(R.string.hm_tap_to_retry))
         }
     }
 }

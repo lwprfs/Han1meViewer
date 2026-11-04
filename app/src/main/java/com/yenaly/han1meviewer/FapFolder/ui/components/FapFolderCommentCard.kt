@@ -128,7 +128,7 @@ fun FapFolderCommentCard(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = comment.authorName.ifBlank { "Unknown" },
+                            text = comment.authorName.ifBlank { stringResource(R.string.unknow) },
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
@@ -193,7 +193,7 @@ fun FapFolderCommentCard(
                     comment.attachmentUrls.take(4).forEach { url ->
                         RetryableImage(
                             model = url,
-                            contentDescription = "Attachment",
+                            contentDescription = stringResource(R.string.fap_attachment),
                             modifier = Modifier
                                 .size(64.dp)
                                 .clip(MaterialTheme.shapes.small),
@@ -235,9 +235,9 @@ fun FapFolderCommentCard(
 
             if (comment.replyCount > 0) {
                 val buttonLabel = when {
-                    repliesLoading -> "Loading replies…"
-                    showReplies -> "Hide ${comment.replyCount} replies"
-                    else -> "View ${comment.replyCount} replies"
+                    repliesLoading -> stringResource(R.string.fap_loading_replies)
+                    showReplies -> stringResource(R.string.fap_hide_replies, comment.replyCount)
+                    else -> stringResource(R.string.view_more_replies, comment.replyCount)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     TextButton(
@@ -275,7 +275,7 @@ fun FapFolderCommentCard(
                     }
                     if (comment.replies.size > 3) {
                         Text(
-                            text = "+${comment.replies.size - 3} more replies",
+                            text = stringResource(R.string.fap_more_replies, comment.replies.size - 3),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -345,7 +345,7 @@ private fun NestedReplyRow(
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = reply.authorName.ifBlank { "Unknown" },
+                    text = reply.authorName.ifBlank { stringResource(R.string.unknow) },
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,

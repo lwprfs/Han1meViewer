@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.HentaiMama.ui.home
 
+import androidx.compose.ui.res.stringResource
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.SiteIconBadge
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
@@ -61,43 +63,43 @@ fun HentaiMamaSettingsHubScreen(
     val entries = listOf(
         HubEntry(
             key = "video",
-            title = "Video",
-            subtitle = "Preferred server & quality, resume playback",
+            title = stringResource(R.string.video),
+            subtitle = stringResource(R.string.hm_preferred_server_quality_resume_playba),
             icon = Icons.Default.PlayCircleOutline,
             onClick = onNavigateToVideoSettings,
         ),
         HubEntry(
             key = "home_categories",
-            title = "Home Categories",
-            subtitle = "Reorder, hide, edit, add or delete home sections",
+            title = stringResource(R.string.drawer_home_categories),
+            subtitle = stringResource(R.string.site_home_categories_subtitle),
             icon = Icons.Default.Category,
             onClick = onNavigateToHomeCategories,
         ),
         HubEntry(
             key = "history",
-            title = "Watch History",
-            subtitle = "Series you've watched, resume from where you left off",
+            title = stringResource(R.string.watch_history),
+            subtitle = stringResource(R.string.hm_history_subtitle),
             icon = Icons.Default.History,
             onClick = onNavigateToHistory,
         ),
         HubEntry(
             key = "playlists",
-            title = "Playlists",
-            subtitle = "Browse public playlists curated by the community",
+            title = stringResource(R.string.hm_playlists_title),
+            subtitle = stringResource(R.string.hm_playlists_subtitle),
             icon = Icons.AutoMirrored.Filled.List,
             onClick = onNavigateToPlaylists,
         ),
         HubEntry(
             key = "recent_episodes",
             title = "Recent Episodes",
-            subtitle = "Newest episode releases across all series",
+            subtitle = stringResource(R.string.hm_recent_episodes_subtitle),
             icon = Icons.Default.VideoLibrary,
             onClick = onNavigateToRecentEpisodes,
         ),
         HubEntry(
             key = "upcoming",
-            title = "Upcoming",
-            subtitle = "Browse upcoming episodes by month",
+            title = stringResource(R.string.drawer_upcoming),
+            subtitle = stringResource(R.string.hm_upcoming_subtitle),
             icon = Icons.Default.CalendarMonth,
             onClick = onNavigateToUpcoming,
         ),

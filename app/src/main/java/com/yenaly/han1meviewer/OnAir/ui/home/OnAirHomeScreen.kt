@@ -72,6 +72,7 @@ import com.yenaly.han1meviewer.logic.state.WebsiteState
 import com.yenaly.han1meviewer.ui.component.lazy.LazyVerticalGrid
 import com.yenaly.han1meviewer.ui.screen.rememberVideoGridColumns
 import com.yenaly.han1meviewer.ui.theme.SpacingNormal
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
@@ -125,14 +126,14 @@ fun OnAirHomeScreen(
 
     LaunchedEffect(homeState) {
         val s = homeState
-        if (s is WebsiteState.Error) onLoadFailure(s.throwable.message ?: "Load failed")
+        if (s is WebsiteState.Error) onLoadFailure(s.throwable.message ?: applicationContext.getString(R.string.onair_load_failed))
     }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             SiteSearchTopBar(
-                hint = "Search OnAir",
+                hint = applicationContext.getString(R.string.onair_search_onair),
                 onSearchClick = { onOpenSearch(null) },
                 leading = {
                     SiteBarIconButton(
@@ -144,7 +145,7 @@ fun OnAirHomeScreen(
                 actions = {
                     SiteBarIconButton(
                         imageVector = Icons.Default.History,
-                        contentDescription = "History",
+                        contentDescription = applicationContext.getString(R.string.site_history),
                         onClick = onOpenHistory,
                     )
                     currentUser?.let { profile ->
@@ -189,7 +190,7 @@ fun OnAirHomeScreen(
                     is WebsiteState.Error -> {
                         if (cards.isEmpty()) {
                             SiteErrorContent(
-                                message = state.throwable.message ?: "Failed to load",
+                                message = state.throwable.message ?: applicationContext.getString(R.string.site_failed_to_load),
                                 onRetry = { viewModel.refresh() },
                             )
                         } else HomeGrid(cards, gridState, columns, isLoadingMore, onOpenVideo) {
@@ -319,9 +320,9 @@ private fun HomeHeader(
                 .padding(horizontal = 4.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            StatPill(label = "Videos", value = data.totalVideos?.toString() ?: "—")
-            StatPill(label = "Pictures", value = data.totalPictures?.toString() ?: "—")
-            StatPill(label = "Members", value = data.totalMembers?.toString() ?: "—")
+            StatPill(label = stringResource(R.string.fap_tab_videos), value = data.totalVideos?.toString() ?: "—")
+            StatPill(label = stringResource(R.string.drawer_pictures), value = data.totalPictures?.toString() ?: "—")
+            StatPill(label = stringResource(R.string.onair_members), value = data.totalMembers?.toString() ?: "—")
         }
         data.announcementTitle?.let { title ->
             Surface(
@@ -331,7 +332,7 @@ private fun HomeHeader(
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
-                        text = "Announcement",
+                        text = stringResource(R.string.announcement),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.75f),
                     )

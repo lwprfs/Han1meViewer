@@ -45,11 +45,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 import com.yenaly.han1meviewer.MissAV.common.MissAvOptions
 import com.yenaly.han1meviewer.MissAV.common.MissAvTag
+import com.yenaly.han1meviewer.R
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MissAvGenreSheet(
@@ -118,12 +120,12 @@ fun MissAvGenreSheet(
                     }) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back to groups",
+                            contentDescription = stringResource(R.string.site_back_to_groups),
                         )
                     }
                 }
                 Text(
-                    text = currentGroup ?: "Browse Genre",
+                    text = currentGroup ?: stringResource(R.string.missav_browse_genre),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f),
@@ -134,7 +136,7 @@ fun MissAvGenreSheet(
                     query = ""
                     onReset()
                 }) {
-                    Text("Reset")
+                    Text(stringResource(R.string.reset))
                 }
             }
 
@@ -149,12 +151,12 @@ fun MissAvGenreSheet(
                 },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                placeholder = { Text("Search genres…") },
+                placeholder = { Text(stringResource(R.string.site_search_genres)) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 trailingIcon = {
                     if (query.isNotEmpty()) {
                         IconButton(onClick = { query = "" }) {
-                            Icon(Icons.Default.Clear, contentDescription = "Clear")
+                            Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.site_clear))
                         }
                     }
                 },
@@ -166,7 +168,7 @@ fun MissAvGenreSheet(
 
                 query.isNotBlank() -> {
                     if (visibleGenres.isEmpty()) {
-                        EmptyHint("No matching genres")
+                        EmptyHint(stringResource(R.string.missav_no_matching_genres))
                     } else {
                         GenreLazyList(
                             genres = visibleGenres,
@@ -182,7 +184,7 @@ fun MissAvGenreSheet(
 
                 currentGroup != null -> {
                     if (visibleGenres.isEmpty()) {
-                        EmptyHint("No genres in this group")
+                        EmptyHint(stringResource(R.string.missav_no_genres_in_this_group))
                     } else {
                         GenreLazyList(
                             genres = visibleGenres,
@@ -211,7 +213,7 @@ fun MissAvGenreSheet(
                             ListItem(
                                 supportingContent = {
                                     Text(
-                                        text = "${genresInGroup.size} genres",
+                                        text = stringResource(R.string.site_genres, genresInGroup.size),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -220,7 +222,7 @@ fun MissAvGenreSheet(
                                     if (selectedInGroup) {
                                         Icon(
                                             Icons.Default.Check,
-                                            contentDescription = "Has selection",
+                                            contentDescription = stringResource(R.string.missav_has_selection),
                                             tint = MaterialTheme.colorScheme.primary,
                                         )
                                     } else {
@@ -278,7 +280,7 @@ fun MissAvGenreSheet(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = "Selected: ",
+                            text = stringResource(R.string.missav_selected) + " ",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -295,7 +297,7 @@ fun MissAvGenreSheet(
                         ) {
                             Icon(
                                 Icons.Default.Clear,
-                                contentDescription = "Clear selection",
+                                contentDescription = stringResource(R.string.missav_clear_selection),
                                 modifier = Modifier.size(16.dp),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -311,7 +313,7 @@ fun MissAvGenreSheet(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 TextButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
                 Button(
                     onClick = { onApply(selectedGenre) },
@@ -327,7 +329,7 @@ fun MissAvGenreSheet(
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(Modifier.size(6.dp))
-                    Text("Apply", fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.site_apply), fontWeight = FontWeight.SemiBold)
                 }
             }
 

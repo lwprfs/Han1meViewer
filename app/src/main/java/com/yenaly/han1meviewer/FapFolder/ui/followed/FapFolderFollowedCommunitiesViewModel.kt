@@ -7,8 +7,10 @@ import androidx.lifecycle.viewModelScope
 import com.yenaly.han1meviewer.FapFolder.data.local.FapFolderSessionCache
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderGroupRow
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetworkRepo
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -68,7 +70,7 @@ class FapFolderFollowedCommunitiesViewModel(
             _uiState.update {
                 it.copy(
                     isLoading = false,
-                    errorMessage = "Not signed in. Sign in to view followed communities.",
+                    errorMessage = applicationContext.getString(R.string.fap_not_signed_in_sign_in_to),
                     sessionExpired = true,
                 )
             }
@@ -101,7 +103,7 @@ class FapFolderFollowedCommunitiesViewModel(
                         is VideoLoadingState.NoContent -> _uiState.update {
                             it.copy(
                                 isLoading = false,
-                                errorMessage = "Profile not found.",
+                                errorMessage = applicationContext.getString(R.string.fap_profile_not_found),
                             )
                         }
                         is VideoLoadingState.Error -> {
@@ -109,7 +111,7 @@ class FapFolderFollowedCommunitiesViewModel(
                             _uiState.update {
                                 it.copy(
                                     isLoading = false,
-                                    errorMessage = msg ?: "Failed to load.",
+                                    errorMessage = msg ?: applicationContext.getString(R.string.fap_failed_to_load),
                                     sessionExpired =
                                         msg?.contains("session", true) == true,
                                 )

@@ -997,4 +997,17 @@
         <item>搓手手期待ing……</item>
         <item>◝(⑅•ᴗ•⑅)◜..°♡ 傳送中……</item>
     </string-array>
+
+    <!-- ===== Hardcoded English UI text moved out of Kotlin code ===== -->
+    <string name="download_failed">下載失敗。</string>
+    <string name="redownload">重新下載</string>
+    <string name="check_tor">檢查 Tor</string>
+    <string name="downloading_2">%1$s 個下載中</string>
+    <string name="queued">%1$s 個排隊中</string>
+    <string name="paused_2">%1$s 個已暫停</string>
+    <string name="failed">%1$s 個失敗</string>
+    <string name="photos">相片 · %1$s</string>
+    <string name="month">月份</string>
+    <string name="pause_video">暫停影片</string>
+    <string name="play_video">播放影片</string>
 </resources>

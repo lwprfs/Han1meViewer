@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.OnAir.ui.settings
 
+import androidx.compose.ui.res.stringResource
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import androidx.compose.foundation.background
@@ -67,6 +69,7 @@ import com.yenaly.han1meviewer.OnAir.data.remote.OnAirNetwork
 import com.yenaly.han1meviewer.OnAir.data.remote.OnAirNetworkRepo
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
 import com.yenaly.han1meviewer.ui.component.GlobalToasts
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 
@@ -127,14 +130,14 @@ fun OnAirSettingsScreen(
             profile = null
             when (result) {
                 is OnAirAuthRepo.AuthResult.Success -> {
-                    GlobalToasts.show("Logged out", level = GlobalToasts.ToastLevel.SUCCESS)
+                    GlobalToasts.show(applicationContext.getString(R.string.site_logged_out), level = GlobalToasts.ToastLevel.SUCCESS)
                     onLoggedOut()
                 }
                 is OnAirAuthRepo.AuthResult.FormError,
                 is OnAirAuthRepo.AuthResult.NetworkError,
                 is OnAirAuthRepo.AuthResult.LoginRequired -> {
                     GlobalToasts.show(
-                        "Session cleared locally",
+                        applicationContext.getString(R.string.onair_session_cleared_locally),
                         level = GlobalToasts.ToastLevel.WARNING,
                     )
                     onLoggedOut()
@@ -146,7 +149,7 @@ fun OnAirSettingsScreen(
     Scaffold(
         topBar = {
             SiteTopAppBar(
-                title = { Text("OnAir Settings") },
+                title = { Text(stringResource(R.string.onair_onair_settings)) },
                 navigationIcon = { SiteBackButton(onClick = onBack) },
             )
         },
@@ -215,7 +218,7 @@ fun OnAirSettingsScreen(
                                     Text(
                                         text = profile?.displayName
                                             ?: usernameHint
-                                            ?: if (hasCookies) "Signed in" else "Not signed in",
+                                            ?: if (hasCookies) stringResource(R.string.site_signed_in) else stringResource(R.string.site_not_signed_in),
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.SemiBold,
                                         maxLines = 1,
@@ -231,9 +234,9 @@ fun OnAirSettingsScreen(
                                 }
                                 val subline = buildString {
                                     profile?.let { p ->
-                                        p.followerCount?.let { append("$it followers · ") }
-                                        p.videoCount?.let { append("$it videos · ") }
-                                        p.pictureCount?.let { append("$it pictures") }
+                                        p.followerCount?.let { append(stringResource(R.string.onair_followers, it) + " ") }
+                                        p.videoCount?.let { append(stringResource(R.string.onair_videos, it) + " ") }
+                                        p.pictureCount?.let { append(stringResource(R.string.onair_pictures, it)) }
                                     }
                                     if (isEmpty()) {
                                         append(
@@ -256,14 +259,14 @@ fun OnAirSettingsScreen(
                                 IconButton(onClick = { refreshProfile() }) {
                                     Icon(
                                         imageVector = Icons.Default.Refresh,
-                                        contentDescription = "Refresh profile",
+                                        contentDescription = stringResource(R.string.onair_refresh_profile),
                                         tint = MaterialTheme.colorScheme.primary,
                                     )
                                 }
                                 IconButton(onClick = { showLogoutDialog = true }) {
                                     Icon(
                                         imageVector = Icons.AutoMirrored.Filled.Logout,
-                                        contentDescription = "Log out",
+                                        contentDescription = stringResource(R.string.logout),
                                         tint = MaterialTheme.colorScheme.error,
                                     )
                                 }
@@ -285,12 +288,12 @@ fun OnAirSettingsScreen(
                                 OutlinedButton(
                                     onClick = onOpenLogin,
                                     modifier = Modifier.weight(1f),
-                                ) { Text("Log in") }
+                                ) { Text(stringResource(R.string.site_log_in)) }
                             } else if (profile != null) {
                                 OutlinedButton(
                                     onClick = { profile?.let { onOpenProfile(it.username) } },
                                     modifier = Modifier.weight(1f),
-                                ) { Text("View my profile") }
+                                ) { Text(stringResource(R.string.onair_view_my_profile)) }
                             }
                         }
                     }
@@ -312,7 +315,7 @@ fun OnAirSettingsScreen(
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            text = "Announcements, chat and tags moved here from the home screen.",
+                            text = stringResource(R.string.onair_announcements_chat_and_tags_moved_here),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -333,12 +336,12 @@ fun OnAirSettingsScreen(
                             Spacer(Modifier.width(10.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Announcements",
+                                    text = stringResource(R.string.onair_announcements_title),
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold,
                                 )
                                 Text(
-                                    text = "Site news and mirror updates",
+                                    text = stringResource(R.string.onair_site_news_and_mirror_updates),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -360,12 +363,12 @@ fun OnAirSettingsScreen(
                             Spacer(Modifier.width(10.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Chat",
+                                    text = stringResource(R.string.drawer_chat),
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold,
                                 )
                                 Text(
-                                    text = "Site-wide community chat",
+                                    text = stringResource(R.string.onair_site_wide_community_chat),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -387,12 +390,12 @@ fun OnAirSettingsScreen(
                             Spacer(Modifier.width(10.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Tags",
+                                    text = stringResource(R.string.drawer_tags),
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold,
                                 )
                                 Text(
-                                    text = "Browse all tags",
+                                    text = stringResource(R.string.onair_browse_all_tags),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -411,13 +414,13 @@ fun OnAirSettingsScreen(
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text(
-                            text = "Mirror / Host",
+                            text = stringResource(R.string.onair_mirror_host),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            text = "OnAir is a Tor-only site. Choose which .onion mirror to use.",
+                            text = stringResource(R.string.onair_onair_is_a_tor_only_site),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -429,7 +432,7 @@ fun OnAirSettingsScreen(
                         )
                         Spacer(Modifier.height(6.dp))
                         TextButton(onClick = { showHostDialog = true }) {
-                            Text("Change host")
+                            Text(stringResource(R.string.onair_change_host))
                         }
                     }
                 }
@@ -444,19 +447,19 @@ fun OnAirSettingsScreen(
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text(
-                            text = "History",
+                            text = stringResource(R.string.site_history),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            text = "Clear all watch history stored on this device.",
+                            text = stringResource(R.string.onair_clear_all_watch_history_stored_on),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Spacer(Modifier.height(6.dp))
                         TextButton(onClick = { showClearHistoryDialog = true }) {
-                            Text("Clear history")
+                            Text(stringResource(R.string.site_clear_history))
                         }
                     }
                 }
@@ -471,15 +474,13 @@ fun OnAirSettingsScreen(
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text(
-                            text = "About OnAir",
+                            text = stringResource(R.string.onair_about_onair),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            text = "Self-hosted video site run by the community. " +
-                                    "This client is a mirror integration inside Han1meViewer. " +
-                                    "All video content is uploaded by members.",
+                            text = stringResource(R.string.onair_self_hosted_video_site_run_by),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -492,7 +493,7 @@ fun OnAirSettingsScreen(
     if (showHostDialog) {
         AlertDialog(
             onDismissRequest = { showHostDialog = false },
-            title = { Text("Choose OnAir host") },
+            title = { Text(stringResource(R.string.onair_choose_onair_host)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     OnAirConstants.ONAIR_HOSTNAME.forEachIndexed { index, host ->
@@ -518,7 +519,7 @@ fun OnAirSettingsScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showHostDialog = false }) { Text("Close") }
+                TextButton(onClick = { showHostDialog = false }) { Text(stringResource(R.string.close)) }
             },
         )
     }
@@ -526,16 +527,16 @@ fun OnAirSettingsScreen(
     if (showClearHistoryDialog) {
         AlertDialog(
             onDismissRequest = { showClearHistoryDialog = false },
-            title = { Text("Clear history") },
-            text = { Text("This will remove all OnAir watch history on this device.") },
+            title = { Text(stringResource(R.string.site_clear_history)) },
+            text = { Text(stringResource(R.string.onair_this_will_remove_all_onair_watch)) },
             confirmButton = {
                 TextButton(onClick = {
                     showClearHistoryDialog = false
                     MainScope().launch { OnAirHistoryRepo.deleteAll() }
-                }) { Text("Clear", color = MaterialTheme.colorScheme.error) }
+                }) { Text(stringResource(R.string.site_clear), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
-                TextButton(onClick = { showClearHistoryDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showClearHistoryDialog = false }) { Text(stringResource(R.string.cancel)) }
             },
         )
     }
@@ -543,8 +544,8 @@ fun OnAirSettingsScreen(
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { if (!loggingOut) showLogoutDialog = false },
-            title = { Text("Log out of OnAir?") },
-            text = { Text("Your session cookies will be removed from this device.") },
+            title = { Text(stringResource(R.string.onair_log_out_of_onair)) },
+            text = { Text(stringResource(R.string.site_your_session_cookies_will_be_removed)) },
             confirmButton = {
                 TextButton(
                     onClick = { performLogout() },
@@ -556,7 +557,7 @@ fun OnAirSettingsScreen(
                             strokeWidth = 2.dp,
                         )
                     } else {
-                        Text("Log out", color = MaterialTheme.colorScheme.error)
+                        Text(stringResource(R.string.logout), color = MaterialTheme.colorScheme.error)
                     }
                 }
             },
@@ -564,7 +565,7 @@ fun OnAirSettingsScreen(
                 TextButton(
                     onClick = { showLogoutDialog = false },
                     enabled = !loggingOut,
-                ) { Text("Cancel") }
+                ) { Text(stringResource(R.string.cancel)) }
             },
         )
     }

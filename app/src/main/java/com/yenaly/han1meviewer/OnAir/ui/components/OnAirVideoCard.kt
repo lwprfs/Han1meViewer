@@ -1,6 +1,7 @@
 package com.yenaly.han1meviewer.OnAir.ui.components
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 import android.content.ClipData
@@ -66,7 +67,7 @@ fun OnAirVideoCardItem(
                 )
             }
         GlobalToasts.show(
-            "Video link copied",
+            stringResource(R.string.onair_video_link_copied),
             level = GlobalToasts.ToastLevel.SUCCESS,
         )
     }

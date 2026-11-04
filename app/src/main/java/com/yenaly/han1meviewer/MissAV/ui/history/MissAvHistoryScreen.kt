@@ -105,7 +105,7 @@ fun MissAvHistoryScreen(
                         IconButton(onClick = { showDeleteAllDialog = true }) {
                             Icon(
                                 Icons.Default.DeleteSweep,
-                                contentDescription = "Delete All History"
+                                contentDescription = stringResource(R.string.missav_delete_all_history)
                             )
                         }
                     }
@@ -122,7 +122,7 @@ fun MissAvHistoryScreen(
                 historyState is PageLoadingState.Loading
                         && historyItems.isEmpty()
                         && loadedPageCount == 0 -> {
-                    SiteLoadingContent(message = "Loading history...")
+                    SiteLoadingContent(message = stringResource(R.string.missav_loading_history))
                 }
 
                 historyState is PageLoadingState.Error && historyItems.isEmpty() -> {
@@ -188,7 +188,7 @@ fun MissAvHistoryScreen(
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Text(
-                                        "No more history",
+                                        stringResource(R.string.site_no_more_history),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -204,19 +204,19 @@ fun MissAvHistoryScreen(
     if (showDeleteAllDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteAllDialog = false },
-            title = { Text("Delete All History") },
-            text = { Text("Are you sure you want to delete all watch history? This action cannot be undone.") },
+            title = { Text(stringResource(R.string.missav_delete_all_history)) },
+            text = { Text(stringResource(R.string.missav_are_you_sure_you_want_to)) },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteAllHistory()
                     showDeleteAllDialog = false
                 }) {
-                    Text("Delete All", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.missav_delete_all), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteAllDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -225,19 +225,19 @@ fun MissAvHistoryScreen(
     if (itemToDelete != null) {
         AlertDialog(
             onDismissRequest = { itemToDelete = null },
-            title = { Text("Delete History Item") },
-            text = { Text("Remove this item from your watch history?") },
+            title = { Text(stringResource(R.string.missav_delete_history_item)) },
+            text = { Text(stringResource(R.string.missav_remove_this_item_from_your_watch)) },
             confirmButton = {
                 TextButton(onClick = {
                     itemToDelete?.let { viewModel.deleteHistoryItem(it) }
                     itemToDelete = null
                 }) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { itemToDelete = null }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -317,13 +317,13 @@ fun MissAvHistoryItemCard(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (item.isPlayed) {
                         Text(
-                            text = "▶ Played",
+                            text = stringResource(R.string.missav_played),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.tertiary,
                         )
                     } else {
                         Text(
-                            text = "📖 Viewed",
+                            text = stringResource(R.string.missav_viewed),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -337,7 +337,7 @@ fun MissAvHistoryItemCard(
                     }
                     if (item.playCount > 0) {
                         Text(
-                            text = "• ${item.playCount}x played",
+                            text = stringResource(R.string.missav_x_played, item.playCount),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -364,7 +364,7 @@ fun MissAvHistoryItemCard(
             ) {
                 Icon(
                     Icons.Default.Delete,
-                    contentDescription = "Delete",
+                    contentDescription = stringResource(R.string.delete),
                     modifier = Modifier.size(16.dp),
                 )
             }

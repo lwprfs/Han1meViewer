@@ -6,6 +6,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.yenaly.han1meviewer.FapFolder.data.local.FapFolderHistoryEntity
 import com.yenaly.han1meviewer.FapFolder.data.local.FapFolderHistoryRepo
+import com.yenaly.han1meviewer.R
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -63,7 +65,7 @@ class FapFolderHistoryViewModel(application: Application) : AndroidViewModel(app
                     it.copy(
                         isLoading = false,
                         isLoadingMore = false,
-                        errorMessage = error.message ?: "Failed to load history.",
+                        errorMessage = error.message ?: applicationContext.getString(R.string.fap_failed_to_load_history),
                     )
                 }
             }
@@ -94,7 +96,7 @@ class FapFolderHistoryViewModel(application: Application) : AndroidViewModel(app
                     _uiState.update {
                         it.copy(
                             isLoadingMore = false,
-                            errorMessage = error.message ?: "Failed to load more.",
+                            errorMessage = error.message ?: applicationContext.getString(R.string.fap_failed_to_load_more),
                         )
                     }
                 }

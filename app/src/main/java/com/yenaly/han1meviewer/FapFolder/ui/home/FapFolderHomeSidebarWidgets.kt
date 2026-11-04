@@ -23,12 +23,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderSuggestedCommunity
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderTrendingTag
+import com.yenaly.han1meviewer.R
 
 @Composable
 fun FapFolderTrendingCard(
@@ -48,7 +50,7 @@ fun FapFolderTrendingCard(
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
-                text = "Trending",
+                text = stringResource(R.string.fap_trending),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
             )
@@ -72,7 +74,7 @@ fun FapFolderTrendingCard(
                     )
                     tag.postCount?.let { count ->
                         Text(
-                            text = if (count == 1) "1 post" else "$count posts",
+                            text = if (count == 1) "1 post" else stringResource(R.string.fap_posts, count),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -101,7 +103,7 @@ fun FapFolderSuggestedCommunitiesCard(
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
-                text = "Suggested Communities",
+                text = stringResource(R.string.fap_suggested_communities),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
             )
@@ -152,8 +154,8 @@ fun FapFolderSuggestedCommunitiesCard(
                             overflow = TextOverflow.Ellipsis,
                         )
                         val meta = buildList {
-                            community.followerCount?.let { add("$it followers") }
-                            if (community.isMember) add("Joined")
+                            community.followerCount?.let { add(stringResource(R.string.fap_followers, it)) }
+                            if (community.isMember) add(stringResource(R.string.fap_joined))
                         }.joinToString(" · ")
                         if (meta.isNotBlank()) {
                             Text(

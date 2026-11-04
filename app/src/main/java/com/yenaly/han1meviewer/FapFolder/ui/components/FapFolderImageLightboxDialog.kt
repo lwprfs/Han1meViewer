@@ -29,6 +29,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import com.yenaly.han1meviewer.ui.component.GlobalToasts
 import com.yenaly.han1meviewer.util.SiteImageSaver
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.launch
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -171,7 +172,7 @@ fun FapFolderImageLightboxDialog(
                                         context = context,
                                         url = image.fullUrl,
                                         segments = saveSegments
-                                            ?: listOf("FapFolder", "Photos"),
+                                            ?: listOf("FapFolder", applicationContext.getString(R.string.fap_tab_photos)),
                                         baseName = name,
                                     )
                                     saving = false
@@ -181,8 +182,8 @@ fun FapFolderImageLightboxDialog(
                                             level = GlobalToasts.ToastLevel.ERROR,
                                         )
                                         is SiteImageSaver.SaveResult.Saved -> GlobalToasts.show(
-                                            if (result.count > 0) "Photo saved"
-                                            else "Photo already saved",
+                                            if (result.count > 0) applicationContext.getString(R.string.fap_photo_saved)
+                                            else applicationContext.getString(R.string.fap_photo_already_saved),
                                             level = GlobalToasts.ToastLevel.SUCCESS,
                                         )
                                     }
@@ -204,7 +205,7 @@ fun FapFolderImageLightboxDialog(
                             } else {
                                 Icon(
                                     imageVector = Icons.Default.Download,
-                                    contentDescription = "Save photo",
+                                    contentDescription = stringResource(R.string.fap_save_photo),
                                     tint = Color.White,
                                 )
                             }

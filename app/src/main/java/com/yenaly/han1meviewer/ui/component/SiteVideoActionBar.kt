@@ -42,6 +42,7 @@ import com.yenaly.han1meviewer.logic.SiteCheckIn
 import com.yenaly.han1meviewer.ui.navigation.NavigationManager
 import com.yenaly.han1meviewer.worker.HanimeDownloadManagerV2
 import com.yenaly.han1meviewer.worker.HanimeDownloadWorker
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -140,14 +141,14 @@ fun SiteVideoActionBar(
                     ?.let { "${it.trim('/')}/$videoCode" } ?: videoCode
                 if (downloadUrl.isNullOrBlank() && resolveDownloadUrl != null) {
                     GlobalToasts.show(
-                        "Getting the download link…",
+                        stringResource(R.string.site_getting_the_download_link),
                         level = GlobalToasts.ToastLevel.INFO,
                     )
                     scope.launch {
                         val resolved = runCatching { resolveDownloadUrl() }.getOrNull()
                         if (resolved.isNullOrBlank()) {
                             GlobalToasts.show(
-                                "Could not get the download link. Try again or play the video first.",
+                                applicationContext.getString(R.string.site_could_not_get_the_download_link),
                                 level = GlobalToasts.ToastLevel.ERROR,
                             )
                         } else {

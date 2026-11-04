@@ -24,7 +24,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.ui.component.ChoiceDialog
 import com.yenaly.han1meviewer.ui.component.SettingNavigationItem
@@ -82,11 +84,11 @@ fun SitePlayerSettingsScreen(site: SiteType, modifier: Modifier = Modifier) {
     if (showCustomize) {
         AlertDialog(
             onDismissRequest = { showCustomize = false },
-            title = { Text("Customize ${SitePlayerSettings.label(site)} settings") },
+            title = { Text(stringResource(R.string.site_customize_settings, SitePlayerSettings.label(site))) },
             text = {
                 androidx.compose.foundation.layout.Column {
                     Text(
-                        "Choose which settings are listed. Hidden settings keep their value.",
+                        stringResource(R.string.site_choose_which_settings_are_listed_hidde),
                         style = MaterialTheme.typography.bodySmall,
                     )
                     SitePlayerSettings.specs.forEach { spec ->
@@ -103,19 +105,18 @@ fun SitePlayerSettingsScreen(site: SiteType, modifier: Modifier = Modifier) {
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { showCustomize = false }) { Text("Done") } },
+            confirmButton = { TextButton(onClick = { showCustomize = false }) { Text(stringResource(R.string.site_done)) } },
         )
     }
 
     LazyColumn(modifier = modifier.fillMaxSize()) {
         item(key = "sync") {
             SettingSwitchItem(
-                title = "Use in-app player settings",
+                title = stringResource(R.string.site_use_in_app_player_settings),
                 summary = if (synced) {
-                    "${SitePlayerSettings.label(site)} follows the Hanime1 / Javchu player settings. " +
-                            "Changing any value below keeps it separate for this site."
+                    stringResource(R.string.site_follows_the_hanime1_javchu_player_sett, SitePlayerSettings.label(site))
                 } else {
-                    "${SitePlayerSettings.label(site)} keeps its own player settings."
+                    stringResource(R.string.site_keeps_its_own_player_settings, SitePlayerSettings.label(site))
                 },
                 checked = synced,
                 onCheckedChange = { on ->
@@ -161,14 +162,14 @@ fun SitePlayerSettingsScreen(site: SiteType, modifier: Modifier = Modifier) {
         item(key = "reset") {
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
                 TextButton(onClick = { showCustomize = true }) {
-                    Text("Customize settings", style = MaterialTheme.typography.labelLarge)
+                    Text(stringResource(R.string.site_customize_settings_2), style = MaterialTheme.typography.labelLarge)
                 }
                 TextButton(
                     onClick = { SitePlayerSettings.resetToApp(site) },
                     enabled = !synced,
                 ) {
                     Text(
-                        "Reset to in-app player settings",
+                        stringResource(R.string.site_reset_to_in_app_player_settings),
                         style = MaterialTheme.typography.labelLarge,
                     )
                 }

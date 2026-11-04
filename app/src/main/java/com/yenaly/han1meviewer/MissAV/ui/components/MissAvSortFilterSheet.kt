@@ -35,12 +35,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 import com.yenaly.han1meviewer.MissAV.common.MissAvGroup
 import com.yenaly.han1meviewer.MissAV.common.MissAvOptions
 import com.yenaly.han1meviewer.MissAV.common.MissAvTag
+import com.yenaly.han1meviewer.R
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MissAvSortFilterSheet(
@@ -80,7 +82,7 @@ fun MissAvSortFilterSheet(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Sort & Filter",
+                    text = stringResource(R.string.site_sort_filter),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f),
@@ -90,7 +92,7 @@ fun MissAvSortFilterSheet(
                     filter = null
                     onReset()
                 }) {
-                    Text("Reset")
+                    Text(stringResource(R.string.reset))
                 }
             }
 
@@ -101,14 +103,14 @@ fun MissAvSortFilterSheet(
                     selected = selectedTab == MissAvGroup.SORT,
                     onClick = { selectedTab = MissAvGroup.SORT },
                     text = {
-                        Text(if (sort != null) "Sort •" else "Sort")
+                        Text(if (sort != null) "Sort •" else stringResource(R.string.site_sort_2))
                     },
                 )
                 Tab(
                     selected = selectedTab == MissAvGroup.FILTER,
                     onClick = { selectedTab = MissAvGroup.FILTER },
                     text = {
-                        Text(if (filter != null) "Filter •" else "Filter")
+                        Text(if (filter != null) "Filter •" else stringResource(R.string.site_filter))
                     },
                 )
             }
@@ -136,7 +138,7 @@ fun MissAvSortFilterSheet(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 TextButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
                 Button(
                     onClick = { onApply(sort, filter) },
@@ -148,7 +150,7 @@ fun MissAvSortFilterSheet(
                 ) {
                     Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.size(6.dp))
-                    Text("Apply", fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.site_apply), fontWeight = FontWeight.SemiBold)
                 }
             }
 

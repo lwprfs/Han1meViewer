@@ -36,15 +36,18 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderAccountRepo
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.GlobalToasts
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -70,14 +73,14 @@ fun FapFolderAccountSettingsScreen(onBack: () -> Unit) {
                 email = it.email
                 username = it.username
             }
-            .onFailure { loadError = it.message ?: "Could not load account settings." }
+            .onFailure { loadError = it.message ?: applicationContext.getString(R.string.fap_could_not_load_account_settings) }
         loading = false
     }
 
     Scaffold(
         topBar = {
             SiteTopAppBar(
-                title = { Text("Account settings") },
+                title = { Text(stringResource(R.string.fap_account_settings)) },
                 navigationIcon = { SiteBackButton(onClick = onBack) },
             )
         },
@@ -103,7 +106,7 @@ fun FapFolderAccountSettingsScreen(onBack: () -> Unit) {
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                TextButton(onClick = { reloadTick++ }) { Text("Retry") }
+                TextButton(onClick = { reloadTick++ }) { Text(stringResource(R.string.retry)) }
             }
 
             else -> Column(
@@ -117,7 +120,7 @@ fun FapFolderAccountSettingsScreen(onBack: () -> Unit) {
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it; message = null },
-                    label = { Text("Email address") },
+                    label = { Text(stringResource(R.string.fap_email_address)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     enabled = !saving,
@@ -126,9 +129,9 @@ fun FapFolderAccountSettingsScreen(onBack: () -> Unit) {
                 OutlinedTextField(
                     value = username,
                     onValueChange = { username = it; message = null },
-                    label = { Text("Username") },
+                    label = { Text(stringResource(R.string.username)) },
                     supportingText = {
-                        Text("Letters, numbers and periods only. Changing it changes your profile link.")
+                        Text(stringResource(R.string.fap_letters_numbers_and_periods_only_chang))
                     },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
@@ -137,8 +140,8 @@ fun FapFolderAccountSettingsScreen(onBack: () -> Unit) {
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it; message = null },
-                    label = { Text("Current password") },
-                    supportingText = { Text("Required as a security check") },
+                    label = { Text(stringResource(R.string.fap_current_password)) },
+                    supportingText = { Text(stringResource(R.string.fap_required_as_a_security_check)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     enabled = !saving,
@@ -155,7 +158,7 @@ fun FapFolderAccountSettingsScreen(onBack: () -> Unit) {
                                 } else {
                                     Icons.Filled.Visibility
                                 },
-                                contentDescription = if (passwordVisible) "Hide" else "Show",
+                                contentDescription = if (passwordVisible) stringResource(R.string.fap_hide) else stringResource(R.string.fap_show),
                             )
                         }
                     },
@@ -181,7 +184,7 @@ fun FapFolderAccountSettingsScreen(onBack: () -> Unit) {
                         if (saving) return@Button
                         if (password.isEmpty()) {
                             message = FapFolderAccountRepo.ActionResult.Error(
-                                "Enter your current password to save changes."
+                                applicationContext.getString(R.string.fap_enter_your_current_password_to_save)
                             )
                             return@Button
                         }
@@ -214,7 +217,7 @@ fun FapFolderAccountSettingsScreen(onBack: () -> Unit) {
                             strokeWidth = 2.dp,
                         )
                     }
-                    Text(if (saving) "Saving…" else "Save changes")
+                    Text(if (saving) stringResource(R.string.fap_saving) else stringResource(R.string.fap_save_changes))
                 }
             }
         }
@@ -238,14 +241,14 @@ fun FapFolderPrivacySettingsScreen(onBack: () -> Unit) {
         loadError = null
         FapFolderAccountRepo.fetchPrivacy()
             .onSuccess { settings = it }
-            .onFailure { loadError = it.message ?: "Could not load privacy settings." }
+            .onFailure { loadError = it.message ?: applicationContext.getString(R.string.fap_could_not_load_privacy_settings) }
         loading = false
     }
 
     Scaffold(
         topBar = {
             SiteTopAppBar(
-                title = { Text("Privacy") },
+                title = { Text(stringResource(R.string.privacy)) },
                 navigationIcon = { SiteBackButton(onClick = onBack) },
             )
         },
@@ -271,7 +274,7 @@ fun FapFolderPrivacySettingsScreen(onBack: () -> Unit) {
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                TextButton(onClick = { reloadTick++ }) { Text("Retry") }
+                TextButton(onClick = { reloadTick++ }) { Text(stringResource(R.string.retry)) }
             }
 
             else -> Column(
@@ -282,22 +285,22 @@ fun FapFolderPrivacySettingsScreen(onBack: () -> Unit) {
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                PrivacyChoice("Who can see your gender", settings.gender, !saving) {
+                PrivacyChoice(stringResource(R.string.fap_who_can_see_your_gender), settings.gender, !saving) {
                     settings = settings.copy(gender = it); message = null
                 }
-                PrivacyChoice("Who can see your birthdate", settings.birthdate, !saving) {
+                PrivacyChoice(stringResource(R.string.fap_who_can_see_your_birthdate), settings.birthdate, !saving) {
                     settings = settings.copy(birthdate = it); message = null
                 }
-                PrivacyChoice("Who can see your basic info", settings.basic, !saving) {
+                PrivacyChoice(stringResource(R.string.fap_who_can_see_your_basic_info), settings.basic, !saving) {
                     settings = settings.copy(basic = it); message = null
                 }
-                PrivacyChoice("Who can see your other info", settings.other, !saving) {
+                PrivacyChoice(stringResource(R.string.fap_who_can_see_your_other_info), settings.other, !saving) {
                     settings = settings.copy(other = it); message = null
                 }
-                PrivacyChoice("Who can see your photos", settings.photos, !saving) {
+                PrivacyChoice(stringResource(R.string.fap_who_can_see_your_photos), settings.photos, !saving) {
                     settings = settings.copy(photos = it); message = null
                 }
-                PrivacyChoice("Who can see your joined groups", settings.groups, !saving) {
+                PrivacyChoice(stringResource(R.string.fap_who_can_see_your_joined_groups), settings.groups, !saving) {
                     settings = settings.copy(groups = it); message = null
                 }
 
@@ -308,7 +311,7 @@ fun FapFolderPrivacySettingsScreen(onBack: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "Receive newsletter emails",
+                        text = stringResource(R.string.fap_receive_newsletter_emails),
                         style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier.weight(1f),
                     )
@@ -364,7 +367,7 @@ fun FapFolderPrivacySettingsScreen(onBack: () -> Unit) {
                             strokeWidth = 2.dp,
                         )
                     }
-                    Text(if (saving) "Saving…" else "Save changes")
+                    Text(if (saving) stringResource(R.string.fap_saving) else stringResource(R.string.fap_save_changes))
                 }
             }
         }
@@ -372,9 +375,9 @@ fun FapFolderPrivacySettingsScreen(onBack: () -> Unit) {
 }
 
 private fun visibilityLabel(value: String): String = when (value) {
-    FapFolderAccountRepo.VISIBILITY_FRIENDS -> "Friends"
-    FapFolderAccountRepo.VISIBILITY_ME -> "Just me"
-    else -> "Everyone"
+    FapFolderAccountRepo.VISIBILITY_FRIENDS -> applicationContext.getString(R.string.fap_friends)
+    FapFolderAccountRepo.VISIBILITY_ME -> applicationContext.getString(R.string.fap_just_me)
+    else -> applicationContext.getString(R.string.fap_everyone)
 }
 
 @Composable

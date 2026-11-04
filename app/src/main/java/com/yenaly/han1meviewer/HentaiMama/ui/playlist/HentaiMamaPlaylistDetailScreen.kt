@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.HentaiMama.ui.playlist
 
+import androidx.compose.ui.res.stringResource
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
@@ -111,13 +112,13 @@ fun HentaiMamaPlaylistDetailScreen(
                 title = {
                     Column {
                         Text(
-                            text = state.hero?.title ?: "Playlist",
+                            text = state.hero?.title ?: stringResource(R.string.play_list),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
                         if (state.totalPages > 1) {
                             Text(
-                                text = "Page ${state.page} / ${state.totalPages}",
+                                text = stringResource(R.string.hm_page_2, state.page, state.totalPages),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
@@ -128,7 +129,7 @@ fun HentaiMamaPlaylistDetailScreen(
                 navigationIcon = { SiteBackButton(onClick = onBack) },
                 actions = {
                     IconButton(onClick = { viewModel.loadDetail(playlistId) }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                        Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.site_refresh))
                     }
                 },
             )
@@ -141,19 +142,19 @@ fun HentaiMamaPlaylistDetailScreen(
         ) {
             when {
                 state.isInitialLoading && state.hero == null -> {
-                    SiteLoadingContent(message = "Loading playlist…")
+                    SiteLoadingContent(message = stringResource(R.string.hm_loading_playlist))
                 }
 
                 state.error != null && state.hero == null -> {
                     SiteErrorContent(
-                        message = state.error?.message ?: "Failed to load playlist",
+                        message = state.error?.message ?: stringResource(R.string.hm_failed_to_load_playlist),
                         onRetry = { viewModel.loadDetail(playlistId) },
                     )
                 }
 
                 state.hero == null -> {
                     SiteErrorContent(
-                        message = "Playlist not found",
+                        message = stringResource(R.string.hm_playlist_not_found),
                         onRetry = { viewModel.loadDetail(playlistId) },
                     )
                 }
@@ -188,13 +189,13 @@ fun HentaiMamaPlaylistDetailScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text(
-                                    text = "Episodes (${hero.videoCount ?: state.episodes.size})",
+                                    text = stringResource(R.string.hm_episodes_count, hero.videoCount ?: state.episodes.size),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     modifier = Modifier.weight(1f),
                                 )
                                 Text(
-                                    text = "Loaded ${state.episodes.size}",
+                                    text = stringResource(R.string.hm_loaded, state.episodes.size),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -239,7 +240,7 @@ fun HentaiMamaPlaylistDetailScreen(
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Text(
-                                        text = "No more episodes",
+                                        text = stringResource(R.string.hm_no_more_episodes),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -303,7 +304,7 @@ private fun PlaylistHeroBlock(
                 shape = RoundedCornerShape(8.dp),
             ) {
                 Text(
-                    text = "${hero.videoCount ?: 0} videos",
+                    text = stringResource(R.string.hm_videos, hero.videoCount ?: 0),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
@@ -343,7 +344,7 @@ private fun PlaylistHeroBlock(
                 )
             }
             Text(
-                text = "by ${hero.ownerName}",
+                text = stringResource(R.string.fap_by_user, hero.ownerName),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -364,7 +365,7 @@ private fun PlaylistHeroBlock(
                     modifier = Modifier.size(16.dp),
                 )
                 Text(
-                    text = hero.viewsRaw.ifBlank { "${hero.views ?: 0} views" },
+                    text = hero.viewsRaw.ifBlank { stringResource(R.string.s_view_times, hero.views ?: 0) },
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -422,7 +423,7 @@ private fun PlaylistHeroBlock(
                         modifier = Modifier.size(20.dp),
                     )
                     Spacer(Modifier.width(6.dp))
-                    Text("Play All", fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.hm_play_all), fontWeight = FontWeight.SemiBold)
                 }
             }
             Surface(
@@ -444,7 +445,7 @@ private fun PlaylistHeroBlock(
                         modifier = Modifier.size(20.dp),
                     )
                     Spacer(Modifier.width(6.dp))
-                    Text("Shuffle", fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.hm_shuffle), fontWeight = FontWeight.SemiBold)
                 }
             }
         }

@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.HentaiMama.ui.playlist
 
+import androidx.compose.ui.res.stringResource
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import com.yenaly.han1meviewer.ui.component.SiteEmptyContent
@@ -107,10 +108,10 @@ fun HentaiMamaPlaylistsScreen(
             SiteTopAppBar(
                 title = {
                     Column {
-                        Text("Playlists", maxLines = 1)
+                        Text(stringResource(R.string.hm_playlists_title), maxLines = 1)
                         if (uiState.totalPages > 1) {
                             Text(
-                                text = "Page ${uiState.page} / ${uiState.totalPages}",
+                                text = stringResource(R.string.hm_page_2, uiState.page, uiState.totalPages),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
@@ -121,7 +122,7 @@ fun HentaiMamaPlaylistsScreen(
                 navigationIcon = { SiteBackButton(onClick = onBack) },
                 actions = {
                     IconButton(onClick = { viewModel.loadIndex(uiState.sortKey) }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                        Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.site_refresh))
                     }
                 },
             )
@@ -134,18 +135,18 @@ fun HentaiMamaPlaylistsScreen(
         ) {
             when {
                 uiState.isInitialLoading && uiState.items.isEmpty() -> {
-                    SiteLoadingContent(message = "Loading playlists…")
+                    SiteLoadingContent(message = stringResource(R.string.hm_loading_playlists))
                 }
 
                 uiState.error != null && uiState.items.isEmpty() -> {
                     SiteErrorContent(
-                        message = uiState.error?.message ?: "Failed to load playlists",
+                        message = uiState.error?.message ?: stringResource(R.string.hm_failed_to_load_playlists),
                         onRetry = { viewModel.loadIndex(uiState.sortKey) },
                     )
                 }
 
                 uiState.items.isEmpty() -> {
-                    SiteEmptyContent(hint = "No playlists")
+                    SiteEmptyContent(hint = stringResource(R.string.hm_no_playlists))
                 }
 
                 else -> {
@@ -207,7 +208,7 @@ fun HentaiMamaPlaylistsScreen(
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Text(
-                                        text = "No more playlists",
+                                        text = stringResource(R.string.hm_no_more_playlists),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -235,7 +236,7 @@ private fun SortChips(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = "Sort by:",
+            text = stringResource(R.string.hm_sort_by),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -302,7 +303,7 @@ private fun PlaylistCardItem(
                     shape = RoundedCornerShape(8.dp),
                 ) {
                     Text(
-                        text = "${card.videoCount ?: 0} videos",
+                        text = stringResource(R.string.hm_videos, card.videoCount ?: 0),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.inverseOnSurface,
                         fontWeight = FontWeight.Bold,
@@ -343,7 +344,7 @@ private fun PlaylistCardItem(
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.Default.PlayArrow,
-                                contentDescription = "Play",
+                                contentDescription = stringResource(R.string.site_play),
                                 tint = MaterialTheme.colorScheme.onPrimary,
                                 modifier = Modifier.size(28.dp),
                             )
@@ -366,7 +367,7 @@ private fun PlaylistCardItem(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = "by ${card.ownerName}",
+                    text = stringResource(R.string.fap_by_user, card.ownerName),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,

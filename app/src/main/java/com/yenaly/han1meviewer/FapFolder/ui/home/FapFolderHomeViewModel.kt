@@ -10,8 +10,10 @@ import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderLoadMoreRequest
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderSuggestedCommunity
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderTrendingTag
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetworkRepo
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -326,7 +328,7 @@ class FapFolderHomeViewModel(application: Application) : AndroidViewModel(applic
                             isRefreshing = false,
                             isLoadingMore = false,
                             errorMessage = if (isSession) null
-                            else (msg ?: "Failed to load FapFolder."),
+                            else (msg ?: applicationContext.getString(R.string.fap_failed_to_load_fapfolder)),
                             sessionExpired = isSession,
                             filterSwitching = false,
                         )

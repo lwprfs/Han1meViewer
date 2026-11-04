@@ -13,7 +13,9 @@ import com.yenaly.han1meviewer.HentaiMama.data.model.SeriesDetailPage
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetworkRepo
 import com.yenaly.han1meviewer.HentaiMama.settings.HentaiMamaVideoSettings
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -185,7 +187,7 @@ class HentaiMamaVideoViewModel(application: Application) : AndroidViewModel(appl
         }
         Log.e(TAG, "loadEpisodeDetail: exhausted $MAX_PAGE_LOAD_ATTEMPTS attempts for $url")
         _pageState.value = VideoLoadingState.Error(
-            IllegalStateException("Could not load episode page after $MAX_PAGE_LOAD_ATTEMPTS attempts")
+            IllegalStateException(applicationContext.getString(R.string.hm_could_not_load_episode_page_after, MAX_PAGE_LOAD_ATTEMPTS))
         )
     }
 
@@ -388,7 +390,7 @@ class HentaiMamaVideoViewModel(application: Application) : AndroidViewModel(appl
             } catch (e: Exception) {
                 Log.e(TAG, "fetchMirrorLinks failed", e)
                 _extractionState.value = HentaiMamaExtractionState.Failed(
-                    e.message ?: "Extraction failed"
+                    e.message ?: applicationContext.getString(R.string.hm_extraction_failed)
                 )
             }
         }

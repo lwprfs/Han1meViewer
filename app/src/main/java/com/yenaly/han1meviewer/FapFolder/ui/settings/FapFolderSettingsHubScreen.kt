@@ -56,6 +56,7 @@ import com.yenaly.han1meviewer.FapFolder.data.local.FapFolderHistoryRepo
 import com.yenaly.han1meviewer.FapFolder.data.local.FapFolderSearchHistoryRepo
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.GlobalToasts
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.launch
 
 private data class FapFolderHubEntry(
@@ -88,7 +89,7 @@ fun FapFolderSettingsHubScreen(
         add(
             FapFolderHubEntry(
                 key = "cookies",
-                title = "Cookies & Session",
+                title = stringResource(R.string.fap_cookies_session),
                 subtitle = if (isLoggedIn) {
                     "Signed in · manage cookies or sign out"
                 } else {
@@ -103,8 +104,8 @@ fun FapFolderSettingsHubScreen(
             add(
                 FapFolderHubEntry(
                     key = "login",
-                    title = "Sign in",
-                    subtitle = "Log in with username & password",
+                    title = stringResource(R.string.site_sign_in),
+                    subtitle = stringResource(R.string.fap_log_in_with_username_password),
                     icon = Icons.AutoMirrored.Filled.Login,
                     onClick = onOpenLogin,
                 )
@@ -115,8 +116,8 @@ fun FapFolderSettingsHubScreen(
             add(
                 FapFolderHubEntry(
                     key = "followed_communities",
-                    title = "Followed Communities",
-                    subtitle = "Communities you follow on FapFolder",
+                    title = stringResource(R.string.drawer_followed_communities),
+                    subtitle = stringResource(R.string.fap_communities_you_follow_on_fapfolder),
                     icon = Icons.Filled.Groups,
                     onClick = onOpenFollowedCommunities,
                 )
@@ -125,8 +126,8 @@ fun FapFolderSettingsHubScreen(
             add(
                 FapFolderHubEntry(
                     key = "saved_posts",
-                    title = "Saved Posts",
-                    subtitle = "Posts you've saved on FapFolder",
+                    title = stringResource(R.string.fap_saved_posts_title),
+                    subtitle = stringResource(R.string.fap_posts_you_ve_saved_on_fapfolder),
                     icon = Icons.Filled.Bookmark,
                     onClick = onOpenSaved,
                 )
@@ -137,7 +138,7 @@ fun FapFolderSettingsHubScreen(
             FapFolderHubEntry(
                 key = "search_history",
                 title = "Search History",
-                subtitle = "Browse and re-run previous searches",
+                subtitle = stringResource(R.string.fap_browse_and_re_run_previous_searches),
                 icon = Icons.Filled.Search,
                 onClick = onOpenSearchHistory,
             )
@@ -146,8 +147,8 @@ fun FapFolderSettingsHubScreen(
         add(
             FapFolderHubEntry(
                 key = "clear_search_history",
-                title = "Clear Search History",
-                subtitle = "Remove local search history",
+                title = stringResource(R.string.fap_clear_search_history_2),
+                subtitle = stringResource(R.string.fap_remove_local_search_history),
                 icon = Icons.Filled.Search,
                 onClick = { showClearSearchDialog = true },
             )
@@ -156,8 +157,8 @@ fun FapFolderSettingsHubScreen(
         add(
             FapFolderHubEntry(
                 key = "watch_history",
-                title = "Watch History",
-                subtitle = "View and clear local post history",
+                title = stringResource(R.string.watch_history),
+                subtitle = stringResource(R.string.fap_view_and_clear_local_post_history),
                 icon = Icons.Filled.History,
                 onClick = onOpenHistory,
             )
@@ -166,8 +167,8 @@ fun FapFolderSettingsHubScreen(
         add(
             FapFolderHubEntry(
                 key = "clear_watch_history",
-                title = "Clear Watch History",
-                subtitle = "Remove every post in local watch history",
+                title = stringResource(R.string.fap_clear_watch_history_2),
+                subtitle = stringResource(R.string.fap_remove_every_post_in_local_watch),
                 icon = Icons.Filled.History,
                 onClick = { showClearHistoryDialog = true },
             )
@@ -176,8 +177,8 @@ fun FapFolderSettingsHubScreen(
         add(
             FapFolderHubEntry(
                 key = "search",
-                title = "Search",
-                subtitle = "Open FapFolder search",
+                title = stringResource(R.string.search),
+                subtitle = stringResource(R.string.fap_open_fapfolder_search),
                 icon = Icons.Filled.Search,
                 onClick = onOpenSearch,
             )
@@ -186,8 +187,8 @@ fun FapFolderSettingsHubScreen(
         add(
             FapFolderHubEntry(
                 key = "about",
-                title = "About FapFolder",
-                subtitle = "Site info, disclaimers, and credits",
+                title = stringResource(R.string.fap_about_fapfolder),
+                subtitle = stringResource(R.string.fap_site_info_disclaimers_and_credits),
                 icon = Icons.Filled.Info,
                 onClick = { showAboutDialog = true },
             )
@@ -197,7 +198,7 @@ fun FapFolderSettingsHubScreen(
     Scaffold(
         topBar = {
             SiteTopAppBar(
-                title = { Text("FapFolder Settings") },
+                title = { Text(stringResource(R.string.fap_fapfolder_settings)) },
                 navigationIcon = { SiteBackButton(onClick = onBack) },
             )
         },
@@ -258,11 +259,10 @@ fun FapFolderSettingsHubScreen(
     if (showClearHistoryDialog) {
         AlertDialog(
             onDismissRequest = { showClearHistoryDialog = false },
-            title = { Text("Clear watch history?") },
+            title = { Text(stringResource(R.string.fap_clear_watch_history)) },
             text = {
                 Text(
-                    "Every post in your FapFolder watch history will be removed. " +
-                            "This does not affect your FapFolder account."
+                    stringResource(R.string.fap_every_post_in_your_fapfolder_watch)
                 )
             },
             confirmButton = {
@@ -271,20 +271,20 @@ fun FapFolderSettingsHubScreen(
                     scope.launch {
                         runCatching { FapFolderHistoryRepo.deleteAll() }
                         GlobalToasts.show(
-                            "Watch history cleared",
+                            applicationContext.getString(R.string.fap_watch_history_cleared),
                             level = GlobalToasts.ToastLevel.SUCCESS,
                         )
                     }
                 }) {
                     Text(
-                        text = "Clear",
+                        text = stringResource(R.string.site_clear),
                         color = MaterialTheme.colorScheme.error,
                     )
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showClearHistoryDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             },
         )
@@ -293,10 +293,10 @@ fun FapFolderSettingsHubScreen(
     if (showClearSearchDialog) {
         AlertDialog(
             onDismissRequest = { showClearSearchDialog = false },
-            title = { Text("Clear search history?") },
+            title = { Text(stringResource(R.string.fap_clear_search_history)) },
             text = {
                 Text(
-                    "Every locally saved FapFolder search will be removed from this device."
+                    stringResource(R.string.fap_every_locally_saved_fapfolder_search_w_2)
                 )
             },
             confirmButton = {
@@ -304,19 +304,19 @@ fun FapFolderSettingsHubScreen(
                     showClearSearchDialog = false
                     FapFolderSearchHistoryRepo.clear()
                     GlobalToasts.show(
-                        "Search history cleared",
+                        applicationContext.getString(R.string.fap_search_history_cleared),
                         level = GlobalToasts.ToastLevel.SUCCESS,
                     )
                 }) {
                     Text(
-                        text = "Clear",
+                        text = stringResource(R.string.site_clear),
                         color = MaterialTheme.colorScheme.error,
                     )
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showClearSearchDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             },
         )
@@ -325,22 +325,15 @@ fun FapFolderSettingsHubScreen(
     if (showAboutDialog) {
         AlertDialog(
             onDismissRequest = { showAboutDialog = false },
-            title = { Text("About FapFolder") },
+            title = { Text(stringResource(R.string.fap_about_fapfolder)) },
             text = {
                 Text(
-                    "FapFolder (fapfolder.club) is an independent content aggregator " +
-                            "focused on leaked social media content. This app is a read-only " +
-                            "client: it renders the site's public pages, its own local watch " +
-                            "history, and nothing else. No data is sent back to any server " +
-                            "except what you explicitly post, and even that is disabled in " +
-                            "this client.\n\n" +
-                            "All content is uploaded by third parties. This app does not host " +
-                            "any content itself."
+                    stringResource(R.string.fap_fapfolder_fapfolder_club_is_an_indepen)
                 )
             },
             confirmButton = {
                 TextButton(onClick = { showAboutDialog = false }) {
-                    Text("Close")
+                    Text(stringResource(R.string.close))
                 }
             },
         )

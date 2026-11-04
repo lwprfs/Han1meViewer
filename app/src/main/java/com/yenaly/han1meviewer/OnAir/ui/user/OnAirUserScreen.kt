@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.OnAir.ui.user
 
+import androidx.compose.ui.res.stringResource
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
@@ -60,6 +62,7 @@ import com.yenaly.han1meviewer.logic.state.VideoLoadingState
 import com.yenaly.han1meviewer.ui.component.lazy.LazyVerticalGrid
 import com.yenaly.han1meviewer.ui.screen.rememberVideoGridColumns
 import com.yenaly.han1meviewer.ui.theme.SpacingNormal
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
@@ -150,7 +153,7 @@ fun OnAirUserScreen(
     LaunchedEffect(state) {
         val s = state
         if (s is VideoLoadingState.Error) {
-            onLoadFailure(s.throwable.message ?: "User profile failed")
+            onLoadFailure(s.throwable.message ?: applicationContext.getString(R.string.onair_user_profile_failed))
         }
     }
 
@@ -170,11 +173,11 @@ fun OnAirUserScreen(
             when (val s = state) {
                 is VideoLoadingState.Loading -> SiteLoadingContent()
                 is VideoLoadingState.Error -> SiteErrorContent(
-                    message = s.throwable.message ?: "Failed",
+                    message = s.throwable.message ?: stringResource(R.string.site_failed),
                     onRetry = { reloadTick++ },
                 )
                 is VideoLoadingState.NoContent -> SiteErrorContent(
-                    message = "User not found",
+                    message = stringResource(R.string.onair_user_not_found),
                     onRetry = { reloadTick++ },
                 )
                 is VideoLoadingState.Success -> {
@@ -213,7 +216,7 @@ fun OnAirUserScreen(
                                         modifier = Modifier.size(40.dp),
                                     )
                                     Text(
-                                        text = "No uploads yet",
+                                        text = stringResource(R.string.onair_no_uploads_yet),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -234,10 +237,10 @@ fun OnAirUserScreen(
 @Composable
 private fun UserHeader(profile: OnAirUserProfile) {
     val stats = buildList {
-        profile.followerCount?.let { add("$it" to "Followers") }
-        profile.followingCount?.let { add("$it" to "Following") }
-        profile.videoCount?.let { add("$it" to "Videos") }
-        profile.pictureCount?.let { add("$it" to "Pictures") }
+        profile.followerCount?.let { add("$it" to stringResource(R.string.site_followers)) }
+        profile.followingCount?.let { add("$it" to stringResource(R.string.site_following)) }
+        profile.videoCount?.let { add("$it" to stringResource(R.string.fap_tab_videos)) }
+        profile.pictureCount?.let { add("$it" to stringResource(R.string.drawer_pictures)) }
     }
     Column(
         modifier = Modifier
@@ -336,7 +339,7 @@ private fun UserHeader(profile: OnAirUserProfile) {
                                         modifier = Modifier.size(14.dp),
                                     )
                                     Text(
-                                        text = "You",
+                                        text = stringResource(R.string.onair_you),
                                         style = MaterialTheme.typography.labelMedium,
                                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                                         fontWeight = FontWeight.SemiBold,
@@ -395,7 +398,7 @@ private fun UserHeader(profile: OnAirUserProfile) {
             }
         }
         Text(
-            text = "Uploads",
+            text = stringResource(R.string.onair_uploads),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(start = 4.dp, top = 4.dp),

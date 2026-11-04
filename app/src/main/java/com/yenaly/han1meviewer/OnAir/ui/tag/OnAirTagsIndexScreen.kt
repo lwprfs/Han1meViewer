@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.OnAir.ui.tag
 
+import androidx.compose.ui.res.stringResource
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
@@ -54,6 +56,7 @@ import com.yenaly.han1meviewer.OnAir.data.remote.OnAirNetworkRepo
 import com.yenaly.han1meviewer.OnAir.ui.home.InfiniteScrollFooter
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.ui.component.lazy.LazyVerticalGrid
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
@@ -120,14 +123,14 @@ fun OnAirTagsIndexScreen(
     LaunchedEffect(state) {
         val s = state
         if (s is PageLoadingState.Error && tags.isEmpty()) {
-            onLoadFailure(s.throwable.message ?: "Tags load failed")
+            onLoadFailure(s.throwable.message ?: applicationContext.getString(R.string.onair_tags_load_failed))
         }
     }
 
     Scaffold(
         topBar = {
             SiteTopAppBar(
-                title = { Text("Tags") },
+                title = { Text(stringResource(R.string.drawer_tags)) },
                 navigationIcon = { SiteBackButton(onClick = onBack) },
             )
         },
@@ -169,7 +172,7 @@ fun OnAirTagsIndexScreen(
                                 )
                                 Box(modifier = Modifier.padding(start = 8.dp)) {
                                     if (query.isEmpty()) Text(
-                                        text = "Find a tag…",
+                                        text = stringResource(R.string.onair_find_a_tag),
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -180,7 +183,7 @@ fun OnAirTagsIndexScreen(
                     )
                 }
                 IconButton(onClick = { load(1, replace = true) }) {
-                    Icon(Icons.Default.Search, contentDescription = "Search")
+                    Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search))
                 }
             }
 
@@ -198,7 +201,7 @@ fun OnAirTagsIndexScreen(
                             load(1, replace = true)
                         }
                     },
-                    label = { Text("Most videos") },
+                    label = { Text(stringResource(R.string.onair_most_videos)) },
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                     ),
@@ -223,12 +226,12 @@ fun OnAirTagsIndexScreen(
                 state is PageLoadingState.Error && tags.isEmpty() -> {
                     val err = state as PageLoadingState.Error
                     SiteErrorContent(
-                        message = err.throwable.message ?: "Failed",
+                        message = err.throwable.message ?: stringResource(R.string.site_failed),
                         onRetry = { load(1, replace = true) },
                     )
                 }
                 tags.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No tags found")
+                    Text(stringResource(R.string.onair_no_tags_found))
                 }
                 else -> LazyVerticalGrid(
                     columns = GridCells.Adaptive(minSize = 140.dp),

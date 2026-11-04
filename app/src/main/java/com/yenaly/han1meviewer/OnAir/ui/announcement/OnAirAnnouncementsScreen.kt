@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.OnAir.ui.announcement
 
+import androidx.compose.ui.res.stringResource
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import com.yenaly.han1meviewer.ui.component.SiteEmptyContent
@@ -55,7 +57,7 @@ fun OnAirAnnouncementsScreen(
     Scaffold(
         topBar = {
             SiteTopAppBar(
-                title = { Text("Announcements") },
+                title = { Text(stringResource(R.string.onair_announcements_title)) },
                 navigationIcon = { SiteBackButton(onClick = onBack) },
             )
         },
@@ -68,12 +70,12 @@ fun OnAirAnnouncementsScreen(
             when (val s = state) {
                 is WebsiteState.Loading -> SiteLoadingContent()
                 is WebsiteState.Error -> SiteErrorContent(
-                    message = s.throwable.message ?: "Failed",
+                    message = s.throwable.message ?: stringResource(R.string.site_failed),
                     onRetry = { },
                 )
                 is WebsiteState.Success -> {
                     if (s.info.isEmpty()) {
-                        SiteEmptyContent(hint = "No announcements")
+                        SiteEmptyContent(hint = stringResource(R.string.onair_no_announcements))
                     } else {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
@@ -95,7 +97,7 @@ fun OnAirAnnouncementsScreen(
                                                     shape = RoundedCornerShape(6.dp),
                                                 ) {
                                                     Text(
-                                                        text = "Pinned",
+                                                        text = stringResource(R.string.onair_pinned),
                                                         style = MaterialTheme.typography.labelSmall,
                                                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                                                         modifier = Modifier.padding(
@@ -116,7 +118,7 @@ fun OnAirAnnouncementsScreen(
                                         entry.author?.let {
                                             Spacer(Modifier.padding(2.dp))
                                             Text(
-                                                text = "by $it",
+                                                text = stringResource(R.string.fap_by_user, it),
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )

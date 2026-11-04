@@ -41,6 +41,7 @@ import com.yenaly.han1meviewer.ui.component.SettingNavigationItem
 import com.yenaly.han1meviewer.ui.component.SettingSwitchItem
 import com.yenaly.han1meviewer.ui.component.lazy.LazyColumn
 import com.yenaly.han1meviewer.ui.preview.ComponentPreview
+import com.yenaly.yenaly_libs.utils.applicationContext
 
 data class NetworkSettingsUiState(
     val domainName: String,
@@ -235,7 +236,7 @@ fun NetworkSettingsScreen(
             item {
                 SettingInfoItem(
                     title = stringResource(R.string.domain_name),
-                    summary = "Javchu uses a fixed URL",
+                    summary = applicationContext.getString(R.string.site_javchu_uses_a_fixed_url),
                     valueText = "https://javchu.com",
                     iconRes = R.drawable.baseline_domain_24,
                 )

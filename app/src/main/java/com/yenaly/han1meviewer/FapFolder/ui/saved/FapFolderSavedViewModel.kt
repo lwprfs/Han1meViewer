@@ -9,8 +9,10 @@ import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderFeedItem
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderLoadMoreRequest
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderFeedPaging
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetworkRepo
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -90,7 +92,7 @@ class FapFolderSavedViewModel(application: Application) : AndroidViewModel(appli
                         _uiState.update {
                             it.copy(
                                 isLoading = false,
-                                errorMessage = msg ?: "Failed to load saved posts.",
+                                errorMessage = msg ?: applicationContext.getString(R.string.fap_failed_to_load_saved_posts_2),
                                 sessionExpired =
                                     msg?.contains("session", true) == true,
                             )

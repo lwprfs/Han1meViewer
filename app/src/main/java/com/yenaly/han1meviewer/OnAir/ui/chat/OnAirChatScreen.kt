@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.OnAir.ui.chat
 
+import androidx.compose.ui.res.stringResource
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import com.yenaly.han1meviewer.ui.component.SiteEmptyContent
@@ -81,7 +83,7 @@ fun OnAirChatScreen(
     Scaffold(
         topBar = {
             SiteTopAppBar(
-                title = { Text("Chat") },
+                title = { Text(stringResource(R.string.drawer_chat)) },
                 navigationIcon = { SiteBackButton(onClick = onBack) },
                 actions = {
                     if (uiState.isRefreshing) {
@@ -95,7 +97,7 @@ fun OnAirChatScreen(
                         IconButton(onClick = { viewModel.refresh() }) {
                             Icon(
                                 imageVector = Icons.Default.Refresh,
-                                contentDescription = "Refresh chat",
+                                contentDescription = stringResource(R.string.onair_refresh_chat),
                             )
                         }
                     }
@@ -112,10 +114,10 @@ fun OnAirChatScreen(
             when {
                 uiState.isLoading && uiState.messages.isEmpty() -> SiteLoadingContent()
                 uiState.loadError != null && uiState.messages.isEmpty() -> SiteErrorContent(
-                    message = uiState.loadError ?: "Failed",
+                    message = uiState.loadError ?: stringResource(R.string.site_failed),
                     onRetry = { viewModel.refresh(initial = true) },
                 )
-                uiState.messages.isEmpty() -> SiteEmptyContent(hint = "No chat messages yet")
+                uiState.messages.isEmpty() -> SiteEmptyContent(hint = stringResource(R.string.onair_no_chat_messages_yet))
                 else -> {
                     LazyColumn(
                         state = listState,
@@ -256,7 +258,7 @@ private fun ChatComposer(
                 value = draft,
                 onValueChange = onDraftChange,
                 modifier = Modifier.weight(1f),
-                placeholder = { Text("Say something…") },
+                placeholder = { Text(stringResource(R.string.onair_say_something)) },
                 maxLines = 4,
                 enabled = !isSending,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
@@ -286,7 +288,7 @@ private fun ChatComposer(
                 } else {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Send,
-                        contentDescription = "Send",
+                        contentDescription = stringResource(R.string.onair_send),
                         tint = if (draft.isNotBlank()) {
                             MaterialTheme.colorScheme.onPrimary
                         } else {

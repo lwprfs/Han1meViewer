@@ -35,12 +35,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yenaly.han1meviewer.OnAir.common.OnAirConstants
 import com.yenaly.han1meviewer.OnAir.data.model.OnAirMirrorStatus
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.util.formatRelativeTime
 
 @Composable
@@ -67,7 +69,7 @@ fun OnAirMirrorStatusCard(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "Mirror status",
+                    text = stringResource(R.string.onair_mirror_status),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f),
@@ -79,15 +81,13 @@ fun OnAirMirrorStatusCard(
                     )
                 } else {
                     IconButton(onClick = { viewModel.checkAll() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Check all")
+                        Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.onair_check_all))
                     }
                 }
             }
 
             Text(
-                text = "Uses TorWatch to check whether each mirror is reachable " +
-                        "through the Tor network. This does not expose your OnAir session " +
-                        "— TorWatch only sees the .onion address.",
+                text = stringResource(R.string.onair_uses_torwatch_to_check_whether_each),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -112,14 +112,14 @@ fun OnAirMirrorStatusCard(
             ) {
                 Icon(Icons.Default.SwapHoriz, contentDescription = null)
                 Spacer(Modifier.width(6.dp))
-                Text("Change website link")
+                Text(stringResource(R.string.onair_change_website_link))
             }
 
             TextButton(
                 onClick = onSwitchSite,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Open site switcher")
+                Text(stringResource(R.string.onair_open_site_switcher))
             }
         }
     }
@@ -127,7 +127,7 @@ fun OnAirMirrorStatusCard(
     if (showPicker) {
         AlertDialog(
             onDismissRequest = { showPicker = false },
-            title = { Text("Choose OnAir mirror") },
+            title = { Text(stringResource(R.string.onair_choose_onair_mirror)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     hosts.forEach { host ->
@@ -150,7 +150,7 @@ fun OnAirMirrorStatusCard(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showPicker = false }) { Text("Close") }
+                TextButton(onClick = { showPicker = false }) { Text(stringResource(R.string.close)) }
             },
         )
     }
@@ -158,22 +158,20 @@ fun OnAirMirrorStatusCard(
     pendingSwitchHost?.let { target ->
         AlertDialog(
             onDismissRequest = { pendingSwitchHost = null },
-            title = { Text("Switch OnAir mirror?") },
+            title = { Text(stringResource(R.string.onair_switch_onair_mirror)) },
             text = {
                 Text(
-                    "This will switch the active mirror to:\n\n$target\n\n" +
-                            "OnAir network will be rebuilt and you may need to sign in again " +
-                            "if the session cookies are not valid on this mirror.",
+                    stringResource(R.string.onair_this_will_switch_the_active_mirror, target),
                 )
             },
             confirmButton = {
                 TextButton(onClick = {
                     pendingSwitchHost = null
                     viewModel.switchTo(target)
-                }) { Text("Confirm") }
+                }) { Text(stringResource(R.string.confirm)) }
             },
             dismissButton = {
-                TextButton(onClick = { pendingSwitchHost = null }) { Text("Cancel") }
+                TextButton(onClick = { pendingSwitchHost = null }) { Text(stringResource(R.string.cancel)) }
             },
         )
     }
@@ -195,19 +193,19 @@ private fun MirrorStatusRow(
     when (val s = status) {
         null -> {
             dotColor = MaterialTheme.colorScheme.outlineVariant
-            label = "Not checked"
+            label = stringResource(R.string.onair_not_checked)
             detail = null
             isChecking = false
         }
         is OnAirMirrorStatus.Checking -> {
             dotColor = MaterialTheme.colorScheme.primary
-            label = "Checking…"
+            label = stringResource(R.string.site_checking)
             detail = null
             isChecking = true
         }
         is OnAirMirrorStatus.Online -> {
             dotColor = Color(0xFF2E7D32)
-            label = "Online"
+            label = stringResource(R.string.online)
             detail = listOfNotNull(
                 s.httpCode?.let { "HTTP $it" },
                 s.detail.takeIf { it.isNotBlank() },
@@ -217,7 +215,7 @@ private fun MirrorStatusRow(
         }
         is OnAirMirrorStatus.Offline -> {
             dotColor = MaterialTheme.colorScheme.error
-            label = "Offline / unreachable"
+            label = stringResource(R.string.onair_offline_unreachable)
             detail = listOfNotNull(
                 s.reason,
                 formatRelativeTime(s.checkedAt),
@@ -226,7 +224,7 @@ private fun MirrorStatusRow(
         }
         is OnAirMirrorStatus.Error -> {
             dotColor = MaterialTheme.colorScheme.error
-            label = "Check failed"
+            label = stringResource(R.string.onair_check_failed)
             detail = listOfNotNull(s.message, formatRelativeTime(s.checkedAt)).joinToString(" · ")
             isChecking = false
         }
@@ -266,7 +264,7 @@ private fun MirrorStatusRow(
                 if (isSelected) {
                     Icon(
                         Icons.Default.Check,
-                        contentDescription = "Selected",
+                        contentDescription = stringResource(R.string.onair_selected),
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(16.dp),
                     )
@@ -278,7 +276,7 @@ private fun MirrorStatusRow(
                         strokeWidth = 2.dp,
                     )
                 } else {
-                    TextButton(onClick = onCheck) { Text("Check") }
+                    TextButton(onClick = onCheck) { Text(stringResource(R.string.onair_check)) }
                 }
             }
             Row {

@@ -96,7 +96,7 @@ fun FapFolderHistoryScreen(
                 title = {
                     val count = uiState.totalCount
                     Text(
-                        text = if (count > 0) "Watch History ($count)" else "Watch History",
+                        text = if (count > 0) stringResource(R.string.fap_watch_history, count) else stringResource(R.string.watch_history),
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -107,14 +107,14 @@ fun FapFolderHistoryScreen(
                     IconButton(onClick = { viewModel.refresh() }) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
-                            contentDescription = "Refresh",
+                            contentDescription = stringResource(R.string.site_refresh),
                         )
                     }
                     if (uiState.entries.isNotEmpty()) {
                         IconButton(onClick = { showClearDialog = true }) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
-                                contentDescription = "Clear all",
+                                contentDescription = stringResource(R.string.watch_history_clear_all),
                             )
                         }
                     }
@@ -134,7 +134,7 @@ fun FapFolderHistoryScreen(
                 ) { CircularProgressIndicator() }
 
                 uiState.errorMessage != null && uiState.entries.isEmpty() -> HistoryError(
-                    message = uiState.errorMessage ?: "Failed to load history.",
+                    message = uiState.errorMessage ?: stringResource(R.string.fap_failed_to_load_history),
                     onRetry = { viewModel.refresh() },
                 )
 
@@ -145,7 +145,7 @@ fun FapFolderHistoryScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "Nothing watched yet.",
+                        text = stringResource(R.string.fap_nothing_watched_yet),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -207,11 +207,10 @@ fun FapFolderHistoryScreen(
     if (showClearDialog) {
         AlertDialog(
             onDismissRequest = { showClearDialog = false },
-            title = { Text("Clear watch history?") },
+            title = { Text(stringResource(R.string.fap_clear_watch_history)) },
             text = {
                 Text(
-                    "Every post in your FapFolder watch history will be removed. " +
-                            "This does not affect your FapFolder account."
+                    stringResource(R.string.fap_every_post_in_your_fapfolder_watch)
                 )
             },
             confirmButton = {
@@ -219,11 +218,11 @@ fun FapFolderHistoryScreen(
                     showClearDialog = false
                     viewModel.clearAll()
                 }) {
-                    Text("Clear", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.site_clear), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showClearDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showClearDialog = false }) { Text(stringResource(R.string.cancel)) }
             },
         )
     }
@@ -231,18 +230,18 @@ fun FapFolderHistoryScreen(
     pendingDelete?.let { entry ->
         AlertDialog(
             onDismissRequest = { pendingDelete = null },
-            title = { Text("Remove from history?") },
+            title = { Text(stringResource(R.string.site_remove_from_history)) },
             text = { Text(entry.title.take(120)) },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteEntry(entry.postId)
                     pendingDelete = null
                 }) {
-                    Text("Remove", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.remove), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { pendingDelete = null }) { Text("Cancel") }
+                TextButton(onClick = { pendingDelete = null }) { Text(stringResource(R.string.cancel)) }
             },
         )
     }
@@ -307,7 +306,7 @@ private fun HistoryCard(
                         color = MaterialTheme.colorScheme.primary,
                     ) {
                         Text(
-                            text = "Watched",
+                            text = stringResource(R.string.played),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
@@ -318,7 +317,7 @@ private fun HistoryCard(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = entry.title.ifBlank { "Untitled" },
+                    text = entry.title.ifBlank { stringResource(R.string.site_untitled) },
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 2,
@@ -360,7 +359,7 @@ private fun HistoryCard(
                         onClick = onRestart,
                         contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
                     ) {
-                        Text("Resume", style = MaterialTheme.typography.labelMedium)
+                        Text(stringResource(R.string.site_resume), style = MaterialTheme.typography.labelMedium)
                     }
                     Spacer(Modifier.width(2.dp))
                     TextButton(
@@ -368,7 +367,7 @@ private fun HistoryCard(
                         contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
                     ) {
                         Text(
-                            "Remove",
+                            stringResource(R.string.remove),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.error,
                         )
@@ -389,7 +388,7 @@ private fun HistoryError(message: String, onRetry: () -> Unit) {
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = "Failed to load history",
+                text = stringResource(R.string.site_failed_to_load_history),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.error,
             )
@@ -400,7 +399,7 @@ private fun HistoryError(message: String, onRetry: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(12.dp))
-            TextButton(onClick = onRetry) { Text("Retry") }
+            TextButton(onClick = onRetry) { Text(stringResource(R.string.retry)) }
         }
     }
 }

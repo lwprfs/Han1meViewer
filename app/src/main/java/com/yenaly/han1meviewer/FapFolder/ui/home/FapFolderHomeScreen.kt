@@ -63,6 +63,7 @@ import com.yenaly.han1meviewer.ui.component.SelectableTag
 import com.yenaly.han1meviewer.ui.component.SiteBarIconButton
 import com.yenaly.han1meviewer.ui.component.SiteSearchTopBar
 import com.yenaly.han1meviewer.ui.component.SiteSwitchButton
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -145,7 +146,7 @@ fun FapFolderHomeScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             SiteSearchTopBar(
-                hint = "Search FapFolder",
+                hint = applicationContext.getString(R.string.fap_search_fapfolder),
                 onSearchClick = { onOpenSearch(null) },
                 leading = {
                     SiteBarIconButton(
@@ -209,7 +210,7 @@ fun FapFolderHomeScreen(
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Text(
-                                        text = uiState.errorMessage ?: "Failed to load",
+                                        text = uiState.errorMessage ?: stringResource(R.string.site_failed_to_load),
                                         color = MaterialTheme.colorScheme.error,
                                         style = MaterialTheme.typography.bodyMedium,
                                     )
@@ -220,7 +221,7 @@ fun FapFolderHomeScreen(
                                             .padding(8.dp),
                                     ) {
                                         Text(
-                                            text = "Retry",
+                                            text = stringResource(R.string.retry),
                                             color = MaterialTheme.colorScheme.primary,
                                             fontWeight = FontWeight.SemiBold,
                                         )
@@ -293,17 +294,17 @@ private fun HomeTabRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         SelectableTag(
-            text = "My Feed",
+            text = stringResource(R.string.fap_my_feed),
             selected = activeTab == FapFolderHomeTab.MY_FEED,
             onClick = { onSelect(FapFolderHomeTab.MY_FEED) },
         )
         SelectableTag(
-            text = "Hot",
+            text = stringResource(R.string.fap_hot),
             selected = activeTab == FapFolderHomeTab.HOT,
             onClick = { onSelect(FapFolderHomeTab.HOT) },
         )
         SelectableTag(
-            text = "Discover",
+            text = stringResource(R.string.fap_discover),
             selected = activeTab == FapFolderHomeTab.DISCOVER,
             onClick = { onSelect(FapFolderHomeTab.DISCOVER) },
         )
@@ -433,7 +434,7 @@ private fun FeedList(
                         color = MaterialTheme.colorScheme.surfaceContainerLow,
                     ) {
                         Text(
-                            text = "There is no more data to show",
+                            text = stringResource(R.string.fap_there_is_no_more_data_to),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
@@ -451,7 +452,7 @@ private fun FeedList(
 }
 
 private fun emptyTextForTab(tab: FapFolderHomeTab): String = when (tab) {
-    FapFolderHomeTab.MY_FEED -> "Your feed is empty. Follow some creators to see posts here."
-    FapFolderHomeTab.HOT -> "Nothing trending right now."
-    FapFolderHomeTab.DISCOVER -> "Nothing to discover yet."
+    FapFolderHomeTab.MY_FEED -> applicationContext.getString(R.string.fap_your_feed_is_empty_follow_some)
+    FapFolderHomeTab.HOT -> applicationContext.getString(R.string.fap_nothing_trending_right_now)
+    FapFolderHomeTab.DISCOVER -> applicationContext.getString(R.string.fap_nothing_to_discover_yet)
 }

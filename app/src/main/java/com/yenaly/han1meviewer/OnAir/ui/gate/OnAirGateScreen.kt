@@ -40,6 +40,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.R
@@ -59,20 +60,20 @@ fun OnAirGateScreen(
             state is OnAirGateState.CheckingTor ||
             state is OnAirGateState.Probing
     val headline = when (state) {
-        OnAirGateState.Initializing -> "Getting ready"
-        OnAirGateState.CheckingTor -> "Checking Tor"
-        OnAirGateState.Probing -> "Validating session"
+        OnAirGateState.Initializing -> stringResource(R.string.onair_getting_ready)
+        OnAirGateState.CheckingTor -> stringResource(R.string.onair_checking_tor)
+        OnAirGateState.Probing -> stringResource(R.string.onair_validating_session)
         OnAirGateState.Passed -> ""
         is OnAirGateState.TorBlocked -> "Tor connection required"
-        is OnAirGateState.ContentError -> "OnAir is not ready"
+        is OnAirGateState.ContentError -> stringResource(R.string.onair_onair_is_not_ready)
     }
     val subtitle = when (state) {
-        OnAirGateState.Initializing -> "Preparing the OnAir workspace…"
-        OnAirGateState.CheckingTor -> "Making sure your traffic goes through Tor…"
-        OnAirGateState.Probing -> "Confirming your OnAir session is still valid…"
+        OnAirGateState.Initializing -> stringResource(R.string.onair_preparing_the_onair_workspace)
+        OnAirGateState.CheckingTor -> stringResource(R.string.onair_making_sure_your_traffic_goes_through)
+        OnAirGateState.Probing -> stringResource(R.string.onair_confirming_your_onair_session_is_still)
         OnAirGateState.Passed -> ""
-        is OnAirGateState.TorBlocked -> "OnAir only works over the Tor network."
-        is OnAirGateState.ContentError -> "We could not load the site right now."
+        is OnAirGateState.TorBlocked -> stringResource(R.string.onair_onair_only_works_over_the_tor)
+        is OnAirGateState.ContentError -> stringResource(R.string.onair_we_could_not_load_the_site)
     }
 
     Box(
@@ -134,7 +135,7 @@ fun OnAirGateScreen(
             when (state) {
                 is OnAirGateState.TorBlocked -> {
                     ReasonCard(
-                        title = "Tor not detected",
+                        title = stringResource(R.string.onair_tor_not_detected),
                         reason = state.reason,
                         container = MaterialTheme.colorScheme.errorContainer,
                         content = MaterialTheme.colorScheme.onErrorContainer,
@@ -143,19 +144,19 @@ fun OnAirGateScreen(
                         onClick = onRetry,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        ButtonLabel(Icons.Default.Refresh, "Retry")
+                        ButtonLabel(Icons.Default.Refresh, stringResource(R.string.retry))
                     }
                     SecondaryActions(
                         onSwitchSite = onSwitchSite,
                         onOpenCookies = onOpenCookies,
                         onOpenSettings = onOpenSettings,
-                        cookiesLabel = "Cookies",
+                        cookiesLabel = stringResource(R.string.site_cookies),
                     )
                 }
 
                 is OnAirGateState.ContentError -> {
                     ReasonCard(
-                        title = "Cannot load OnAir",
+                        title = stringResource(R.string.onair_cannot_load_onair),
                         reason = state.reason,
                         container = MaterialTheme.colorScheme.tertiaryContainer,
                         content = MaterialTheme.colorScheme.onTertiaryContainer,
@@ -166,14 +167,14 @@ fun OnAirGateScreen(
                     ) {
                         ButtonLabel(
                             Icons.Default.Refresh,
-                            if (state.suggestWait) "Retry later" else "Retry",
+                            if (state.suggestWait) stringResource(R.string.site_retry_later) else stringResource(R.string.retry),
                         )
                     }
                     SecondaryActions(
                         onSwitchSite = if (state.suggestSwitchSite) onSwitchSite else null,
                         onOpenCookies = onOpenCookies,
                         onOpenSettings = onOpenSettings,
-                        cookiesLabel = if (state.suggestRelogin) "Sign in / cookies" else "Cookies",
+                        cookiesLabel = if (state.suggestRelogin) "Sign in / cookies" else stringResource(R.string.site_cookies),
                     )
                 }
 
@@ -201,8 +202,8 @@ private fun StepCard(torDone: Boolean, torActive: Boolean, sessionActive: Boolea
             modifier = Modifier.padding(SpacingLarge),
             verticalArrangement = Arrangement.spacedBy(SpacingNormal),
         ) {
-            StepRow("Tor connection", done = torDone, active = torActive)
-            StepRow("Session check", done = false, active = sessionActive)
+            StepRow(stringResource(R.string.onair_tor_connection), done = torDone, active = torActive)
+            StepRow(stringResource(R.string.onair_session_check), done = false, active = sessionActive)
         }
     }
 }
@@ -308,7 +309,7 @@ private fun SecondaryActions(
                 onClick = onSwitchSite,
                 modifier = Modifier.weight(1f),
             ) {
-                ButtonLabel(Icons.Default.SwapHoriz, "Switch site")
+                ButtonLabel(Icons.Default.SwapHoriz, stringResource(R.string.site_switch_site))
             }
         }
     }
@@ -316,7 +317,7 @@ private fun SecondaryActions(
         TextButton(onClick = openSettings) {
             Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(SpacingNormal))
-            Text("App settings")
+            Text(stringResource(R.string.onair_app_settings))
         }
     }
 }

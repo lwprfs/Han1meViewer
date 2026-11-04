@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="site_drawer_section_browse">Browse</string>
-    <string name="site_drawer_section_library">Library</string>
-    <string name="site_drawer_section_account">Account</string>
-    <string name="site_drawer_section_customize">Customize</string>
-    <string name="site_drawer_section_app">App</string>
+    <string name="site_drawer_section_browse">瀏覽</string>
+    <string name="site_drawer_section_library">資料庫</string>
+    <string name="site_drawer_section_account">帳號</string>
+    <string name="site_drawer_section_customize">自訂</string>
+    <string name="site_drawer_section_app">應用程式</string>
 </resources>

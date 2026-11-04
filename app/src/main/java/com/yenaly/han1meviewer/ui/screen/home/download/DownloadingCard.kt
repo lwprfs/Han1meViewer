@@ -292,7 +292,7 @@ private fun DownloadFailurePanel(item: HanimeDownloadEntity) {
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text(
-                text = failure?.message ?: "Download failed.",
+                text = failure?.message ?: stringResource(R.string.download_failed),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onErrorContainer,
             )
@@ -303,7 +303,7 @@ private fun DownloadFailurePanel(item: HanimeDownloadEntity) {
                         HanimeDownloadWorker.Args.fromEntity(item),
                         redownload = true,
                     )
-                }) { Text("Redownload") }
+                }) { Text(stringResource(R.string.redownload)) }
                 if (isOnAir) {
                     TextButton(
                         enabled = !checking,
@@ -320,12 +320,12 @@ private fun DownloadFailurePanel(item: HanimeDownloadEntity) {
                                 )
                             }
                         },
-                    ) { Text(if (checking) "Checking…" else "Check Tor") }
+                    ) { Text(if (checking) stringResource(R.string.site_checking) else stringResource(R.string.check_tor)) }
                     TextButton(onClick = {
                         runCatching {
                             NavigationManager.getNavController()?.navigateSafely(OnAirCookieRoute)
                         }
-                    }) { Text("Cookies") }
+                    }) { Text(stringResource(R.string.site_cookies)) }
                 }
             }
         }

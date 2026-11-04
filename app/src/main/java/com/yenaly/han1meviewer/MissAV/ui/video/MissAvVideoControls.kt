@@ -84,6 +84,7 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import coil3.compose.AsyncImage
 import com.yenaly.han1meviewer.ui.component.content.ErrorContent
+import com.yenaly.yenaly_libs.utils.applicationContext
 import java.io.File
 import java.io.InputStream
 import java.nio.charset.StandardCharsets
@@ -390,7 +391,7 @@ fun MissAvVideoPlayer(
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
                         Text(
-                            text = "Resume from ${MissAvVideoUtils.formatTime(savedPosition)}?",
+                            text = stringResource(R.string.site_resume_from, MissAvVideoUtils.formatTime(savedPosition)),
                             style = MaterialTheme.typography.titleMedium,
                             color = Color.White,
                         )
@@ -401,7 +402,7 @@ fun MissAvVideoPlayer(
                                 shape = RoundedCornerShape(8.dp),
                             ) {
                                 Text(
-                                    text = "Resume",
+                                    text = stringResource(R.string.site_resume),
                                     modifier = Modifier.padding(
                                         horizontal = 32.dp,
                                         vertical = 12.dp,
@@ -416,7 +417,7 @@ fun MissAvVideoPlayer(
                                 shape = RoundedCornerShape(8.dp),
                             ) {
                                 Text(
-                                    text = "Start Over",
+                                    text = stringResource(R.string.missav_start_over),
                                     modifier = Modifier.padding(
                                         horizontal = 24.dp,
                                         vertical = 12.dp,
@@ -475,7 +476,7 @@ fun MissAvVideoPlayer(
                         IconButton(onClick = onSubtitleToggle, modifier = Modifier.size(32.dp)) {
                             Icon(
                                 if (hasSubtitle) Icons.Filled.ClosedCaption else Icons.Filled.Subtitles,
-                                contentDescription = if (hasSubtitle) "Remove Subtitle" else "Add Subtitle",
+                                contentDescription = if (hasSubtitle) stringResource(R.string.missav_remove_subtitle) else stringResource(R.string.missav_add_subtitle),
                                 tint = if (hasSubtitle) Color.Green else Color.White,
                             )
                         }
@@ -487,7 +488,7 @@ fun MissAvVideoPlayer(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator()
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("Loading resolutions...", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.missav_loading_resolutions), style = MaterialTheme.typography.bodySmall)
                 }
             }
         } else if (isExtractingUrl) {
@@ -562,19 +563,19 @@ fun MissAvVideoPlayer(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator()
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("Extracting video URL...", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.missav_extracting_video_url), style = MaterialTheme.typography.bodySmall)
                 }
             }
         } else if (extractionFailed) {
             ErrorContent(
-                message = "Failed to extract video URL",
+                message = applicationContext.getString(R.string.missav_failed_to_extract_video_url),
                 onRetry = onRetryExtraction,
             )
         } else {
             if (coverUrl.isNotEmpty()) {
                 AsyncImage(
                     model = coverUrl,
-                    contentDescription = "Video cover",
+                    contentDescription = applicationContext.getString(R.string.missav_video_cover),
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
                 )
@@ -586,7 +587,7 @@ fun MissAvVideoPlayer(
                     containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
                 ),
             ) {
-                Icon(Icons.Filled.PlayArrow, "Play", modifier = Modifier.size(36.dp))
+                Icon(Icons.Filled.PlayArrow, stringResource(R.string.site_play), modifier = Modifier.size(36.dp))
             }
         }
     }

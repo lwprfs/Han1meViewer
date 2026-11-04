@@ -47,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -56,9 +57,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.yenaly.han1meviewer.FapFolder.common.FapFolderConstants
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderAccountRepo
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.GlobalToasts
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -99,15 +102,15 @@ fun FapFolderRegisterScreen(
     fun submit() {
         if (isSubmitting) return
         val validation = when {
-            username.isBlank() -> "Enter a username."
+            username.isBlank() -> applicationContext.getString(R.string.fap_enter_a_username)
             !Regex("^[A-Za-z0-9.]+$").matches(username.trim()) ->
-                "Username can only contain letters, numbers and periods."
-            email.isBlank() || !email.contains('@') -> "Enter a valid email address."
+                applicationContext.getString(R.string.fap_username_can_only_contain_letters_numb)
+            email.isBlank() || !email.contains('@') -> applicationContext.getString(R.string.fap_enter_a_valid_email_address)
             !email.trim().equals(email2.trim(), ignoreCase = true) ->
-                "The two email addresses do not match."
-            password.length < 6 -> "Password must be at least 6 characters."
-            !agree -> "You must confirm you are 18+ and accept the Terms & Rules."
-            captchaToken.isNullOrBlank() -> "Complete the security check first."
+                applicationContext.getString(R.string.fap_the_two_email_addresses_do_not)
+            password.length < 6 -> applicationContext.getString(R.string.fap_password_must_be_at_least_6)
+            !agree -> applicationContext.getString(R.string.fap_you_must_confirm_you_are_18)
+            captchaToken.isNullOrBlank() -> applicationContext.getString(R.string.fap_complete_the_security_check_first)
             else -> null
         }
         if (validation != null) {
@@ -131,7 +134,7 @@ fun FapFolderRegisterScreen(
             when (result) {
                 is FapFolderAccountRepo.RegisterResult.LoggedIn -> {
                     GlobalToasts.show(
-                        "Account created",
+                        applicationContext.getString(R.string.fap_account_created),
                         level = GlobalToasts.ToastLevel.SUCCESS,
                     )
                     onRegistered()
@@ -150,7 +153,7 @@ fun FapFolderRegisterScreen(
     Scaffold(
         topBar = {
             SiteTopAppBar(
-                title = { Text("Create account") },
+                title = { Text(stringResource(R.string.site_create_account)) },
                 navigationIcon = { SiteBackButton(onClick = onBack) },
             )
         },
@@ -177,14 +180,13 @@ fun FapFolderRegisterScreen(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Text(
-                        text = "Join FapFolder",
+                        text = stringResource(R.string.fap_join_fapfolder),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
                     Text(
-                        text = "Create a free fapfolder.club account. Use a real email " +
-                                "address — you may need it to activate the account.",
+                        text = stringResource(R.string.fap_create_a_free_fapfolder_club_account),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f),
                     )
@@ -194,8 +196,8 @@ fun FapFolderRegisterScreen(
             OutlinedTextField(
                 value = username,
                 onValueChange = { username = it; errorMessage = null },
-                label = { Text("Username") },
-                supportingText = { Text("Letters, numbers and periods only") },
+                label = { Text(stringResource(R.string.username)) },
+                supportingText = { Text(stringResource(R.string.fap_letters_numbers_and_periods_only)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 enabled = !isSubmitting,
@@ -203,7 +205,7 @@ fun FapFolderRegisterScreen(
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it; errorMessage = null },
-                label = { Text("Email (specify carefully)") },
+                label = { Text(stringResource(R.string.fap_email_specify_carefully)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 enabled = !isSubmitting,
@@ -212,7 +214,7 @@ fun FapFolderRegisterScreen(
             OutlinedTextField(
                 value = email2,
                 onValueChange = { email2 = it; errorMessage = null },
-                label = { Text("Repeat email") },
+                label = { Text(stringResource(R.string.fap_repeat_email)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 enabled = !isSubmitting,
@@ -221,7 +223,7 @@ fun FapFolderRegisterScreen(
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it; errorMessage = null },
-                label = { Text("Password") },
+                label = { Text(stringResource(R.string.password)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 enabled = !isSubmitting,
@@ -238,7 +240,7 @@ fun FapFolderRegisterScreen(
                             } else {
                                 Icons.Filled.Visibility
                             },
-                            contentDescription = if (passwordVisible) "Hide" else "Show",
+                            contentDescription = if (passwordVisible) stringResource(R.string.fap_hide) else stringResource(R.string.fap_show),
                         )
                     }
                 },
@@ -261,18 +263,17 @@ fun FapFolderRegisterScreen(
                     enabled = !isSubmitting,
                 )
                 Text(
-                    text = "I certify that I am 18 years of age or older, and agree to the " +
-                            "Terms & Rules",
+                    text = stringResource(R.string.fap_i_certify_that_i_am_18),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 TextButton(onClick = { openUrl(FapFolderConstants.BASE_URL + "static/terms") }) {
-                    Text("Terms")
+                    Text(stringResource(R.string.fap_terms))
                 }
                 TextButton(onClick = { openUrl(FapFolderConstants.BASE_URL + "static/rules") }) {
-                    Text("Rules")
+                    Text(stringResource(R.string.fap_rules))
                 }
             }
 
@@ -323,9 +324,9 @@ fun FapFolderRegisterScreen(
                             .size(16.dp),
                         strokeWidth = 2.dp,
                     )
-                    Text("Creating account…")
+                    Text(stringResource(R.string.fap_creating_account))
                 } else {
-                    Text("Sign up")
+                    Text(stringResource(R.string.fap_sign_up))
                 }
             }
 
@@ -334,13 +335,13 @@ fun FapFolderRegisterScreen(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !isSubmitting,
             ) {
-                Text("Already have an account? Sign in")
+                Text(stringResource(R.string.fap_already_have_an_account_sign_in))
             }
             TextButton(
                 onClick = { openUrl(FapFolderConstants.BASE_URL + FapFolderAccountRepo.PATH_SIGNUP) },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Open sign-up in browser instead")
+                Text(stringResource(R.string.fap_open_sign_up_in_browser_instead))
             }
         }
     }

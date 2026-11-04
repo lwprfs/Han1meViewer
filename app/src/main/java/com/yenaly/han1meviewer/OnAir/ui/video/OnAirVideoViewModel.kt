@@ -9,7 +9,9 @@ import com.yenaly.han1meviewer.OnAir.data.model.OnAirVideoDetail
 import com.yenaly.han1meviewer.OnAir.data.model.StreamResult
 import com.yenaly.han1meviewer.OnAir.data.remote.OnAirNetworkRepo
 import com.yenaly.han1meviewer.OnAir.data.remote.OnAirStreamFetcher
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -143,7 +145,7 @@ class OnAirVideoViewModel(application: Application) : AndroidViewModel(applicati
                             it.copy(
                                 isLoading = false,
                                 hasError = true,
-                                errorMessage = "Video not found",
+                                errorMessage = applicationContext.getString(R.string.onair_video_not_found),
                             )
                         }
                     }
@@ -262,7 +264,7 @@ class OnAirVideoViewModel(application: Application) : AndroidViewModel(applicati
         _playerState.update {
             it.copy(
                 hasError = true,
-                errorMessage = "No playable quality available for this video",
+                errorMessage = applicationContext.getString(R.string.onair_no_playable_quality_available_for_this),
                 isLoading = false,
             )
         }
@@ -298,7 +300,7 @@ class OnAirVideoViewModel(application: Application) : AndroidViewModel(applicati
                             quality to QualityStream(
                                 quality = quality,
                                 state = StreamState.Error,
-                                errorMessage = "Quality $quality unavailable",
+                                errorMessage = applicationContext.getString(R.string.onair_quality_unavailable, quality),
                             )
                             ),
                 )
@@ -486,7 +488,7 @@ class OnAirVideoViewModel(application: Application) : AndroidViewModel(applicati
             updated[quality] = QualityStream(
                 quality = quality,
                 state = StreamState.Error,
-                errorMessage = reason ?: "Quality $quality unavailable",
+                errorMessage = reason ?: applicationContext.getString(R.string.onair_quality_unavailable, quality),
             )
             qualityCache.remove(quality)
 

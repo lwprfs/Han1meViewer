@@ -217,7 +217,7 @@ fun SiteSettingsHubScreen(
                 .padding(padding),
             contentPadding = PaddingValues(bottom = 24.dp),
         ) {
-            item { HubSectionTitle("App appearance") }
+            item { HubSectionTitle(stringResource(R.string.site_app_appearance)) }
             item {
                 SettingNavigationItem(
                     title = stringResource(R.string.dark_theme),
@@ -234,8 +234,8 @@ fun SiteSettingsHubScreen(
             }
             item {
                 SettingSwitchItem(
-                    title = "Pure black dark mode",
-                    summary = "Use a pure black background on OLED screens",
+                    title = stringResource(R.string.site_pure_black_dark_mode),
+                    summary = stringResource(R.string.site_use_a_pure_black_background_on),
                     checked = Preferences.pureBlackDarkMode,
                     onCheckedChange = { enabled ->
                         if (enabled != Preferences.pureBlackDarkMode) {
@@ -254,11 +254,11 @@ fun SiteSettingsHubScreen(
                 )
             }
 
-            item { HubSectionTitle("Layout & column count") }
+            item { HubSectionTitle(stringResource(R.string.site_layout_column_count)) }
             item {
                 SettingNavigationItem(
-                    title = "Video grid columns",
-                    summary = "Columns of search / list grids by screen width",
+                    title = stringResource(R.string.site_video_grid_columns),
+                    summary = stringResource(R.string.site_columns_of_search_list_grids_by),
                     valueText = listOf(
                         gridConfig.compactColumns,
                         gridConfig.mediumColumns,
@@ -270,8 +270,8 @@ fun SiteSettingsHubScreen(
             }
             item {
                 SettingNavigationItem(
-                    title = "Cards per row",
-                    summary = "Number of cards visible in horizontal home rows",
+                    title = stringResource(R.string.site_cards_per_row),
+                    summary = stringResource(R.string.site_number_of_cards_visible_in_horizontal),
                     valueText = listOf(
                         cardConfig.narrowCount,
                         cardConfig.compactCount,
@@ -282,13 +282,13 @@ fun SiteSettingsHubScreen(
                 )
             }
 
-            item { HubSectionTitle("All app settings") }
+            item { HubSectionTitle(stringResource(R.string.site_all_app_settings)) }
             item {
                 HubRow(
                     SiteSettingsEntry(
                         key = "app_settings",
                         title = stringResource(R.string.settings),
-                        subtitle = "Playback, language, backup, cache, update and everything else",
+                        subtitle = stringResource(R.string.site_playback_language_backup_cache_update),
                         icon = Icons.Default.Settings,
                         onClick = onOpenAppSettings,
                     )
@@ -308,20 +308,20 @@ fun SiteSettingsHubScreen(
             }
 
             if (siteEntries.isNotEmpty()) {
-                item { HubSectionTitle("${CrossSiteNavigator.siteLabel(site)} settings") }
+                item { HubSectionTitle(stringResource(R.string.site_settings_2, CrossSiteNavigator.siteLabel(site))) }
                 items(siteEntries.size, key = { siteEntries[it].key }) { index ->
                     HubRow(siteEntries[index])
                 }
             }
 
             if (onOpenUnifiedHistory != null) {
-                item { HubSectionTitle("History") }
+                item { HubSectionTitle(stringResource(R.string.site_history)) }
                 item {
                     HubRow(
                         SiteSettingsEntry(
                             key = "unified_history",
-                            title = "Watch history · all sites",
-                            subtitle = "Touch an item of another site to switch site, check the connection and open its video page",
+                            title = stringResource(R.string.site_watch_history_all_sites),
+                            subtitle = stringResource(R.string.site_touch_an_item_of_another_site),
                             icon = Icons.Default.History,
                             onClick = onOpenUnifiedHistory,
                         )

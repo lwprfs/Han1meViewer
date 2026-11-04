@@ -25,14 +25,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.FapFolder.common.FapFolderUrlUtils
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderPost
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderCommentParser
 import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderCommentCard
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.ui.component.LoadMoreFooter
+import com.yenaly.yenaly_libs.utils.applicationContext
 
 internal fun LazyListScope.fapFolderCommentItems(
     post: FapFolderPost,
@@ -81,7 +84,7 @@ internal fun LazyListScope.fapFolderCommentItems(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text(
-                    text = "Comments",
+                    text = stringResource(R.string.comment),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                 )
@@ -101,9 +104,9 @@ internal fun LazyListScope.fapFolderCommentItems(
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(
-                    "Recent" to FapFolderCommentParser.FILTER_MOST_RECENT,
-                    "Top" to FapFolderCommentParser.FILTER_TOP,
-                    "All" to FapFolderCommentParser.FILTER_ALL,
+                    applicationContext.getString(R.string.fap_recent) to FapFolderCommentParser.FILTER_MOST_RECENT,
+                    applicationContext.getString(R.string.fap_top) to FapFolderCommentParser.FILTER_TOP,
+                    applicationContext.getString(R.string.site_all) to FapFolderCommentParser.FILTER_ALL,
                 ).forEach { (label, filter) ->
                     CommentFilterChip(
                         label = label,
@@ -130,8 +133,8 @@ internal fun LazyListScope.fapFolderCommentItems(
         uiState.comments.isEmpty() && uiState.commentsError != null -> {
             item(key = "comments_error") {
                 PostErrorBlock(
-                    title = "Failed to load comments",
-                    message = uiState.commentsError ?: "Unknown error",
+                    title = applicationContext.getString(R.string.fap_failed_to_load_comments),
+                    message = uiState.commentsError ?: applicationContext.getString(R.string.unknown_error),
                     onRetry = { viewModel.loadMoreComments() },
                 )
             }
@@ -156,7 +159,7 @@ internal fun LazyListScope.fapFolderCommentItems(
                             modifier = Modifier.size(32.dp),
                         )
                         Text(
-                            text = "No comments yet",
+                            text = stringResource(R.string.fap_no_comments_yet),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

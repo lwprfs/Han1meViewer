@@ -133,8 +133,8 @@ fun MissAvNavHost(
                     ),
                     SiteSettingsEntry(
                         key = "video_quality",
-                        title = "Video Resolution",
-                        subtitle = "Choose Auto or a fixed starting resolution",
+                        title = stringResource(R.string.missav_video_resolution),
+                        subtitle = stringResource(R.string.missav_choose_auto_or_a_fixed_starting),
                         icon = Icons.Default.HighQuality,
                         onClick = { navController.navigateSafely(MissAvQualitySettingsRoute) },
                     ),

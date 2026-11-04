@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="site_drawer_section_browse">Browse</string>
+    <string name="site_drawer_section_library">Library</string>
+    <string name="site_drawer_section_account">Account</string>
+    <string name="site_drawer_section_customize">Customize</string>
+    <string name="site_drawer_section_app">App</string>
+</resources>

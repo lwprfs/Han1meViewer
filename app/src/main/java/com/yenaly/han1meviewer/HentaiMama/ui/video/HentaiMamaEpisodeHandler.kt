@@ -20,9 +20,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.HentaiMama.data.model.EpisodeInfo
+import com.yenaly.han1meviewer.R
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -58,8 +60,8 @@ fun HentaiMamaEpisodeHandler(
             ) {
                 views?.let { MetaInfoItem(icon = Icons.Rounded.PlayArrow, iconSize = 16, text = it.toString()) }
                 studio?.let { MetaInfoItem(icon = null, text = it) }
-                airedOn?.let { MetaInfoItem(icon = Icons.Rounded.Schedule, text = "Aired $it") }
-                addedOn?.let { MetaInfoItem(icon = Icons.Rounded.Schedule, text = "Added $it") }
+                airedOn?.let { MetaInfoItem(icon = Icons.Rounded.Schedule, text = stringResource(R.string.hm_aired, it)) }
+                addedOn?.let { MetaInfoItem(icon = Icons.Rounded.Schedule, text = stringResource(R.string.hm_added, it)) }
             }
         }
     }

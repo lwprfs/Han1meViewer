@@ -103,7 +103,7 @@ fun FapFolderSavedScreen(
             SiteTopAppBar(
                 title = {
                     Text(
-                        text = "Saved Posts",
+                        text = stringResource(R.string.fap_saved_posts_title),
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -114,7 +114,7 @@ fun FapFolderSavedScreen(
                     IconButton(onClick = { viewModel.refresh() }) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
-                            contentDescription = "Refresh",
+                            contentDescription = stringResource(R.string.site_refresh),
                         )
                     }
                 },
@@ -141,7 +141,7 @@ fun FapFolderSavedScreen(
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text = "Failed to load saved posts",
+                                text = stringResource(R.string.fap_failed_to_load_saved_posts),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.error,
                             )
@@ -153,7 +153,7 @@ fun FapFolderSavedScreen(
                             )
                             Spacer(Modifier.height(12.dp))
                             TextButton(onClick = { viewModel.refresh() }) {
-                                Text("Retry")
+                                Text(stringResource(R.string.retry))
                             }
                         }
                     }
@@ -167,7 +167,7 @@ fun FapFolderSavedScreen(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = "You haven't saved any posts yet.",
+                            text = stringResource(R.string.fap_you_haven_t_saved_any_posts),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

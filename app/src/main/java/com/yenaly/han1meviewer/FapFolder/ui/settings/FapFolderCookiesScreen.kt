@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.FapFolder.ui.settings
 
+import androidx.compose.ui.res.stringResource
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import androidx.compose.foundation.background
@@ -63,6 +65,7 @@ import com.yenaly.han1meviewer.FapFolder.data.local.FapFolderProfileCache
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderUserProfile
 import com.yenaly.han1meviewer.FapFolder.ui.gate.FapFolderGateState
 import com.yenaly.han1meviewer.ui.component.GlobalToasts
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.launch
 import androidx.compose.ui.platform.LocalClipboard
 
@@ -100,7 +103,7 @@ fun FapFolderCookiesScreen(
             loggingOut = false
             showLogoutDialog = false
             profile = null
-            GlobalToasts.show("Logged out", level = GlobalToasts.ToastLevel.SUCCESS)
+            GlobalToasts.show(applicationContext.getString(R.string.site_logged_out), level = GlobalToasts.ToastLevel.SUCCESS)
             onLoggedOut?.invoke()
         }
     }
@@ -108,14 +111,14 @@ fun FapFolderCookiesScreen(
     Scaffold(
         topBar = {
             SiteTopAppBar(
-                title = { Text("Cookies") },
+                title = { Text(stringResource(R.string.site_cookies)) },
                 navigationIcon = { SiteBackButton(onClick = onBack) },
                 actions = {
                     IconButton(onClick = { profile = FapFolderProfileCache.current() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                        Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.site_refresh))
                     }
                     IconButton(onClick = onSwitchSite) {
-                        Icon(Icons.Default.SwapHoriz, contentDescription = "Switch site")
+                        Icon(Icons.Default.SwapHoriz, contentDescription = stringResource(R.string.site_switch_site))
                     }
                     if (hasCookies) {
                         TextButton(onClick = {
@@ -128,7 +131,7 @@ fun FapFolderCookiesScreen(
                                 "Cookies copied",
                                 level = GlobalToasts.ToastLevel.SUCCESS,
                             )
-                        }) { Text("Copy") }
+                        }) { Text(stringResource(R.string.copy_)) }
                     }
                 },
             )
@@ -164,7 +167,7 @@ fun FapFolderCookiesScreen(
                         verticalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         Text(
-                            text = "FapFolder needs attention",
+                            text = stringResource(R.string.fap_fapfolder_needs_attention),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onTertiaryContainer,
@@ -178,12 +181,12 @@ fun FapFolderCookiesScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            OutlinedButton(onClick = onCookiesSaved) { Text("Retry") }
+                            OutlinedButton(onClick = onCookiesSaved) { Text(stringResource(R.string.retry)) }
                             if (gateState.suggestSwitchSite) {
-                                Button(onClick = onSwitchSite) { Text("Switch site") }
+                                Button(onClick = onSwitchSite) { Text(stringResource(R.string.site_switch_site)) }
                             }
                             if (gateState.suggestRelogin) {
-                                Button(onClick = onOpenLogin) { Text("Sign in") }
+                                Button(onClick = onOpenLogin) { Text(stringResource(R.string.site_sign_in)) }
                             }
                         }
                     }
@@ -198,20 +201,18 @@ fun FapFolderCookiesScreen(
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
-                        text = "Supported formats",
+                        text = stringResource(R.string.site_supported_formats),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
-                        text = "• JSON (exported from browser dev tools)\n" +
-                                "• Netscape (cookies.txt)\n" +
-                                "• Raw string (name=value; name2=value2)",
+                        text = stringResource(R.string.site_json_exported_from_browser_dev_tools),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     val format = FapFolderCookieManager.detectFormat(cookieInput)
                     Text(
-                        text = "Detected format: ${format.name}",
+                        text = stringResource(R.string.site_detected_format, format.name),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary,
                     )
@@ -221,8 +222,8 @@ fun FapFolderCookiesScreen(
             OutlinedTextField(
                 value = cookieInput,
                 onValueChange = { cookieInput = it },
-                label = { Text("Cookies") },
-                placeholder = { Text("Paste cookies here…") },
+                label = { Text(stringResource(R.string.site_cookies)) },
+                placeholder = { Text(stringResource(R.string.site_paste_cookies_here)) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 200.dp, max = 400.dp),
@@ -265,12 +266,12 @@ fun FapFolderCookiesScreen(
                             strokeWidth = 2.dp,
                         )
                     }
-                    Text("Validate & Save")
+                    Text(stringResource(R.string.site_validate_save))
                 }
                 TextButton(
                     onClick = { showClearDialog = true },
                     enabled = hasCookies,
-                ) { Text("Clear") }
+                ) { Text(stringResource(R.string.site_clear)) }
             }
         }
     }
@@ -278,15 +279,15 @@ fun FapFolderCookiesScreen(
     if (showSavedDialog) {
         AlertDialog(
             onDismissRequest = { showSavedDialog = false },
-            title = { Text("Cookies saved") },
+            title = { Text(stringResource(R.string.site_cookies_saved)) },
             text = {
-                Text("Cookies have been applied. FapFolder will now load using your session.")
+                Text(stringResource(R.string.fap_cookies_have_been_applied_fapfolder_wi))
             },
             confirmButton = {
                 TextButton(onClick = {
                     showSavedDialog = false
                     onCookiesSaved()
-                }) { Text("OK") }
+                }) { Text(stringResource(R.string.site_ok)) }
             },
         )
     }
@@ -294,9 +295,9 @@ fun FapFolderCookiesScreen(
     if (showClearDialog) {
         AlertDialog(
             onDismissRequest = { showClearDialog = false },
-            title = { Text("Clear cookies") },
+            title = { Text(stringResource(R.string.site_clear_cookies)) },
             text = {
-                Text("This will remove the saved FapFolder cookies. You will need to log in again.")
+                Text(stringResource(R.string.fap_this_will_remove_the_saved_fapfolder))
             },
             confirmButton = {
                 TextButton(onClick = {
@@ -307,11 +308,11 @@ fun FapFolderCookiesScreen(
                     cookieInput = ""
                     GlobalToasts.show("Cookies cleared", level = GlobalToasts.ToastLevel.INFO)
                 }) {
-                    Text("Clear", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.site_clear), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showClearDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showClearDialog = false }) { Text(stringResource(R.string.cancel)) }
             },
         )
     }
@@ -319,8 +320,8 @@ fun FapFolderCookiesScreen(
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { if (!loggingOut) showLogoutDialog = false },
-            title = { Text("Log out of FapFolder?") },
-            text = { Text("Your session cookies will be removed from this device.") },
+            title = { Text(stringResource(R.string.fap_log_out_of_fapfolder)) },
+            text = { Text(stringResource(R.string.site_your_session_cookies_will_be_removed)) },
             confirmButton = {
                 TextButton(
                     onClick = { performLogout() },
@@ -332,7 +333,7 @@ fun FapFolderCookiesScreen(
                             strokeWidth = 2.dp,
                         )
                     } else {
-                        Text("Log out", color = MaterialTheme.colorScheme.error)
+                        Text(stringResource(R.string.logout), color = MaterialTheme.colorScheme.error)
                     }
                 }
             },
@@ -340,7 +341,7 @@ fun FapFolderCookiesScreen(
                 TextButton(
                     onClick = { showLogoutDialog = false },
                     enabled = !loggingOut,
-                ) { Text("Cancel") }
+                ) { Text(stringResource(R.string.cancel)) }
             },
         )
     }
@@ -418,7 +419,7 @@ private fun SignedInCard(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = profile?.displayName
-                                ?: if (hasCookies) "Signed in" else "Not signed in",
+                                ?: if (hasCookies) stringResource(R.string.site_signed_in) else stringResource(R.string.site_not_signed_in),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold,
                             maxLines = 1,
@@ -462,7 +463,7 @@ private fun SignedInCard(
                             modifier = Modifier.size(16.dp),
                         )
                         Spacer(Modifier.width(6.dp))
-                        Text("Refresh")
+                        Text(stringResource(R.string.site_refresh))
                     }
                     Button(
                         onClick = onLogout,
@@ -478,17 +479,17 @@ private fun SignedInCard(
                             modifier = Modifier.size(16.dp),
                         )
                         Spacer(Modifier.width(6.dp))
-                        Text("Log out")
+                        Text(stringResource(R.string.logout))
                     }
                 } else {
                     Button(
                         onClick = onOpenLogin,
                         modifier = Modifier.weight(1f),
-                    ) { Text("Log in") }
+                    ) { Text(stringResource(R.string.site_log_in)) }
                     OutlinedButton(
                         onClick = onOpenRegister,
                         modifier = Modifier.weight(1f),
-                    ) { Text("Create account") }
+                    ) { Text(stringResource(R.string.site_create_account)) }
                 }
             }
         }

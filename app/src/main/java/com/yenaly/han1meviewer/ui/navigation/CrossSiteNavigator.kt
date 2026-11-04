@@ -7,11 +7,13 @@ import com.yenaly.han1meviewer.MissAV.common.MissAvConstants
 import com.yenaly.han1meviewer.OnAir.data.remote.OnAirTorChecker
 import com.yenaly.han1meviewer.OnAir.data.remote.TorFailure
 import com.yenaly.han1meviewer.Preferences
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.USER_AGENT
 import com.yenaly.han1meviewer.logic.network.HDns
 import com.yenaly.han1meviewer.logic.network.HProxySelector
 import com.yenaly.han1meviewer.ui.navigation.settings.SettingsPreferenceKeys
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -87,7 +89,7 @@ object CrossSiteNavigator {
 
             else -> tor.message.ifBlank { "Tor is required to access OnAir." }
         }
-        return Validation.Failed(title = "Tor not connected", message = message)
+        return Validation.Failed(title = applicationContext.getString(R.string.onair_tor_not_connected), message = message)
     }
 
     private suspend fun validateReachable(site: SiteType): Validation =
@@ -103,26 +105,24 @@ object CrossSiteNavigator {
                 client.newCall(request).execute().use { Validation.Ok }
             } catch (e: SocketTimeoutException) {
                 Validation.Failed(
-                    title = "Connection timed out",
-                    message = "${siteLabel(site)} ($url) did not answer in time. " +
-                            "Check your connection, VPN or DNS settings and retry.",
+                    title = applicationContext.getString(R.string.site_connection_timed_out),
+                    message = applicationContext.getString(R.string.site_did_not_answer_in_time_check, siteLabel(site), url),
                 )
             } catch (e: UnknownHostException) {
                 Validation.Failed(
-                    title = "Cannot resolve host",
-                    message = "The address of ${siteLabel(site)} ($url) could not be resolved. " +
-                            "Check your connection or DNS-over-HTTPS settings and retry.",
+                    title = applicationContext.getString(R.string.site_cannot_resolve_host),
+                    message = applicationContext.getString(R.string.site_the_address_of_could_not_be, siteLabel(site), url),
                 )
             } catch (e: IOException) {
                 Validation.Failed(
-                    title = "Connection failed",
-                    message = "Could not connect to ${siteLabel(site)} ($url): " +
+                    title = applicationContext.getString(R.string.site_connection_failed),
+                    message = applicationContext.getString(R.string.site_could_not_connect_to, siteLabel(site), url) + " " +
                             (e.message ?: e.javaClass.simpleName),
                 )
             } catch (e: IllegalArgumentException) {
                 Validation.Failed(
-                    title = "Invalid address",
-                    message = "The configured address for ${siteLabel(site)} is not valid: $url",
+                    title = applicationContext.getString(R.string.site_invalid_address),
+                    message = applicationContext.getString(R.string.site_the_configured_address_for_is_not, siteLabel(site), url),
                 )
             }
         }

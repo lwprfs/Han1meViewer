@@ -1,4 +1,6 @@
 package com.yenaly.han1meviewer.MissAV.ui.home
+import androidx.compose.ui.res.stringResource
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import android.content.Context
@@ -85,7 +87,7 @@ fun MissAvHostSettingsScreen(
     Scaffold(
         topBar = {
             SiteTopAppBar(
-                title = { Text("Host / Mirror") },
+                title = { Text(stringResource(R.string.drawer_host_mirror)) },
                 navigationIcon = { SiteBackButton(onClick = onBack) },
             )
         },
@@ -96,7 +98,7 @@ fun MissAvHostSettingsScreen(
                 .padding(paddingValues)
         ) {
             Text(
-                text = "Choose which MissAV hostname the app uses. Switching is instant; in-flight requests finish on the current host.",
+                text = stringResource(R.string.missav_choose_which_missav_hostname_the_app),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -123,9 +125,9 @@ fun MissAvHostSettingsScreen(
     pendingSwitch?.let { target ->
         AlertDialog(
             onDismissRequest = { pendingSwitch = null },
-            title = { Text("Switch host") },
+            title = { Text(stringResource(R.string.missav_switch_host)) },
             text = {
-                Text("Switch to ${target.label}? The current page will refresh against the new host.")
+                Text(stringResource(R.string.missav_switch_to_the_current_page_will, target.label))
             },
             confirmButton = {
                 TextButton(onClick = {
@@ -133,12 +135,12 @@ fun MissAvHostSettingsScreen(
                     current = target
                     pendingSwitch = null
                 }) {
-                    Text("Switch")
+                    Text(stringResource(R.string.missav_switch))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { pendingSwitch = null }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             },
         )

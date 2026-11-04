@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.HentaiMama.ui.history
 
+import androidx.compose.ui.res.stringResource
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import com.yenaly.han1meviewer.ui.component.SiteEmptyContent
@@ -69,6 +70,7 @@ import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
 import com.yenaly.han1meviewer.util.formatRelativeTime
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
@@ -115,12 +117,12 @@ fun HentaiMamaHistoryScreen(
     Scaffold(
         topBar = {
             SiteTopAppBar(
-                title = { Text("History") },
+                title = { Text(stringResource(R.string.site_history)) },
                 navigationIcon = { SiteBackButton(onClick = onBack) },
                 actions = {
                     if (uiState.items.isNotEmpty()) {
                         IconButton(onClick = { showDeleteAllDialog = true }) {
-                            Icon(Icons.Default.DeleteSweep, contentDescription = "Delete all")
+                            Icon(Icons.Default.DeleteSweep, contentDescription = stringResource(R.string.site_delete_all))
                         }
                     }
                 },
@@ -140,7 +142,7 @@ fun HentaiMamaHistoryScreen(
 
                 uiState.error != null && uiState.items.isEmpty() -> {
                     SiteErrorContent(
-                        message = uiState.error?.message ?: "Failed to load history",
+                        message = uiState.error?.message ?: stringResource(R.string.site_failed_to_load_history),
                         onRetry = { viewModel.refresh() },
                     )
                 }
@@ -152,11 +154,11 @@ fun HentaiMamaHistoryScreen(
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             SiteEmptyContent(
-                                hint = "No watch history yet",
+                                hint = stringResource(R.string.watch_history_empty_title),
                                 subHint = "Videos you watch will show up here.",
                             )
                             TextButton(onClick = onBrowseHome) {
-                                Text("Browse home")
+                                Text(stringResource(R.string.hm_browse_home))
                             }
                         }
                     }
@@ -215,7 +217,7 @@ fun HentaiMamaHistoryScreen(
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Text(
-                                        text = "No more history",
+                                        text = stringResource(R.string.site_no_more_history),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -231,22 +233,22 @@ fun HentaiMamaHistoryScreen(
     pendingDeleteVideoCode?.let { code: String ->
         AlertDialog(
             onDismissRequest = { pendingDeleteVideoCode = null },
-            title = { Text("Delete history entry") },
-            text = { Text("Remove this series from your watch history?") },
+            title = { Text(stringResource(R.string.hm_delete_history_entry)) },
+            text = { Text(stringResource(R.string.hm_remove_this_series_from_your_watch)) },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteItem(code)
                     pendingDeleteVideoCode = null
                     coroutineScope.launch {
-                        snackbarHostState.showSnackbar("History entry removed")
+                        snackbarHostState.showSnackbar(applicationContext.getString(R.string.hm_history_entry_removed))
                     }
                 }) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { pendingDeleteVideoCode = null }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             },
         )
@@ -255,11 +257,10 @@ fun HentaiMamaHistoryScreen(
     if (showDeleteAllDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteAllDialog = false },
-            title = { Text("Delete all history") },
+            title = { Text(stringResource(R.string.site_delete_all_history)) },
             text = {
                 Text(
-                    "This will remove every entry from your watch history. " +
-                            "This cannot be undone."
+                    stringResource(R.string.hm_this_will_remove_every_entry_from)
                 )
             },
             confirmButton = {
@@ -267,15 +268,15 @@ fun HentaiMamaHistoryScreen(
                     viewModel.deleteAll()
                     showDeleteAllDialog = false
                     coroutineScope.launch {
-                        snackbarHostState.showSnackbar("History cleared")
+                        snackbarHostState.showSnackbar(applicationContext.getString(R.string.hm_history_cleared))
                     }
                 }) {
-                    Text("Delete all", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.site_delete_all), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteAllDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             },
         )
@@ -312,7 +313,7 @@ private fun HistorySwipeRow(
             ) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete",
+                    contentDescription = stringResource(R.string.delete),
                     tint = MaterialTheme.colorScheme.onErrorContainer,
                 )
             }
@@ -431,7 +432,7 @@ private fun HistoryCard(
 
                 if (item.watchDuration > 0) {
                     Text(
-                        text = "Watched ${formatDuration(item.watchDuration)}",
+                        text = stringResource(R.string.hm_watched, formatDuration(item.watchDuration)),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -447,7 +448,7 @@ private fun HistoryCard(
                     )
                 } else if (item.completed) {
                     Text(
-                        text = "✓ Completed",
+                        text = stringResource(R.string.site_completed),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary,
                     )

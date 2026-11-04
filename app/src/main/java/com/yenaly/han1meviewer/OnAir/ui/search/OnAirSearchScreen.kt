@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.OnAir.ui.search
 
+import androidx.compose.ui.res.stringResource
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
 import com.yenaly.han1meviewer.ui.component.SiteErrorContent
 import androidx.compose.foundation.background
@@ -76,6 +78,7 @@ import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.ui.component.lazy.LazyVerticalGrid
 import com.yenaly.han1meviewer.ui.screen.rememberVideoGridColumns
 import com.yenaly.han1meviewer.ui.theme.SpacingNormal
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
@@ -145,7 +148,7 @@ fun OnAirSearchScreen(
     LaunchedEffect(state) {
         val s = state
         if (s is PageLoadingState.Error && results.isEmpty()) {
-            onLoadFailure(s.throwable.message ?: "Search failed")
+            onLoadFailure(s.throwable.message ?: applicationContext.getString(R.string.site_search_failed))
         }
     }
 
@@ -207,35 +210,35 @@ fun OnAirSearchScreen(
 
         val filterChips = buildList {
             if (tagFilter != null) {
-                add("Tag: $tagFilter" to {
+                add(stringResource(R.string.onair_tag, tagFilter) to {
                     viewModel.setTagFilter(null)
                     runSearch()
                 })
             }
             if (field != OnAirConstants.SEARCH_FIELD_TITLE) {
                 val label = OnAirOptions.searchFields.firstOrNull { it.value == field }?.label ?: field
-                add("Field: $label" to {
+                add(stringResource(R.string.onair_field, label) to {
                     viewModel.setField(OnAirConstants.SEARCH_FIELD_TITLE)
                     runSearch()
                 })
             }
             if (length != OnAirConstants.LENGTH_ANY) {
                 val label = OnAirOptions.lengths.firstOrNull { it.value == length }?.label ?: length
-                add("Length: $label" to {
+                add(stringResource(R.string.onair_length, label) to {
                     viewModel.setLength(OnAirConstants.LENGTH_ANY)
                     runSearch()
                 })
             }
             if (date != OnAirConstants.DATE_ANY) {
                 val label = OnAirOptions.dates.firstOrNull { it.value == date }?.label ?: date
-                add("Date: $label" to {
+                add(stringResource(R.string.onair_date, label) to {
                     viewModel.setDate(OnAirConstants.DATE_ANY)
                     runSearch()
                 })
             }
             if (sort != OnAirConstants.SORT_NEWEST) {
                 val label = OnAirOptions.sorts.firstOrNull { it.value == sort }?.label ?: sort
-                add("Sort: $label" to {
+                add(stringResource(R.string.site_sort_3, label) to {
                     viewModel.setSort(OnAirConstants.SORT_NEWEST)
                     runSearch()
                 })
@@ -272,7 +275,7 @@ fun OnAirSearchScreen(
                             viewModel.reset()
                             history = OnAirSearchHistoryRepo.load()
                         },
-                        label = { Text("Clear all") },
+                        label = { Text(stringResource(R.string.watch_history_clear_all)) },
                         colors = AssistChipDefaults.assistChipColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant,
                         ),
@@ -285,7 +288,7 @@ fun OnAirSearchScreen(
             !hasSearched -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
-                        text = "Type to search, or tap Filters.",
+                        text = stringResource(R.string.onair_type_to_search_or_tap_filters),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(32.dp),
@@ -299,7 +302,7 @@ fun OnAirSearchScreen(
 
             state is PageLoadingState.Error && results.isEmpty() -> {
                 SiteErrorContent(
-                    message = (state as PageLoadingState.Error).throwable.message ?: "Failed",
+                    message = (state as PageLoadingState.Error).throwable.message ?: stringResource(R.string.site_failed),
                     onRetry = { runSearch() },
                 )
             }
@@ -307,7 +310,7 @@ fun OnAirSearchScreen(
             results.isEmpty() -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
-                        text = "No results found",
+                        text = stringResource(R.string.search_no_results),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -367,7 +370,7 @@ private fun SearchTopBar(
             IconButton(onClick = onBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
+                    contentDescription = stringResource(R.string.back),
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
@@ -399,7 +402,7 @@ private fun SearchTopBar(
                         ) {
                             if (query.isEmpty()) {
                                 Text(
-                                    text = "Search OnAir…",
+                                    text = stringResource(R.string.onair_search_onair_2),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -413,7 +416,7 @@ private fun SearchTopBar(
                 IconButton(onClick = onClear) {
                     Icon(
                         imageVector = Icons.Default.Clear,
-                        contentDescription = "Clear",
+                        contentDescription = stringResource(R.string.site_clear),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -421,21 +424,21 @@ private fun SearchTopBar(
             IconButton(onClick = onSearch) {
                 Icon(
                     imageVector = Icons.Default.Search,
-                    contentDescription = "Search",
+                    contentDescription = stringResource(R.string.search),
                     tint = MaterialTheme.colorScheme.primary,
                 )
             }
             IconButton(onClick = onOpenFilters) {
                 Icon(
                     imageVector = Icons.Default.FilterList,
-                    contentDescription = "Filters",
+                    contentDescription = stringResource(R.string.onair_filters),
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
             IconButton(onClick = onOpenHistory) {
                 Icon(
                     imageVector = Icons.Filled.Search,
-                    contentDescription = "History",
+                    contentDescription = stringResource(R.string.site_history),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -469,7 +472,7 @@ private fun SearchFilterSheet(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Filters",
+                    text = stringResource(R.string.onair_filters),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f),
@@ -479,29 +482,29 @@ private fun SearchFilterSheet(
                     onLengthChange(OnAirConstants.LENGTH_ANY)
                     onDateChange(OnAirConstants.DATE_ANY)
                     onSortChange(OnAirConstants.SORT_NEWEST)
-                }) { Text("Reset") }
+                }) { Text(stringResource(R.string.reset)) }
             }
 
             FilterSection(
-                title = "Field",
+                title = stringResource(R.string.onair_field_2),
                 options = OnAirOptions.searchFields,
                 selected = field,
                 onSelect = onFieldChange,
             )
             FilterSection(
-                title = "Length",
+                title = stringResource(R.string.onair_length_2),
                 options = OnAirOptions.lengths,
                 selected = length,
                 onSelect = onLengthChange,
             )
             FilterSection(
-                title = "Date",
+                title = stringResource(R.string.onair_date_2),
                 options = OnAirOptions.dates,
                 selected = date,
                 onSelect = onDateChange,
             )
             FilterSection(
-                title = "Sort",
+                title = stringResource(R.string.site_sort_2),
                 options = OnAirOptions.sorts,
                 selected = sort,
                 onSelect = onSortChange,
@@ -514,10 +517,10 @@ private fun SearchFilterSheet(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 TextButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
                 TextButton(onClick = onApply, modifier = Modifier.weight(2f)) {
-                    Text("Apply", fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.site_apply), fontWeight = FontWeight.SemiBold)
                 }
             }
         }
@@ -578,19 +581,19 @@ private fun SearchHistorySheet(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Recent Searches",
+                    text = stringResource(R.string.recent_searches),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f),
                 )
                 TextButton(onClick = onClear, enabled = history.isNotEmpty()) {
-                    Text("Clear")
+                    Text(stringResource(R.string.site_clear))
                 }
             }
 
             if (history.isEmpty()) {
                 Text(
-                    text = "No recent searches",
+                    text = stringResource(R.string.onair_no_recent_searches),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 12.dp),
@@ -610,7 +613,7 @@ private fun SearchHistorySheet(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = entry.query.ifBlank { entry.tag ?: "Filters" },
+                                    text = entry.query.ifBlank { entry.tag ?: stringResource(R.string.onair_filters) },
                                     style = MaterialTheme.typography.bodyMedium,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
@@ -635,7 +638,7 @@ private fun SearchHistorySheet(
                             IconButton(onClick = { onDelete(entry) }) {
                                 Icon(
                                     imageVector = Icons.Default.Clear,
-                                    contentDescription = "Remove",
+                                    contentDescription = stringResource(R.string.remove),
                                 )
                             }
                         }

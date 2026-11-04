@@ -35,6 +35,7 @@ import com.yenaly.han1meviewer.ui.screen.settings.dialog.HorizontalCardCountDial
 import com.yenaly.han1meviewer.ui.screen.settings.dialog.SearchGridColumnsDialog
 import com.yenaly.han1meviewer.ui.screen.settings.model.HomeSettingsUiState
 import com.yenaly.han1meviewer.ui.theme.ThemeColorPreset
+import com.yenaly.yenaly_libs.utils.applicationContext
 
 private enum class HomeSettingsChoiceDialog {
     VideoLanguage,
@@ -330,11 +331,11 @@ fun HomeSettingsScreen(
                 onClick = onOpenNetworkSettings,
             )
         }
-        item { SettingsGroupTitle("History") }
+        item { SettingsGroupTitle(applicationContext.getString(R.string.site_history)) }
         item {
             SettingNavigationItem(
-                title = "Watch history · all sites",
-                summary = "Hanime, MissAV, HentaiMama and OnAir. Touch an item to switch site, check the connection (Tor for OnAir) and open its video page",
+                title = applicationContext.getString(R.string.site_watch_history_all_sites),
+                summary = applicationContext.getString(R.string.site_hanime_missav_hentaimama_and_onair_tou),
                 onClick = onOpenUnifiedHistory,
             )
         }

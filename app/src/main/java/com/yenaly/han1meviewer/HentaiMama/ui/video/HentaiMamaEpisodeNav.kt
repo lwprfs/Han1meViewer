@@ -21,9 +21,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.HentaiMama.data.model.EpisodeNav
+import com.yenaly.han1meviewer.R
 
 @Composable
 fun HentaiMamaEpisodeNav(
@@ -41,19 +43,19 @@ fun HentaiMamaEpisodeNav(
     ) {
         NavActionButton(
             icon = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-            label = "Prev",
+            label = stringResource(R.string.hm_prev),
             enabled = nav.prevUrl != null,
             onClick = onPrev,
         )
         NavActionButton(
             icon = Icons.AutoMirrored.Filled.List,
-            label = "Episodes",
+            label = stringResource(R.string.hm_episodes),
             enabled = nav.seriesUrl != null,
             onClick = onSeries,
         )
         NavActionButton(
             icon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            label = "Next",
+            label = stringResource(R.string.hm_next),
             enabled = nav.nextUrl != null,
             onClick = onNext,
         )

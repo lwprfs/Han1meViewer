@@ -12,8 +12,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.util.FapFolderImageLocation
-
 private enum class ImageGateDialog { None, NeedFolder, ConfirmFolder }
 
 @Composable
@@ -44,35 +45,34 @@ fun rememberFapFolderImageGate(): (onReady: () -> Unit) -> Unit {
         ImageGateDialog.None -> Unit
         ImageGateDialog.NeedFolder -> AlertDialog(
             onDismissRequest = ::cancel,
-            title = { Text("Choose image download folder") },
+            title = { Text(stringResource(R.string.fap_choose_image_download_folder)) },
             text = {
                 Text(
-                    "FapFolder images are saved to their own folder, separate from videos. " +
-                            "Pick a folder and allow access to it to continue."
+                    stringResource(R.string.fap_fapfolder_images_are_saved_to_their)
                 )
             },
             confirmButton = {
-                TextButton(onClick = { picker.launch(null) }) { Text("Choose folder") }
+                TextButton(onClick = { picker.launch(null) }) { Text(stringResource(R.string.fap_choose_folder)) }
             },
-            dismissButton = { TextButton(onClick = ::cancel) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = ::cancel) { Text(stringResource(R.string.cancel)) } },
         )
 
         ImageGateDialog.ConfirmFolder -> AlertDialog(
             onDismissRequest = ::cancel,
-            title = { Text("Save images here?") },
-            text = { Text("Images will be saved to:\n${FapFolderImageLocation.displayName(context)}") },
+            title = { Text(stringResource(R.string.fap_save_images_here)) },
+            text = { Text(stringResource(R.string.fap_images_will_be_saved_to, FapFolderImageLocation.displayName(context))) },
             confirmButton = {
                 TextButton(onClick = {
                     val action = pending
                     cancel()
                     FapFolderImageLocation.confirmedThisSession = true
                     action?.invoke()
-                }) { Text("Download here") }
+                }) { Text(stringResource(R.string.fap_download_here)) }
             },
             dismissButton = {
                 Row {
-                    TextButton(onClick = { picker.launch(null) }) { Text("Change folder") }
-                    TextButton(onClick = ::cancel) { Text("Cancel") }
+                    TextButton(onClick = { picker.launch(null) }) { Text(stringResource(R.string.fap_change_folder)) }
+                    TextButton(onClick = ::cancel) { Text(stringResource(R.string.cancel)) }
                 }
             },
         )

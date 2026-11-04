@@ -115,7 +115,7 @@ fun FapFolderHashtagScreen(
                     IconButton(onClick = { viewModel.refresh() }) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
-                            contentDescription = "Refresh",
+                            contentDescription = stringResource(R.string.site_refresh),
                         )
                     }
                 },
@@ -144,7 +144,7 @@ fun FapFolderHashtagScreen(
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text = "Failed to load #${uiState.normalisedTag}",
+                                text = stringResource(R.string.fap_failed_to_load_2, uiState.normalisedTag),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.error,
                             )
@@ -156,7 +156,7 @@ fun FapFolderHashtagScreen(
                             )
                             Spacer(Modifier.height(12.dp))
                             TextButton(onClick = { viewModel.refresh() }) {
-                                Text("Retry")
+                                Text(stringResource(R.string.retry))
                             }
                         }
                     }
@@ -170,7 +170,7 @@ fun FapFolderHashtagScreen(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = "No posts yet for #${uiState.normalisedTag}.",
+                            text = stringResource(R.string.fap_no_posts_yet_for, uiState.normalisedTag),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -243,7 +243,7 @@ fun FapFolderHashtagScreen(
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Text(
-                                        text = "There is no more data to show",
+                                        text = stringResource(R.string.fap_there_is_no_more_data_to),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )

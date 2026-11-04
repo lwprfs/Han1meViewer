@@ -25,11 +25,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.HentaiMama.data.model.GenreHeader
 import com.yenaly.han1meviewer.HentaiMama.data.model.GenreLayout
 import com.yenaly.han1meviewer.HentaiMama.data.model.SortOption
+import com.yenaly.han1meviewer.R
 
 @Composable
 fun HentaiMamaGenreSortBar(
@@ -98,7 +100,7 @@ fun HentaiMamaGenreSortBar(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "Sort:",
+                        text = stringResource(R.string.hm_sort),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -133,7 +135,7 @@ fun HentaiMamaGenreSortBar(
                     ) {
                         Icon(
                             imageVector = Icons.Filled.ViewAgenda,
-                            contentDescription = "Details layout",
+                            contentDescription = stringResource(R.string.hm_details_layout),
                             tint = if (layout == GenreLayout.DETAILS) {
                                 MaterialTheme.colorScheme.primary
                             } else {
@@ -148,7 +150,7 @@ fun HentaiMamaGenreSortBar(
                     ) {
                         Icon(
                             imageVector = Icons.Filled.GridView,
-                            contentDescription = "Bare layout",
+                            contentDescription = stringResource(R.string.hm_bare_layout),
                             tint = if (layout == GenreLayout.BARE) {
                                 MaterialTheme.colorScheme.primary
                             } else {

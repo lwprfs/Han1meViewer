@@ -12,6 +12,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import com.yenaly.han1meviewer.R
@@ -90,7 +91,7 @@ fun CrossSiteOpenDialog(
             },
             title = {
                 Text(
-                    text = "Switch to $siteName?",
+                    text = stringResource(R.string.site_switch_to, siteName),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                 )
@@ -113,11 +114,11 @@ fun CrossSiteOpenDialog(
                         )
                     }
                     Text(
-                        text = "This video belongs to $siteName. " +
+                        text = stringResource(R.string.site_this_video_belongs_to, siteName) + " " +
                                 if (isTor) {
-                                    "The app will check your Tor connection, switch site and open the video page."
+                                    stringResource(R.string.site_the_app_will_check_your_tor)
                                 } else {
-                                    "The app will check the connection, switch site and open the video page."
+                                    stringResource(R.string.site_the_app_will_check_the_connection)
                                 },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -126,11 +127,11 @@ fun CrossSiteOpenDialog(
             },
             confirmButton = {
                 Button(onClick = ::startValidation, shape = RoundedCornerShape(14.dp)) {
-                    Text("Switch & open", fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.site_switch_open), fontWeight = FontWeight.SemiBold)
                 }
             },
             dismissButton = {
-                TextButton(onClick = ::cancel) { Text("Cancel") }
+                TextButton(onClick = ::cancel) { Text(stringResource(R.string.cancel)) }
             },
         )
 
@@ -140,7 +141,7 @@ fun CrossSiteOpenDialog(
             shape = dialogShape,
             title = {
                 Text(
-                    text = if (isTor) "Checking Tor connection" else "Checking connection",
+                    text = if (isTor) stringResource(R.string.site_checking_tor_connection) else stringResource(R.string.site_checking_connection),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                 )
@@ -152,8 +153,8 @@ fun CrossSiteOpenDialog(
                 ) {
                     CircularProgressIndicator(modifier = Modifier.size(28.dp), strokeWidth = 3.dp)
                     Text(
-                        if (isTor) "Verifying that this device exits through Tor…"
-                        else "Verifying that $siteName can be reached…",
+                        if (isTor) stringResource(R.string.site_verifying_that_this_device_exits_throu)
+                        else stringResource(R.string.site_verifying_that_can_be_reached, siteName),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -161,7 +162,7 @@ fun CrossSiteOpenDialog(
             },
             confirmButton = {},
             dismissButton = {
-                TextButton(onClick = ::cancel) { Text("Cancel") }
+                TextButton(onClick = ::cancel) { Text(stringResource(R.string.cancel)) }
             },
         )
 
@@ -195,11 +196,11 @@ fun CrossSiteOpenDialog(
             },
             confirmButton = {
                 Button(onClick = ::startValidation, shape = RoundedCornerShape(14.dp)) {
-                    Text("Retry", fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.retry), fontWeight = FontWeight.SemiBold)
                 }
             },
             dismissButton = {
-                TextButton(onClick = ::cancel) { Text("Cancel") }
+                TextButton(onClick = ::cancel) { Text(stringResource(R.string.cancel)) }
             },
         )
     }

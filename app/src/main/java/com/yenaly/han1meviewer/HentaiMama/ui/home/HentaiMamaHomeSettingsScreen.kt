@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.HentaiMama.ui.home
 
+import androidx.compose.ui.res.stringResource
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import androidx.compose.foundation.clickable
@@ -80,19 +82,19 @@ fun HentaiMamaHomeSettingsScreen(
     Scaffold(
         topBar = {
             SiteTopAppBar(
-                title = { Text("Home Categories") },
+                title = { Text(stringResource(R.string.drawer_home_categories)) },
                 navigationIcon = { SiteBackButton(onClick = onBack) },
                 actions = {
                     Box {
                         IconButton(onClick = { showMenu = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "More")
+                            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.more))
                         }
                         DropdownMenu(
                             expanded = showMenu,
                             onDismissRequest = { showMenu = false },
                         ) {
                             DropdownMenuItem(
-                                text = { Text("Reset to defaults") },
+                                text = { Text(stringResource(R.string.site_reset_to_defaults)) },
                                 onClick = {
                                     showMenu = false
                                     showResetDialog = true
@@ -110,7 +112,7 @@ fun HentaiMamaHomeSettingsScreen(
             ExtendedFloatingActionButton(
                 onClick = { showAddDialog = true },
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text("Add category") },
+                text = { Text(stringResource(R.string.site_add_category)) },
             )
         },
     ) { padding ->
@@ -120,10 +122,7 @@ fun HentaiMamaHomeSettingsScreen(
                 .padding(padding)
         ) {
             Text(
-                text = "Tap a row to toggle visibility. Use the edit icon to change title, path or sort. " +
-                        "Reorder with the up/down arrows.\n\n" +
-                        "Genre pages: use a path like `genre/uncensored/` or just `uncensored` to " +
-                        "load a rich genre view with sort bar and pagination.",
+                text = stringResource(R.string.hm_tap_a_row_to_toggle_visibility),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -135,7 +134,7 @@ fun HentaiMamaHomeSettingsScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        "No categories. Tap + to add one.",
+                        stringResource(R.string.site_no_categories_tap_to_add_one),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -176,11 +175,10 @@ fun HentaiMamaHomeSettingsScreen(
     if (showResetDialog) {
         AlertDialog(
             onDismissRequest = { showResetDialog = false },
-            title = { Text("Reset categories") },
+            title = { Text(stringResource(R.string.site_reset_categories)) },
             text = {
                 Text(
-                    "This will discard your customizations and restore the built-in category list. " +
-                            "Continue?"
+                    stringResource(R.string.site_this_will_discard_your_customizations)
                 )
             },
             confirmButton = {
@@ -188,18 +186,18 @@ fun HentaiMamaHomeSettingsScreen(
                     viewModel.resetCategoriesToDefaults()
                     showResetDialog = false
                 }) {
-                    Text("Reset", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.reset), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showResetDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showResetDialog = false }) { Text(stringResource(R.string.cancel)) }
             },
         )
     }
 
     if (showAddDialog) {
         CategoryEditDialog(
-            title = "Add category",
+            title = stringResource(R.string.site_add_category),
             initial = null,
             onDismiss = { showAddDialog = false },
             onConfirm = { title, genrePath, sort ->
@@ -211,7 +209,7 @@ fun HentaiMamaHomeSettingsScreen(
 
     editingCategory?.let { category ->
         CategoryEditDialog(
-            title = "Edit category",
+            title = stringResource(R.string.site_edit_category),
             initial = category,
             onDismiss = { editingCategory = null },
             onConfirm = { title, genrePath, sort ->
@@ -230,18 +228,18 @@ fun HentaiMamaHomeSettingsScreen(
     deletingCategory?.let { category ->
         AlertDialog(
             onDismissRequest = { deletingCategory = null },
-            title = { Text("Delete category") },
-            text = { Text("Remove \"${category.title}\" from the home screen? This cannot be undone.") },
+            title = { Text(stringResource(R.string.site_delete_category)) },
+            text = { Text(stringResource(R.string.site_remove_from_the_home_screen_this, category.title)) },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteCategory(category.key)
                     deletingCategory = null
                 }) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { deletingCategory = null }) { Text("Cancel") }
+                TextButton(onClick = { deletingCategory = null }) { Text(stringResource(R.string.cancel)) }
             },
         )
     }
@@ -288,7 +286,7 @@ private fun CategoryEditorRow(
                 Text(
                     text = buildString {
                         append(category.genrePath)
-                        category.sort?.let { append(" • sort=$it") }
+                        category.sort?.let { append(" " + stringResource(R.string.site_sort, it)) }
                         if (isGenre) append(" • genre")
                     },
                     style = MaterialTheme.typography.bodySmall,
@@ -309,7 +307,7 @@ private fun CategoryEditorRow(
                 ) {
                     Icon(
                         Icons.Default.ArrowUpward,
-                        contentDescription = "Move up",
+                        contentDescription = stringResource(R.string.site_move_up),
                         modifier = Modifier.size(18.dp),
                     )
                 }
@@ -320,7 +318,7 @@ private fun CategoryEditorRow(
                 ) {
                     Icon(
                         Icons.Default.ArrowDownward,
-                        contentDescription = "Move down",
+                        contentDescription = stringResource(R.string.site_move_down),
                         modifier = Modifier.size(18.dp),
                     )
                 }
@@ -329,7 +327,7 @@ private fun CategoryEditorRow(
             IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
                 Icon(
                     Icons.Default.Edit,
-                    contentDescription = "Edit",
+                    contentDescription = stringResource(R.string.edit),
                     modifier = Modifier.size(18.dp),
                 )
             }
@@ -337,7 +335,7 @@ private fun CategoryEditorRow(
             IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
                 Icon(
                     Icons.Default.Delete,
-                    contentDescription = "Delete",
+                    contentDescription = stringResource(R.string.delete),
                     tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(18.dp),
                 )
@@ -370,24 +368,21 @@ private fun CategoryEditDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 EditField(
-                    label = "Title",
+                    label = stringResource(R.string.title),
                     value = titleValue,
                     onValueChange = { titleValue = it },
                 )
                 EditField(
-                    label = "Genre path",
+                    label = stringResource(R.string.hm_genre_path),
                     value = genrePath,
                     onValueChange = { genrePath = it },
-                    supportingText = "Genre page: `genre/uncensored/` or just `uncensored`. " +
-                            "Also supports: `hentai-series/?filter=weekly` or " +
-                            "`advance-search/?genres_filter[]=NTR&submit=Submit`",
+                    supportingText = stringResource(R.string.hm_genre_page_genre_uncensored_or_just),
                 )
                 EditField(
-                    label = "Sort (optional)",
+                    label = stringResource(R.string.site_sort_optional),
                     value = sortValue,
                     onValueChange = { sortValue = it },
-                    supportingText = "Recent, Rating, A-Z, Week, Month, All Time. " +
-                            "Leave blank to use site default.",
+                    supportingText = stringResource(R.string.hm_recent_rating_a_z_week_month),
                 )
             }
         },
@@ -396,11 +391,11 @@ private fun CategoryEditDialog(
                 onClick = { onConfirm(titleValue, genrePath, sortValue) },
                 enabled = canConfirm,
             ) {
-                Text("Save")
+                Text(stringResource(R.string.save))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         },
     )
 }

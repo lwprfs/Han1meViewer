@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.HentaiMama.ui.search
 
+import androidx.compose.ui.res.stringResource
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
 import com.yenaly.han1meviewer.ui.component.SiteErrorContent
 import android.net.Uri
@@ -253,11 +255,11 @@ fun HentaiMamaSearchScreen(
     }
 
     val activeFilters = buildList {
-        selectedOrder?.let { add("Order: $it" to { viewModel.setOrder(null); runSearch() }) }
-        selectedGenre?.let { add("Genre: $it" to { viewModel.setGenre(null); runSearch() }) }
-        selectedYear?.let { add("Year: $it" to { viewModel.setYear(null); runSearch() }) }
+        selectedOrder?.let { add(stringResource(R.string.hm_order_2, it) to { viewModel.setOrder(null); runSearch() }) }
+        selectedGenre?.let { add(stringResource(R.string.site_genre_2, it) to { viewModel.setGenre(null); runSearch() }) }
+        selectedYear?.let { add(stringResource(R.string.hm_year, it) to { viewModel.setYear(null); runSearch() }) }
         selectedProducer?.let {
-            add("Producer: ${it.take(24)}" to { viewModel.setProducer(null); runSearch() })
+            add(stringResource(R.string.hm_producer_2, it.take(24)) to { viewModel.setProducer(null); runSearch() })
         }
     }
 
@@ -366,7 +368,7 @@ fun HentaiMamaSearchScreen(
                             viewModel.clearFilters()
                             runSearch()
                         },
-                        label = { Text("Reset") },
+                        label = { Text(stringResource(R.string.reset)) },
                         colors = AssistChipDefaults.assistChipColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant,
                         ),
@@ -448,7 +450,7 @@ fun HentaiMamaSearchScreen(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = "Type to search, or tap Advanced for filters.",
+                            text = stringResource(R.string.hm_type_to_search_or_tap_advanced),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(32.dp),
@@ -495,7 +497,7 @@ private fun SearchTopBar(
             IconButton(onClick = onBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
+                    contentDescription = stringResource(R.string.back),
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
@@ -527,7 +529,7 @@ private fun SearchTopBar(
                         ) {
                             if (query.isEmpty()) {
                                 Text(
-                                    text = "Search videos…",
+                                    text = stringResource(R.string.search_video_hint),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -541,13 +543,13 @@ private fun SearchTopBar(
                 IconButton(onClick = onClear) {
                     Icon(
                         imageVector = Icons.Default.Clear,
-                        contentDescription = "Clear",
+                        contentDescription = stringResource(R.string.site_clear),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
             Text(
-                text = "Advanced",
+                text = stringResource(R.string.advanced),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
@@ -588,9 +590,9 @@ private fun RecentHistoryList(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = entry.query.ifBlank {
-                            entry.genreSlug?.let { "Page: $it" }
-                                ?: entry.genre?.let { "Genre: $it" }
-                                ?: "Filter"
+                            entry.genreSlug?.let { stringResource(R.string.hm_page, it) }
+                                ?: entry.genre?.let { stringResource(R.string.site_genre_2, it) }
+                                ?: stringResource(R.string.site_filter)
                         },
                         style = MaterialTheme.typography.bodyMedium,
                         maxLines = 1,
@@ -598,11 +600,11 @@ private fun RecentHistoryList(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     val sub = buildList {
-                        entry.order?.let { add("Order: $it") }
-                        entry.genre?.let { add("Genre: $it") }
-                        entry.year?.let { add("Year: $it") }
-                        entry.producer?.let { add("Producer: $it") }
-                        entry.genreSlug?.let { add("Page: $it") }
+                        entry.order?.let { add(stringResource(R.string.hm_order_2, it)) }
+                        entry.genre?.let { add(stringResource(R.string.site_genre_2, it)) }
+                        entry.year?.let { add(stringResource(R.string.hm_year, it)) }
+                        entry.producer?.let { add(stringResource(R.string.hm_producer_2, it)) }
+                        entry.genreSlug?.let { add(stringResource(R.string.hm_page, it)) }
                     }.joinToString(" · ")
                     if (sub.isNotBlank()) {
                         Text(
@@ -620,7 +622,7 @@ private fun RecentHistoryList(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Clear,
-                        contentDescription = "Remove",
+                        contentDescription = stringResource(R.string.remove),
                         modifier = Modifier.size(16.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -647,12 +649,12 @@ private fun SearchResultsArea(
     when {
         state is PageLoadingState.Loading && empty -> SiteLoadingContent()
         state is PageLoadingState.Error && empty -> SiteErrorContent(
-            message = state.throwable.message ?: "Failed to load results",
+            message = state.throwable.message ?: stringResource(R.string.site_failed_to_load_results),
             onRetry = onRetry,
         )
         empty -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
-                text = "No results found",
+                text = stringResource(R.string.search_no_results),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

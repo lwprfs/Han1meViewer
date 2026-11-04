@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.OnAir.ui.picture
 
+import androidx.compose.ui.res.stringResource
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
@@ -64,6 +65,7 @@ import com.yenaly.han1meviewer.ui.component.lazy.LazyVerticalGrid
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
 import com.yenaly.han1meviewer.ui.screen.rememberVideoGridColumns
 import com.yenaly.han1meviewer.ui.theme.SpacingNormal
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -130,14 +132,14 @@ fun OnAirPicturesScreen(
     LaunchedEffect(state) {
         val s = state
         if (s is PageLoadingState.Error && cards.isEmpty()) {
-            onLoadFailure(s.throwable.message ?: "Pictures load failed")
+            onLoadFailure(s.throwable.message ?: applicationContext.getString(R.string.onair_pictures_load_failed))
         }
     }
 
     Scaffold(
         topBar = {
             SiteTopAppBar(
-                title = { Text("Pictures") },
+                title = { Text(stringResource(R.string.drawer_pictures)) },
                 navigationIcon = { SiteBackButton(onClick = onBack) },
             )
         },
@@ -152,12 +154,12 @@ fun OnAirPicturesScreen(
                 state is PageLoadingState.Error && cards.isEmpty() -> {
                     val err = state as PageLoadingState.Error
                     SiteErrorContent(
-                        message = err.throwable.message ?: "Failed",
+                        message = err.throwable.message ?: stringResource(R.string.site_failed),
                         onRetry = { load(1, replace = true) },
                     )
                 }
                 cards.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No pictures")
+                    Text(stringResource(R.string.onair_no_pictures))
                 }
                 else -> {
                     LazyVerticalGrid(
@@ -320,7 +322,7 @@ private fun PictureFullscreenViewer(
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.back),
                             tint = Color.White,
                         )
                     }

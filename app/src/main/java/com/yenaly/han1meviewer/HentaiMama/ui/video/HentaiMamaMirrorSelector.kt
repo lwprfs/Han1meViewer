@@ -28,8 +28,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.HentaiMama.data.model.Mirror
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.SelectableTag
 
 @Composable
@@ -92,7 +94,7 @@ fun HentaiMamaMirrorSelector(
             ) {
                 if (qualities.isEmpty()) {
                     DropdownMenuItem(
-                        text = { Text("No quality options") },
+                        text = { Text(stringResource(R.string.hm_no_quality_options)) },
                         onClick = { showQualityMenu = false },
                         enabled = false,
                     )
@@ -128,7 +130,7 @@ fun HentaiMamaMirrorSelector(
             IconButton(onClick = { showSpeedMenu = true }) {
                 Icon(
                     imageVector = Icons.Filled.Speed,
-                    contentDescription = "Speed",
+                    contentDescription = stringResource(R.string.speed),
                 )
             }
             DropdownMenu(

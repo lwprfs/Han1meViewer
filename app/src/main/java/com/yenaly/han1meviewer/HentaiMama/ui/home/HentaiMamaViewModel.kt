@@ -15,10 +15,12 @@ import com.yenaly.han1meviewer.HentaiMama.data.model.SeriesDetailPage
 import com.yenaly.han1meviewer.HentaiMama.data.parser.HentaiMamaSeriesCardParser
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetworkRepo
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.model.HanimeInfo
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -221,7 +223,7 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
                         updateRow(key) {
                             it.copy(
                                 isLoading = false,
-                                error = "Failed to load genre",
+                                error = applicationContext.getString(R.string.hm_failed_to_load_genre),
                                 isGenre = true,
                             )
                         }
@@ -312,7 +314,7 @@ class HentaiMamaViewModel(application: Application) : AndroidViewModel(applicati
             } catch (e: Exception) {
                 Log.e(TAG, "Category '$key' failed: ${e.message}", e)
                 updateRow(key) {
-                    it.copy(isLoading = false, error = e.message ?: "Failed to load")
+                    it.copy(isLoading = false, error = e.message ?: applicationContext.getString(R.string.site_failed_to_load))
                 }
             }
         }

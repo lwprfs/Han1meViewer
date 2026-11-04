@@ -18,18 +18,21 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.FapFolder.common.FapFolderUrlUtils
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderMedia
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderPost
 import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderPostCard
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.ui.component.GlobalToasts
 import com.yenaly.han1meviewer.ui.component.SiteVideoActionBar
 import com.yenaly.han1meviewer.util.DownloadLayout
 import com.yenaly.han1meviewer.util.FapOwnerKind
 import com.yenaly.han1meviewer.util.SiteImageSaver
+import com.yenaly.yenaly_libs.utils.applicationContext
 
 internal fun FapFolderPost.allImages(): List<FapFolderMedia.Image> {
     val out = LinkedHashMap<String, FapFolderMedia.Image>()
@@ -103,12 +106,12 @@ internal fun LazyListScope.fapFolderImagePostItems(
             onDownloadClick = {
                 if (images.isEmpty()) {
                     GlobalToasts.show(
-                        "This post has no images to download.",
+                        applicationContext.getString(R.string.fap_this_post_has_no_images_to),
                         level = GlobalToasts.ToastLevel.WARNING,
                     )
                 } else imageGate {
                     GlobalToasts.show(
-                        "Downloading ${images.size} image(s)…",
+                        applicationContext.getString(R.string.fap_downloading_image_s, images.size),
                         level = GlobalToasts.ToastLevel.INFO,
                     )
                     SiteImageSaver.saveBatchInBackground(
@@ -124,9 +127,9 @@ internal fun LazyListScope.fapFolderImagePostItems(
                                 result.message, level = GlobalToasts.ToastLevel.ERROR,
                             )
                             is SiteImageSaver.SaveResult.Saved -> GlobalToasts.show(
-                                "Saved ${result.count} image(s)" +
-                                        (if (result.skipped > 0) ", ${result.skipped} already existed" else "") +
-                                        (if (result.failed > 0) ", ${result.failed} failed" else ""),
+                                applicationContext.getString(R.string.fap_saved_image_s, result.count) +
+                                        (if (result.skipped > 0) applicationContext.getString(R.string.fap_already_existed, result.skipped) else "") +
+                                        (if (result.failed > 0) applicationContext.getString(R.string.fap_failed, result.failed) else ""),
                                 level = if (result.failed > 0) GlobalToasts.ToastLevel.WARNING
                                 else GlobalToasts.ToastLevel.SUCCESS,
                             )
@@ -170,7 +173,7 @@ internal fun LazyListScope.fapFolderImagePostItems(
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            if (!groupSlug.isNullOrBlank()) "Group photos" else "Photos",
+                            if (!groupSlug.isNullOrBlank()) stringResource(R.string.fap_group_photos) else stringResource(R.string.fap_tab_photos),
                             fontWeight = FontWeight.SemiBold,
                         )
                     }
@@ -182,7 +185,7 @@ internal fun LazyListScope.fapFolderImagePostItems(
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(16.dp),
                     ) {
-                        Text("See album", fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.fap_see_album), fontWeight = FontWeight.SemiBold)
                     }
                 }
             }

@@ -22,9 +22,11 @@ import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderPostParser
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderFeedPaging
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetwork
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetworkRepo
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -204,7 +206,7 @@ class FapFolderProfileViewModel(application: Application) : AndroidViewModel(app
                         }
                     }
                     is VideoLoadingState.NoContent -> _uiState.update {
-                        it.copy(isLoading = false, headerError = "Profile not found.")
+                        it.copy(isLoading = false, headerError = applicationContext.getString(R.string.fap_profile_not_found))
                     }
                 }
             }
@@ -339,7 +341,7 @@ class FapFolderProfileViewModel(application: Application) : AndroidViewModel(app
                             following = wasFollowing,
                             followPending = false,
                             followError = result.throwable.message
-                                ?: "Failed to update follow state.",
+                                ?: applicationContext.getString(R.string.fap_failed_to_update_follow_state),
                         )
                     }
                 }
@@ -394,7 +396,7 @@ class FapFolderProfileViewModel(application: Application) : AndroidViewModel(app
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        itemsError = e.message ?: "Failed to load.",
+                        itemsError = e.message ?: applicationContext.getString(R.string.fap_failed_to_load),
                     )
                 }
             }

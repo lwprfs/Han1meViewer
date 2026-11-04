@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -48,7 +49,7 @@ fun HentaiMamaEpisodeHeader(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
 
-        val studioName: String = info.studio?.takeIf { it.isNotBlank() } ?: "Series"
+        val studioName: String = info.studio?.takeIf { it.isNotBlank() } ?: stringResource(R.string.hm_series)
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
@@ -97,7 +98,7 @@ fun HentaiMamaEpisodeHeader(
                             val votes: Int? = info.voteCount
                             Text(
                                 text = if (votes != null && votes > 0) {
-                                    "${formatRating(rating)} ($votes votes)"
+                                    stringResource(R.string.hm_votes, formatRating(rating), votes)
                                 } else {
                                     formatRating(rating)
                                 },

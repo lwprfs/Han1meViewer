@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.FapFolder.ui.search
 
+import androidx.compose.ui.res.stringResource
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import androidx.compose.foundation.clickable
@@ -47,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.FapFolder.data.local.FapFolderSearchHelper
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderSearchHistoryEntry
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderSearchTab
+import com.yenaly.yenaly_libs.utils.applicationContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,7 +77,7 @@ fun FapFolderSearchHistoryScreen(
                 actions = {
                     if (entries.isNotEmpty()) {
                         TextButton(onClick = { showClearDialog = true }) {
-                            Text("Clear")
+                            Text(stringResource(R.string.site_clear))
                         }
                     }
                 },
@@ -101,7 +104,7 @@ fun FapFolderSearchHistoryScreen(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = "No saved searches yet.",
+                            text = stringResource(R.string.fap_no_saved_searches_yet),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -143,19 +146,19 @@ fun FapFolderSearchHistoryScreen(
     if (showClearDialog) {
         AlertDialog(
             onDismissRequest = { showClearDialog = false },
-            title = { Text("Clear search history?") },
-            text = { Text("Every locally saved FapFolder search will be removed.") },
+            title = { Text(stringResource(R.string.fap_clear_search_history)) },
+            text = { Text(stringResource(R.string.fap_every_locally_saved_fapfolder_search_w)) },
             confirmButton = {
                 TextButton(onClick = {
                     showClearDialog = false
                     FapFolderSearchHelper.clear()
                     reload()
                 }) {
-                    Text("Clear", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.site_clear), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showClearDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showClearDialog = false }) { Text(stringResource(R.string.cancel)) }
             },
         )
     }
@@ -204,7 +207,7 @@ private fun HistoryRow(
             IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete",
+                    contentDescription = stringResource(R.string.delete),
                     tint = MaterialTheme.colorScheme.error,
                 )
             }
@@ -215,7 +218,7 @@ private fun HistoryRow(
 private fun tabLabel(param: String): String = when (
     FapFolderSearchTab.fromParam(param)
 ) {
-    FapFolderSearchTab.POSTS -> "Posts"
-    FapFolderSearchTab.USERS -> "Users"
-    FapFolderSearchTab.COMMUNITIES -> "Communities"
+    FapFolderSearchTab.POSTS -> applicationContext.getString(R.string.fap_tab_posts)
+    FapFolderSearchTab.USERS -> applicationContext.getString(R.string.fap_users)
+    FapFolderSearchTab.COMMUNITIES -> applicationContext.getString(R.string.fap_communities)
 }

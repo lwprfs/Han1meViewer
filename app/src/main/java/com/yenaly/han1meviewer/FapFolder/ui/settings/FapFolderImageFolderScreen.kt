@@ -21,6 +21,9 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.res.stringResource
+import com.yenaly.han1meviewer.R
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.launch
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -209,8 +212,8 @@ fun FapFolderImageFolderScreen(onBack: () -> Unit) {
             SiteTopAppBar(
                 title = {
                     Text(
-                        text = if (selecting) "${selected.size} selected"
-                        else crumbs.lastOrNull()?.name ?: "Downloaded photos",
+                        text = if (selecting) stringResource(R.string.fap_selected, selected.size)
+                        else crumbs.lastOrNull()?.name ?: stringResource(R.string.fap_downloaded_photos),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -218,7 +221,7 @@ fun FapFolderImageFolderScreen(onBack: () -> Unit) {
                 navigationIcon = {
                     if (selecting) {
                         IconButton(onClick = { selected.clear() }) {
-                            Icon(Icons.Default.Close, contentDescription = "Cancel selection")
+                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.fap_cancel_selection))
                         }
                     } else {
                         SiteBackButton(onClick = {
@@ -232,14 +235,14 @@ fun FapFolderImageFolderScreen(onBack: () -> Unit) {
                             selected.clear()
                             selected.addAll(photos.map { it.docId })
                         }) {
-                            Icon(Icons.Default.SelectAll, contentDescription = "Select all")
+                            Icon(Icons.Default.SelectAll, contentDescription = stringResource(R.string.fap_select_all))
                         }
                         IconButton(onClick = { confirmBatchDelete = true }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete selected")
+                            Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.fap_delete_selected))
                         }
                     } else {
                         IconButton(onClick = { showSettings = !showSettings }) {
-                            Icon(Icons.Default.Settings, contentDescription = "Photo download settings")
+                            Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.fap_photo_download_settings))
                         }
                     }
                 },
@@ -257,22 +260,21 @@ fun FapFolderImageFolderScreen(onBack: () -> Unit) {
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        Text("Photo download settings", style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.fap_photo_download_settings), style = MaterialTheme.typography.titleMedium)
                         Text(
-                            text = "FapFolder photos are saved to their own folder, separate from the " +
-                                    "video download location.",
+                            text = stringResource(R.string.fap_fapfolder_photos_are_saved_to_their),
                             style = MaterialTheme.typography.bodyMedium,
                         )
                         Text(
-                            text = if (ready) "Current folder:\n${FapFolderImageLocation.displayName(context)}"
-                            else if (FapFolderImageLocation.uri != null) "Access to the saved folder was lost. Choose it again."
-                            else "No folder chosen yet. You will be asked when you download a photo.",
+                            text = if (ready) stringResource(R.string.fap_current_folder, FapFolderImageLocation.displayName(context))
+                            else if (FapFolderImageLocation.uri != null) stringResource(R.string.fap_access_to_the_saved_folder_was)
+                            else stringResource(R.string.fap_no_folder_chosen_yet_you_will),
                             style = MaterialTheme.typography.titleSmall,
                         )
                         Button(
                             onClick = { picker.launch(null) },
                             modifier = Modifier.fillMaxWidth(),
-                        ) { Text(if (ready) "Change folder" else "Choose folder") }
+                        ) { Text(if (ready) stringResource(R.string.fap_change_folder) else stringResource(R.string.fap_choose_folder)) }
                         if (FapFolderImageLocation.uri != null) {
                             OutlinedButton(
                                 onClick = {
@@ -282,7 +284,7 @@ fun FapFolderImageFolderScreen(onBack: () -> Unit) {
                                     refresh++
                                 },
                                 modifier = Modifier.fillMaxWidth(),
-                            ) { Text("Forget folder") }
+                            ) { Text(stringResource(R.string.fap_forget_folder)) }
                         }
                     }
                 }
@@ -296,18 +298,18 @@ fun FapFolderImageFolderScreen(onBack: () -> Unit) {
                     FilterChip(
                         selected = !showAll,
                         onClick = { showAll = false },
-                        label = { Text("Folders") },
+                        label = { Text(stringResource(R.string.fap_folders)) },
                     )
                     FilterChip(
                         selected = showAll,
                         onClick = { showAll = true },
-                        label = { Text("All photos") },
+                        label = { Text(stringResource(R.string.fap_all_photos)) },
                     )
                 }
                 Box(modifier = Modifier.fillMaxSize()) {
                     if (!loading && entries.isEmpty()) {
                         Text(
-                            text = "No downloaded photos here yet.",
+                            text = stringResource(R.string.fap_no_downloaded_photos_here_yet),
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.align(Alignment.Center),
                         )
@@ -418,8 +420,8 @@ fun FapFolderImageFolderScreen(onBack: () -> Unit) {
         val count = selected.size
         AlertDialog(
             onDismissRequest = { confirmBatchDelete = false },
-            title = { Text("Delete $count photo${if (count == 1) "" else "s"}?") },
-            text = { Text("The selected photos will be removed from your device.") },
+            title = { Text(stringResource(R.string.fap_delete_photo_s, count)) },
+            text = { Text(stringResource(R.string.fap_the_selected_photos_will_be_removed)) },
             confirmButton = {
                 TextButton(onClick = {
                     confirmBatchDelete = false
@@ -437,22 +439,22 @@ fun FapFolderImageFolderScreen(onBack: () -> Unit) {
                         val failed = targets.size - deleted
                         android.widget.Toast.makeText(
                             context,
-                            if (failed == 0) "Deleted $deleted photo(s)"
-                            else "Deleted $deleted, $failed failed",
+                            if (failed == 0) applicationContext.getString(R.string.fap_deleted_photo_s, deleted)
+                            else applicationContext.getString(R.string.fap_deleted_failed, deleted, failed),
                             android.widget.Toast.LENGTH_SHORT,
                         ).show()
                     }
-                }) { Text("Delete") }
+                }) { Text(stringResource(R.string.delete)) }
             },
-            dismissButton = { TextButton(onClick = { confirmBatchDelete = false }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { confirmBatchDelete = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 
     deleteTarget?.let { target ->
         AlertDialog(
             onDismissRequest = { deleteTarget = null },
-            title = { Text("Delete photo?") },
-            text = { Text("\"${target.name}\" will be removed from your device.") },
+            title = { Text(stringResource(R.string.fap_delete_photo)) },
+            text = { Text(stringResource(R.string.fap_will_be_removed_from_your_device, target.name)) },
             confirmButton = {
                 TextButton(onClick = {
                     deleteTarget = null
@@ -467,13 +469,13 @@ fun FapFolderImageFolderScreen(onBack: () -> Unit) {
                             refresh++
                         } else {
                             android.widget.Toast.makeText(
-                                context, "Couldn't delete this photo", android.widget.Toast.LENGTH_SHORT,
+                                context, applicationContext.getString(R.string.fap_couldn_t_delete_this_photo), android.widget.Toast.LENGTH_SHORT,
                             ).show()
                         }
                     }
-                }) { Text("Delete") }
+                }) { Text(stringResource(R.string.delete)) }
             },
-            dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 
@@ -518,7 +520,7 @@ fun FapFolderImageFolderScreen(onBack: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         IconButton(onClick = { viewerIndex = null }) {
-                            Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close), tint = Color.White)
                         }
                         Text(
                             text = "${pagerState.currentPage + 1} / ${photos.size}",
@@ -536,16 +538,16 @@ fun FapFolderImageFolderScreen(onBack: () -> Unit) {
                                 }
                                 runCatching {
                                     context.startActivity(
-                                        Intent.createChooser(send, "Share photo")
+                                        Intent.createChooser(send, applicationContext.getString(R.string.fap_share_photo))
                                             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                     )
                                 }
                             }
                         }) {
-                            Icon(Icons.Default.Share, contentDescription = "Share", tint = Color.White)
+                            Icon(Icons.Default.Share, contentDescription = stringResource(R.string.share), tint = Color.White)
                         }
                         IconButton(onClick = { deleteTarget = current }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.White)
+                            Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete), tint = Color.White)
                         }
                     }
                 }

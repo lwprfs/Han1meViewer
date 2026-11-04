@@ -82,6 +82,7 @@ import com.yenaly.han1meviewer.ui.viewmodel.VideoViewModel
 import com.yenaly.han1meviewer.util.checkBadGuy
 import com.yenaly.han1meviewer.util.loadAssetAs
 import com.yenaly.yenaly_libs.utils.OrientationManager
+import com.yenaly.yenaly_libs.utils.applicationContext
 import com.yenaly.yenaly_libs.utils.browse
 import com.yenaly.yenaly_libs.utils.copyToClipboard
 import com.yenaly.yenaly_libs.utils.dp
@@ -195,7 +196,7 @@ fun VideoRouteHostScreen(
         } else {
             Icon.createWithResource(activity, R.drawable.ic_pip_play_arrow_24)
         }
-        val title = if (isPlaying) "Pause Video" else "Play Video"
+        val title = if (isPlaying) applicationContext.getString(R.string.pause_video) else applicationContext.getString(R.string.play_video)
         val intent = PendingIntent.getBroadcast(
             activity,
             0,
@@ -491,7 +492,7 @@ fun VideoRouteHostScreen(
             val mediaInterface: JZMediaInterface? = player.mediaInterface
             if (mediaInterface != null && !mediaInterface.isPlaying) {
                 val currentPosition = player.currentPositionWhenPlaying
-                showAddHKeyframeDialog = Pair(currentPosition, videoTitle ?: "Untitled")
+                showAddHKeyframeDialog = Pair(currentPosition, videoTitle ?: applicationContext.getString(R.string.site_untitled))
             } else {
                 GlobalToasts.show(activity.getString(R.string.pause_then_long_press), level = GlobalToasts.ToastLevel.WARNING)
             }

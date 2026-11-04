@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.OnAir.ui.tag
 
+import androidx.compose.ui.res.stringResource
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
@@ -43,6 +45,7 @@ import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.ui.component.lazy.LazyVerticalGrid
 import com.yenaly.han1meviewer.ui.screen.rememberVideoGridColumns
 import com.yenaly.han1meviewer.ui.theme.SpacingNormal
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
@@ -113,7 +116,7 @@ fun OnAirTagScreen(
     LaunchedEffect(state) {
         val s = state
         if (s is PageLoadingState.Error && cards.isEmpty()) {
-            onLoadFailure(s.throwable.message ?: "Tag load failed")
+            onLoadFailure(s.throwable.message ?: applicationContext.getString(R.string.onair_tag_load_failed))
         }
     }
 
@@ -135,13 +138,13 @@ fun OnAirTagScreen(
                 state is PageLoadingState.Error && cards.isEmpty() -> {
                     val err = state as PageLoadingState.Error
                     SiteErrorContent(
-                        message = err.throwable.message ?: "Failed",
+                        message = err.throwable.message ?: stringResource(R.string.site_failed),
                         onRetry = { load(1, replace = true) },
                     )
                 }
                 cards.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
-                        text = "No videos for this tag",
+                        text = stringResource(R.string.onair_no_videos_for_this_tag),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

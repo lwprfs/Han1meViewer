@@ -37,6 +37,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -44,6 +45,7 @@ import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.ui.theme.SpacingLarge
 import com.yenaly.han1meviewer.ui.theme.SpacingNormal
+import com.yenaly.yenaly_libs.utils.applicationContext
 
 data class SiteSwitchOption(
     val name: String,
@@ -57,42 +59,42 @@ data class SiteSwitchOption(
 val DefaultSiteSwitchOptions: List<SiteSwitchOption> = listOf(
     SiteSwitchOption(
         name = "Hanime",
-        description = "Main site with H-anime",
+        description = applicationContext.getString(R.string.site_main_site_with_h_anime),
         siteType = SiteType.HANIME,
         logoRes = R.drawable.s_switch_han1me,
         accentColor = Color(0xFFE53935),
     ),
     SiteSwitchOption(
         name = "MissAV",
-        description = "JAV streaming platform",
+        description = applicationContext.getString(R.string.site_jav_streaming_platform),
         siteType = SiteType.MISSAV,
         logoRes = R.drawable.s_switch_missav,
         accentColor = Color(0xFF1E88E5),
     ),
     SiteSwitchOption(
         name = "HentaiMama",
-        description = "Hentai streaming site",
+        description = applicationContext.getString(R.string.site_hentai_streaming_site),
         siteType = SiteType.HENTAIMAMA,
         logoRes = R.drawable.s_switch_hentaimama,
         accentColor = Color(0xFF8E24AA),
     ),
     SiteSwitchOption(
         name = "Javchu",
-        description = "JAV library (Fixed URL)",
+        description = applicationContext.getString(R.string.site_jav_library_fixed_url),
         siteType = SiteType.JAVCHU,
         logoRes = R.drawable.s_switch_javchu,
         accentColor = Color(0xFFFB8C00),
     ),
     SiteSwitchOption(
         name = "OnAir",
-        description = "Self-hosted onion video site",
+        description = applicationContext.getString(R.string.site_self_hosted_onion_video_site),
         siteType = SiteType.ONAIR,
         logoRes = R.drawable.s_switch_onair,
         accentColor = Color(0xFF00897B),
     ),
     SiteSwitchOption(
         name = "FapFolder",
-        description = "Community feed, albums and videos",
+        description = applicationContext.getString(R.string.site_community_feed_albums_and_videos),
         siteType = SiteType.FAPFOLDER,
         logoRes = R.drawable.s_switch_fapfolder,
         accentColor = Color(0xFFD81B60),
@@ -126,13 +128,13 @@ fun SiteSwitchDialog(
         ) {
             Column(modifier = Modifier.padding(bottom = SpacingNormal)) {
                 Text(
-                    text = "Switch site",
+                    text = stringResource(R.string.site_switch_site),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    text = "Tap a source to jump straight to it",
+                    text = stringResource(R.string.site_tap_a_source_to_jump_straight),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -232,7 +234,7 @@ private fun SiteSwitchTile(
                 if (isCurrent) {
                     Icon(
                         imageVector = Icons.Filled.CheckCircle,
-                        contentDescription = "Current site",
+                        contentDescription = stringResource(R.string.site_current_site),
                         tint = MaterialTheme.colorScheme.primary,
                     )
                 }

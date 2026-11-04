@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.HentaiMama.ui.recent
 
+import androidx.compose.ui.res.stringResource
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import com.yenaly.han1meviewer.ui.component.SiteEmptyContent
@@ -125,7 +126,7 @@ fun HentaiMamaRecentEpisodesScreen(
                         )
                         uiState.pageInfo?.let { info ->
                             Text(
-                                text = "Page ${info.current} / ${info.total}",
+                                text = stringResource(R.string.hm_page_2, info.current, info.total),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
@@ -138,13 +139,13 @@ fun HentaiMamaRecentEpisodesScreen(
                     IconButton(onClick = onNavigateToCardSettings) {
                         Icon(
                             imageVector = Icons.Default.Settings,
-                            contentDescription = "Card settings",
+                            contentDescription = stringResource(R.string.hm_card_settings),
                         )
                     }
                     IconButton(onClick = { viewModel.refresh() }) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
-                            contentDescription = "Refresh",
+                            contentDescription = stringResource(R.string.site_refresh),
                         )
                     }
                 },
@@ -159,7 +160,7 @@ fun HentaiMamaRecentEpisodesScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.KeyboardArrowUp,
-                        contentDescription = "Scroll to top",
+                        contentDescription = stringResource(R.string.site_scroll_to_top),
                     )
                 }
             }
@@ -172,12 +173,12 @@ fun HentaiMamaRecentEpisodesScreen(
         ) {
             when {
                 uiState.isLoadingFirst && uiState.items.isEmpty() -> {
-                    SiteLoadingContent(message = "Loading recent episodes…")
+                    SiteLoadingContent(message = stringResource(R.string.hm_loading_recent_episodes))
                 }
 
                 uiState.error != null && uiState.items.isEmpty() -> {
                     SiteErrorContent(
-                        title = "Failed to load recent episodes",
+                        title = stringResource(R.string.hm_failed_to_load_recent_episodes),
                         message = uiState.error?.message,
                         onRetry = { viewModel.refresh() },
                     )
@@ -185,8 +186,8 @@ fun HentaiMamaRecentEpisodesScreen(
 
                 uiState.items.isEmpty() -> {
                     SiteEmptyContent(
-                        hint = "No recent episodes",
-                        subHint = "Check back later.",
+                        hint = stringResource(R.string.hm_no_recent_episodes),
+                        subHint = stringResource(R.string.hm_check_back_later),
                     )
                 }
 

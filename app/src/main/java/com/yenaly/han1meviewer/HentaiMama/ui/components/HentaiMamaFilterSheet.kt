@@ -43,18 +43,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaOptions
 import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaOrder
+import com.yenaly.han1meviewer.R
+import com.yenaly.yenaly_libs.utils.applicationContext
 
 private enum class FilterTab(val title: String) {
-    ORDER("Order"),
-    GENRE("Genre"),
-    YEAR("Year"),
-    PRODUCER("Producer"),
-    SLUG("Slug"),
+    ORDER(applicationContext.getString(R.string.hm_order)),
+    GENRE(applicationContext.getString(R.string.site_genre)),
+    YEAR(applicationContext.getString(R.string.site_year)),
+    PRODUCER(applicationContext.getString(R.string.hm_producer)),
+    SLUG(applicationContext.getString(R.string.hm_slug)),
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -151,7 +154,7 @@ fun HentaiMamaFilterSheet(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Sort & Filter",
+                    text = stringResource(R.string.site_sort_filter),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f),
@@ -167,7 +170,7 @@ fun HentaiMamaFilterSheet(
                     slugQuery = ""
                     onReset()
                 }) {
-                    Text("Reset")
+                    Text(stringResource(R.string.reset))
                 }
             }
 
@@ -204,7 +207,7 @@ fun HentaiMamaFilterSheet(
                 FilterTab.GENRE -> SearchableSingleSelectTab(
                     query = genreQuery,
                     onQueryChange = { genreQuery = it },
-                    placeholder = "Search genres…",
+                    placeholder = stringResource(R.string.site_search_genres),
                     items = filteredGenres,
                     selected = genre,
                     onSelect = { genre = if (genre == it) null else it },
@@ -219,7 +222,7 @@ fun HentaiMamaFilterSheet(
                 FilterTab.PRODUCER -> SearchableSingleSelectTab(
                     query = producerQuery,
                     onQueryChange = { producerQuery = it },
-                    placeholder = "Search producers…",
+                    placeholder = stringResource(R.string.hm_search_producers),
                     items = filteredProducers,
                     selected = producer,
                     onSelect = { producer = if (producer == it) null else it },
@@ -230,14 +233,14 @@ fun HentaiMamaFilterSheet(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(
-                        text = "Browse a genre page directly (e.g. uncensored, harem, ntr).",
+                        text = stringResource(R.string.hm_browse_a_genre_page_directly_e),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     SearchableSingleSelectTab(
                         query = slugQuery,
                         onQueryChange = { slugQuery = it },
-                        placeholder = "Search slugs…",
+                        placeholder = stringResource(R.string.hm_search_slugs),
                         items = filteredSlugs,
                         selected = genreSlug,
                         onSelect = { slug ->
@@ -259,7 +262,7 @@ fun HentaiMamaFilterSheet(
                     onClick = onDismiss,
                     modifier = Modifier.weight(1f),
                 ) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
                 Button(
                     onClick = {
@@ -277,7 +280,7 @@ fun HentaiMamaFilterSheet(
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(Modifier.size(6.dp))
-                    Text("Apply", fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.site_apply), fontWeight = FontWeight.SemiBold)
                 }
             }
 
@@ -355,7 +358,7 @@ private fun SearchableSingleSelectTab(
             trailingIcon = {
                 if (query.isNotEmpty()) {
                     IconButton(onClick = { onQueryChange("") }) {
-                        Icon(Icons.Default.Clear, contentDescription = "Clear")
+                        Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.site_clear))
                     }
                 }
             },
@@ -370,7 +373,7 @@ private fun SearchableSingleSelectTab(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "No matches",
+                    text = stringResource(R.string.hm_no_matches),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.OnAir.ui.video
 
+import androidx.compose.ui.res.stringResource
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
 import com.yenaly.han1meviewer.ui.component.SiteErrorContent
@@ -73,6 +75,7 @@ import com.yenaly.han1meviewer.ui.component.SiteVideoActionBar
 import com.yenaly.han1meviewer.OnAir.data.model.OnAirVideoTag
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
 import com.yenaly.han1meviewer.ui.screen.rememberRandomLoadingHint
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
@@ -176,7 +179,7 @@ fun OnAirVideoScreen(
     LaunchedEffect(state) {
         val s = state
         if (s is VideoLoadingState.Error) {
-            onLoadFailure(s.throwable.message ?: "Video failed")
+            onLoadFailure(s.throwable.message ?: applicationContext.getString(R.string.onair_video_failed))
         }
     }
 
@@ -240,7 +243,7 @@ fun OnAirVideoScreen(
                 onTokenExpired = {
                     viewModel.markStreamUnavailable(
                         playerState.currentQuality,
-                        "Session expired — sign in again to refresh stream URLs.",
+                        applicationContext.getString(R.string.onair_session_expired_sign_in_again_to),
                     )
                 },
                 coverUrl = info?.recommendedVideos?.firstOrNull()?.thumbUrl,
@@ -253,7 +256,7 @@ fun OnAirVideoScreen(
         topBar = {
             SiteTopAppBar(
                 title = {
-                    val title = (state as? VideoLoadingState.Success)?.info?.title ?: "Video"
+                    val title = (state as? VideoLoadingState.Success)?.info?.title ?: stringResource(R.string.video)
                     Text(text = title, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 },
                 navigationIcon = {
@@ -263,7 +266,7 @@ fun OnAirVideoScreen(
                     }) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.back),
                         )
                     }
                 },
@@ -277,13 +280,13 @@ fun OnAirVideoScreen(
             )
 
             is VideoLoadingState.Error -> SiteErrorContent(
-                message = s.throwable.message ?: "Failed to load",
+                message = s.throwable.message ?: stringResource(R.string.site_failed_to_load),
                 onRetry = { viewModel.loadVideo(videoId, preferredQuality) },
                 modifier = Modifier.padding(paddingValues),
             )
 
             is VideoLoadingState.NoContent -> SiteErrorContent(
-                message = "Video not found",
+                message = stringResource(R.string.onair_video_not_found),
                 onRetry = { viewModel.loadVideo(videoId, preferredQuality) },
                 modifier = Modifier.padding(paddingValues),
             )
@@ -319,7 +322,7 @@ fun OnAirVideoScreen(
                             onTokenExpired = {
                                 viewModel.markStreamUnavailable(
                                     playerState.currentQuality,
-                                    "Session expired — sign in again to refresh stream URLs.",
+                                    applicationContext.getString(R.string.onair_session_expired_sign_in_again_to),
                                 )
                             },
                             coverUrl = detail.recommendedVideos.firstOrNull()?.thumbUrl,
@@ -355,7 +358,7 @@ fun OnAirVideoScreen(
                                     tint = MaterialTheme.colorScheme.onSecondaryContainer,
                                 )
                                 Text(
-                                    text = "Resume from ${formatMillis(resumePosition)}?",
+                                    text = stringResource(R.string.site_resume_from, formatMillis(resumePosition)),
                                     modifier = Modifier.weight(1f),
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Medium,
@@ -364,14 +367,14 @@ fun OnAirVideoScreen(
                                 TextButton(onClick = {
                                     viewModel.startFromBeginning()
                                     viewModel.startPlayback()
-                                }) { Text("Restart") }
+                                }) { Text(stringResource(R.string.onair_restart)) }
                                 FilledTonalButton(
                                     onClick = {
                                         viewModel.applyResume()
                                         viewModel.startPlayback()
                                     },
                                     shape = RoundedCornerShape(50),
-                                ) { Text("Resume") }
+                                ) { Text(stringResource(R.string.site_resume)) }
                             }
                         }
                     }
@@ -557,7 +560,7 @@ private fun VideoDetailContent(
         if (detail.recommendedVideos.isNotEmpty()) {
             item(key = "recommended_header") {
                 Text(
-                    text = "More videos",
+                    text = stringResource(R.string.onair_more_videos),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 6.dp),

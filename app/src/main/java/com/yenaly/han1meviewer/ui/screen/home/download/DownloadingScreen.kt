@@ -95,13 +95,13 @@ private fun DownloadStatusSummary(items: List<HanimeDownloadEntity>) {
     if (items.isEmpty()) return
     val parts = buildList {
         items.count { it.state == DownloadState.Downloading }.takeIf { it > 0 }
-            ?.let { add("$it downloading") }
+            ?.let { add(stringResource(R.string.downloading_2, it)) }
         items.count { it.state == DownloadState.Queued }.takeIf { it > 0 }
-            ?.let { add("$it queued") }
+            ?.let { add(stringResource(R.string.queued, it)) }
         items.count { it.state == DownloadState.Paused || it.state == DownloadState.Unknown }
-            .takeIf { it > 0 }?.let { add("$it paused") }
+            .takeIf { it > 0 }?.let { add(stringResource(R.string.paused_2, it)) }
         items.count { it.state == DownloadState.Failed }.takeIf { it > 0 }
-            ?.let { add("$it failed") }
+            ?.let { add(stringResource(R.string.failed, it)) }
     }
     if (parts.isEmpty()) return
     Text(
@@ -119,7 +119,7 @@ private fun ImageDownloadRow(job: ImageDownloadJob) {
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
         Row(modifier = Modifier.fillMaxWidth()) {
             Text(
-                text = "Photos · ${job.label}",
+                text = stringResource(R.string.photos, job.label),
                 style = MaterialTheme.typography.labelMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

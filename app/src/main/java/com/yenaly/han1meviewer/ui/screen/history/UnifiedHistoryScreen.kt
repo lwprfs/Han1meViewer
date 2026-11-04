@@ -43,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -55,6 +56,7 @@ import com.yenaly.han1meviewer.FapFolder.data.local.FapFolderHistoryRepo
 import com.yenaly.han1meviewer.HentaiMama.data.local.HentaiMamaHistoryRepo
 import com.yenaly.han1meviewer.MissAV.data.repository.MissAvHistoryRepo
 import com.yenaly.han1meviewer.OnAir.data.local.OnAirHistoryRepo
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.logic.DatabaseRepo
 import com.yenaly.han1meviewer.logic.entity.WatchHistoryEntity
@@ -270,10 +272,10 @@ fun UnifiedHistoryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Watch history · all sites") },
+                title = { Text(stringResource(R.string.site_watch_history_all_sites)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {
@@ -281,7 +283,7 @@ fun UnifiedHistoryScreen(
                         onClick = { showClearConfirm = true },
                         enabled = !visible.isNullOrEmpty(),
                     ) {
-                        Icon(Icons.Default.DeleteSweep, contentDescription = "Clear history")
+                        Icon(Icons.Default.DeleteSweep, contentDescription = stringResource(R.string.site_clear_history))
                     }
                 },
             )
@@ -302,7 +304,7 @@ fun UnifiedHistoryScreen(
                 FilterChip(
                     selected = filter == null,
                     onClick = { filter = null },
-                    label = { Text("All") },
+                    label = { Text(stringResource(R.string.site_all)) },
                 )
                 filterSites.forEach { site ->
                     FilterChip(
@@ -321,7 +323,7 @@ fun UnifiedHistoryScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        "Nothing watched yet",
+                        stringResource(R.string.site_nothing_watched_yet),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -347,35 +349,35 @@ fun UnifiedHistoryScreen(
     itemToDelete?.let { item ->
         AlertDialog(
             onDismissRequest = { itemToDelete = null },
-            title = { Text("Remove from history?") },
+            title = { Text(stringResource(R.string.site_remove_from_history)) },
             text = { Text(item.title.ifBlank { item.code }) },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.delete(item)
                     itemToDelete = null
-                }) { Text("Remove") }
+                }) { Text(stringResource(R.string.remove)) }
             },
-            dismissButton = { TextButton(onClick = { itemToDelete = null }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { itemToDelete = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 
     if (showClearConfirm) {
         AlertDialog(
             onDismissRequest = { showClearConfirm = false },
-            title = { Text("Clear history?") },
+            title = { Text(stringResource(R.string.site_clear_history_2)) },
             text = {
                 Text(
-                    if (filter == null) "This removes the watch history of every site."
-                    else "This removes the watch history of ${siteBadge(filter!!)}."
+                    if (filter == null) stringResource(R.string.site_this_removes_the_watch_history_of)
+                    else stringResource(R.string.site_this_removes_the_watch_history_of_2, siteBadge(filter!!))
                 )
             },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.clear(filter)
                     showClearConfirm = false
-                }) { Text("Clear") }
+                }) { Text(stringResource(R.string.site_clear)) }
             },
-            dismissButton = { TextButton(onClick = { showClearConfirm = false }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { showClearConfirm = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 }
@@ -448,7 +450,7 @@ private fun UnifiedHistoryRow(
                 }
             }
             IconButton(onClick = onDelete, modifier = Modifier.size(40.dp)) {
-                Icon(Icons.Default.Delete, contentDescription = "Remove")
+                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.remove))
             }
         }
     }

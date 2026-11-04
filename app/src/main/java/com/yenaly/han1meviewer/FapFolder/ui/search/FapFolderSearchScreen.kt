@@ -51,6 +51,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -61,6 +62,7 @@ import coil3.compose.AsyncImage
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.graphics.SolidColor
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.SelectableTag
 import com.yenaly.han1meviewer.FapFolder.common.FapFolderConstants
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderAutocompleteSuggestion
@@ -138,7 +140,7 @@ fun FapFolderSearchScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.back),
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
@@ -172,7 +174,7 @@ fun FapFolderSearchScreen(
                                 ) {
                                     if (queryText.isEmpty()) {
                                         Text(
-                                            text = "Search posts, users, or #hashtags",
+                                            text = stringResource(R.string.fap_search_posts_users_or_hashtags),
                                             style = MaterialTheme.typography.bodyLarge,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             maxLines = 1,
@@ -192,7 +194,7 @@ fun FapFolderSearchScreen(
                         }) {
                             Icon(
                                 imageVector = Icons.Default.Clear,
-                                contentDescription = "Clear",
+                                contentDescription = stringResource(R.string.site_clear),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
@@ -200,7 +202,7 @@ fun FapFolderSearchScreen(
                     IconButton(onClick = { submit() }) {
                         Icon(
                             imageVector = Icons.Default.Search,
-                            contentDescription = "Search",
+                            contentDescription = stringResource(R.string.search),
                             tint = MaterialTheme.colorScheme.primary,
                         )
                     }
@@ -250,17 +252,17 @@ fun FapFolderSearchScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 TabChip(
-                    label = "Posts",
+                    label = stringResource(R.string.fap_tab_posts),
                     selected = uiState.activeTab == FapFolderSearchTab.POSTS,
                     onClick = { viewModel.changeTab(FapFolderSearchTab.POSTS) },
                 )
                 TabChip(
-                    label = "Users",
+                    label = stringResource(R.string.fap_users),
                     selected = uiState.activeTab == FapFolderSearchTab.USERS,
                     onClick = { viewModel.changeTab(FapFolderSearchTab.USERS) },
                 )
                 TabChip(
-                    label = "Communities",
+                    label = stringResource(R.string.fap_communities),
                     selected = uiState.activeTab == FapFolderSearchTab.COMMUNITIES,
                     onClick = { viewModel.changeTab(FapFolderSearchTab.COMMUNITIES) },
                 )
@@ -276,17 +278,17 @@ fun FapFolderSearchScreen(
                     FilterChip(
                         selected = uiState.activeFilter == FapFolderConstants.FILTER_ALL,
                         onClick = { viewModel.changeFilter(FapFolderConstants.FILTER_ALL) },
-                        label = { Text("All") },
+                        label = { Text(stringResource(R.string.site_all)) },
                     )
                     FilterChip(
                         selected = uiState.activeFilter == FapFolderConstants.FILTER_PHOTOS,
                         onClick = { viewModel.changeFilter(FapFolderConstants.FILTER_PHOTOS) },
-                        label = { Text("Photos") },
+                        label = { Text(stringResource(R.string.fap_tab_photos)) },
                     )
                     FilterChip(
                         selected = uiState.activeFilter == FapFolderConstants.FILTER_VIDEOS,
                         onClick = { viewModel.changeFilter(FapFolderConstants.FILTER_VIDEOS) },
-                        label = { Text("Videos") },
+                        label = { Text(stringResource(R.string.fap_tab_videos)) },
                     )
                 }
             }
@@ -296,7 +298,7 @@ fun FapFolderSearchScreen(
             Box(modifier = Modifier.fillMaxSize()) {
                 when {
                     uiState.rawQuery.isBlank() && uiState.items.isEmpty() -> {
-                        SearchHint(message = "Type a query and press Enter to search.")
+                        SearchHint(message = stringResource(R.string.fap_type_a_query_and_press_enter))
                     }
 
                     uiState.isLoading && uiState.items.isEmpty() -> {
@@ -308,14 +310,14 @@ fun FapFolderSearchScreen(
 
                     uiState.errorMessage != null && uiState.items.isEmpty() -> {
                         SearchError(
-                            message = uiState.errorMessage ?: "Search failed.",
+                            message = uiState.errorMessage ?: stringResource(R.string.fap_search_failed),
                             onRetry = { viewModel.retry() },
                         )
                     }
 
                     uiState.empty && uiState.items.isEmpty() -> {
                         SearchHint(
-                            message = "No results for ${queryText.ifBlank { "this query" }}.",
+                            message = stringResource(R.string.fap_no_results_for, queryText.ifBlank { "this query" }),
                         )
                     }
 
@@ -482,7 +484,7 @@ private fun AutocompleteRow(
                 is FapFolderAutocompleteSuggestion.Community -> {
                     suggestion.followerCount?.let { count ->
                         Text(
-                            text = "$count followers",
+                            text = stringResource(R.string.fap_followers, count),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -490,14 +492,14 @@ private fun AutocompleteRow(
                 }
                 is FapFolderAutocompleteSuggestion.Hashtag -> {
                     Text(
-                        text = "Hashtag",
+                        text = stringResource(R.string.fap_hashtag),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 is FapFolderAutocompleteSuggestion.SearchFor -> {
                     Text(
-                        text = if (suggestion.isHashtag) "Hashtag search" else "Search",
+                        text = if (suggestion.isHashtag) stringResource(R.string.fap_hashtag_search) else stringResource(R.string.search),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -568,7 +570,7 @@ private fun SearchError(message: String, onRetry: () -> Unit) {
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = "Search failed",
+                text = stringResource(R.string.site_search_failed),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.error,
             )
@@ -579,7 +581,7 @@ private fun SearchError(message: String, onRetry: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(12.dp))
-            TextButton(onClick = onRetry) { Text("Retry") }
+            TextButton(onClick = onRetry) { Text(stringResource(R.string.retry)) }
         }
     }
 }

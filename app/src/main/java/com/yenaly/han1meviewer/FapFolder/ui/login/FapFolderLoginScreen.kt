@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.FapFolder.ui.login
 
+import androidx.compose.ui.res.stringResource
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import androidx.compose.foundation.clickable
@@ -51,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderAuthRepo
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderAuthResult
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderCredentialStore
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
@@ -76,7 +79,7 @@ fun FapFolderLoginScreen(
         if (isSubmitting) return
         val user = username.trim()
         if (user.isEmpty() || password.isEmpty()) {
-            errorMessage = "Username and password cannot be empty."
+            errorMessage = applicationContext.getString(R.string.fap_username_and_password_cannot_be_empty)
             return
         }
         errorMessage = null
@@ -106,13 +109,12 @@ fun FapFolderLoginScreen(
                     }
                     is FapFolderAuthResult.InvalidCredentials -> {
                         isSubmitting = false
-                        errorMessage = "Incorrect username or password."
+                        errorMessage = applicationContext.getString(R.string.fap_incorrect_username_or_password)
                     }
                     is FapFolderAuthResult.CloudflareChallenge -> {
                         isSubmitting = false
                         errorMessage =
-                            "Cloudflare challenge detected. Wait a moment and try again, " +
-                                    "or paste fresh cookies."
+                            applicationContext.getString(R.string.fap_cloudflare_challenge_detected_wait_a_m)
                     }
                     is FapFolderAuthResult.SessionExpired -> {
                         isSubmitting = false
@@ -121,7 +123,7 @@ fun FapFolderLoginScreen(
                     is FapFolderAuthResult.NetworkError -> {
                         isSubmitting = false
                         errorMessage = result.throwable.message
-                            ?: "Could not reach FapFolder."
+                            ?: applicationContext.getString(R.string.fap_could_not_reach_fapfolder)
                     }
                 }
             }
@@ -131,7 +133,7 @@ fun FapFolderLoginScreen(
     Scaffold(
         topBar = {
             SiteTopAppBar(
-                title = { Text("Sign in") },
+                title = { Text(stringResource(R.string.site_sign_in)) },
                 navigationIcon = { SiteBackButton(onClick = onBack) },
             )
         },
@@ -158,15 +160,13 @@ fun FapFolderLoginScreen(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Text(
-                        text = "Sign in to FapFolder",
+                        text = stringResource(R.string.fap_sign_in_to_fapfolder),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
                     Text(
-                        text = "Log in with your fapfolder.club username or email. " +
-                                "If login fails with a Cloudflare challenge, paste fresh " +
-                                "cookies from a browser session instead.",
+                        text = stringResource(R.string.fap_log_in_with_your_fapfolder_club),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f),
                     )
@@ -176,7 +176,7 @@ fun FapFolderLoginScreen(
             OutlinedTextField(
                 value = username,
                 onValueChange = { username = it; errorMessage = null },
-                label = { Text("Username or email") },
+                label = { Text(stringResource(R.string.fap_username_or_email)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 enabled = !isSubmitting,
@@ -185,7 +185,7 @@ fun FapFolderLoginScreen(
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it; errorMessage = null },
-                label = { Text("Password") },
+                label = { Text(stringResource(R.string.password)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 enabled = !isSubmitting,
@@ -202,7 +202,7 @@ fun FapFolderLoginScreen(
                             } else {
                                 Icons.Filled.Visibility
                             },
-                            contentDescription = if (passwordVisible) "Hide" else "Show",
+                            contentDescription = if (passwordVisible) stringResource(R.string.fap_hide) else stringResource(R.string.fap_show),
                         )
                     }
                 },
@@ -223,7 +223,7 @@ fun FapFolderLoginScreen(
                     enabled = !isSubmitting,
                 )
                 Text(
-                    text = "Keep me signed in for 30 days",
+                    text = stringResource(R.string.fap_keep_me_signed_in_for_30),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -249,9 +249,9 @@ fun FapFolderLoginScreen(
                             .size(16.dp),
                         strokeWidth = 2.dp,
                     )
-                    Text("Signing in…")
+                    Text(stringResource(R.string.fap_signing_in))
                 } else {
-                    Text("Sign in")
+                    Text(stringResource(R.string.site_sign_in))
                 }
             }
 
@@ -262,7 +262,7 @@ fun FapFolderLoginScreen(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !isSubmitting,
             ) {
-                Text("New here? Create an account")
+                Text(stringResource(R.string.fap_new_here_create_an_account))
             }
 
             TextButton(
@@ -270,7 +270,7 @@ fun FapFolderLoginScreen(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !isSubmitting,
             ) {
-                Text("Paste cookies instead")
+                Text(stringResource(R.string.fap_paste_cookies_instead))
             }
         }
     }

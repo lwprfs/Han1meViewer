@@ -1,4 +1,6 @@
 package com.yenaly.han1meviewer.MissAV.ui.home
+import androidx.compose.ui.res.stringResource
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import androidx.compose.foundation.clickable
@@ -46,15 +48,15 @@ fun MissAvSettingsHubScreen(
     val entries = listOf(
         SettingsHubEntry(
             key = "home_categories",
-            title = "Home Categories",
-            subtitle = "Reorder, hide, edit, add or delete home sections",
+            title = stringResource(R.string.drawer_home_categories),
+            subtitle = stringResource(R.string.site_home_categories_subtitle),
             icon = Icons.Default.Category,
             onClick = onNavigateToHomeCategories,
         ),
         SettingsHubEntry(
             key = "host",
-            title = "Host / Mirror",
-            subtitle = "Choose which MissAV hostname to load",
+            title = stringResource(R.string.drawer_host_mirror),
+            subtitle = stringResource(R.string.missav_host_subtitle),
             icon = Icons.Default.Dns,
             onClick = onNavigateToHost,
         ),
@@ -63,7 +65,7 @@ fun MissAvSettingsHubScreen(
     Scaffold(
         topBar = {
             SiteTopAppBar(
-                title = { Text("MissAV Settings") },
+                title = { Text(stringResource(R.string.missav_missav_settings)) },
                 navigationIcon = { SiteBackButton(onClick = onBack) },
             )
         },

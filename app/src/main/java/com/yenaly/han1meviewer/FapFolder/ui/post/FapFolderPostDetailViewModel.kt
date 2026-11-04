@@ -14,9 +14,11 @@ import com.yenaly.han1meviewer.FapFolder.data.model.withLiked
 import com.yenaly.han1meviewer.FapFolder.data.model.liked
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderCommentParser
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetworkRepo
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -114,7 +116,7 @@ class FapFolderPostDetailViewModel(application: Application) : AndroidViewModel(
                         _uiState.update {
                             it.copy(
                                 postLoading = false,
-                                postError = msg ?: "Failed to load post.",
+                                postError = msg ?: applicationContext.getString(R.string.fap_failed_to_load_post),
                                 sessionExpired = msg?.contains("session", true) == true,
                             )
                         }
@@ -123,7 +125,7 @@ class FapFolderPostDetailViewModel(application: Application) : AndroidViewModel(
                         _uiState.update {
                             it.copy(
                                 postLoading = false,
-                                postError = "Post not found.",
+                                postError = applicationContext.getString(R.string.fap_post_not_found_2),
                             )
                         }
                     }
@@ -374,7 +376,7 @@ class FapFolderPostDetailViewModel(application: Application) : AndroidViewModel(
                             it.copy(
                                 commentPostPending = false,
                                 commentPostError = result.throwable.message
-                                    ?: "Failed to post comment.",
+                                    ?: applicationContext.getString(R.string.fap_failed_to_post_comment),
                             )
                         }
                     }

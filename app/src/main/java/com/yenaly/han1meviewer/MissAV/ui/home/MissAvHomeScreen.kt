@@ -89,7 +89,7 @@ fun MissAvHomeScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             SiteSearchTopBar(
-                hint = "Search MissAV · $hostLabel",
+                hint = stringResource(R.string.missav_search_missav, hostLabel),
                 onSearchClick = { onNavigateToSearch(null) },
                 leading = {
                     SiteBarIconButton(
@@ -124,7 +124,7 @@ fun MissAvHomeScreen(
 
                 isErrorEverything -> SiteErrorContent(
                     message = (homeState as WebsiteState.Error).throwable.message
-                        ?: "Failed to load home page",
+                        ?: stringResource(R.string.missav_failed_to_load_home_page),
                     onRetry = {
                         viewModel.getHomePage(force = true)
                         viewModel.refreshAllCategories()
@@ -157,13 +157,13 @@ private fun HomeContent(
     if (popular.isEmpty() && categoryRows.all { it.videos.isEmpty() && !it.isLoading }) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                SiteEmptyContent(hint = "No content available")
+                SiteEmptyContent(hint = stringResource(R.string.missav_no_content_available))
             }
             TextButton(
                 onClick = { onNavigateToSearch(null) },
                 modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 48.dp),
             ) {
-                Text("Try searching")
+                Text(stringResource(R.string.missav_try_searching))
             }
         }
         return
@@ -177,7 +177,7 @@ private fun HomeContent(
         if (popular.isNotEmpty()) {
             item(key = "popular_header") {
                 SiteSectionHeader(
-                    title = "Popular Videos",
+                    title = stringResource(R.string.missav_popular_videos),
                     onMoreClick = { onNavigateToSearch(null) },
                 )
             }

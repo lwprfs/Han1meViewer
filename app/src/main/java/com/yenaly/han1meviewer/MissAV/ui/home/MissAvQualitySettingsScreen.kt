@@ -24,10 +24,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.Preferences
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
+import com.yenaly.yenaly_libs.utils.applicationContext
 
 data class MissAvQualityOption(
 
@@ -39,11 +42,11 @@ data class MissAvQualityOption(
 object MissAvQualityRepo {
 
     val options: List<MissAvQualityOption> = listOf(
-        MissAvQualityOption("auto", "Auto", "Adapts to your connection while playing"),
-        MissAvQualityOption("1080", "1080p", "Full HD, highest data use"),
+        MissAvQualityOption("auto", "Auto", applicationContext.getString(R.string.missav_adapts_to_your_connection_while_playin)),
+        MissAvQualityOption("1080", "1080p", applicationContext.getString(R.string.missav_full_hd_highest_data_use)),
         MissAvQualityOption("720", "720p", "HD"),
-        MissAvQualityOption("480", "480p", "Standard"),
-        MissAvQualityOption("360", "360p", "Lowest data use"),
+        MissAvQualityOption("480", "480p", applicationContext.getString(R.string.missav_standard)),
+        MissAvQualityOption("360", "360p", applicationContext.getString(R.string.missav_lowest_data_use)),
     )
 
     fun current(): MissAvQualityOption {
@@ -67,7 +70,7 @@ fun MissAvQualitySettingsScreen(
     Scaffold(
         topBar = {
             SiteTopAppBar(
-                title = { Text("Video Resolution") },
+                title = { Text(stringResource(R.string.missav_video_resolution)) },
                 navigationIcon = { SiteBackButton(onClick = onBack) },
             )
         },
@@ -78,9 +81,7 @@ fun MissAvQualitySettingsScreen(
                 .padding(paddingValues)
         ) {
             Text(
-                text = "Resolution a MissAV video starts in. If a video doesn't offer " +
-                    "the chosen resolution, the closest lower one is used. Unless " +
-                    "locked, you can still switch resolution from the player.",
+                text = stringResource(R.string.missav_resolution_a_missav_video_starts_in),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -94,12 +95,12 @@ fun MissAvQualitySettingsScreen(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Lock resolution",
+                        text = stringResource(R.string.missav_lock_resolution),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
-                        text = "Always play the selected resolution and disable switching in the player",
+                        text = stringResource(R.string.missav_always_play_the_selected_resolution_an),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

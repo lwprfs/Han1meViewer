@@ -47,6 +47,7 @@ import com.yenaly.han1meviewer.ui.component.SiteVideoSectionHeader
 import com.yenaly.han1meviewer.ui.component.VideoCardItem
 import com.yenaly.han1meviewer.ui.theme.SpacingNormal
 import com.yenaly.han1meviewer.ui.theme.VideoNormalCardMinWidth
+import com.yenaly.yenaly_libs.utils.applicationContext
 import java.util.regex.Pattern
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -152,7 +153,7 @@ fun MissAvVideoDetails(
         val infoItems = listOf(
             "Directors" to info.directors,
             "Label" to info.label,
-            "Series" to info.series,
+            stringResource(R.string.hm_series) to info.series,
             "Makers" to info.makers
         ).filter { it.second.isNullOrBlank().not() }
 
@@ -229,7 +230,7 @@ fun MissAvVideoDetails(
                             contentColor = content,
                             onClick = { onNavigateToSearch(genre) },
                             onLongClick = {
-                                MissAvVideoUtils.copyToClipboard(context, "Genre", genre)
+                                MissAvVideoUtils.copyToClipboard(context, applicationContext.getString(R.string.site_genre), genre)
                             },
                         )
                     }

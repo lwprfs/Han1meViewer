@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.HentaiMama.ui.upcoming
 
+import androidx.compose.ui.res.stringResource
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import com.yenaly.han1meviewer.ui.component.SiteEmptyContent
@@ -68,6 +69,7 @@ import com.yenaly.han1meviewer.HentaiMama.settings.HentaiMamaCardSettings
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.SiteVideoSectionHeader
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -108,7 +110,7 @@ fun HentaiMamaUpcomingScreen(
                 title = {
                     Column {
                         Text(
-                            text = "Upcoming",
+                            text = stringResource(R.string.drawer_upcoming),
                             style = MaterialTheme.typography.titleLarge,
                             maxLines = 1,
                         )
@@ -128,19 +130,19 @@ fun HentaiMamaUpcomingScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Filled.CalendarMonth,
-                            contentDescription = "Pick month",
+                            contentDescription = stringResource(R.string.hm_pick_month),
                         )
                     }
                     IconButton(onClick = onNavigateToCardSettings) {
                         Icon(
                             imageVector = Icons.Default.Settings,
-                            contentDescription = "Card settings",
+                            contentDescription = stringResource(R.string.hm_card_settings),
                         )
                     }
                     IconButton(onClick = { viewModel.refresh() }) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
-                            contentDescription = "Refresh",
+                            contentDescription = stringResource(R.string.site_refresh),
                         )
                     }
                 },
@@ -155,12 +157,12 @@ fun HentaiMamaUpcomingScreen(
             val selected = uiState.selectedMonth
             when {
                 uiState.isLoadingMonths && selected == null -> {
-                    SiteLoadingContent(message = "Loading upcoming months…")
+                    SiteLoadingContent(message = stringResource(R.string.hm_loading_upcoming_months))
                 }
 
                 selected == null && uiState.error != null -> {
                     SiteErrorContent(
-                        title = "Failed to load upcoming",
+                        title = stringResource(R.string.hm_failed_to_load_upcoming),
                         message = uiState.error?.message,
                         onRetry = { viewModel.refresh() },
                     )
@@ -168,18 +170,18 @@ fun HentaiMamaUpcomingScreen(
 
                 selected == null -> {
                     SiteEmptyContent(
-                        hint = "No upcoming months",
+                        hint = stringResource(R.string.hm_no_upcoming_months),
                         subHint = "",
                     )
                 }
 
                 uiState.isLoading && uiState.cards.isEmpty() -> {
-                    SiteLoadingContent(message = "Loading ${selected.displayName}…")
+                    SiteLoadingContent(message = stringResource(R.string.hm_loading, selected.displayName))
                 }
 
                 uiState.error != null && uiState.cards.isEmpty() -> {
                     SiteErrorContent(
-                        title = "Failed to load upcoming",
+                        title = stringResource(R.string.hm_failed_to_load_upcoming),
                         message = uiState.error?.message,
                         onRetry = { viewModel.refresh() },
                     )
@@ -187,8 +189,8 @@ fun HentaiMamaUpcomingScreen(
 
                 uiState.cards.isEmpty() -> {
                     SiteEmptyContent(
-                        hint = "No upcoming episodes",
-                        subHint = "${selected.displayName} has nothing scheduled yet.",
+                        hint = stringResource(R.string.hm_no_upcoming_episodes),
+                        subHint = stringResource(R.string.hm_has_nothing_scheduled_yet, selected.displayName),
                     )
                 }
 
@@ -229,7 +231,7 @@ private fun UpcomingGrid(
     onOpenStudio: (String) -> Unit,
 ) {
     val grouped: Map<String, List<UpcomingCard>> = remember(cards) {
-        cards.groupBy { it.airDateRaw.ifBlank { "TBA" } }
+        cards.groupBy { it.airDateRaw.ifBlank { applicationContext.getString(R.string.hm_tba) } }
             .toSortedMap()
     }
 
@@ -327,7 +329,7 @@ private fun UpcomingCardView(
                         shape = RoundedCornerShape(4.dp),
                     ) {
                         Text(
-                            text = "NEW",
+                            text = stringResource(R.string.hm_new),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onTertiaryContainer,
@@ -444,7 +446,7 @@ private fun MonthPickerDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Pick a month") },
+        title = { Text(stringResource(R.string.hm_pick_a_month)) },
         text = {
             Column(
                 modifier = Modifier
@@ -481,7 +483,7 @@ private fun MonthPickerDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Close") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) }
         },
     )
 }

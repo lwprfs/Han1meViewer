@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.OnAir.ui.settings
 
+import androidx.compose.ui.res.stringResource
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import androidx.compose.animation.animateColorAsState
@@ -85,6 +87,7 @@ import com.yenaly.han1meviewer.OnAir.data.remote.OnAirTorStatus
 import com.yenaly.han1meviewer.OnAir.ui.gate.OnAirGateState
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
 import com.yenaly.han1meviewer.ui.component.GlobalToasts
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.ui.platform.LocalClipboard
@@ -132,7 +135,7 @@ fun OnAirCookieSettingsScreen(
         CookieFormat.JSON -> "JSON"
         CookieFormat.NETSCAPE -> "Netscape"
         CookieFormat.RAW_STRING -> "Raw Cookie String"
-        CookieFormat.UNKNOWN -> "Unknown"
+        CookieFormat.UNKNOWN -> stringResource(R.string.unknow)
     }
 
     fun refreshProfile() {
@@ -214,14 +217,14 @@ fun OnAirCookieSettingsScreen(
             profile = null
             when (result) {
                 is OnAirAuthRepo.AuthResult.Success -> {
-                    GlobalToasts.show("Logged out", level = GlobalToasts.ToastLevel.SUCCESS)
+                    GlobalToasts.show(applicationContext.getString(R.string.site_logged_out), level = GlobalToasts.ToastLevel.SUCCESS)
                     onLoggedOut?.invoke()
                 }
                 is OnAirAuthRepo.AuthResult.FormError,
                 is OnAirAuthRepo.AuthResult.NetworkError,
                 is OnAirAuthRepo.AuthResult.LoginRequired -> {
                     GlobalToasts.show(
-                        "Session cleared locally",
+                        applicationContext.getString(R.string.onair_session_cleared_locally),
                         level = GlobalToasts.ToastLevel.WARNING,
                     )
                     onLoggedOut?.invoke()
@@ -235,14 +238,14 @@ fun OnAirCookieSettingsScreen(
     Scaffold(
         topBar = {
             SiteTopAppBar(
-                title = { Text("Cookies") },
+                title = { Text(stringResource(R.string.site_cookies)) },
                 navigationIcon = { SiteBackButton(onClick = onBack) },
                 actions = {
                     IconButton(onClick = { runTorAndReload() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Recheck Tor and reload")
+                        Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.onair_recheck_tor_and_reload))
                     }
                     IconButton(onClick = onSwitchSite) {
-                        Icon(Icons.Default.SwapHoriz, contentDescription = "Switch site")
+                        Icon(Icons.Default.SwapHoriz, contentDescription = stringResource(R.string.site_switch_site))
                     }
                     if (hasCookies) {
                         TextButton(onClick = {
@@ -255,7 +258,7 @@ fun OnAirCookieSettingsScreen(
                                 "Cookies copied",
                                 level = GlobalToasts.ToastLevel.SUCCESS,
                             )
-                        }) { Text("Copy") }
+                        }) { Text(stringResource(R.string.copy_)) }
                     }
                 },
             )
@@ -293,7 +296,7 @@ fun OnAirCookieSettingsScreen(
                             verticalArrangement = Arrangement.spacedBy(6.dp),
                         ) {
                             Text(
-                                text = "OnAir needs attention",
+                                text = stringResource(R.string.onair_onair_needs_attention),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onTertiaryContainer,
@@ -308,7 +311,7 @@ fun OnAirCookieSettingsScreen(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
                                 OutlinedButton(onClick = onCookiesSaved) {
-                                    Text("Retry")
+                                    Text(stringResource(R.string.retry))
                                 }
                                 if (gs.suggestSwitchSite) {
                                     Button(onClick = onSwitchSite) {
@@ -318,12 +321,12 @@ fun OnAirCookieSettingsScreen(
                                             modifier = Modifier.size(16.dp),
                                         )
                                         Spacer(Modifier.width(6.dp))
-                                        Text("Switch site")
+                                        Text(stringResource(R.string.site_switch_site))
                                     }
                                 }
                                 if (gs.suggestRelogin) {
                                     Button(onClick = onOpenLogin) {
-                                        Text("Sign in")
+                                        Text(stringResource(R.string.site_sign_in))
                                     }
                                 }
                             }
@@ -343,7 +346,7 @@ fun OnAirCookieSettingsScreen(
                             verticalArrangement = Arrangement.spacedBy(6.dp),
                         ) {
                             Text(
-                                text = "Tor is not connected",
+                                text = stringResource(R.string.onair_tor_is_not_connected),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onErrorContainer,
@@ -382,21 +385,19 @@ fun OnAirCookieSettingsScreen(
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
-                        text = "Supported formats",
+                        text = stringResource(R.string.site_supported_formats),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = "• JSON (exported from browser dev tools)\n" +
-                                "• Netscape (cookies.txt)\n" +
-                                "• Raw string (name=value; name2=value2)",
+                        text = stringResource(R.string.site_json_exported_from_browser_dev_tools),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        text = "Detected format: $formatLabel",
+                        text = stringResource(R.string.site_detected_format, formatLabel),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary,
                     )
@@ -406,8 +407,8 @@ fun OnAirCookieSettingsScreen(
             OutlinedTextField(
                 value = cookieInput,
                 onValueChange = { cookieInput = it },
-                label = { Text("Cookies") },
-                placeholder = { Text("Paste cookies here…") },
+                label = { Text(stringResource(R.string.site_cookies)) },
+                placeholder = { Text(stringResource(R.string.site_paste_cookies_here)) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 200.dp, max = 400.dp),
@@ -450,12 +451,12 @@ fun OnAirCookieSettingsScreen(
                             strokeWidth = 2.dp,
                         )
                     }
-                    Text("Validate & Save")
+                    Text(stringResource(R.string.site_validate_save))
                 }
                 TextButton(
                     onClick = { showClearDialog = true },
                     enabled = hasCookies,
-                ) { Text("Clear") }
+                ) { Text(stringResource(R.string.site_clear)) }
             }
         }
     }
@@ -463,13 +464,13 @@ fun OnAirCookieSettingsScreen(
     if (showSavedDialog) {
         AlertDialog(
             onDismissRequest = { showSavedDialog = false },
-            title = { Text("Cookies saved") },
-            text = { Text("Cookies have been applied. OnAir will now load using your session.") },
+            title = { Text(stringResource(R.string.site_cookies_saved)) },
+            text = { Text(stringResource(R.string.onair_cookies_have_been_applied_onair_will)) },
             confirmButton = {
                 TextButton(onClick = {
                     showSavedDialog = false
                     onCookiesSaved()
-                }) { Text("OK") }
+                }) { Text(stringResource(R.string.site_ok)) }
             },
         )
     }
@@ -477,8 +478,8 @@ fun OnAirCookieSettingsScreen(
     if (showClearDialog) {
         AlertDialog(
             onDismissRequest = { showClearDialog = false },
-            title = { Text("Clear cookies") },
-            text = { Text("This will remove the saved OnAir cookies. You will need to log in again.") },
+            title = { Text(stringResource(R.string.site_clear_cookies)) },
+            text = { Text(stringResource(R.string.onair_this_will_remove_the_saved_onair)) },
             confirmButton = {
                 TextButton(onClick = {
                     showClearDialog = false
@@ -487,10 +488,10 @@ fun OnAirCookieSettingsScreen(
                     profile = null
                     cookieInput = ""
                     GlobalToasts.show("Cookies cleared", level = GlobalToasts.ToastLevel.INFO)
-                }) { Text("Clear", color = MaterialTheme.colorScheme.error) }
+                }) { Text(stringResource(R.string.site_clear), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
-                TextButton(onClick = { showClearDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showClearDialog = false }) { Text(stringResource(R.string.cancel)) }
             },
         )
     }
@@ -498,8 +499,8 @@ fun OnAirCookieSettingsScreen(
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { if (!loggingOut) showLogoutDialog = false },
-            title = { Text("Log out of OnAir?") },
-            text = { Text("Your session cookies will be removed from this device.") },
+            title = { Text(stringResource(R.string.onair_log_out_of_onair)) },
+            text = { Text(stringResource(R.string.site_your_session_cookies_will_be_removed)) },
             confirmButton = {
                 TextButton(
                     onClick = { performLogout() },
@@ -511,7 +512,7 @@ fun OnAirCookieSettingsScreen(
                             strokeWidth = 2.dp,
                         )
                     } else {
-                        Text("Log out", color = MaterialTheme.colorScheme.error)
+                        Text(stringResource(R.string.logout), color = MaterialTheme.colorScheme.error)
                     }
                 }
             },
@@ -519,7 +520,7 @@ fun OnAirCookieSettingsScreen(
                 TextButton(
                     onClick = { showLogoutDialog = false },
                     enabled = !loggingOut,
-                ) { Text("Cancel") }
+                ) { Text(stringResource(R.string.cancel)) }
             },
         )
     }
@@ -601,8 +602,8 @@ private fun SignedInCard(
                             text = when {
                                 profile != null -> profile.displayName
                                 !usernameHint.isNullOrBlank() -> usernameHint
-                                hasCookies -> "Signed in"
-                                else -> "Not signed in"
+                                hasCookies -> stringResource(R.string.site_signed_in)
+                                else -> stringResource(R.string.site_not_signed_in)
                             },
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold,
@@ -647,7 +648,7 @@ private fun SignedInCard(
                             modifier = Modifier.size(16.dp),
                         )
                         Spacer(Modifier.width(6.dp))
-                        Text("Refresh profile")
+                        Text(stringResource(R.string.onair_refresh_profile))
                     }
                     Button(
                         onClick = onLogout,
@@ -663,17 +664,17 @@ private fun SignedInCard(
                             modifier = Modifier.size(16.dp),
                         )
                         Spacer(Modifier.width(6.dp))
-                        Text("Log out")
+                        Text(stringResource(R.string.logout))
                     }
                 } else {
                     Button(
                         onClick = onOpenLogin,
                         modifier = Modifier.weight(1f),
-                    ) { Text("Log in") }
+                    ) { Text(stringResource(R.string.site_log_in)) }
                     OutlinedButton(
                         onClick = onOpenRegister,
                         modifier = Modifier.weight(1f),
-                    ) { Text("Create account") }
+                    ) { Text(stringResource(R.string.site_create_account)) }
                 }
             }
         }
@@ -738,10 +739,10 @@ private fun TorStatusBlock(
             }
             Spacer(Modifier.width(8.dp))
             val label = when (torState) {
-                TorBubbleState.Checking -> "Checking Tor…"
-                TorBubbleState.Passed -> "Tor connected" +
+                TorBubbleState.Checking -> stringResource(R.string.onair_checking_tor_2)
+                TorBubbleState.Passed -> stringResource(R.string.onair_tor_connected) +
                         (torStatus?.ip?.let { " · $it" } ?: "")
-                TorBubbleState.Failed -> "Tor not detected — tap to retry"
+                TorBubbleState.Failed -> stringResource(R.string.onair_tor_not_detected_tap_to_retry)
             }
             Text(
                 text = label,
@@ -762,7 +763,7 @@ private fun TorStatusBlock(
             )
         } else if (torState == TorBubbleState.Failed) {
             Text(
-                text = "You must be connected through Tor to load OnAir.",
+                text = stringResource(R.string.onair_you_must_be_connected_through_tor),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.error,
             )

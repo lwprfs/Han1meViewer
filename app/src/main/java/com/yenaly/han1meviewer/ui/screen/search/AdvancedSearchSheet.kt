@@ -553,7 +553,7 @@ private fun AdvancedSearchReleaseDateDialog(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         WheelLikeColumn(
-                            title = "Year",
+                            title = stringResource(R.string.site_year),
                             values = (SEARCH_YEAR_RANGE_START..SEARCH_YEAR_RANGE_END).toList(),
                             selectedValue = selectedYear,
                             modifier = Modifier.weight(1f),
@@ -562,7 +562,7 @@ private fun AdvancedSearchReleaseDateDialog(
                         )
                         if (!yearOnly) {
                             WheelLikeColumn(
-                                title = "Month",
+                                title = stringResource(R.string.month),
                                 values = (1..12).toList(),
                                 selectedValue = selectedMonth,
                                 modifier = Modifier.weight(1f),

@@ -10,7 +10,9 @@ import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderLoadMoreRequest
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderMedia
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetworkRepo
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderAlbumParser
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -113,7 +115,7 @@ class FapFolderAlbumViewModel(application: Application) : AndroidViewModel(appli
                             it.copy(
                                 isLoading = false,
                                 headerError = state.throwable.message
-                                    ?: "Failed to load album.",
+                                    ?: applicationContext.getString(R.string.fap_failed_to_load_album_2),
                             )
                         }
                     }

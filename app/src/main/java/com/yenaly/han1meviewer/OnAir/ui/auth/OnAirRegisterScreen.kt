@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.OnAir.ui.auth
 
+import androidx.compose.ui.res.stringResource
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import androidx.compose.foundation.background
@@ -49,6 +50,7 @@ import com.yenaly.han1meviewer.OnAir.data.remote.OnAirAuthRepo
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.GlobalToasts
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.launch
 
 private val usernamePattern = Regex("^[A-Za-z0-9_]{3,20}$")
@@ -88,7 +90,7 @@ fun OnAirRegisterScreen(
                 }
             } catch (e: Exception) {
                 captchaLoading = false
-                errorMessage = e.message ?: "Failed to load captcha"
+                errorMessage = e.message ?: applicationContext.getString(R.string.onair_failed_to_load_captcha)
             }
         }
     }
@@ -97,12 +99,12 @@ fun OnAirRegisterScreen(
 
     val usernameError = when {
         username.isNotBlank() && !usernamePattern.matches(username) ->
-            "3-20 letters, numbers or underscore"
+            stringResource(R.string.onair_3_20_letters_numbers_or_underscore)
         else -> null
     }
     val passwordError = when {
-        confirm.isNotBlank() && password != confirm -> "Passwords do not match"
-        password.isNotBlank() && password.length < 8 -> "Password must be at least 8 characters"
+        confirm.isNotBlank() && password != confirm -> stringResource(R.string.onair_passwords_do_not_match)
+        password.isNotBlank() && password.length < 8 -> stringResource(R.string.onair_password_must_be_at_least_8)
         else -> null
     }
     val canSubmit = !submitting && !captchaLoading && challenge != null &&
@@ -126,13 +128,13 @@ fun OnAirRegisterScreen(
                 when (result) {
                     is OnAirAuthRepo.AuthResult.Success -> {
                         GlobalToasts.show(
-                            "Account created — you are logged in",
+                            applicationContext.getString(R.string.onair_account_created_you_are_logged_in),
                             level = GlobalToasts.ToastLevel.SUCCESS,
                         )
                         onSuccess()
                     }
                     is OnAirAuthRepo.AuthResult.LoginRequired -> {
-                        errorMessage = "Your session was rejected. Try again."
+                        errorMessage = applicationContext.getString(R.string.onair_your_session_was_rejected_try_again)
                         preserveErrorOnRefresh = true
                         captchaNonce = System.currentTimeMillis()
                     }
@@ -142,7 +144,7 @@ fun OnAirRegisterScreen(
                         captchaNonce = System.currentTimeMillis()
                     }
                     is OnAirAuthRepo.AuthResult.NetworkError -> {
-                        errorMessage = result.throwable.message ?: "Network error"
+                        errorMessage = result.throwable.message ?: applicationContext.getString(R.string.onair_network_error)
                     }
                 }
             }
@@ -152,7 +154,7 @@ fun OnAirRegisterScreen(
     Scaffold(
         topBar = {
             SiteTopAppBar(
-                title = { Text("Sign up for OnAir") },
+                title = { Text(stringResource(R.string.onair_sign_up_for_onair)) },
                 navigationIcon = { SiteBackButton(onClick = onBack) },
             )
         },
@@ -166,7 +168,7 @@ fun OnAirRegisterScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = "Create a new OnAir account.",
+                text = stringResource(R.string.onair_create_a_new_onair_account),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -174,7 +176,7 @@ fun OnAirRegisterScreen(
             OutlinedTextField(
                 value = username,
                 onValueChange = { username = it },
-                label = { Text("Username") },
+                label = { Text(stringResource(R.string.username)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 enabled = !submitting,
@@ -185,7 +187,7 @@ fun OnAirRegisterScreen(
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("Password") },
+                label = { Text(stringResource(R.string.password)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 enabled = !submitting,
@@ -199,7 +201,7 @@ fun OnAirRegisterScreen(
             OutlinedTextField(
                 value = confirm,
                 onValueChange = { confirm = it },
-                label = { Text("Confirm password") },
+                label = { Text(stringResource(R.string.onair_confirm_password)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 enabled = !submitting,
@@ -214,13 +216,13 @@ fun OnAirRegisterScreen(
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "Quick check — enter the equation result shown below",
+                    text = stringResource(R.string.onair_quick_check_enter_the_equation_result),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f),
                 )
                 IconButton(onClick = { captchaNonce = System.currentTimeMillis() }) {
-                    Icon(Icons.Default.Refresh, contentDescription = "Refresh captcha")
+                    Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.onair_refresh_captcha))
                 }
             }
 
@@ -237,7 +239,7 @@ fun OnAirRegisterScreen(
                 } else {
                     RetryableImage(
                         model = "${challenge!!.captchaImageUrl}?v=$captchaNonce",
-                        contentDescription = "Captcha",
+                        contentDescription = stringResource(R.string.onair_captcha),
                         modifier = Modifier
                             .heightIn(max = 120.dp)
                             .fillMaxWidth(),
@@ -251,7 +253,7 @@ fun OnAirRegisterScreen(
             OutlinedTextField(
                 value = captchaAnswer,
                 onValueChange = { captchaAnswer = it.filter(Char::isDigit) },
-                label = { Text("Captcha answer") },
+                label = { Text(stringResource(R.string.onair_captcha_answer)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 enabled = !submitting,
@@ -282,7 +284,7 @@ fun OnAirRegisterScreen(
                         strokeWidth = 2.dp,
                     )
                 }
-                Text("Create account")
+                Text(stringResource(R.string.site_create_account))
             }
 
             TextButton(
@@ -290,7 +292,7 @@ fun OnAirRegisterScreen(
                 enabled = !submitting,
                 modifier = Modifier.align(Alignment.CenterHorizontally),
             ) {
-                Text("Already have an account? Log in")
+                Text(stringResource(R.string.onair_already_have_an_account_log_in))
             }
         }
     }

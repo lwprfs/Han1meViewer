@@ -107,7 +107,7 @@ fun FapFolderAlbumScreen(
             SiteTopAppBar(
                 title = {
                     Text(
-                        text = uiState.title ?: "Album",
+                        text = uiState.title ?: stringResource(R.string.fap_album),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         fontWeight = FontWeight.SemiBold,
@@ -118,7 +118,7 @@ fun FapFolderAlbumScreen(
                     IconButton(onClick = { viewModel.refresh() }) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
-                            contentDescription = "Refresh",
+                            contentDescription = stringResource(R.string.site_refresh),
                         )
                     }
                 },
@@ -137,7 +137,7 @@ fun FapFolderAlbumScreen(
                 ) { CircularProgressIndicator() }
 
                 uiState.headerError != null && uiState.photos.isEmpty() -> AlbumError(
-                    title = "Failed to load album",
+                    title = stringResource(R.string.fap_failed_to_load_album),
                     message = uiState.headerError ?: "",
                     onRetry = { viewModel.refresh() },
                 )
@@ -149,7 +149,7 @@ fun FapFolderAlbumScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "No photos in this album.",
+                        text = stringResource(R.string.fap_no_photos_in_this_album),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -196,7 +196,7 @@ fun FapFolderAlbumScreen(
                                     val total = uiState.totalCount
                                     if (total != null) {
                                         Text(
-                                            text = "$total photos",
+                                            text = stringResource(R.string.fap_photos, total),
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
@@ -271,7 +271,7 @@ fun FapFolderAlbumScreen(
                                     )
                                     Spacer(Modifier.size(8.dp))
                                     TextButton(onClick = { viewModel.loadMore() }) {
-                                        Text("Retry")
+                                        Text(stringResource(R.string.retry))
                                     }
                                 }
                             }
@@ -312,7 +312,7 @@ private fun AlbumError(title: String, message: String, onRetry: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(12.dp))
-            TextButton(onClick = onRetry) { Text("Retry") }
+            TextButton(onClick = onRetry) { Text(stringResource(R.string.retry)) }
         }
     }
 }

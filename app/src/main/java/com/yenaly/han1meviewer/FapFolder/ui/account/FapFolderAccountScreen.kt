@@ -48,12 +48,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderAccountRepo
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderAuthRepo
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetwork
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteIconBadge
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
@@ -97,7 +99,7 @@ fun FapFolderAccountScreen(
     Scaffold(
         topBar = {
             SiteTopAppBar(
-                title = { Text("My account") },
+                title = { Text(stringResource(R.string.site_my_account)) },
                 navigationIcon = { SiteBackButton(onClick = onBack) },
             )
         },
@@ -125,26 +127,26 @@ fun FapFolderAccountScreen(
                     if (!username.isNullOrBlank()) {
                         add(
                             AccountRow(
-                                "My profile", "View your public page",
+                                stringResource(R.string.fap_my_profile), stringResource(R.string.fap_view_your_public_page),
                                 Icons.Filled.Person,
                             ) { onOpenMyProfile(username) }
                         )
                     }
                     add(
                         AccountRow(
-                            "Account settings", "Email, username and password check",
+                            stringResource(R.string.fap_account_settings), stringResource(R.string.fap_email_username_and_password_check),
                             Icons.Filled.Settings, onOpenAccountSettings,
                         )
                     )
                     add(
                         AccountRow(
-                            "Privacy", "Who can see your info, photos and groups",
+                            stringResource(R.string.privacy), "Who can see your info, photos and groups",
                             Icons.Filled.Lock, onOpenPrivacy,
                         )
                     )
                     add(
                         AccountRow(
-                            "Followed communities", "Groups you follow",
+                            stringResource(R.string.drawer_followed_communities), "Groups you follow",
                             Icons.Filled.Groups, onOpenFollowed,
                         )
                     )
@@ -156,7 +158,7 @@ fun FapFolderAccountScreen(
                     )
                     add(
                         AccountRow(
-                            "Watch history", "Posts and videos you opened",
+                            "Watch history", stringResource(R.string.fap_posts_and_videos_you_opened),
                             Icons.Filled.History, onOpenHistory,
                         )
                     )
@@ -205,7 +207,7 @@ fun FapFolderAccountScreen(
                                 modifier = Modifier.size(18.dp),
                             )
                             Text(
-                                text = if (signingOut) "Signing out…" else "Sign out",
+                                text = if (signingOut) stringResource(R.string.fap_signing_out) else stringResource(R.string.fap_sign_out),
                                 modifier = Modifier.padding(start = 8.dp),
                             )
                         }
@@ -265,7 +267,7 @@ private fun AccountHeader(username: String?, avatarUrl: String?) {
             }
             Column {
                 Text(
-                    text = username ?: "Signed in",
+                    text = username ?: stringResource(R.string.site_signed_in),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -337,14 +339,13 @@ private fun SignedOutContent(
             tint = MaterialTheme.colorScheme.primary,
         )
         Text(
-            text = "You are not signed in",
+            text = stringResource(R.string.fap_you_are_not_signed_in),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(top = 12.dp),
         )
         Text(
-            text = "Sign in or create a free account to follow communities, save posts " +
-                    "and manage your profile.",
+            text = stringResource(R.string.fap_sign_in_or_create_a_free),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 4.dp, bottom = 20.dp),
@@ -355,7 +356,7 @@ private fun SignedOutContent(
                 contentDescription = null,
                 modifier = Modifier.size(18.dp),
             )
-            Text("Sign in", modifier = Modifier.padding(start = 8.dp))
+            Text(stringResource(R.string.site_sign_in), modifier = Modifier.padding(start = 8.dp))
         }
         OutlinedButton(
             onClick = onOpenRegister,
@@ -368,10 +369,10 @@ private fun SignedOutContent(
                 contentDescription = null,
                 modifier = Modifier.size(18.dp),
             )
-            Text("Create account", modifier = Modifier.padding(start = 8.dp))
+            Text(stringResource(R.string.site_create_account), modifier = Modifier.padding(start = 8.dp))
         }
         TextButton(onClick = onOpenCookies, modifier = Modifier.padding(top = 4.dp)) {
-            Text("Paste cookies instead")
+            Text(stringResource(R.string.fap_paste_cookies_instead))
         }
     }
 }

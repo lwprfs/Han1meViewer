@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.HentaiMama.settings
 
+import androidx.compose.ui.res.stringResource
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import androidx.compose.foundation.layout.Arrangement
@@ -36,16 +37,17 @@ import com.yenaly.han1meviewer.ui.component.SettingNavigationItem
 import com.yenaly.han1meviewer.HentaiMama.cloudflare.HentaiMamaCloudflareCookieManager
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaCookieJar
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
+import com.yenaly.yenaly_libs.utils.applicationContext
 
 private val SERVER_OPTIONS: List<Pair<String, String>> = listOf(
-    "Automatic (first available)" to HentaiMamaVideoSettings.SERVER_AUTO,
-    "Mirror 1" to "mi-1",
-    "Mirror 2" to "mi-2",
-    "Mirror 3" to "mi-3",
+    applicationContext.getString(R.string.hm_automatic_first_available) to HentaiMamaVideoSettings.SERVER_AUTO,
+    applicationContext.getString(R.string.hm_mirror_1) to "mi-1",
+    applicationContext.getString(R.string.hm_mirror_2) to "mi-2",
+    applicationContext.getString(R.string.hm_mirror_3) to "mi-3",
 )
 
 private val QUALITY_OPTIONS: List<Pair<String, String>> = listOf(
-    "Automatic (first source)" to HentaiMamaVideoSettings.QUALITY_AUTO,
+    applicationContext.getString(R.string.hm_automatic_first_source) to HentaiMamaVideoSettings.QUALITY_AUTO,
     "1080p" to "1080p",
     "720p" to "720p",
     "480p" to "480p",
@@ -87,7 +89,7 @@ fun HentaiMamaVideoSettingsScreen(
     Scaffold(
         topBar = {
             SiteTopAppBar(
-                title = { Text("Video") },
+                title = { Text(stringResource(R.string.video)) },
                 navigationIcon = { SiteBackButton(onClick = onBack) },
             )
         }
@@ -101,16 +103,15 @@ fun HentaiMamaVideoSettingsScreen(
         ) {
             item {
                 SettingInfoItem(
-                    title = "Playback preferences",
-                    summary = "Choose your default server and quality. " +
-                            "The app will use these whenever possible.",
+                    title = stringResource(R.string.hm_playback_preferences),
+                    summary = stringResource(R.string.hm_choose_your_default_server_and_quality),
                 )
             }
 
             item {
                 SettingNavigationItem(
-                    title = "Preferred server",
-                    summary = "Pick the mirror the app should try first when loading an episode.",
+                    title = stringResource(R.string.hm_preferred_server),
+                    summary = stringResource(R.string.hm_pick_the_mirror_the_app_should),
                     valueText = serverLabel,
                     iconRes = R.drawable.ic_baseline_play_arrow_24,
                     onClick = { showServerDialog = true },
@@ -119,8 +120,8 @@ fun HentaiMamaVideoSettingsScreen(
 
             item {
                 SettingNavigationItem(
-                    title = "Preferred quality",
-                    summary = "Pick the source quality the app should auto-select when loading an episode.",
+                    title = stringResource(R.string.hm_preferred_quality),
+                    summary = stringResource(R.string.hm_pick_the_source_quality_the_app),
                     valueText = qualityLabel,
                     iconRes = R.drawable.baseline_decoder_24,
                     onClick = { showQualityDialog = true },
@@ -129,10 +130,8 @@ fun HentaiMamaVideoSettingsScreen(
 
             item {
                 SettingNavigationItem(
-                    title = "Clear Cloudflare cookie",
-                    summary = "Force the app to re-solve the Cloudflare challenge " +
-                            "on the next request. Use this if HentaiMama starts " +
-                            "rejecting a cookie that has not yet expired.",
+                    title = stringResource(R.string.hm_clear_cloudflare_cookie),
+                    summary = stringResource(R.string.hm_force_the_app_to_re_solve),
                     iconRes = R.drawable.baseline_hosts_24,
                     onClick = {
                         HentaiMamaCloudflareCookieManager.clearAllCloudflareCookies()
@@ -145,28 +144,18 @@ fun HentaiMamaVideoSettingsScreen(
             if (showHomeCardSettings) {
                 item {
                     SettingInfoItem(
-                        title = "Home card size",
-                        summary = "Adjust how large the video cards appear on the home and search screens.\n\n" +
-                                "• Cards per row — how many cards fit across the screen.\n" +
-                                "  Change this FIRST to set your target layout.\n" +
-                                "  Doing so resets Height and Width to the Han1meViewer default (1.00× / 1.00×).\n" +
-                                "• Height — how tall the thumbnail is. Change AFTER Cards to fine-tune the shape.\n" +
-                                "• Width (advanced) — a final width tweak. Only change this if Height\n" +
-                                "  and Cards do not give you the look you want. Recommended value: 1.00×.\n\n" +
-                                "Recommended workflow:\n" +
-                                "  1) Set Cards per row.\n" +
-                                "  2) Set Height.\n" +
-                                "  3) Leave Width at 1.00× unless absolutely necessary.",
+                        title = stringResource(R.string.hm_home_card_size),
+                        summary = stringResource(R.string.hm_adjust_how_large_the_video_cards),
                     )
                 }
                 item {
                     CardSettingSlider(
-                        title = "Cards per row",
+                        title = stringResource(R.string.site_cards_per_row),
                         value = HentaiMamaCardSettings.cardMultiplier,
                         valueRange = HentaiMamaCardSettings.MIN_CARD_MULTIPLIER..
                                 HentaiMamaCardSettings.MAX_CARD_MULTIPLIER,
                         valueLabel = "×%.2f".format(HentaiMamaCardSettings.cardMultiplier),
-                        note = "Changing this resets Height and Width to their defaults (1.00×).",
+                        note = stringResource(R.string.hm_changing_this_resets_height_and_width),
                         onValueChange = {
                             HentaiMamaCardSettings.applyCardsMultiplier(it)
                         },
@@ -174,12 +163,12 @@ fun HentaiMamaVideoSettingsScreen(
                 }
                 item {
                     CardSettingSlider(
-                        title = "Height",
+                        title = stringResource(R.string.hm_height),
                         value = HentaiMamaCardSettings.heightMultiplier,
                         valueRange = HentaiMamaCardSettings.MIN_HEIGHT_MULTIPLIER..
                                 HentaiMamaCardSettings.MAX_HEIGHT_MULTIPLIER,
                         valueLabel = "×%.2f".format(HentaiMamaCardSettings.heightMultiplier),
-                        note = "1.00× matches the standard Han1meViewer card height.",
+                        note = stringResource(R.string.hm_1_00_matches_the_standard_han1meviewer),
                         onValueChange = {
                             HentaiMamaCardSettings.heightMultiplier = it
                         },
@@ -187,13 +176,12 @@ fun HentaiMamaVideoSettingsScreen(
                 }
                 item {
                     CardSettingSlider(
-                        title = "Width (advanced)",
+                        title = stringResource(R.string.hm_width_advanced),
                         value = HentaiMamaCardSettings.widthMultiplier,
                         valueRange = HentaiMamaCardSettings.MIN_WIDTH_MULTIPLIER..
                                 HentaiMamaCardSettings.MAX_WIDTH_MULTIPLIER,
                         valueLabel = "×%.2f".format(HentaiMamaCardSettings.widthMultiplier),
-                        note = "⚠ Not recommended. Leave at 1.00× unless you know what you're doing. " +
-                                "It stacks on top of Cards and Height and is easy to make look wrong.",
+                        note = stringResource(R.string.hm_not_recommended_leave_at_1_00),
                         onValueChange = {
                             HentaiMamaCardSettings.widthMultiplier = it
                         },
@@ -204,7 +192,7 @@ fun HentaiMamaVideoSettingsScreen(
                         onClick = { HentaiMamaCardSettings.resetToDefaults() },
                         modifier = Modifier.padding(horizontal = 16.dp),
                     ) {
-                        Text("Reset home card size to defaults")
+                        Text(stringResource(R.string.hm_reset_home_card_size_to_defaults))
                     }
                 }
             }
@@ -212,13 +200,13 @@ fun HentaiMamaVideoSettingsScreen(
             if (showRecentCardSettings) {
                 item {
                     SettingInfoItem(
-                        title = "Recent Episodes card size",
-                        summary = "Controls how large the cards appear on the Recent Episodes page.",
+                        title = stringResource(R.string.hm_recent_episodes_card_size),
+                        summary = stringResource(R.string.hm_controls_how_large_the_cards_appear),
                     )
                 }
                 item {
                     CardSettingSlider(
-                        title = "Recent · Cards per row",
+                        title = stringResource(R.string.hm_recent_cards_per_row),
                         value = HentaiMamaCardSettings.recentCardMultiplier,
                         valueRange = HentaiMamaCardSettings.MIN_CARD_MULTIPLIER..
                                 HentaiMamaCardSettings.MAX_CARD_MULTIPLIER,
@@ -230,7 +218,7 @@ fun HentaiMamaVideoSettingsScreen(
                 }
                 item {
                     CardSettingSlider(
-                        title = "Recent · Height",
+                        title = stringResource(R.string.hm_recent_height),
                         value = HentaiMamaCardSettings.recentHeightMultiplier,
                         valueRange = HentaiMamaCardSettings.MIN_HEIGHT_MULTIPLIER..
                                 HentaiMamaCardSettings.MAX_HEIGHT_MULTIPLIER,
@@ -242,7 +230,7 @@ fun HentaiMamaVideoSettingsScreen(
                 }
                 item {
                     CardSettingSlider(
-                        title = "Recent · Width (advanced)",
+                        title = stringResource(R.string.hm_recent_width_advanced),
                         value = HentaiMamaCardSettings.recentWidthMultiplier,
                         valueRange = HentaiMamaCardSettings.MIN_WIDTH_MULTIPLIER..
                                 HentaiMamaCardSettings.MAX_WIDTH_MULTIPLIER,
@@ -264,7 +252,7 @@ fun HentaiMamaVideoSettingsScreen(
                         },
                         modifier = Modifier.padding(horizontal = 16.dp),
                     ) {
-                        Text("Reset recent card size to defaults")
+                        Text(stringResource(R.string.hm_reset_recent_card_size_to_defaults))
                     }
                 }
             }
@@ -272,13 +260,13 @@ fun HentaiMamaVideoSettingsScreen(
             if (showUpcomingCardSettings) {
                 item {
                     SettingInfoItem(
-                        title = "Upcoming card size",
-                        summary = "Controls how large the cards appear on the Upcoming page.",
+                        title = stringResource(R.string.hm_upcoming_card_size),
+                        summary = stringResource(R.string.hm_controls_how_large_the_cards_appear_2),
                     )
                 }
                 item {
                     CardSettingSlider(
-                        title = "Upcoming · Cards per row",
+                        title = stringResource(R.string.hm_upcoming_cards_per_row),
                         value = HentaiMamaCardSettings.upcomingCardMultiplier,
                         valueRange = HentaiMamaCardSettings.MIN_CARD_MULTIPLIER..
                                 HentaiMamaCardSettings.MAX_CARD_MULTIPLIER,
@@ -290,7 +278,7 @@ fun HentaiMamaVideoSettingsScreen(
                 }
                 item {
                     CardSettingSlider(
-                        title = "Upcoming · Height",
+                        title = stringResource(R.string.hm_upcoming_height),
                         value = HentaiMamaCardSettings.upcomingHeightMultiplier,
                         valueRange = HentaiMamaCardSettings.MIN_HEIGHT_MULTIPLIER..
                                 HentaiMamaCardSettings.MAX_HEIGHT_MULTIPLIER,
@@ -302,7 +290,7 @@ fun HentaiMamaVideoSettingsScreen(
                 }
                 item {
                     CardSettingSlider(
-                        title = "Upcoming · Width (advanced)",
+                        title = stringResource(R.string.hm_upcoming_width_advanced),
                         value = HentaiMamaCardSettings.upcomingWidthMultiplier,
                         valueRange = HentaiMamaCardSettings.MIN_WIDTH_MULTIPLIER..
                                 HentaiMamaCardSettings.MAX_WIDTH_MULTIPLIER,
@@ -324,7 +312,7 @@ fun HentaiMamaVideoSettingsScreen(
                         },
                         modifier = Modifier.padding(horizontal = 16.dp),
                     ) {
-                        Text("Reset upcoming card size to defaults")
+                        Text(stringResource(R.string.hm_reset_upcoming_card_size_to_defaults))
                     }
                 }
             }
@@ -333,7 +321,7 @@ fun HentaiMamaVideoSettingsScreen(
 
     ChoiceDialog(
         visible = showServerDialog,
-        title = "Preferred server",
+        title = stringResource(R.string.hm_preferred_server),
         options = SERVER_OPTIONS,
         selectedValue = selectedServer,
         onDismiss = { showServerDialog = false },
@@ -346,7 +334,7 @@ fun HentaiMamaVideoSettingsScreen(
 
     ChoiceDialog(
         visible = showQualityDialog,
-        title = "Preferred quality",
+        title = stringResource(R.string.hm_preferred_quality),
         options = QUALITY_OPTIONS,
         selectedValue = selectedQuality,
         onDismiss = { showQualityDialog = false },

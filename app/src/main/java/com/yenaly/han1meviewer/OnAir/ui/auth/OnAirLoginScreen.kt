@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.OnAir.ui.auth
 
+import androidx.compose.ui.res.stringResource
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import androidx.compose.foundation.background
@@ -52,6 +53,7 @@ import com.yenaly.han1meviewer.OnAir.data.remote.OnAirCookieManager
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.GlobalToasts
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -88,7 +90,7 @@ fun OnAirLoginScreen(
                 }
             } catch (e: Exception) {
                 captchaLoading = false
-                errorMessage = e.message ?: "Failed to load captcha"
+                errorMessage = e.message ?: applicationContext.getString(R.string.onair_failed_to_load_captcha)
             }
         }
     }
@@ -110,13 +112,13 @@ fun OnAirLoginScreen(
                 when (result) {
                     is OnAirAuthRepo.AuthResult.Success -> {
                         GlobalToasts.show(
-                            "Logged in successfully",
+                            applicationContext.getString(R.string.onair_logged_in_successfully),
                             level = GlobalToasts.ToastLevel.SUCCESS,
                         )
                         onSuccess()
                     }
                     is OnAirAuthRepo.AuthResult.LoginRequired -> {
-                        errorMessage = "Your session was rejected. Try again."
+                        errorMessage = applicationContext.getString(R.string.onair_your_session_was_rejected_try_again)
                         preserveErrorOnRefresh = true
                         captchaNonce = System.currentTimeMillis()
                     }
@@ -126,7 +128,7 @@ fun OnAirLoginScreen(
                         captchaNonce = System.currentTimeMillis()
                     }
                     is OnAirAuthRepo.AuthResult.NetworkError -> {
-                        errorMessage = result.throwable.message ?: "Network error"
+                        errorMessage = result.throwable.message ?: applicationContext.getString(R.string.onair_network_error)
                     }
                 }
             }
@@ -136,7 +138,7 @@ fun OnAirLoginScreen(
     Scaffold(
         topBar = {
             SiteTopAppBar(
-                title = { Text("Log in to OnAir") },
+                title = { Text(stringResource(R.string.onair_log_in_to_onair)) },
                 navigationIcon = { SiteBackButton(onClick = onBack) },
             )
         },
@@ -150,7 +152,7 @@ fun OnAirLoginScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = "Sign in with your OnAir username and password.",
+                text = stringResource(R.string.onair_sign_in_with_your_onair_username),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -158,7 +160,7 @@ fun OnAirLoginScreen(
             OutlinedTextField(
                 value = username,
                 onValueChange = { username = it },
-                label = { Text("Username") },
+                label = { Text(stringResource(R.string.username)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 enabled = !submitting,
@@ -168,7 +170,7 @@ fun OnAirLoginScreen(
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("Password") },
+                label = { Text(stringResource(R.string.password)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 enabled = !submitting,
@@ -181,13 +183,13 @@ fun OnAirLoginScreen(
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "Quick check — enter the equation result shown below",
+                    text = stringResource(R.string.onair_quick_check_enter_the_equation_result),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f),
                 )
                 IconButton(onClick = { captchaNonce = System.currentTimeMillis() }) {
-                    Icon(Icons.Default.Refresh, contentDescription = "Refresh captcha")
+                    Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.onair_refresh_captcha))
                 }
             }
 
@@ -204,7 +206,7 @@ fun OnAirLoginScreen(
                 } else {
                     RetryableImage(
                         model = "${challenge!!.captchaImageUrl}?v=$captchaNonce",
-                        contentDescription = "Captcha",
+                        contentDescription = stringResource(R.string.onair_captcha),
                         modifier = Modifier
                             .heightIn(max = 120.dp)
                             .fillMaxWidth(),
@@ -218,7 +220,7 @@ fun OnAirLoginScreen(
             OutlinedTextField(
                 value = captchaAnswer,
                 onValueChange = { captchaAnswer = it.filter(Char::isDigit) },
-                label = { Text("Captcha answer") },
+                label = { Text(stringResource(R.string.onair_captcha_answer)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 enabled = !submitting,
@@ -252,7 +254,7 @@ fun OnAirLoginScreen(
                         strokeWidth = 2.dp,
                     )
                 }
-                Text("Log in")
+                Text(stringResource(R.string.site_log_in))
             }
 
             TextButton(
@@ -260,12 +262,12 @@ fun OnAirLoginScreen(
                 enabled = !submitting,
                 modifier = Modifier.align(Alignment.CenterHorizontally),
             ) {
-                Text("No account yet? Sign up")
+                Text(stringResource(R.string.onair_no_account_yet_sign_up))
             }
 
             if (OnAirCookieManager.hasCookies) {
                 Text(
-                    text = "You already have cookies saved. Logging in will replace them.",
+                    text = stringResource(R.string.onair_you_already_have_cookies_saved_logging),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,

@@ -14,8 +14,10 @@ import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderSearchTab
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderAutocompleteParser
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderFeedPaging
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetworkRepo
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -165,7 +167,7 @@ class FapFolderSearchViewModel(application: Application) : AndroidViewModel(appl
                     is WebsiteState.Error -> _uiState.update {
                         it.copy(
                             isLoading = false,
-                            errorMessage = result.throwable.message ?: "Search failed.",
+                            errorMessage = result.throwable.message ?: applicationContext.getString(R.string.fap_search_failed),
                         )
                     }
                 }

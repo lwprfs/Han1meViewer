@@ -130,7 +130,7 @@ fun FapFolderGroupScreen(
                     IconButton(onClick = { viewModel.refresh() }) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
-                            contentDescription = "Refresh",
+                            contentDescription = stringResource(R.string.site_refresh),
                         )
                     }
                 },
@@ -159,7 +159,7 @@ fun FapFolderGroupScreen(
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text = "Failed to load group",
+                                text = stringResource(R.string.fap_failed_to_load_group),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.error,
                             )
@@ -170,7 +170,7 @@ fun FapFolderGroupScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Spacer(Modifier.height(12.dp))
-                            TextButton(onClick = { viewModel.refresh() }) { Text("Retry") }
+                            TextButton(onClick = { viewModel.refresh() }) { Text(stringResource(R.string.retry)) }
                         }
                     }
                 }
@@ -320,8 +320,8 @@ private fun GroupHeaderBlock(
                             color = MaterialTheme.colorScheme.errorContainer,
                         ) {
                             Text(
-                                text = if (group.visibility == GroupVisibility.PRIVATE) "Private"
-                                else "Secret",
+                                text = if (group.visibility == GroupVisibility.PRIVATE) stringResource(R.string.fap_private)
+                                else stringResource(R.string.fap_secret),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onErrorContainer,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
@@ -332,7 +332,7 @@ private fun GroupHeaderBlock(
                 val followers = group.followerCount ?: group.memberCount
                 if (followers != null) {
                     Text(
-                        text = "${formatCount(followers)} followers",
+                        text = stringResource(R.string.fap_followers, formatCount(followers)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -381,10 +381,10 @@ private fun GroupStatsRow(
 ) {
     val followers = group.followerCount ?: group.memberCount
     val stats = listOf(
-        Triple("Followers", followers, null as FapFolderGroupTab?),
-        Triple("Posts", group.postCount, FapFolderGroupTab.POSTS),
-        Triple("Photos", group.photoCount, FapFolderGroupTab.PHOTOS),
-        Triple("Videos", group.videoCount, FapFolderGroupTab.VIDEOS),
+        Triple(stringResource(R.string.site_followers), followers, null as FapFolderGroupTab?),
+        Triple(stringResource(R.string.fap_tab_posts), group.postCount, FapFolderGroupTab.POSTS),
+        Triple(stringResource(R.string.fap_tab_photos), group.photoCount, FapFolderGroupTab.PHOTOS),
+        Triple(stringResource(R.string.fap_tab_videos), group.videoCount, FapFolderGroupTab.VIDEOS),
     ).filter { it.second != null }
     if (stats.isEmpty()) return
 
@@ -600,7 +600,7 @@ private fun GroupPostsTab(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "Failed to load posts",
+                            text = stringResource(R.string.fap_failed_to_load_posts),
                             style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.error,
                         )
@@ -609,7 +609,7 @@ private fun GroupPostsTab(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        TextButton(onClick = onRetry) { Text("Retry") }
+                        TextButton(onClick = onRetry) { Text(stringResource(R.string.retry)) }
                     }
                 }
             }
@@ -622,7 +622,7 @@ private fun GroupPostsTab(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "Nothing here yet.",
+                        text = stringResource(R.string.fap_nothing_here_yet),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -781,7 +781,7 @@ private fun GroupMediaTab(
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
-                                    text = "Failed to load photos",
+                                    text = stringResource(R.string.fap_failed_to_load_photos),
                                     style = MaterialTheme.typography.titleSmall,
                                     color = MaterialTheme.colorScheme.error,
                                 )
@@ -790,7 +790,7 @@ private fun GroupMediaTab(
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
-                                TextButton(onClick = onRetry) { Text("Retry") }
+                                TextButton(onClick = onRetry) { Text(stringResource(R.string.retry)) }
                             }
                         }
                     }
@@ -807,7 +807,7 @@ private fun GroupMediaTab(
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
-                                text = "No photos yet.",
+                                text = stringResource(R.string.fap_no_photos_yet),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -886,7 +886,7 @@ private fun GroupMediaTab(
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
-                                    text = "Failed to load videos",
+                                    text = stringResource(R.string.fap_failed_to_load_videos),
                                     style = MaterialTheme.typography.titleSmall,
                                     color = MaterialTheme.colorScheme.error,
                                 )
@@ -895,7 +895,7 @@ private fun GroupMediaTab(
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
-                                TextButton(onClick = onRetry) { Text("Retry") }
+                                TextButton(onClick = onRetry) { Text(stringResource(R.string.retry)) }
                             }
                         }
                     }
@@ -912,7 +912,7 @@ private fun GroupMediaTab(
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
-                                text = "No videos yet.",
+                                text = stringResource(R.string.fap_no_videos_yet),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -991,7 +991,7 @@ private fun VideoTileBox(
         ) {
             Icon(
                 imageVector = Icons.Filled.PlayArrow,
-                contentDescription = "Play",
+                contentDescription = stringResource(R.string.site_play),
                 tint = MaterialTheme.colorScheme.onPrimary,
             )
         }
@@ -1005,11 +1005,11 @@ private fun MembershipButton(
     onClick: () -> Unit,
 ) {
     val label = when (membership) {
-        GroupMembership.NOT_MEMBER, GroupMembership.UNKNOWN -> "Join"
-        GroupMembership.PENDING -> "Pending"
-        GroupMembership.MEMBER -> "Following"
-        GroupMembership.ADMIN -> "Admin"
-        GroupMembership.OWNER -> "Owner"
+        GroupMembership.NOT_MEMBER, GroupMembership.UNKNOWN -> stringResource(R.string.fap_join)
+        GroupMembership.PENDING -> stringResource(R.string.creator_status_pending)
+        GroupMembership.MEMBER -> stringResource(R.string.site_following)
+        GroupMembership.ADMIN -> stringResource(R.string.fap_admin)
+        GroupMembership.OWNER -> stringResource(R.string.fap_owner)
     }
     val enabled = !loading && membership != GroupMembership.ADMIN &&
             membership != GroupMembership.OWNER

@@ -21,9 +21,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.lazy.LazyColumn
 import com.yenaly.han1meviewer.ui.preview.ComponentPreview
 
@@ -108,7 +110,7 @@ fun WheelLikeColumnPreview(){
         Row {
             WheelLikeColumn(
                 modifier = Modifier.weight(1f),
-                title = "Year",
+                title = stringResource(R.string.site_year),
                 values = (1990..2026).toList(),
                 selectedValue = 1992,
                 label = { value -> value.toString() },
@@ -116,7 +118,7 @@ fun WheelLikeColumnPreview(){
             )
             WheelLikeColumn(
                 modifier = Modifier.weight(1f),
-                title = "Month",
+                title = stringResource(R.string.month),
                 values = (1..12).toList(),
                 selectedValue = 2,
                 label = { value -> value.toString() },
