@@ -40,6 +40,7 @@ import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.entity.download.DownloadGroupEntity
 import com.yenaly.han1meviewer.logic.entity.download.HanimeDownloadEntity
 import com.yenaly.han1meviewer.logic.entity.download.VideoWithCategories
+import com.yenaly.han1meviewer.logic.state.DownloadState
 import com.yenaly.han1meviewer.logic.model.DownloadHeaderNode
 import com.yenaly.han1meviewer.logic.model.DownloadItemNode
 import com.yenaly.han1meviewer.ui.component.appbar.HanimeScaffold
@@ -204,22 +205,32 @@ fun DownloadScreen(
         onBack = onBack,
         actions = {
             if (uiState.currentPage == 0) {
-                FilledIconButton(
-                    onClick = { handleEvent(DownloadEvent.OnResumeAll(uiState.downloadingItems)) },
-                    enabled = uiState.downloadingItems.isNotEmpty()
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_baseline_play_arrow_24),
-                        contentDescription = stringResource(R.string.start_all),
-                    )
+                // One button, always in sync with the real state: pause while anything is
+                // running/queued, otherwise start everything that is paused.
+                val hasActive = uiState.downloadingItems.any {
+                    it.state == DownloadState.Downloading || it.state == DownloadState.Queued
+                }
+                val hasResumable = uiState.downloadingItems.any {
+                    it.state == DownloadState.Paused || it.state == DownloadState.Unknown
                 }
                 FilledIconButton(
-                    onClick = { handleEvent(DownloadEvent.OnPauseAll(uiState.downloadingItems)) },
-                    enabled = uiState.downloadingItems.isNotEmpty()
+                    onClick = {
+                        if (hasActive) {
+                            handleEvent(DownloadEvent.OnPauseAll(uiState.downloadingItems))
+                        } else {
+                            handleEvent(DownloadEvent.OnResumeAll(uiState.downloadingItems))
+                        }
+                    },
+                    enabled = hasActive || hasResumable
                 ) {
                     Icon(
-                        painter = painterResource(R.drawable.ic_baseline_pause_24),
-                        contentDescription = stringResource(R.string.pause_all),
+                        painter = painterResource(
+                            if (hasActive) R.drawable.ic_baseline_pause_24
+                            else R.drawable.ic_baseline_play_arrow_24
+                        ),
+                        contentDescription = stringResource(
+                            if (hasActive) R.string.pause_all else R.string.start_all
+                        ),
                     )
                 }
             } else {

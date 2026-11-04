@@ -53,7 +53,7 @@ fun List<DownloadGroupEntity>.toDisplayGroups(): List<DownloadGroupEntity> = map
 
 @Composable
 fun downloadStateText(state: DownloadState, progress: Int): String = when (state) {
-    DownloadState.Queued -> stringResource(R.string.already_in_queue)
+    DownloadState.Queued -> "Queued"
     DownloadState.Downloading -> stringResource(R.string.download_progress_percent, progress)
     DownloadState.Paused -> stringResource(R.string.paused)
     DownloadState.Failed -> stringResource(R.string.download_failed_tap_retry)
@@ -62,9 +62,9 @@ fun downloadStateText(state: DownloadState, progress: Int): String = when (state
 }
 
 fun downloadStateIcon(state: DownloadState): Int = when (state) {
-    DownloadState.Queued -> R.drawable.ic_baseline_play_arrow_24
-    DownloadState.Downloading -> R.drawable.ic_baseline_pause_24
-    DownloadState.Paused -> R.drawable.ic_baseline_play_arrow_24
+    DownloadState.Queued -> R.drawable.ic_baseline_download_24
+    DownloadState.Downloading -> R.drawable.ic_baseline_download_24
+    DownloadState.Paused -> R.drawable.ic_baseline_pause_24
     DownloadState.Failed -> R.drawable.baseline_error_outline_24
     DownloadState.Finished -> R.drawable.ic_baseline_check_circle_24
     DownloadState.Unknown -> R.drawable.ic_baseline_download_24

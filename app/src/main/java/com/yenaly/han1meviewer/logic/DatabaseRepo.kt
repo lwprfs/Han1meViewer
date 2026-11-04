@@ -248,6 +248,21 @@ object DatabaseRepo {
         suspend fun updateCoverUri(id: Int, coverUri: String?) =
             hanimeDownloadDao.updateCoverUri(id, coverUri)
 
+        suspend fun updateProgress(id: Int, downloaded: Long, length: Long) =
+            hanimeDownloadDao.updateProgress(id, downloaded, length)
+
+        suspend fun updateDownloadedLength(id: Int, downloaded: Long) =
+            hanimeDownloadDao.updateDownloadedLength(id, downloaded)
+
+        suspend fun markDownloading(videoCode: String) =
+            hanimeDownloadDao.markDownloading(videoCode)
+
+        suspend fun markQueued(videoCode: String) =
+            hanimeDownloadDao.markQueued(videoCode)
+
+        suspend fun markPaused(videoCode: String) =
+            hanimeDownloadDao.markPaused(videoCode)
+
         suspend fun find(videoCode: String, quality: String) =
             hanimeDownloadDao.find(videoCode, quality)
 

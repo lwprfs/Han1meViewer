@@ -183,7 +183,9 @@ fun DownloadingItemCard(
                     }
 
                     when (item.state) {
-                        DownloadState.Downloading -> {
+                        // Running or waiting for a slot: the only sensible action is "pause".
+                        DownloadState.Downloading,
+                        DownloadState.Queued -> {
                             FilledTonalIconButton(
                                 onClick = onPause,
                                 modifier = Modifier.size(36.dp)
@@ -197,7 +199,6 @@ fun DownloadingItemCard(
                         }
 
                         DownloadState.Paused,
-                        DownloadState.Queued,
                         DownloadState.Unknown -> {
                             FilledTonalIconButton(
                                 onClick = onResume,

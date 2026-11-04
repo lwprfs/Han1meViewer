@@ -45,6 +45,10 @@ import com.yenaly.yenaly_libs.utils.createFileIfNotExists
 import com.yenaly.yenaly_libs.utils.saveTo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -181,7 +185,10 @@ class HanimeDownloadWorker(
 
     override suspend fun doWork(): Result {
         if (fastPathCancel) return Result.success()
-        setForeground(createForegroundInfo())
+        // Queue placeholders and delete jobs are not downloads: no "Downloading..." notification.
+        if (!isInWaitingQueue && !shouldDelete) {
+            setForeground(createForegroundInfo())
+        }
         return download()
     }
 
@@ -215,7 +222,7 @@ class HanimeDownloadWorker(
                         videoUrl = downloadUrl,
                         length = len,
                         downloadedLength = 0,
-                        state = DownloadState.Queued
+                        state = if (isInWaitingQueue) DownloadState.Queued else DownloadState.Downloading
                     )
                     DatabaseRepo.HanimeDownload.insert(entity)
 
@@ -319,7 +326,12 @@ class HanimeDownloadWorker(
             )
             val fileName = createVideoName(hanimeName, quality, videoType)
             if (shouldRedownload || shouldDelete) {
-                HFileManager.getDownloadVideoFolder(context, videoCode).deleteRecursively()
+                if (shouldDelete) {
+                    // also removes the partial file when a custom (SAF) folder is used
+                    SafFileManager.deleteDownloadVideoFolder(context, videoCode)
+                } else {
+                    HFileManager.getDownloadVideoFolder(context, videoCode).deleteRecursively()
+                }
                 DatabaseRepo.HanimeDownload.delete(videoCode)
                 if (shouldDelete) return@withContext Result.success()
             }
@@ -340,7 +352,7 @@ class HanimeDownloadWorker(
                     videoUrl = downloadUrl,
                     length = 0,
                     downloadedLength = 0,
-                    state = DownloadState.Queued,
+                    state = if (isInWaitingQueue) DownloadState.Queued else DownloadState.Downloading,
                 ).also { DatabaseRepo.HanimeDownload.insert(it) }
                     .let { DatabaseRepo.HanimeDownload.find(videoCode, quality)!! }
 
@@ -360,6 +372,7 @@ class HanimeDownloadWorker(
                 workDataOf(DownloadState.STATE to DownloadState.Failed.mask)
             )
             var shouldRetry = false
+            var cancelled = false
             var out: java.io.OutputStream? = null
             try {
 
@@ -378,6 +391,7 @@ class HanimeDownloadWorker(
                 val playlist = downloader.resolvePlaylist(downloadUrl)
                 var lastUpdate = 0L
                 written = downloader.download(playlist, out) { done, total, bytes ->
+                    currentCoroutineContext().ensureActive()
                     val now = System.currentTimeMillis()
                     if (now - lastUpdate > RESPONSE_INTERVAL || done == total) {
                         lastUpdate = now
@@ -388,16 +402,20 @@ class HanimeDownloadWorker(
                         entity = entity.copy(
                             length = estimated.coerceAtLeast(bytes),
                             downloadedLength = bytes,
-                            state = DownloadState.Downloading,
                         )
-                        DatabaseRepo.HanimeDownload.updateKeepingGroup(entity)
+                        // Guarded write: never revives a row the user already paused.
+                        DatabaseRepo.HanimeDownload.updateProgress(
+                            entity.id, entity.downloadedLength, entity.length
+                        )
                     }
                 }
                 entity = entity.copy(length = written, downloadedLength = written)
                 showSuccessNotification()
                 result = Result.success(workDataOf(DownloadState.STATE to DownloadState.Finished.mask))
             } catch (e: Exception) {
-                result = if (e is CancellationException || e.isStoppedCancellation()) {
+                // Anything thrown while WorkManager is stopping us is part of the stop, not a failure.
+                cancelled = e is CancellationException || isStopped || e.isStoppedCancellation()
+                result = if (cancelled) {
                     cancelDownloadNotification()
                     Result.success(workDataOf(DownloadState.STATE to DownloadState.Paused.mask))
                 } else if (e.isRetryableNetworkError() && e !is HlsHttpException &&
@@ -422,9 +440,18 @@ class HanimeDownloadWorker(
                 val state = DownloadState.from(
                     result.outputData.getInt(DownloadState.STATE, DownloadState.Unknown.mask)
                 )
-                DatabaseRepo.HanimeDownload.updateKeepingGroup(
-                    entity.copy(state = if (shouldRetry) DownloadState.Queued else state)
-                )
+                withContext(NonCancellable) {
+                    if (cancelled) {
+                        // The manager owns Paused/Queued; only remember how far we got.
+                        DatabaseRepo.HanimeDownload.updateDownloadedLength(
+                            entity.id, entity.downloadedLength
+                        )
+                    } else {
+                        DatabaseRepo.HanimeDownload.updateKeepingGroup(
+                            entity.copy(state = if (shouldRetry) DownloadState.Queued else state)
+                        )
+                    }
+                }
                 runCatching { out?.close() }
             }
             result
@@ -440,7 +467,12 @@ class HanimeDownloadWorker(
             val safUri = SafFileManager.getDownloadVideoFileUri(context, videoCode, createVideoName(hanimeName, quality, videoType))
 
             if (shouldRedownload || shouldDelete) {
-                HFileManager.getDownloadVideoFolder(context, videoCode).deleteRecursively()
+                if (shouldDelete) {
+                    // also removes the partial file when a custom (SAF) folder is used
+                    SafFileManager.deleteDownloadVideoFolder(context, videoCode)
+                } else {
+                    HFileManager.getDownloadVideoFolder(context, videoCode).deleteRecursively()
+                }
                 DatabaseRepo.HanimeDownload.delete(videoCode)
                 if (shouldDelete) {
                     return@withContext Result.success()
@@ -522,6 +554,7 @@ class HanimeDownloadWorker(
                 workDataOf(DownloadState.STATE to DownloadState.Failed.mask)
             )
             var shouldRetry = false
+            var cancelled = false
 
             try {
                 if (safUri != null) {
@@ -547,59 +580,73 @@ class HanimeDownloadWorker(
                         .forEach { (k, v) -> requestBuilder.header(k, v) }
                     if (requestNeedRange) requestBuilder.header("Range", "bytes=$downloadedLength-")
                     val request = requestBuilder.build()
-                    response = siteClient().newCall(request).await()
-                    val canWrite = (requestNeedRange && response.code == 206) || (!requestNeedRange && response.isSuccessful)
-                    if (!canWrite) {
-                        val reason = response.toDownloadErrorMessage(requestNeedRange)
-                        recordFailure(null, response.code, reason)
-                        showFailureNotification(reason)
-                        mainScope.launch {
-                            GlobalToasts.show(context.getString(R.string.download_task_failed_s_reason_s, hanimeName, reason), level = GlobalToasts.ToastLevel.ERROR)
+                    val call = siteClient().newCall(request)
+                    // A blocking socket read ignores coroutine cancellation. This watchdog aborts the
+                    // call the moment the worker is stopped, so Pause takes effect immediately.
+                    val watchdog = launch {
+                        try {
+                            awaitCancellation()
+                        } finally {
+                            call.cancel()
                         }
-                        result = Result.failure(workDataOf(DownloadState.STATE to DownloadState.Failed.mask))
-                        return@withContext result
                     }
-
-                    body = response.body
-                    val responseBody = body
-                    bodyStream = responseBody.byteStream()
-                    var len: Int = bodyStream.read(buffer)
-
                     try {
-                        while (len != -1) {
-                            if (raf != null) {
-                                raf.write(buffer, 0, len)
-                            } else safChannel?.writeFully(buffer, len)
-                            downloadedLength += len
-
-                            if (System.currentTimeMillis() - delayTime > RESPONSE_INTERVAL) {
-                                val progress = (downloadedLength * 100 / entity.length).coerceAtMost(100)
-                                setProgress(workDataOf(PROGRESS to progress.toInt()))
-                                updateDownloadNotification(progress.toInt())
-                                DatabaseRepo.HanimeDownload.updateKeepingGroup(
-                                    entity.copy(downloadedLength = downloadedLength,
-                                        state = DownloadState.Downloading
-                                    )
-                                )
-                                delayTime = System.currentTimeMillis()
+                        response = call.await()
+                        val canWrite = (requestNeedRange && response.code == 206) || (!requestNeedRange && response.isSuccessful)
+                        if (!canWrite) {
+                            val reason = response.toDownloadErrorMessage(requestNeedRange)
+                            recordFailure(null, response.code, reason)
+                            showFailureNotification(reason)
+                            mainScope.launch {
+                                GlobalToasts.show(context.getString(R.string.download_task_failed_s_reason_s, hanimeName, reason), level = GlobalToasts.ToastLevel.ERROR)
                             }
-                            len = bodyStream.read(buffer)
+                            result = Result.failure(workDataOf(DownloadState.STATE to DownloadState.Failed.mask))
+                            return@withContext result
                         }
-                    } catch (e: IOException) {
-                        if (!e.isStreamResetCancel() || retryCount >= MAX_STREAM_RETRY_COUNT) {
-                            throw e
-                        }
-                        retryCount++
-                        response.closeQuietly()
-                        body.closeQuietly()
-                        bodyStream.closeQuietly()
-                        response = null
-                        body = null
-                        bodyStream = null
-                        continue
-                    }
 
-                    break
+                        body = response.body
+                        val responseBody = body
+                        bodyStream = responseBody.byteStream()
+                        var len: Int = bodyStream.read(buffer)
+
+                        try {
+                            while (len != -1) {
+                                if (raf != null) {
+                                    raf.write(buffer, 0, len)
+                                } else safChannel?.writeFully(buffer, len)
+                                downloadedLength += len
+
+                                if (System.currentTimeMillis() - delayTime > RESPONSE_INTERVAL) {
+                                    currentCoroutineContext().ensureActive()
+                                    val progress = (downloadedLength * 100 / entity.length).coerceAtMost(100)
+                                    setProgress(workDataOf(PROGRESS to progress.toInt()))
+                                    updateDownloadNotification(progress.toInt())
+                                    // Guarded write: never revives a row the user already paused.
+                                    DatabaseRepo.HanimeDownload.updateProgress(
+                                        entity.id, downloadedLength, entity.length
+                                    )
+                                    delayTime = System.currentTimeMillis()
+                                }
+                                len = bodyStream.read(buffer)
+                            }
+                        } catch (e: IOException) {
+                            if (!e.isStreamResetCancel() || retryCount >= MAX_STREAM_RETRY_COUNT) {
+                                throw e
+                            }
+                            retryCount++
+                            response.closeQuietly()
+                            body.closeQuietly()
+                            bodyStream.closeQuietly()
+                            response = null
+                            body = null
+                            bodyStream = null
+                            continue
+                        }
+
+                        break
+                    } finally {
+                        watchdog.cancel()
+                    }
                 }
 
                 if (downloadedLength < entity.length) {
@@ -612,9 +659,10 @@ class HanimeDownloadWorker(
                 )
 
             } catch (e: Exception) {
-                result = if (e is CancellationException || e.isStoppedCancellation()) {
+                // Anything thrown while WorkManager is stopping us is part of the stop, not a failure.
+                cancelled = e is CancellationException || isStopped || e.isStoppedCancellation()
+                result = if (cancelled) {
                     cancelDownloadNotification()
-                    mainScope.launch { GlobalToasts.show(context.getString(R.string.download_error_cancelled), level = GlobalToasts.ToastLevel.INFO) }
                     Result.success(
                         workDataOf(DownloadState.STATE to DownloadState.Paused.mask)
                     )
@@ -642,12 +690,19 @@ class HanimeDownloadWorker(
                 val state = DownloadState.from(
                     result.outputData.getInt(DownloadState.STATE, DownloadState.Unknown.mask)
                 )
-                DatabaseRepo.HanimeDownload.updateKeepingGroup(
-                    entity.copy(
-                        state = if (shouldRetry) DownloadState.Queued else state,
-                        downloadedLength = downloadedLength
-                    )
-                )
+                withContext(NonCancellable) {
+                    if (cancelled) {
+                        // The manager owns Paused/Queued; only remember how far we got.
+                        DatabaseRepo.HanimeDownload.updateDownloadedLength(entity.id, downloadedLength)
+                    } else {
+                        DatabaseRepo.HanimeDownload.updateKeepingGroup(
+                            entity.copy(
+                                state = if (shouldRetry) DownloadState.Queued else state,
+                                downloadedLength = downloadedLength
+                            )
+                        )
+                    }
+                }
                 raf?.closeQuietly()
                 safChannel?.closeQuietly()
                 safPfd?.closeQuietly()

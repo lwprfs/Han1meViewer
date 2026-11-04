@@ -65,24 +65,54 @@ fun DownloadingScreen(
             )
         }
     } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            items(imageJobs, key = { "img_${it.id}" }) { job ->
-                ImageDownloadRow(job)
-            }
-            items(uiState.downloadingItems, key = { it.id }) { item ->
-                DownloadingItemCard(
-                    item = item,
-                    onPause = { onEvent(DownloadEvent.OnPauseItem(item)) },
-                    onResume = { onEvent(DownloadEvent.OnResumeItem(item)) },
-                    onDelete = { pendingDelete = item },
-                )
+        Column(modifier = Modifier.fillMaxSize()) {
+            DownloadStatusSummary(uiState.downloadingItems)
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                items(imageJobs, key = { "img_${it.id}" }) { job ->
+                    ImageDownloadRow(job)
+                }
+                items(uiState.downloadingItems, key = { it.id }) { item ->
+                    DownloadingItemCard(
+                        item = item,
+                        onPause = { onEvent(DownloadEvent.OnPauseItem(item)) },
+                        onResume = { onEvent(DownloadEvent.OnResumeItem(item)) },
+                        onDelete = { pendingDelete = item },
+                    )
+                }
             }
         }
     }
+}
+
+/** One-line overview of what the queue is doing, e.g. "1 downloading · 2 queued · 1 paused". */
+@Composable
+private fun DownloadStatusSummary(items: List<HanimeDownloadEntity>) {
+    if (items.isEmpty()) return
+    val parts = buildList {
+        items.count { it.state == DownloadState.Downloading }.takeIf { it > 0 }
+            ?.let { add("$it downloading") }
+        items.count { it.state == DownloadState.Queued }.takeIf { it > 0 }
+            ?.let { add("$it queued") }
+        items.count { it.state == DownloadState.Paused || it.state == DownloadState.Unknown }
+            .takeIf { it > 0 }?.let { add("$it paused") }
+        items.count { it.state == DownloadState.Failed }.takeIf { it > 0 }
+            ?.let { add("$it failed") }
+    }
+    if (parts.isEmpty()) return
+    Text(
+        text = parts.joinToString(" · "),
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 16.dp, end = 16.dp, top = 12.dp),
+    )
 }
 
 @Composable

@@ -74,12 +74,8 @@ fun DownloadRouteScreen(
 
     val handleEvent: (DownloadEvent) -> Unit = { event ->
         when (event) {
-            is DownloadEvent.OnPauseAll -> event.items.forEach { entity ->
-                if (entity.isDownloading) HanimeDownloadManagerV2.stopTask(entity)
-            }
-            is DownloadEvent.OnResumeAll -> event.items.forEach { entity ->
-                if (!entity.isDownloading) HanimeDownloadManagerV2.resumeTask(entity)
-            }
+            is DownloadEvent.OnPauseAll -> HanimeDownloadManagerV2.pauseAll(event.items)
+            is DownloadEvent.OnResumeAll -> HanimeDownloadManagerV2.resumeAll(event.items)
             is DownloadEvent.OnPauseItem -> HanimeDownloadManagerV2.stopTask(event.item)
             is DownloadEvent.OnResumeItem -> HanimeDownloadManagerV2.resumeTask(event.item)
             is DownloadEvent.OnDeleteDownloadingItem -> HanimeDownloadManagerV2.deleteTask(event.item)
