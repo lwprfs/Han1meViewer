@@ -50,6 +50,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderAuthRepo
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderAuthResult
+import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderCredentialStore
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
@@ -91,6 +92,13 @@ fun FapFolderLoginScreen(
                 when (result) {
                     is FapFolderAuthResult.Success -> {
                         isSubmitting = false
+                        // Keep the password (encrypted storage only) for automatic re-sign-in
+                        // when the session expires. "Remember me" unchecked removes it.
+                        if (remember) {
+                            FapFolderCredentialStore.save(user, password)
+                        } else {
+                            FapFolderCredentialStore.clear()
+                        }
                         onLoginSuccess()
                     }
                     is FapFolderAuthResult.FormError -> {

@@ -33,6 +33,15 @@ class FapFolderCookieJar : CookieJar {
             "cf_chl_rc_ni",
         )
 
+        private val AUTH_COOKIE_NAMES = setOf(
+            FapFolderConstants.COOKIE_PHPSESSID,
+            FapFolderConstants.COOKIE_C_USER,
+            FapFolderConstants.COOKIE_XS,
+        )
+
+        private fun isDeletedValue(value: String): Boolean =
+            value.isBlank() || value.equals("deleted", ignoreCase = true)
+
         private val SEED_HOSTS = listOf(
             "fapfolder.club",
             "www.fapfolder.club",
@@ -127,7 +136,7 @@ class FapFolderCookieJar : CookieJar {
             if (c.name !in PRESERVED_NAMES) return@forEach
             val k = key(c)
             val expired = c.expiresAt != Long.MAX_VALUE && c.expiresAt <= now
-            if (expired || c.value.isBlank()) {
+            if (expired || isDeletedValue(c.value)) {
                 if (bucket.remove(k) != null) changed = true
             } else {
                 val old = bucket[k]
@@ -195,6 +204,19 @@ class FapFolderCookieJar : CookieJar {
 
     fun clearCookies() {
         cookieStore.clear()
+    }
+
+    /**
+     * Removes only the session cookies (PHPSESSID, c_user, xs) and keeps the Cloudflare ones
+     * (cf_clearance, __cf_bm, ...), then persists the remaining set.
+     */
+    fun clearAuthCookies() {
+        cookieStore.values.forEach { bucket ->
+            bucket.entries.removeAll { (_, c) -> c.name in AUTH_COOKIE_NAMES }
+        }
+        cookieStore.entries.removeAll { it.value.isEmpty() }
+        runCatching { persistToPreferences() }
+            .onFailure { Log.w(TAG, "clearAuthCookies persist failed: ${it.message}") }
     }
 
     fun persistToPreferences() {

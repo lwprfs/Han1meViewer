@@ -11,12 +11,24 @@ object FapFolderSecurePrefs {
     private const val FILE_NAME = "fapfolder_secure"
     private const val FALLBACK_FILE_NAME = "fapfolder_secure_fallback"
 
+    @Volatile
+    private var encrypted: Boolean = false
+
     val instance: SharedPreferences by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
-        createEncryptedWithRetry() ?: applicationContext.getSharedPreferences(
+        val enc = createEncryptedWithRetry()
+        encrypted = enc != null
+        enc ?: applicationContext.getSharedPreferences(
             FALLBACK_FILE_NAME,
             Context.MODE_PRIVATE,
         )
     }
+
+    /** True only when [instance] is backed by EncryptedSharedPreferences (not the plain fallback). */
+    val isEncrypted: Boolean
+        get() {
+            instance
+            return encrypted
+        }
 
     private fun createEncryptedWithRetry(): SharedPreferences? {
         repeat(3) { attempt ->

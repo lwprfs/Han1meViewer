@@ -310,6 +310,11 @@ object FapFolderNetwork {
         Log.d(TAG, "clearCookies: jar and preferences cleared")
     }
 
+    fun clearAuthCookies() {
+        cookieJar.clearAuthCookies()
+        Log.d(TAG, "clearAuthCookies: session cookies removed, Cloudflare cookies kept")
+    }
+
     fun snapshotCookies(): String {
         ensureInitialized()
         val snap = FapFolderCookieJar.snapshot()

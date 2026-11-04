@@ -2,6 +2,7 @@ package com.yenaly.han1meviewer.FapFolder.data.remote
 
 import android.util.Log
 import com.yenaly.han1meviewer.FapFolder.common.FapFolderConstants
+import com.yenaly.han1meviewer.FapFolder.data.local.FapFolderCookieManager
 import com.yenaly.han1meviewer.FapFolder.data.local.FapFolderSessionCache
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderSessionParser
 import kotlinx.coroutines.Dispatchers
@@ -11,7 +12,9 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import okhttp3.Cookie
 import okhttp3.FormBody
+import okhttp3.HttpUrl
 import okhttp3.Request
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
@@ -62,6 +65,22 @@ object FapFolderAuthRepo {
     private fun looksSignedOut(result: FapFolderProbeResult): Boolean {
         val code = result.httpCode ?: return false
         return result.failure == FapFolderProbeFailure.SessionExpired && code in 200..299
+    }
+
+    /**
+     * True only when [setCookies] contains a usable [name] cookie: non-blank, not "deleted",
+     * and not already expired. PHP-style sites answer a failed login with
+     * `c_user=deleted; expires=<past>`, which must not count as a session.
+     */
+    private fun isRealCookie(setCookies: List<String>, name: String, url: HttpUrl): Boolean {
+        val now = System.currentTimeMillis()
+        return setCookies.any { header ->
+            val c = Cookie.parse(url, header) ?: return@any false
+            c.name.equals(name, ignoreCase = true) &&
+                    c.value.isNotBlank() &&
+                    !c.value.equals("deleted", ignoreCase = true) &&
+                    c.expiresAt > now
+        }
     }
 
     private fun fetchHomeForProbe(url: String): ProbeFetch {
@@ -234,6 +253,9 @@ object FapFolderAuthRepo {
                     return@withLock
                 }
 
+                // Never send a stale/dead session with the sign-in request. Cloudflare cookies stay.
+                FapFolderNetwork.clearAuthCookies()
+
                 val priming = Request.Builder()
                     .url(FapFolderConstants.BASE_URL.trimEnd('/') + "/signin")
                     .get()
@@ -275,16 +297,25 @@ object FapFolderAuthRepo {
                         return@use
                     }
 
-                    val hasCUser = setCookies.any { it.startsWith("c_user=", ignoreCase = true) }
-                    val hasXs = setCookies.any { it.startsWith("xs=", ignoreCase = true) }
+                    // Stale cookies were cleared above, so anything in the jar now is fresh
+                    // (this also covers cookies set on an intermediate redirect hop).
+                    val hasCUser = isRealCookie(setCookies, "c_user", resp.request.url)
+                    val hasXs = isRealCookie(setCookies, "xs", resp.request.url)
+                    val jarHasAuth = FapFolderCookieJar.hasRequiredAuthCookie()
 
-                    if (code in 200..399 && hasCUser && hasXs) {
+                    if (code in 200..399 && ((hasCUser && hasXs) || jarHasAuth)) {
                         FapFolderNetwork.persistCookies()
                         emit(FapFolderAuthResult.Success)
                         return@use
                     }
 
-                    if (code == 401 || code == 403) {
+                    if (code == 403) {
+                        // Same as probe(): a 403 is a Cloudflare/WAF block, not wrong credentials.
+                        emit(FapFolderAuthResult.CloudflareChallenge)
+                        return@use
+                    }
+
+                    if (code == 401) {
                         emit(FapFolderAuthResult.InvalidCredentials)
                         return@use
                     }
@@ -295,7 +326,7 @@ object FapFolderAuthRepo {
                         return@use
                     }
 
-                    if (body.contains("callback", ignoreCase = true)) {
+                    if (body.contains("callback", ignoreCase = true) && jarHasAuth) {
                         FapFolderNetwork.persistCookies()
                         emit(FapFolderAuthResult.Success)
                         return@use
@@ -326,21 +357,25 @@ object FapFolderAuthRepo {
             FapFolderAuthResult.NetworkError(IllegalStateException("Logout failed"))
         } finally {
             FapFolderNetwork.clearCookies()
+            FapFolderCredentialStore.clear()
             FapFolderSessionCache.clear()
         }
     }
 
     suspend fun saveRawCookies(raw: String?): FapFolderCookieJar.ValidationResult =
         withContext(Dispatchers.IO) {
-            val jar = FapFolderNetwork.cookieJar
-            val validation = jar.validateRawCookies(raw)
+            val input = raw.orEmpty()
+            val validation = FapFolderCookieManager.validate(input)
             if (validation.valid) {
-                val parsed = jar.parseRawCookieString(raw)
-                jar.seedFromSnapshot(parsed)
-                FapFolderNetwork.persistCookies()
+                // Same parser as validate(): JSON, Netscape and raw `a=b; c=d` all work.
+                FapFolderCookieManager.saveCookies(input)
                 FapFolderSessionCache.clear()
             }
-            validation
+            FapFolderCookieJar.ValidationResult(
+                valid = validation.valid,
+                cookieCount = validation.cookieCount,
+                message = validation.message,
+            )
         }
 
     private fun extractErrorMessage(body: String): String? {

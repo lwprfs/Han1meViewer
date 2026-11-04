@@ -218,7 +218,10 @@ object FapFolderNetworkRepo {
                 }
             }
             if (sessionLooksDead(session)) {
-                FapFolderSessionCache.clear()
+                if (FapFolderSessionGuard.recoverAfterDeadSession()) {
+                    emit(WebsiteState.Error(IllegalStateException("Signed in again. Please retry.")))
+                    return@flow
+                }
                 emit(WebsiteState.Error(SessionExpiredException()))
                 return@flow
             }
@@ -287,7 +290,10 @@ object FapFolderNetworkRepo {
                 }
             }
             if (sessionLooksDead(session)) {
-                FapFolderSessionCache.clear()
+                if (FapFolderSessionGuard.recoverAfterDeadSession()) {
+                    emit(WebsiteState.Error(IllegalStateException("Signed in again. Please retry.")))
+                    return@flow
+                }
                 emit(WebsiteState.Error(SessionExpiredException()))
                 return@flow
             }
@@ -389,7 +395,10 @@ object FapFolderNetworkRepo {
                     return@flow
                 }
                 if (parsed.has("callback") && !parsed.isNull("callback")) {
-                    FapFolderSessionCache.clear()
+                    if (FapFolderSessionGuard.recoverAfterDeadSession()) {
+                        emit(PageLoadingState.Error(IllegalStateException("Signed in again. Please retry.")))
+                        return@flow
+                    }
                     emit(PageLoadingState.Error(IllegalStateException("Session expired. Sign in again.")))
                     return@flow
                 }
@@ -434,7 +443,10 @@ object FapFolderNetworkRepo {
                 return@flow
             }
             if (parsed.has("callback") && !parsed.isNull("callback")) {
-                FapFolderSessionCache.clear()
+                if (FapFolderSessionGuard.recoverAfterDeadSession()) {
+                    emit(PageLoadingState.Error(IllegalStateException("Signed in again. Please retry.")))
+                    return@flow
+                }
                 emit(PageLoadingState.Error(IllegalStateException("Session expired.")))
                 return@flow
             }
@@ -480,7 +492,10 @@ object FapFolderNetworkRepo {
                 }
             }
             if (sessionLooksDead(session)) {
-                FapFolderSessionCache.clear()
+                if (FapFolderSessionGuard.recoverAfterDeadSession()) {
+                    emit(PageLoadingState.Error(IllegalStateException("Signed in again. Please retry.")))
+                    return@flow
+                }
                 emit(PageLoadingState.Error(SessionExpiredException()))
                 return@flow
             }
@@ -665,7 +680,10 @@ object FapFolderNetworkRepo {
                 }
             }
             if (sessionLooksDead(session)) {
-                FapFolderSessionCache.clear()
+                if (FapFolderSessionGuard.recoverAfterDeadSession()) {
+                    emit(WebsiteState.Error(IllegalStateException("Signed in again. Please retry.")))
+                    return@flow
+                }
                 emit(WebsiteState.Error(SessionExpiredException()))
                 return@flow
             }
@@ -774,7 +792,10 @@ object FapFolderNetworkRepo {
                 }
             }
             if (sessionLooksDead(session)) {
-                FapFolderSessionCache.clear()
+                if (FapFolderSessionGuard.recoverAfterDeadSession()) {
+                    emit(VideoLoadingState.Error(IllegalStateException("Signed in again. Please retry.")))
+                    return@flow
+                }
                 emit(VideoLoadingState.Error(SessionExpiredException()))
                 return@flow
             }
@@ -919,7 +940,10 @@ object FapFolderNetworkRepo {
                 }
             }
             if (sessionLooksDead(session)) {
-                FapFolderSessionCache.clear()
+                if (FapFolderSessionGuard.recoverAfterDeadSession()) {
+                    emit(VideoLoadingState.Error(IllegalStateException("Signed in again. Please retry.")))
+                    return@flow
+                }
                 emit(VideoLoadingState.Error(SessionExpiredException()))
                 return@flow
             }
@@ -962,7 +986,10 @@ object FapFolderNetworkRepo {
                 }
             }
             if (sessionLooksDead(session)) {
-                FapFolderSessionCache.clear()
+                if (FapFolderSessionGuard.recoverAfterDeadSession()) {
+                    emit(VideoLoadingState.Error(IllegalStateException("Signed in again. Please retry.")))
+                    return@flow
+                }
                 emit(VideoLoadingState.Error(SessionExpiredException()))
                 return@flow
             }
@@ -1004,7 +1031,10 @@ object FapFolderNetworkRepo {
                 }
             }
             if (sessionLooksDead(session)) {
-                FapFolderSessionCache.clear()
+                if (FapFolderSessionGuard.recoverAfterDeadSession()) {
+                    emit(VideoLoadingState.Error(IllegalStateException("Signed in again. Please retry.")))
+                    return@flow
+                }
                 emit(VideoLoadingState.Error(SessionExpiredException()))
                 return@flow
             }
@@ -1045,7 +1075,10 @@ object FapFolderNetworkRepo {
                 return@flow
             }
             if (parsed.hasCallback) {
-                FapFolderSessionCache.clear()
+                if (FapFolderSessionGuard.recoverAfterDeadSession()) {
+                    emit(WebsiteState.Error(IllegalStateException("Signed in again. Please retry.")))
+                    return@flow
+                }
                 emit(WebsiteState.Error(IllegalStateException("Session expired. Sign in again.")))
                 return@flow
             }
@@ -1093,7 +1126,10 @@ object FapFolderNetworkRepo {
                 return@flow
             }
             if (parsed.has("callback") && !parsed.isNull("callback")) {
-                FapFolderSessionCache.clear()
+                if (FapFolderSessionGuard.recoverAfterDeadSession()) {
+                    emit(PageLoadingState.Error(IllegalStateException("Signed in again. Please retry.")))
+                    return@flow
+                }
                 emit(PageLoadingState.Error(IllegalStateException("Session expired.")))
                 return@flow
             }
@@ -1198,7 +1234,10 @@ object FapFolderNetworkRepo {
                 }
             }
             if (sessionLooksDead(session)) {
-                FapFolderSessionCache.clear()
+                if (FapFolderSessionGuard.recoverAfterDeadSession()) {
+                    emit(PageLoadingState.Error(IllegalStateException("Signed in again. Please retry.")))
+                    return@flow
+                }
                 emit(PageLoadingState.Error(SessionExpiredException()))
                 return@flow
             }
@@ -1258,7 +1297,10 @@ object FapFolderNetworkRepo {
                 }
             }
             if (sessionLooksDead(session)) {
-                FapFolderSessionCache.clear()
+                if (FapFolderSessionGuard.recoverAfterDeadSession()) {
+                    emit(VideoLoadingState.Error(IllegalStateException("Signed in again. Please retry.")))
+                    return@flow
+                }
                 emit(VideoLoadingState.Error(SessionExpiredException()))
                 return@flow
             }
@@ -1304,7 +1346,10 @@ object FapFolderNetworkRepo {
                 return@flow
             }
             if (parsed.has("callback") && !parsed.isNull("callback")) {
-                FapFolderSessionCache.clear()
+                if (FapFolderSessionGuard.recoverAfterDeadSession()) {
+                    emit(PageLoadingState.Error(IllegalStateException("Signed in again. Please retry.")))
+                    return@flow
+                }
                 emit(PageLoadingState.Error(IllegalStateException("Session expired.")))
                 return@flow
             }
@@ -1504,7 +1549,10 @@ object FapFolderNetworkRepo {
             }
             val parsed = runCatching { JSONObject(rawBody) }.getOrNull()
             if (parsed != null && parsed.has("callback") && !parsed.isNull("callback")) {
-                FapFolderSessionCache.clear()
+                if (FapFolderSessionGuard.recoverAfterDeadSession()) {
+                    emit(WebsiteState.Error(IllegalStateException("Signed in again. Please retry.")))
+                    return@flow
+                }
                 emit(WebsiteState.Error(IllegalStateException("Session expired.")))
                 return@flow
             }

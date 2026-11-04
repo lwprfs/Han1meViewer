@@ -60,7 +60,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.yenaly.han1meviewer.FapFolder.data.local.FapFolderHistoryRepo
-import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderAuthRepo
+import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderCredentialStore
+import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderSessionGuard
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetwork
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderProbeFailure
 import com.yenaly.han1meviewer.FapFolder.ui.account.FapFolderAccountScreen
@@ -96,7 +97,6 @@ import com.yenaly.han1meviewer.ui.navigation.settings.registerGlobalSettingsRout
 import com.yenaly.han1meviewer.ui.screen.settings.SiteSettingsEntry
 import com.yenaly.han1meviewer.ui.screen.settings.SiteSettingsHubScreen
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
 
 @Composable
 fun FapFolderNavHost(
@@ -121,12 +121,15 @@ fun FapFolderNavHost(
         gateState = FapFolderGateState.Probing
         delay(16L)
 
-        if (!FapFolderNetwork.hasAuthCookies()) {
+        // No cookies and no saved credentials: browse as a guest, nothing to validate.
+        if (!FapFolderNetwork.hasAuthCookies() && !FapFolderCredentialStore.hasSaved()) {
             gateState = FapFolderGateState.Passed
             return@LaunchedEffect
         }
 
-        val probe = runCatching { FapFolderAuthRepo.probe(activity).first() }
+        // Probe; on a dead session clear the auth cookies and re-sign in with saved credentials.
+        // NeedsManualLogin carries suggestRelogin = true, so the gate offers the sign-in screen.
+        val probe = runCatching { FapFolderSessionGuard.validateOrSignIn(activity).probe }
             .getOrNull()
 
         gateState = when {

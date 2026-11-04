@@ -131,11 +131,20 @@ internal object FapFolderHtmlUtils {
                 (t.contains("<title>attention required") && t.contains("cloudflare"))
     }
 
-    fun looksLikeLoggedOut(body: String?): Boolean {
-        if (body.isNullOrBlank()) return false
-        val m = Regex("""var\s+logged_in\s*=\s*(\d+)""").find(body) ?: return false
-        return m.groupValues.getOrNull(1) == "0"
+    private val loggedInVarRegex =
+        Regex("""var\s+logged_in\s*=\s*['"]?\s*(\w*)\s*['"]?""")
+
+    /** Reads `var logged_in = 1`, `'1'`, `"1"`, `true`, `0`, `'0'`, `false` the same way. */
+    fun extractLoggedInFlag(body: String?): Boolean? {
+        if (body.isNullOrBlank()) return null
+        val raw = loggedInVarRegex.find(body)?.groupValues?.getOrNull(1)
+            ?.trim()?.lowercase()
+            ?.takeIf { it.isNotEmpty() }
+            ?: return null
+        return raw == "1" || raw == "true"
     }
+
+    fun looksLikeLoggedOut(body: String?): Boolean = extractLoggedInFlag(body) == false
 
     fun extractSiteVar(body: String?, varName: String): String? {
         if (body.isNullOrBlank()) return null
@@ -156,11 +165,6 @@ internal object FapFolderHtmlUtils {
     fun extractSitePath(body: String?): String? = extractSiteVar(body, "site_path")
 
     fun extractCurrentPage(body: String?): String? = extractSiteVar(body, "current_page")
-
-    fun extractLoggedInFlag(body: String?): Boolean? {
-        val raw = extractSiteVar(body, "logged_in") ?: return null
-        return raw == "1"
-    }
 
     fun parseSiteStats(body: String?): Triple<Int?, Int?, Int?> {
         if (body.isNullOrBlank()) return Triple(null, null, null)

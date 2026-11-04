@@ -5,6 +5,7 @@ import androidx.core.content.edit
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.FapFolder.common.FapFolderSecurePrefs
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderCookieJar
+import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderCredentialStore
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetwork
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -34,6 +35,10 @@ object FapFolderCookieManager {
     private const val PREF_FAPFOLDER_COOKIES = "fapfolder_cookies_raw"
 
     private val requiredCookieNames = setOf("PHPSESSID", "c_user", "xs")
+
+    private val recognizedCookieNames = requiredCookieNames + setOf(
+        "cf_clearance", "__cf_bm", "cf_chl_2", "cf_chl_prog", "cf_chl_rc_ni",
+    )
 
     private val junkCookieNames = setOf(
         "path", "domain", "expires", "max-age",
@@ -92,6 +97,8 @@ object FapFolderCookieManager {
         FapFolderCookieJar().clearCookies()
         FapFolderCookieJar().clearPersistedPreferences()
         FapFolderNetwork.clearCookies()
+        // Clearing cookies is an explicit sign-out: don't silently sign back in.
+        FapFolderCredentialStore.clear()
         _cookiesFlow.value = ""
         Log.d(TAG, "clearCookies")
     }
@@ -107,13 +114,39 @@ object FapFolderCookieManager {
         return FapFolderCookieFormat.UNKNOWN
     }
 
+    /**
+     * Validates with the same parser [saveCookies] uses, so JSON, Netscape and raw
+     * `a=b; c=d` input all behave the same.
+     */
     fun validate(raw: String): FapFolderCookieValidationResult {
-        val jarResult = FapFolderCookieJar().validateRawCookies(raw)
-        return FapFolderCookieValidationResult(
-            valid = jarResult.valid,
-            cookieCount = jarResult.cookieCount,
-            message = jarResult.message,
-        )
+        if (raw.isBlank()) {
+            return FapFolderCookieValidationResult(false, 0, "No cookies provided")
+        }
+        val now = System.currentTimeMillis()
+        val usable = parseToCookies(raw, FapFolderNetwork.baseUrl)
+            .filter { it.name in recognizedCookieNames }
+            .filter { it.value.isNotBlank() && !it.value.equals("deleted", ignoreCase = true) }
+            .filter { it.expiresAt > now }
+        if (usable.isEmpty()) {
+            return FapFolderCookieValidationResult(
+                false, 0,
+                "No recognized cookies. FapFolder needs PHPSESSID, c_user, and xs.",
+            )
+        }
+        val names = usable.map { it.name }.toSet()
+        return when {
+            "c_user" !in names || "xs" !in names ->
+                FapFolderCookieValidationResult(
+                    false, names.size,
+                    "Missing required cookies. Need c_user and xs (from a logged-in session).",
+                )
+            "PHPSESSID" !in names ->
+                FapFolderCookieValidationResult(
+                    true, names.size,
+                    "Warning: PHPSESSID missing. Session may not persist.",
+                )
+            else -> FapFolderCookieValidationResult(true, names.size, "OK")
+        }
     }
 
     fun parseToCookies(raw: String, baseUrl: String): List<Cookie> {
