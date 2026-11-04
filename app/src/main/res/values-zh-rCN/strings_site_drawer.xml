@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="site_drawer_section_browse">浏览</string>
+    <string name="site_drawer_section_library">资料库</string>
+    <string name="site_drawer_section_account">账号</string>
+    <string name="site_drawer_section_customize">自定义</string>
+    <string name="site_drawer_section_app">应用</string>
+</resources>

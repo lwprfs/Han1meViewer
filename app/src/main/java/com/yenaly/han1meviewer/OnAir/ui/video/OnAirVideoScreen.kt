@@ -2,6 +2,7 @@ package com.yenaly.han1meviewer.OnAir.ui.video
 
 import androidx.compose.ui.res.stringResource
 import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.ui.component.CollapsingPlayerLayout
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
 import com.yenaly.han1meviewer.ui.component.SiteErrorContent
@@ -293,11 +294,12 @@ fun OnAirVideoScreen(
 
             is VideoLoadingState.Success -> {
                 val detail = s.info
-                Column(
+                CollapsingPlayerLayout(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues),
-                ) {
+                    player = {
+                    Column {
                     if (!playerState.isFullscreen) {
                         OnAirVideoPlayer(
                             state = playerState,
@@ -336,7 +338,15 @@ fun OnAirVideoScreen(
                             )
                         }
                     }
-
+                    }
+                    },
+                    content = {
+                    VideoDetailContent(
+                        detail = detail,
+                        onOpenUser = onOpenUser,
+                        onOpenTag = onOpenTag,
+                        onOpenVideo = navigateToVideoAndCancel,
+                        header = {
                     if (showResumeBanner && com.yenaly.han1meviewer.ui.component.player.SitePlayerSettings.config(com.yenaly.han1meviewer.SiteType.ONAIR).resumePlayback) {
                         Surface(
                             modifier = Modifier
@@ -394,14 +404,10 @@ fun OnAirVideoScreen(
                                 .fetch(videoId, quality)?.url
                         },
                     )
-
-                    VideoDetailContent(
-                        detail = detail,
-                        onOpenUser = onOpenUser,
-                        onOpenTag = onOpenTag,
-                        onOpenVideo = navigateToVideoAndCancel,
+                        },
                     )
-                }
+                    },
+                )
             }
         }
     }
@@ -413,11 +419,14 @@ private fun VideoDetailContent(
     onOpenUser: (String) -> Unit,
     onOpenTag: (String) -> Unit,
     onOpenVideo: (String) -> Unit,
+    header: @Composable () -> Unit = {},
 ) {
     androidx.compose.foundation.lazy.LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 32.dp),
     ) {
+        item(key = "header") { Column { header() } }
+
         item(key = "title") {
             Text(
                 text = detail.title,

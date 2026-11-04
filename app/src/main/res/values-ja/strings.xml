@@ -944,4 +944,17 @@ hanime1.me以外のドメインは、特定の時間帯にhanime1.meにリダイ
     <string name="download_auto_group_reuse">既存のグループを使用します：%s</string>
     <string name="download_auto_group_create">新しいグループを作成します：%s</string>
     <string name="download_group_script_simplified">簡体字</string>
+    <string name="switched_to_site">%s に切り替えました</string>
+    <string name="site_selection">サイトを選択</string>
+    <string name="download_failed">ダウンロードに失敗しました。</string>
+    <string name="redownload">再ダウンロード</string>
+    <string name="check_tor">Tor を確認</string>
+    <string name="downloading_2">%1$s 件ダウンロード中</string>
+    <string name="queued">%1$s 件待機中</string>
+    <string name="paused_2">%1$s 件一時停止中</string>
+    <string name="failed">%1$s 件失敗</string>
+    <string name="photos">写真 · %1$s</string>
+    <string name="month">月</string>
+    <string name="pause_video">動画を一時停止</string>
+    <string name="play_video">動画を再生</string>
 </resources>

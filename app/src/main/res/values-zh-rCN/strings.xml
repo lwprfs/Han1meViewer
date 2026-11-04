@@ -944,4 +944,17 @@
         <item>搓手手期待ing……</item>
         <item>◝(⑅•ᴗ•⑅)◜..°♡ 传送中……</item>
     </string-array>
+    <string name="switched_to_site">已切换到 %s</string>
+    <string name="site_selection">选择站点</string>
+    <string name="download_failed">下载失败。</string>
+    <string name="redownload">重新下载</string>
+    <string name="check_tor">检查 Tor</string>
+    <string name="downloading_2">%1$s 个下载中</string>
+    <string name="queued">%1$s 个排队中</string>
+    <string name="paused_2">%1$s 个已暂停</string>
+    <string name="failed">%1$s 个失败</string>
+    <string name="photos">相片 · %1$s</string>
+    <string name="month">月份</string>
+    <string name="pause_video">暂停视频</string>
+    <string name="play_video">播放视频</string>
 </resources>

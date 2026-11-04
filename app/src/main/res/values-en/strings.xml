@@ -952,4 +952,6 @@ Recommendations are as follows:\n
     <string name="month">Month</string>
     <string name="pause_video">Pause Video</string>
     <string name="play_video">Play Video</string>
+    <string name="switched_to_site">Switched to %s</string>
+    <string name="site_selection">Select Site</string>
 </resources>

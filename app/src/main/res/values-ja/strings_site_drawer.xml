@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="site_drawer_section_browse">閲覧</string>
+    <string name="site_drawer_section_library">ライブラリ</string>
+    <string name="site_drawer_section_account">アカウント</string>
+    <string name="site_drawer_section_customize">カスタマイズ</string>
+    <string name="site_drawer_section_app">アプリ</string>
+</resources>
