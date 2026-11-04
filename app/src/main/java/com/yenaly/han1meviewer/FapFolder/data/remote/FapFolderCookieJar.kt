@@ -206,10 +206,6 @@ class FapFolderCookieJar : CookieJar {
         cookieStore.clear()
     }
 
-    /**
-     * Removes only the session cookies (PHPSESSID, c_user, xs) and keeps the Cloudflare ones
-     * (cf_clearance, __cf_bm, ...), then persists the remaining set.
-     */
     fun clearAuthCookies() {
         cookieStore.values.forEach { bucket ->
             bucket.entries.removeAll { (_, c) -> c.name in AUTH_COOKIE_NAMES }

@@ -24,10 +24,6 @@ import com.yenaly.han1meviewer.ui.component.SiteVideoSectionHeader
 import com.yenaly.han1meviewer.ui.component.VideoCardItem
 import com.yenaly.han1meviewer.ui.screen.rememberVideoGridColumns
 
-/**
- * "Related videos" section for the MissAV video page.
- * Same vertical grid + card style as the search results.
- */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MissAvRelatedVideos(

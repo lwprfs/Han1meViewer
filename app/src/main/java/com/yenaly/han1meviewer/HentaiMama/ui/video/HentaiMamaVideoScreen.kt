@@ -803,7 +803,7 @@ internal fun SimilarGrid(
 
     Column(verticalArrangement = Arrangement.spacedBy(SpacingNormal)) {
         SiteVideoSectionHeader(title = stringResource(R.string.hm_similar_titles))
-        // Same sizing rules as the search results grid: vertical, wraps down the page.
+
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val gap = 8.dp
             val gridWidth = maxWidth

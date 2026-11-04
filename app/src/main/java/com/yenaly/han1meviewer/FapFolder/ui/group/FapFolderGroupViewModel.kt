@@ -105,8 +105,7 @@ class FapFolderGroupViewModel(application: Application) : AndroidViewModel(appli
         val cleanSlug = slug.trim('/')
         if (cleanSlug.isBlank()) return
         val tab = FapFolderGroupTab.fromParam(initialTab)
-        // Re-entering the screen (e.g. coming back from a video) calls load() again with the
-        // ORIGINAL route tab. That must not reset a tab the user switched to, nor its scroll.
+
         val sameLoad = _uiState.value.slug == cleanSlug &&
                 (_uiState.value.activeTab == tab || loadedRouteTab == tab) &&
                 _uiState.value.group != null

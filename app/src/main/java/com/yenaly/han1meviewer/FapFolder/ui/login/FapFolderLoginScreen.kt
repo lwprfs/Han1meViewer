@@ -92,8 +92,7 @@ fun FapFolderLoginScreen(
                 when (result) {
                     is FapFolderAuthResult.Success -> {
                         isSubmitting = false
-                        // Keep the password (encrypted storage only) for automatic re-sign-in
-                        // when the session expires. "Remember me" unchecked removes it.
+
                         if (remember) {
                             FapFolderCredentialStore.save(user, password)
                         } else {

@@ -12,12 +12,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
-/**
- * Saved sign-in credentials used for automatic re-sign-in.
- *
- * The password is only ever written to EncryptedSharedPreferences. If encrypted storage is not
- * available (the plain-text fallback prefs are in use) nothing is stored and [save] returns false.
- */
 object FapFolderCredentialStore {
 
     private const val KEY_USER = "fapfolder_auto_user"
@@ -26,7 +20,6 @@ object FapFolderCredentialStore {
 
     fun canStore(): Boolean = FapFolderSecurePrefs.isEncrypted
 
-    /** Call after a successful manual sign-in. Returns true when the credentials were stored. */
     fun save(username: String, password: String): Boolean {
         if (username.isBlank() || password.isEmpty()) return false
         if (!canStore()) {
@@ -41,7 +34,6 @@ object FapFolderCredentialStore {
         return true
     }
 
-    /** Saved credentials that auto sign-in may still use, or null. */
     fun load(): Pair<String, String>? {
         if (!canStore()) return null
         val prefs = FapFolderSecurePrefs.instance
@@ -53,10 +45,6 @@ object FapFolderCredentialStore {
 
     fun hasSaved(): Boolean = load() != null
 
-    /**
-     * The site rejected the saved credentials. They are kept but not retried until the next
-     * successful manual sign-in ([save]), so a wrong password is not hammered on every launch.
-     */
     internal fun markRejected() {
         if (!canStore()) return
         FapFolderSecurePrefs.instance.edit(commit = true) { putBoolean(KEY_REJECTED, true) }
@@ -76,19 +64,13 @@ object FapFolderCredentialStore {
 sealed interface FapFolderGuardResult {
     val probe: FapFolderProbeResult
 
-    /** Session is valid. [reSignedIn] is true when it was restored with saved credentials. */
     data class Valid(
         override val probe: FapFolderProbeResult,
         val reSignedIn: Boolean = false,
     ) : FapFolderGuardResult
 
-    /**
-     * Cloudflare, rate limit, server, network or other transient failure. Cookies were not
-     * touched, so a good session is not wiped.
-     */
     data class Transient(override val probe: FapFolderProbeResult) : FapFolderGuardResult
 
-    /** The session is dead and could not be restored: open the sign-in screen. */
     data class NeedsManualLogin(
         val message: String,
         override val probe: FapFolderProbeResult = FapFolderProbeResult(
@@ -115,13 +97,6 @@ object FapFolderSessionGuard {
     @Volatile
     private var lastReSignInFailAt = 0L
 
-    /**
-     * Probe; if the session is dead, clear only the auth cookies and sign in again with the saved
-     * credentials; probe again to confirm. Use this wherever `FapFolderAuthRepo.probe()` was used.
-     *
-     * @param allowAutoLogin false = never use saved credentials: dead cookies are cleared and
-     * [FapFolderGuardResult.NeedsManualLogin] is returned.
-     */
     suspend fun validateOrSignIn(
         context: Context,
         allowAutoLogin: Boolean = true,
@@ -129,16 +104,9 @@ object FapFolderSessionGuard {
         mutex.withLock { validateLocked(context, allowAutoLogin) }
     }
 
-    /**
-     * Called by the repository when a page or ajax response says the session is gone.
-     * Verifies the session is really dead, then tries to restore it silently.
-     *
-     * @return true only when the session was restored, so the caller can ask the user to retry
-     * instead of reporting "session expired".
-     */
     suspend fun recoverAfterDeadSession(): Boolean = withContext(Dispatchers.IO) {
         mutex.withLock {
-            // Another request already restored the session a moment ago.
+
             if (System.currentTimeMillis() - lastReSignInOkAt < RECENT_RESIGNIN_WINDOW_MS &&
                 FapFolderNetwork.hasAuthCookies()
             ) {

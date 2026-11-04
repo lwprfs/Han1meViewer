@@ -134,7 +134,6 @@ internal object FapFolderHtmlUtils {
     private val loggedInVarRegex =
         Regex("""var\s+logged_in\s*=\s*['"]?\s*(\w*)\s*['"]?""")
 
-    /** Reads `var logged_in = 1`, `'1'`, `"1"`, `true`, `0`, `'0'`, `false` the same way. */
     fun extractLoggedInFlag(body: String?): Boolean? {
         if (body.isNullOrBlank()) return null
         val raw = loggedInVarRegex.find(body)?.groupValues?.getOrNull(1)

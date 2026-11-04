@@ -121,14 +121,11 @@ fun FapFolderNavHost(
         gateState = FapFolderGateState.Probing
         delay(16L)
 
-        // No cookies and no saved credentials: browse as a guest, nothing to validate.
         if (!FapFolderNetwork.hasAuthCookies() && !FapFolderCredentialStore.hasSaved()) {
             gateState = FapFolderGateState.Passed
             return@LaunchedEffect
         }
 
-        // Probe; on a dead session clear the auth cookies and re-sign in with saved credentials.
-        // NeedsManualLogin carries suggestRelogin = true, so the gate offers the sign-in screen.
         val probe = runCatching { FapFolderSessionGuard.validateOrSignIn(activity).probe }
             .getOrNull()
 

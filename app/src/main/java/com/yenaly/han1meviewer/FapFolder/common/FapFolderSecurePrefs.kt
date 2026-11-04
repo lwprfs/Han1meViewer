@@ -23,7 +23,6 @@ object FapFolderSecurePrefs {
         )
     }
 
-    /** True only when [instance] is backed by EncryptedSharedPreferences (not the plain fallback). */
     val isEncrypted: Boolean
         get() {
             instance

@@ -394,7 +394,7 @@ fun FapFolderVideoPlayerScreen(
 
             override fun onPlayerError(error: PlaybackException) {
                 if (error.isDecoderProblem()) {
-                    // Keep the FapFolder UI: decode with the bundled mpv inside this page.
+
                     StreamFallback.markMpv(playableUrl)
                     player.pause()
                     isBuffering = false

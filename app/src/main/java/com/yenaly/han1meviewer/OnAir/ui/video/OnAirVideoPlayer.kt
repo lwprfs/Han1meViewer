@@ -183,7 +183,7 @@ fun OnAirVideoPlayer(
             override fun onPlayerError(error: PlaybackException) {
                 val failingUrl = currentState.activeUrl
                 if (error.isDecoderProblem() && failingUrl != null) {
-                    // Keep the OnAir UI: decode with the bundled mpv inside this page.
+
                     StreamFallback.markMpv(failingUrl)
                     player.pause()
                     mpvUrl = failingUrl

@@ -97,7 +97,7 @@ object FapFolderCookieManager {
         FapFolderCookieJar().clearCookies()
         FapFolderCookieJar().clearPersistedPreferences()
         FapFolderNetwork.clearCookies()
-        // Clearing cookies is an explicit sign-out: don't silently sign back in.
+
         FapFolderCredentialStore.clear()
         _cookiesFlow.value = ""
         Log.d(TAG, "clearCookies")
@@ -114,10 +114,6 @@ object FapFolderCookieManager {
         return FapFolderCookieFormat.UNKNOWN
     }
 
-    /**
-     * Validates with the same parser [saveCookies] uses, so JSON, Netscape and raw
-     * `a=b; c=d` input all behave the same.
-     */
     fun validate(raw: String): FapFolderCookieValidationResult {
         if (raw.isBlank()) {
             return FapFolderCookieValidationResult(false, 0, "No cookies provided")

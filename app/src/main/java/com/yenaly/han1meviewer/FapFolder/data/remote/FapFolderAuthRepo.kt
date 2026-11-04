@@ -67,11 +67,6 @@ object FapFolderAuthRepo {
         return result.failure == FapFolderProbeFailure.SessionExpired && code in 200..299
     }
 
-    /**
-     * True only when [setCookies] contains a usable [name] cookie: non-blank, not "deleted",
-     * and not already expired. PHP-style sites answer a failed login with
-     * `c_user=deleted; expires=<past>`, which must not count as a session.
-     */
     private fun isRealCookie(setCookies: List<String>, name: String, url: HttpUrl): Boolean {
         val now = System.currentTimeMillis()
         return setCookies.any { header ->
@@ -253,7 +248,6 @@ object FapFolderAuthRepo {
                     return@withLock
                 }
 
-                // Never send a stale/dead session with the sign-in request. Cloudflare cookies stay.
                 FapFolderNetwork.clearAuthCookies()
 
                 val priming = Request.Builder()
@@ -297,8 +291,6 @@ object FapFolderAuthRepo {
                         return@use
                     }
 
-                    // Stale cookies were cleared above, so anything in the jar now is fresh
-                    // (this also covers cookies set on an intermediate redirect hop).
                     val hasCUser = isRealCookie(setCookies, "c_user", resp.request.url)
                     val hasXs = isRealCookie(setCookies, "xs", resp.request.url)
                     val jarHasAuth = FapFolderCookieJar.hasRequiredAuthCookie()
@@ -310,7 +302,7 @@ object FapFolderAuthRepo {
                     }
 
                     if (code == 403) {
-                        // Same as probe(): a 403 is a Cloudflare/WAF block, not wrong credentials.
+
                         emit(FapFolderAuthResult.CloudflareChallenge)
                         return@use
                     }
@@ -367,7 +359,7 @@ object FapFolderAuthRepo {
             val input = raw.orEmpty()
             val validation = FapFolderCookieManager.validate(input)
             if (validation.valid) {
-                // Same parser as validate(): JSON, Netscape and raw `a=b; c=d` all work.
+
                 FapFolderCookieManager.saveCookies(input)
                 FapFolderSessionCache.clear()
             }
