@@ -799,4 +799,6 @@
     <string name="site_playback_language_backup_cache_update">播放、語言、備份、快取、更新與其他所有設定</string>
     <string name="site_settings_2">%1$s 設定</string>
     <string name="site_touch_an_item_of_another_site">點擊其他站點的項目即可切換站點、檢查連線並開啟影片頁面</string>
+    <string name="site_default_resolution">預設解析度</string>
+    <string name="site_default_resolution_summary">開啟影片時使用的畫質；若沒有該畫質，則使用最接近的較低畫質</string>
 </resources>

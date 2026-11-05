@@ -205,7 +205,7 @@ object MissAvStreamResolver {
                 .build()
             client.newCall(request).execute().use { resp ->
                 if (!resp.isSuccessful) error("HTTP ${resp.code}")
-                val variants = parseMaster(resp.body?.string().orEmpty(), master)
+                val variants = parseMaster(resp.body.string(), master)
                 if (variants.isEmpty()) error("no variants in master playlist")
                 MissAvStreams(master, variants)
             }

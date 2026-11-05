@@ -8,7 +8,7 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.PlayCircleOutline
-import androidx.compose.material.icons.filled.QueueMusic
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -424,7 +424,7 @@ fun HentaiMamaNavHost(
                         key = "playlists",
                         title = stringResource(R.string.hm_playlists_title),
                         subtitle = stringResource(R.string.hm_playlists_subtitle),
-                        icon = Icons.Default.QueueMusic,
+                        icon = Icons.AutoMirrored.Filled.QueueMusic,
                         onClick = { open(HentaiMamaPlaylistsRoute) },
                     ),
                     SiteSettingsEntry(

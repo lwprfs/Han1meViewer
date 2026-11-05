@@ -102,6 +102,7 @@ val DefaultSiteSwitchOptions: List<SiteSwitchOption> = listOf(
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
+@Suppress("DEPRECATION")
 @Composable
 fun SiteSwitchDialog(
     currentSite: SiteType,

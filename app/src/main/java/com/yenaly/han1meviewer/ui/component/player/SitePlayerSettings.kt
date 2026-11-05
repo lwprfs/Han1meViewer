@@ -5,7 +5,9 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.edit
 import com.yenaly.han1meviewer.Preferences
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.SiteType
+import com.yenaly.yenaly_libs.utils.applicationContext
 
 object SitePlayerSettings {
 
@@ -76,8 +78,9 @@ object SitePlayerSettings {
         "3.5x" to "3.5", "4.0x" to "4.0",
     )
 
-    private val qualityOptions = listOf(
-        "Original (best)" to "original",
+    private val qualityOptions: List<Pair<String, String>>
+        get() = listOf(
+        applicationContext.getString(R.string.site_quality_original) to "original",
         "720p" to "720",
         "480p" to "480",
         "360p" to "360",
@@ -85,10 +88,12 @@ object SitePlayerSettings {
         "144p" to "144",
     )
 
-    val specs: List<Spec> = listOf(
+    val specs: List<Spec>
+        get() = listOf(
         Spec.Choice(
-            ID_DEFAULT_QUALITY, "Default resolution",
-            "Quality used when a video opens. If it is not offered, the closest lower one is used",
+            ID_DEFAULT_QUALITY,
+            applicationContext.getString(R.string.site_default_resolution),
+            applicationContext.getString(R.string.site_default_resolution_summary),
             qualityOptions,
             onlySites = setOf(SiteType.ONAIR),
         ) { "original" },
@@ -144,6 +149,7 @@ object SitePlayerSettings {
 
     fun spec(id: String): Spec? = specs.firstOrNull { it.id == id }
 
+    /** Specs that make sense for [site] (some, like resolution, are site specific). */
     fun specsFor(site: SiteType): List<Spec> = specs.filter {
         val only = (it as? Spec.Choice)?.onlySites
         only == null || site in only

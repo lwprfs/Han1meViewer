@@ -63,7 +63,7 @@ internal fun LazyListScope.fapFolderCommentItems(
                         tint = MaterialTheme.colorScheme.onErrorContainer,
                     )
                     Text(
-                        text = uiState.commentPostError ?: "",
+                        text = uiState.commentPostError,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onErrorContainer,
                     )
@@ -134,7 +134,7 @@ internal fun LazyListScope.fapFolderCommentItems(
             item(key = "comments_error") {
                 PostErrorBlock(
                     title = applicationContext.getString(R.string.fap_failed_to_load_comments),
-                    message = uiState.commentsError ?: applicationContext.getString(R.string.unknown_error),
+                    message = uiState.commentsError.ifBlank { applicationContext.getString(R.string.unknown_error) },
                     onRetry = { viewModel.loadMoreComments() },
                 )
             }

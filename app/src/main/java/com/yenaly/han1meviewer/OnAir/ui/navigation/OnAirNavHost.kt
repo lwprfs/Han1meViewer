@@ -8,9 +8,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Campaign
-import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Label
+import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
@@ -469,7 +469,7 @@ private fun onAirHubEntries(
                 key = "tags",
                 title = applicationContext.getString(R.string.drawer_tags),
                 subtitle = applicationContext.getString(R.string.onair_tags_subtitle),
-                icon = Icons.Default.Label,
+                icon = Icons.AutoMirrored.Filled.Label,
                 onClick = { navController.navigateSafely(OnAirTagsIndexRoute) },
             )
         )
@@ -487,7 +487,7 @@ private fun onAirHubEntries(
                 key = "chat",
                 title = applicationContext.getString(R.string.drawer_chat),
                 subtitle = applicationContext.getString(R.string.onair_chat_subtitle),
-                icon = Icons.Default.Chat,
+                icon = Icons.AutoMirrored.Filled.Chat,
                 onClick = { navController.navigateSafely(OnAirChatRoute) },
             )
         )

@@ -799,4 +799,6 @@
     <string name="site_playback_language_backup_cache_update">Playback, language, backup, cache, update and everything else</string>
     <string name="site_settings_2">%1$s settings</string>
     <string name="site_touch_an_item_of_another_site">Touch an item of another site to switch site, check the connection and open its video page</string>
+    <string name="site_default_resolution">Default resolution</string>
+    <string name="site_default_resolution_summary">Quality used when a video opens. If it is not offered, the closest lower one is used</string>
 </resources>

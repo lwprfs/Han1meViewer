@@ -664,14 +664,14 @@ fun FapFolderVideoPlayerScreen(
                             ViewGroup.LayoutParams.MATCH_PARENT,
                             ViewGroup.LayoutParams.MATCH_PARENT,
                         )
-                        val surface = SurfaceView(ctx).apply {
+                        val surface = SurfaceView(ctx).apply surfaceView@{
                             layoutParams = FrameLayout.LayoutParams(
                                 ViewGroup.LayoutParams.MATCH_PARENT,
                                 ViewGroup.LayoutParams.MATCH_PARENT,
                             )
                             holder.addCallback(object : SurfaceHolder.Callback {
                                 override fun surfaceCreated(h: SurfaceHolder) {
-                                    exoPlayer?.setVideoSurfaceView(this@apply)
+                                    exoPlayer?.setVideoSurfaceView(this@surfaceView)
                                 }
 
                                 override fun surfaceChanged(
@@ -680,11 +680,11 @@ fun FapFolderVideoPlayerScreen(
                                     width: Int,
                                     height: Int,
                                 ) {
-                                    exoPlayer?.setVideoSurfaceView(this@apply)
+                                    exoPlayer?.setVideoSurfaceView(this@surfaceView)
                                 }
 
                                 override fun surfaceDestroyed(h: SurfaceHolder) {
-                                    exoPlayer?.clearVideoSurfaceView(this@apply)
+                                    exoPlayer?.clearVideoSurfaceView(this@surfaceView)
                                 }
                             })
                         }
