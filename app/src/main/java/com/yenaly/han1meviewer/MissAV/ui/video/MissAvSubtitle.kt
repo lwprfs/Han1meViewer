@@ -36,6 +36,25 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
+import com.yenaly.han1meviewer.MissAV.ui.home.MissAvSubtitleSettingsRepo
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import org.json.JSONArray
+import java.util.concurrent.atomic.AtomicInteger
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.SiteVideoSectionHeader
@@ -60,6 +79,12 @@ data class SubtitleResult(
     val downloads: String = "N/A",
     val languages: String = "N/A",
 )
+
+sealed class SubtitleLangStatus {
+    data class Available(val url: String) : SubtitleLangStatus()
+    data class Translatable(val folder: String, val origFile: String) : SubtitleLangStatus()
+    data object Missing : SubtitleLangStatus()
+}
 
 object MissAvSubtitleHelper {
     private const val SUBTITLE_CAT_BASE = "https://www.subtitlecat.com"
@@ -189,63 +214,199 @@ object MissAvSubtitleHelper {
         }
     }
 
-    suspend fun checkAndGetSubtitle(pageUrl: String): String? = withContext(Dispatchers.IO) {
-        try {
-            if (pageUrl.isBlank()) return@withContext null
-            val httpClient = requireClient()
+    suspend fun checkLanguage(pageUrl: String, langCode: String): SubtitleLangStatus? =
+        withContext(Dispatchers.IO) {
+            try {
+                if (pageUrl.isBlank()) return@withContext null
+                val request = Request.Builder()
+                    .url(pageUrl)
+                    .header("User-Agent", USER_AGENT)
+                    .header("Referer", SUBTITLE_CAT_BASE)
+                    .header(
+                        "Accept",
+                        "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                    )
+                    .header("Accept-Language", "en-US,en;q=0.9")
+                    .build()
 
+                val html = requireClient().newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) null else response.body.string()
+                } ?: return@withContext null
+                if (html.isBlank()) return@withContext null
+
+                val document = Jsoup.parse(html)
+                val translateRegex = Regex(
+                    """translate_from_server_folder\('([^']*)',\s*'([^']*)',\s*'([^']*)'\)""",
+                )
+
+                for (subSingle in document.select("div.sub-single")) {
+                    val code = subSingle.selectFirst("img.flag")?.attr("alt")?.trim().orEmpty()
+                    if (!code.equals(langCode, ignoreCase = true)) continue
+
+                    val href = subSingle.selectFirst("a.green-link")?.attr("href")
+                        ?: subSingle.selectFirst("a[href\$=.srt]")?.attr("href")
+                    if (!href.isNullOrBlank()) {
+                        return@withContext SubtitleLangStatus.Available(buildFullUrl(href))
+                    }
+
+                    val onclick = subSingle.selectFirst("button[onclick*=translate_from_server_folder]")
+                        ?.attr("onclick").orEmpty()
+                    val match = translateRegex.find(onclick)
+                    if (match != null) {
+                        return@withContext SubtitleLangStatus.Translatable(
+                            folder = match.groupValues[3],
+                            origFile = match.groupValues[2],
+                        )
+                    }
+                    return@withContext SubtitleLangStatus.Missing
+                }
+                SubtitleLangStatus.Missing
+            } catch (e: SocketTimeoutException) {
+                Log.e(TAG, "Timeout checking subtitle: $pageUrl")
+                null
+            } catch (e: Exception) {
+                Log.e(TAG, "Check error for $pageUrl: ${e.message}")
+                null
+            }
+        }
+
+    private data class Cue(val timing: String, val lines: List<String>)
+
+    private fun parseSrt(text: String): List<Cue> {
+        val clean = text.removePrefix("\uFEFF").replace("\r\n", "\n").replace('\r', '\n')
+        val cues = mutableListOf<Cue>()
+        for (block in clean.split(Regex("\n{2,}"))) {
+            val lines = block.split('\n')
+            val ti = lines.indexOfFirst { it.contains("-->") }
+            if (ti < 0) continue
+            cues += Cue(lines[ti].trim(), lines.drop(ti + 1).filter { it.isNotBlank() })
+        }
+        return cues
+    }
+
+    private fun googleTranslate(text: String, target: String): String {
+        val url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto" +
+            "&tl=${URLEncoder.encode(target, "UTF-8")}&dt=t&q=${URLEncoder.encode(text, "UTF-8")}"
+        val request = Request.Builder()
+            .url(url)
+            .header("User-Agent", USER_AGENT)
+            .build()
+        val body = requireClient().newCall(request).execute().use { r ->
+            if (!r.isSuccessful) throw java.io.IOException("Translate HTTP ${r.code}")
+            r.body.string()
+        }
+        val segments = JSONArray(body).getJSONArray(0)
+        val sb = StringBuilder()
+        for (i in 0 until segments.length()) {
+            val seg = segments.optJSONArray(i) ?: continue
+            if (!seg.isNull(0)) sb.append(seg.getString(0))
+        }
+        return sb.toString()
+    }
+
+    private fun translateLines(lines: List<String>, target: String): List<String> {
+        if (lines.isEmpty()) return lines
+        val out = googleTranslate(lines.joinToString("\n"), target)
+            .replace("\r\n", "\n").trimEnd('\n').split('\n')
+        return if (out.size == lines.size) out else emptyList()
+    }
+
+    suspend fun translateSubtitle(
+        context: Context,
+        status: SubtitleLangStatus.Translatable,
+        targetLang: String,
+        fileName: String,
+        onProgress: (done: Int, total: Int) -> Unit,
+    ): Uri? = withContext(Dispatchers.IO) {
+        try {
+            val srtUrl = buildFullUrl(status.folder.trimEnd('/') + "/" + status.origFile)
             val request = Request.Builder()
-                .url(pageUrl)
+                .url(srtUrl)
                 .header("User-Agent", USER_AGENT)
                 .header("Referer", SUBTITLE_CAT_BASE)
-                .header(
-                    "Accept",
-                    "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                )
-                .header("Accept-Language", "en-US,en;q=0.9")
                 .build()
-
-            val html = httpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) null
-                else response.body.string()
+            val bytes = requireClient().newCall(request).execute().use { r ->
+                if (r.isSuccessful) r.body.bytes() else null
             } ?: return@withContext null
 
-            if (html.isBlank()) return@withContext null
+            val cues = parseSrt(String(bytes, Charsets.UTF_8))
+            if (cues.isEmpty()) return@withContext null
 
-            val document = Jsoup.parse(html)
-
-            for (subSingle in document.select("div.sub-single")) {
-                val isEnglish = subSingle.selectFirst(
-                    "img[src*=/assets/flags/gb.png], img[src*=/flags/gb.png]"
-                ) != null
-
-                if (!isEnglish) continue
-
-                val href = subSingle.selectFirst("a.green-link")?.attr("href")
-                    ?: subSingle.selectFirst("a[href$=.srt]")?.attr("href")
-
-                if (href.isNullOrBlank()) {
-                    return@withContext ""
+            val chunks = mutableListOf<List<Int>>()
+            var current = mutableListOf<Int>()
+            var chars = 0
+            cues.forEachIndexed { i, cue ->
+                val len = cue.lines.sumOf { it.length + 1 }
+                if (current.isNotEmpty() && (chars + len > 1500 || current.size >= 40)) {
+                    chunks += current; current = mutableListOf(); chars = 0
                 }
+                current += i; chars += len
+            }
+            if (current.isNotEmpty()) chunks += current
 
-                val fullUrl = buildFullUrl(href)
+            val translated = arrayOfNulls<List<String>>(cues.size)
+            val done = AtomicInteger(0)
+            val failed = AtomicInteger(0)
+            val gate = Semaphore(4)
+            onProgress(0, chunks.size)
 
-                return@withContext if (
-                    fullUrl.endsWith(".srt", ignoreCase = true) ||
-                    fullUrl.contains("download", ignoreCase = true)
-                ) {
-                    fullUrl
-                } else {
-                    ""
-                }
+            coroutineScope {
+                chunks.map { idx ->
+                    async {
+                        gate.withPermit {
+                            var ok = false
+                            repeat(2) { attempt ->
+                                if (ok) return@repeat
+                                try {
+                                    val src = idx.flatMap { cues[it].lines }
+                                    val out = translateLines(src, targetLang)
+                                    if (out.isNotEmpty() || src.isEmpty()) {
+                                        var p = 0
+                                        for (i in idx) {
+                                            val n = cues[i].lines.size
+                                            translated[i] = out.subList(p, p + n); p += n
+                                        }
+                                    } else {
+
+                                        for (i in idx) {
+                                            val one = cues[i].lines
+                                            val r = translateLines(one, targetLang)
+                                            translated[i] = if (r.isNotEmpty() || one.isEmpty()) r
+                                            else listOf(
+                                                googleTranslate(one.joinToString(" "), targetLang)
+                                                    .replace("\n", " ").trim(),
+                                            )
+                                        }
+                                    }
+                                    ok = true
+                                } catch (e: Exception) {
+                                    Log.w(TAG, "Translate chunk failed (try $attempt): ${e.message}")
+                                }
+                            }
+                            if (!ok) failed.incrementAndGet()
+                            onProgress(done.incrementAndGet(), chunks.size)
+                        }
+                    }
+                }.awaitAll()
             }
 
-            ""
-        } catch (e: SocketTimeoutException) {
-            Log.e(TAG, "Timeout checking subtitle: $pageUrl")
-            null
+            if (failed.get() == chunks.size) return@withContext null
+
+            val sb = StringBuilder()
+            cues.forEachIndexed { i, cue ->
+                sb.append(i + 1).append('\n').append(cue.timing).append('\n')
+                (translated[i] ?: cue.lines).forEach { sb.append(it).append('\n') }
+                sb.append('\n')
+            }
+
+            val dir = File(context.getExternalFilesDir("subtitles"), "missav")
+            if (!dir.exists() && !dir.mkdirs()) return@withContext null
+            val file = File(dir, fileName.replace(Regex("""[\\/:*?"<>|]"""), "_"))
+            file.writeText(sb.toString(), Charsets.UTF_8)
+            if (file.length() == 0L) return@withContext null
+            FileProvider.getUriForFile(context, "${context.packageName}.fileProvider", file)
         } catch (e: Exception) {
-            Log.e(TAG, "Check error for $pageUrl: ${e.message}")
+            Log.e(TAG, "Translate error: ${e.message}")
             null
         }
     }
@@ -454,12 +615,18 @@ private fun MissAvSubtitleCatSection(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
 
     remember(context) {
         MissAvSubtitleHelper.init(context)
         true
     }
 
+    val langCode = Preferences.missAvSubtitleCatLanguage
+    val langName = MissAvSubtitleSettingsRepo.languageName(langCode)
+    val translateEnabled = Preferences.missAvSubtitleCatTranslate
+
+    var manualQuery by remember { mutableStateOf("") }
     var searchResults by remember { mutableStateOf<List<SubtitleResult>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
     var hasSearched by remember { mutableStateOf(false) }
@@ -467,15 +634,34 @@ private fun MissAvSubtitleCatSection(
 
     var downloadStates by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
     var checkingStates by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
+    var progressStates by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
 
-    var englishUrls by remember { mutableStateOf<Map<String, String?>>(emptyMap()) }
+    var statuses by remember { mutableStateOf<Map<String, SubtitleLangStatus?>>(emptyMap()) }
     var downloadedKeys by remember { mutableStateOf<Set<String>>(emptySet()) }
 
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    fun checkSingle(result: SubtitleResult) {
+        val key = result.link
+        if (checkingStates[key] == true) return
+        checkingStates = checkingStates + (key to true)
+        scope.launch {
+            try {
+                statuses = statuses + (key to MissAvSubtitleHelper.checkLanguage(key, langCode))
+            } catch (e: Exception) {
+                Log.e("MissAvSubtitle", "Check failed for $key: ${e.message}")
+                statuses = statuses + (key to null)
+            } finally {
+                checkingStates = checkingStates + (key to false)
+            }
+        }
+    }
+
     fun searchSubtitles() {
-        if (videoCode.isBlank() || isLoading) return
+        val query = manualQuery.trim().ifBlank { videoCode }
+        if (query.isBlank() || isLoading) return
+        focusManager.clearFocus()
 
         isLoading = true
         hasSearched = true
@@ -483,36 +669,21 @@ private fun MissAvSubtitleCatSection(
         searchResults = emptyList()
         downloadStates = emptyMap()
         checkingStates = emptyMap()
-        englishUrls = emptyMap()
+        progressStates = emptyMap()
+        statuses = emptyMap()
         downloadedKeys = emptySet()
 
         scope.launch {
             try {
-                val results = MissAvSubtitleHelper.searchSubtitles(videoCode).take(7)
+                val results = MissAvSubtitleHelper.searchSubtitles(query).take(7)
                 searchResults = results
                 isLoading = false
 
                 if (results.isEmpty()) {
-                    errorMsg = "No subtitles found for this video"
+                    errorMsg = "No subtitles found for \"$query\""
                     return@launch
                 }
-
-                results.forEachIndexed { index, result ->
-                    if (index >= 3) return@forEachIndexed
-                    launch {
-                        val key = result.link
-                        checkingStates = checkingStates + (key to true)
-                        try {
-                            val url = MissAvSubtitleHelper.checkAndGetSubtitle(result.link)
-                            englishUrls = englishUrls + (key to url)
-                        } catch (e: Exception) {
-                            Log.e("MissAvSubtitle", "Check failed for $key: ${e.message}")
-                            englishUrls = englishUrls + (key to null)
-                        } finally {
-                            checkingStates = checkingStates + (key to false)
-                        }
-                    }
-                }
+                results.take(3).forEach { checkSingle(it) }
             } catch (e: Exception) {
                 Log.e("MissAvSubtitle", "Search error: ${e.message}")
                 errorMsg = "Failed to search subtitles"
@@ -523,49 +694,50 @@ private fun MissAvSubtitleCatSection(
 
     fun download(result: SubtitleResult) {
         val key = result.link
-        val url = englishUrls[key]
-        if (url.isNullOrEmpty()) return
-        if (downloadStates[key] == true) return
-        if (key in downloadedKeys) return
+        val status = statuses[key] ?: return
+        if (downloadStates[key] == true || key in downloadedKeys) return
 
         downloadStates = downloadStates + (key to true)
         scope.launch {
             try {
-                val ext = url.substringAfterLast('.', "srt").take(5)
-                    .lowercase()
-                    .let { if (it.matches(Regex("[a-z0-9]{1,5}"))) it else "srt" }
-                val fileName = "${videoCode}_subtitle.$ext"
+                val fileName = "${videoCode}_subtitle_$langCode.srt"
+                val uri = when (status) {
+                    is SubtitleLangStatus.Available ->
+                        MissAvSubtitleHelper.downloadSubtitle(context, status.url, fileName)
 
-                val uri = MissAvSubtitleHelper.downloadSubtitle(context, url, fileName)
+                    is SubtitleLangStatus.Translatable -> {
+                        if (!translateEnabled) null
+                        else MissAvSubtitleHelper.translateSubtitle(
+                            context, status, langCode, fileName,
+                        ) { done, total ->
+                            progressStates = progressStates +
+                                (key to (done * 100 / total.coerceAtLeast(1)))
+                        }
+                    }
+
+                    SubtitleLangStatus.Missing -> null
+                }
                 if (uri != null) {
                     downloadedKeys = downloadedKeys + key
                     onSubtitleDownloaded(uri)
-                    snackbarHostState.showSnackbar("Subtitle downloaded successfully!")
+                    snackbarHostState.showSnackbar(
+                        if (status is SubtitleLangStatus.Translatable)
+                            "$langName subtitle translated and loaded"
+                        else "Subtitle downloaded successfully!",
+                    )
                 } else {
-                    snackbarHostState.showSnackbar("Failed to download subtitle")
+                    snackbarHostState.showSnackbar(
+                        if (status is SubtitleLangStatus.Translatable)
+                            "Translation failed"
+                        else "Failed to download subtitle",
+                    )
                 }
             } catch (e: Exception) {
                 Log.e("MissAvSubtitle", "Download error: ${e.message}")
                 snackbarHostState.showSnackbar("Error: ${e.message}")
             } finally {
                 downloadStates = downloadStates + (key to false)
-            }
-        }
-    }
-
-    fun checkSingle(result: SubtitleResult) {
-        val key = result.link
-        if (checkingStates[key] == true) return
-        checkingStates = checkingStates + (key to true)
-        scope.launch {
-            try {
-                val url = MissAvSubtitleHelper.checkAndGetSubtitle(result.link)
-                englishUrls = englishUrls + (key to url)
-            } catch (e: Exception) {
-                Log.e("MissAvSubtitle", "Check failed: ${e.message}")
-                englishUrls = englishUrls + (key to null)
-            } finally {
-                checkingStates = checkingStates + (key to false)
+                progressStates = progressStates - key
             }
         }
     }
@@ -576,9 +748,15 @@ private fun MissAvSubtitleCatSection(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             SiteVideoSectionHeader(
-                title = "Subtitles (subtitlecat.com)",
+                title = "Subtitles (subtitlecat.com · $langName)",
                 actionText = if (isLoading) "Searching…" else "Search",
                 onActionClick = { if (!isLoading) searchSubtitles() },
+            )
+
+            SubtitleSearchBar(
+                query = manualQuery,
+                onQueryChange = { manualQuery = it },
+                onSearch = { searchSubtitles() },
             )
 
             when {
@@ -635,10 +813,13 @@ private fun MissAvSubtitleCatSection(
                             SubtitleResultItem(
                                 result = result,
                                 index = index,
+                                languageName = langName,
+                                translateEnabled = translateEnabled,
                                 isChecking = checkingStates[key] == true,
                                 isDownloading = downloadStates[key] == true,
                                 isAlreadyDownloaded = key in downloadedKeys,
-                                hasEnglish = englishUrls[key],
+                                progress = progressStates[key] ?: -1,
+                                status = statuses[key],
                                 onCheck = { checkSingle(result) },
                                 onDownload = { download(result) },
                             )
@@ -648,7 +829,7 @@ private fun MissAvSubtitleCatSection(
 
                 !hasSearched -> {
                     Text(
-                        text = "Tap Search to find subtitles",
+                        text = "Tap Search to find $langName subtitles, or type a title above",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(vertical = 4.dp),
@@ -667,13 +848,74 @@ private fun MissAvSubtitleCatSection(
 }
 
 @Composable
+private fun SubtitleSearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onSearch: () -> Unit,
+) {
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(40.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 14.dp, end = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                if (query.isEmpty()) {
+                    Text(
+                        text = "Search subtitles manually…",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                BasicTextField(
+                    value = query,
+                    onValueChange = onQueryChange,
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(
+                        color = MaterialTheme.colorScheme.onSurface,
+                    ),
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { onSearch() }),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            if (query.isNotEmpty()) {
+                IconButton(onClick = { onQueryChange("") }, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Clear",
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
+            IconButton(onClick = onSearch, modifier = Modifier.size(36.dp)) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "Search",
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun SubtitleResultItem(
     result: SubtitleResult,
     index: Int,
+    languageName: String,
+    translateEnabled: Boolean,
     isChecking: Boolean,
     isDownloading: Boolean,
     isAlreadyDownloaded: Boolean,
-    hasEnglish: String?,
+    progress: Int,
+    status: SubtitleLangStatus?,
     onCheck: () -> Unit,
     onDownload: () -> Unit,
 ) {
@@ -728,30 +970,30 @@ fun SubtitleResultItem(
 
             when {
                 isDownloading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-
-                isAlreadyDownloaded -> {
-                    Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = MaterialTheme.colorScheme.tertiaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
-                            text = "Downloaded",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(
-                                horizontal = 8.dp,
-                                vertical = 4.dp,
-                            ),
+                        if (progress >= 0) {
+                            Text(
+                                text = "Translating $progress%",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.primary,
                         )
                     }
                 }
+
+                isAlreadyDownloaded -> StatusBadge(
+                    text = "Loaded",
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                )
 
                 isChecking -> {
                     CircularProgressIndicator(
@@ -761,7 +1003,7 @@ fun SubtitleResultItem(
                     )
                 }
 
-                hasEnglish == null -> {
+                status == null -> {
                     ActionSurface(
                         text = "Check",
                         onClick = onCheck,
@@ -770,25 +1012,7 @@ fun SubtitleResultItem(
                     )
                 }
 
-                hasEnglish.isEmpty() -> {
-                    Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    ) {
-                        Text(
-                            text = "No English",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(
-                                horizontal = 8.dp,
-                                vertical = 4.dp,
-                            ),
-                        )
-                    }
-                }
-
-                else -> {
+                status is SubtitleLangStatus.Available -> {
                     ActionSurface(
                         text = "Download",
                         onClick = onDownload,
@@ -796,8 +1020,39 @@ fun SubtitleResultItem(
                         contentColor = MaterialTheme.colorScheme.onPrimary,
                     )
                 }
+
+                status is SubtitleLangStatus.Translatable && translateEnabled -> {
+                    ActionSurface(
+                        text = "Translate",
+                        onClick = onDownload,
+                        containerColor = MaterialTheme.colorScheme.tertiary,
+                        contentColor = MaterialTheme.colorScheme.onTertiary,
+                    )
+                }
+
+                else -> StatusBadge(
+                    text = "No $languageName",
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun StatusBadge(text: String, containerColor: Color, contentColor: Color) {
+    Surface(
+        shape = RoundedCornerShape(4.dp),
+        color = containerColor,
+        contentColor = contentColor,
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+        )
     }
 }
 

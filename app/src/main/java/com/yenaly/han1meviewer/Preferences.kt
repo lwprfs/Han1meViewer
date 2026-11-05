@@ -117,6 +117,14 @@ object Preferences {
         get() = preferenceSp.getString("missav_subtitle_source", "subtitlecat") ?: "subtitlecat"
         set(value) = preferenceSp.edit { putString("missav_subtitle_source", value) }
 
+    var missAvSubtitleCatLanguage: String
+        get() = preferenceSp.getString("missav_subtitlecat_language", "en") ?: "en"
+        set(value) = preferenceSp.edit { putString("missav_subtitlecat_language", value) }
+
+    var missAvSubtitleCatTranslate: Boolean
+        get() = preferenceSp.getBoolean("missav_subtitlecat_translate", true)
+        set(value) = preferenceSp.edit { putBoolean("missav_subtitlecat_translate", value) }
+
     var missAvPreferredQuality: String
         get() = preferenceSp.getString("missav_preferred_quality", "auto") ?: "auto"
         set(value) = preferenceSp.edit { putString("missav_preferred_quality", value) }
