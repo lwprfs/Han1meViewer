@@ -10,11 +10,14 @@ import com.yenaly.han1meviewer.OnAir.data.model.StreamResult
 import com.yenaly.han1meviewer.OnAir.data.remote.OnAirNetworkRepo
 import com.yenaly.han1meviewer.OnAir.data.remote.OnAirStreamFetcher
 import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
+import com.yenaly.han1meviewer.ui.component.player.SitePlayerSettings
 import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -66,7 +69,26 @@ class OnAirVideoViewModel(application: Application) : AndroidViewModel(applicati
         private const val RESUME_THRESHOLD_MS = 5_000L
         private const val COMPLETE_GRACE_MS = 3_000L
         private const val QUALITY_FETCH_TIMEOUT_MS = 45_000L
-        private val QUALITY_PRIORITY = listOf("original", "480", "360", "240", "144")
+
+        private val FALLBACK_QUALITIES = listOf("original", "480", "360", "240", "144")
+
+        private fun qualityHeight(q: String): Int =
+            if (q == "original") Int.MAX_VALUE else q.toIntOrNull() ?: 0
+
+        fun orderQualities(keys: Collection<String>): List<String> =
+            keys.distinct().sortedByDescending(::qualityHeight)
+
+        fun resolveQuality(wanted: String, available: List<String>): String {
+            if (available.isEmpty()) return wanted
+            if (wanted in available) return wanted
+            val numeric = available.filter { it != "original" }.mapNotNull { q ->
+                q.toIntOrNull()?.let { q to it }
+            }
+            val h = qualityHeight(wanted)
+            numeric.filter { it.second <= h }.maxByOrNull { it.second }?.let { return it.first }
+            numeric.filter { it.second > h }.minByOrNull { it.second }?.let { return it.first }
+            return if ("original" in available) "original" else available.first()
+        }
     }
 
     private val _pageState =
@@ -113,101 +135,132 @@ class OnAirVideoViewModel(application: Application) : AndroidViewModel(applicati
             _showResumeBanner.value = false
             _resumePosition.value = 0L
 
-            OnAirNetworkRepo.getVideoDetail(videoId, quality = "original").collect { state ->
-                _pageState.value = state
-                when (state) {
-                    is VideoLoadingState.Success -> {
-                        var detail = state.info
-                        if (detail.videoId.isBlank()) {
-                            detail = detail.copy(videoId = videoId)
-                            _pageState.value = VideoLoadingState.Success(detail)
-                        }
-                        currentDetail = detail
-                        val history = OnAirHistoryRepo.getByVideoId(videoId)
-                        val preferred = preferredQuality ?: history?.lastQuality
-                        applyInitialDetail(detail, preferred)
-                        loadResumePosition(videoId)
-                        if (_playerState.value.activeStream?.state != StreamState.Ready) {
-                            scheduleFallback()
-                        }
+            val wanted = preferredQuality?.takeIf { it.isNotBlank() }
+                ?: SitePlayerSettings.config(SiteType.ONAIR).defaultQuality
+
+            var first = OnAirNetworkRepo.getVideoDetail(videoId, quality = wanted)
+                .first { it !is VideoLoadingState.Loading }
+            if (first is VideoLoadingState.NoContent) {
+                first = OnAirNetworkRepo.getVideoDetail(videoId, quality = null)
+                    .first { it !is VideoLoadingState.Loading }
+            }
+
+            val state = first
+            _pageState.value = state
+            when (state) {
+                is VideoLoadingState.Success -> {
+                    var detail = state.info
+                    if (detail.videoId.isBlank()) {
+                        detail = detail.copy(videoId = videoId)
+                        _pageState.value = VideoLoadingState.Success(detail)
                     }
-                    is VideoLoadingState.Error -> {
-                        _playerState.update {
-                            it.copy(
-                                isLoading = false,
-                                hasError = true,
-                                errorMessage = state.throwable.message,
-                            )
-                        }
-                    }
-                    is VideoLoadingState.NoContent -> {
-                        _playerState.update {
-                            it.copy(
-                                isLoading = false,
-                                hasError = true,
-                                errorMessage = applicationContext.getString(R.string.onair_video_not_found),
-                            )
-                        }
-                    }
-                    is VideoLoadingState.Loading -> Unit
+                    currentDetail = detail
+                    applyInitialDetail(detail, wanted)
+                    loadResumePosition(videoId)
                 }
+                is VideoLoadingState.Error -> {
+                    _playerState.update {
+                        it.copy(
+                            isLoading = false,
+                            hasError = true,
+                            errorMessage = state.throwable.message,
+                        )
+                    }
+                }
+                is VideoLoadingState.NoContent -> {
+                    _playerState.update {
+                        it.copy(
+                            isLoading = false,
+                            hasError = true,
+                            errorMessage = applicationContext.getString(R.string.onair_video_not_found),
+                        )
+                    }
+                }
+                is VideoLoadingState.Loading -> Unit
             }
         }
     }
 
-    private fun applyInitialDetail(detail: OnAirVideoDetail, preferred: String?) {
-        val streamMap = detail.streamUrlByQuality
-        val initialMap = linkedMapOf<String, QualityStream>()
+    private fun availableQualities(detail: OnAirVideoDetail): List<String> {
+        val advertised = detail.qualityLinks.map { it.quality }
+            .ifEmpty { FALLBACK_QUALITIES }
+        return orderQualities(advertised + detail.currentQuality)
+    }
 
-        streamMap.forEach { (quality, url) ->
-            if (url.isNotBlank()) {
-                initialMap[quality] = QualityStream(
-                    quality = quality,
-                    url = url,
-                    mediaType = detail.currentMediaType,
-                    isHls = url.contains(".m3u8", ignoreCase = true),
-                    state = StreamState.Ready,
-                )
-            }
+    private fun applyInitialDetail(detail: OnAirVideoDetail, wantedQuality: String) {
+        val available = availableQualities(detail)
+        val target = resolveQuality(wantedQuality, available)
+
+        val map = linkedMapOf<String, QualityStream>()
+        available.forEach { q -> map[q] = QualityStream(quality = q, state = StreamState.Loading) }
+
+        val pageQuality = detail.currentQuality
+        val pageUrl = detail.streamUrlByQuality[pageQuality]?.takeIf { it.isNotBlank() }
+        val pageStream = pageUrl?.let {
+            QualityStream(
+                quality = pageQuality,
+                url = it,
+                mediaType = detail.currentMediaType,
+                isHls = it.contains(".m3u8", ignoreCase = true),
+                state = StreamState.Ready,
+            )
+        }
+        if (pageStream != null) {
+            map[pageQuality] = pageStream
+            qualityCache[pageQuality] = pageStream
         }
 
-        val advertised = LinkedHashSet<String>()
-        advertised.add("original")
-        QUALITY_PRIORITY.forEach { advertised.add(it) }
-        detail.qualityLinksByQuality.keys.forEach { advertised.add(it) }
-
-        advertised.forEach { q ->
-            if (q !in initialMap) {
-                initialMap[q] = QualityStream(quality = q, state = StreamState.Loading)
-            }
-        }
-
-        val chosen = when {
-            initialMap["original"]?.state == StreamState.Ready -> "original"
-            preferred != null && initialMap[preferred]?.state == StreamState.Ready -> preferred
-            initialMap[detail.currentQuality]?.state == StreamState.Ready -> detail.currentQuality
-            else -> initialMap.entries.firstOrNull { it.value.state == StreamState.Ready }?.key
-                ?: QUALITY_PRIORITY.firstOrNull { initialMap[it]?.state == StreamState.Ready }
-                ?: initialMap.keys.first()
-        }
-
-        initialMap[chosen]?.takeIf { it.state == StreamState.Ready }?.let {
-            qualityCache[chosen] = it
-        }
-
-        val chosenReady = initialMap[chosen]?.state == StreamState.Ready
-
+        val targetReady = map[target]?.state == StreamState.Ready
         _playerState.update {
             it.copy(
-                currentQuality = chosen,
-                streamsByQuality = initialMap,
+                currentQuality = target,
+                streamsByQuality = map,
                 isLoading = false,
                 hasError = false,
                 errorMessage = null,
-                isReady = chosenReady,
+                isReady = targetReady,
                 playbackIntent = PlaybackIntent.NotStarted,
-                pendingQuality = null,
+                pendingQuality = if (targetReady) null else target,
             )
+        }
+        if (targetReady) return
+
+        extractJob?.cancel()
+        extractJob = viewModelScope.launch {
+            val result = fetchQualityStreamOrNull(target)
+            if (result != null) {
+                val ready = QualityStream(
+                    quality = target,
+                    url = result.url,
+                    mediaType = result.mediaType,
+                    isHls = result.isHls,
+                    state = StreamState.Ready,
+                )
+                qualityCache[target] = ready
+                _playerState.update {
+                    it.copy(
+                        pendingQuality = null,
+                        currentQuality = target,
+                        isReady = true,
+                        hasError = false,
+                        errorMessage = null,
+                        streamsByQuality = it.streamsByQuality + (target to ready),
+                    )
+                }
+            } else if (pageStream != null) {
+                Log.w(TAG, "wanted $target unavailable, using page stream $pageQuality")
+                _playerState.update {
+                    it.copy(
+                        pendingQuality = null,
+                        currentQuality = pageQuality,
+                        isReady = true,
+                        hasError = false,
+                        errorMessage = null,
+                    )
+                }
+            } else {
+                scheduleFallback()
+            }
         }
     }
 
@@ -219,7 +272,7 @@ class OnAirVideoViewModel(application: Application) : AndroidViewModel(applicati
     private suspend fun advanceFallback() {
         val advertised = _playerState.value.streamsByQuality.keys
         if (advertised.isEmpty()) return
-        val candidates = QUALITY_PRIORITY.filter { it in advertised }
+        val candidates = orderQualities(advertised)
         if (candidates.isEmpty()) return
 
         for (q in candidates) {
@@ -504,13 +557,12 @@ class OnAirVideoViewModel(application: Application) : AndroidViewModel(applicati
         }
 
         val advertised = _playerState.value.streamsByQuality.keys
-        val candidates = QUALITY_PRIORITY.filter { it in advertised && it != quality }
+        val candidates = orderQualities(advertised).filter { it != quality }
+        val streams = _playerState.value.streamsByQuality
+
         val next = candidates.firstOrNull { q ->
-            _playerState.value.streamsByQuality[q]?.state == StreamState.Error
-        } ?: _playerState.value.streamsByQuality
-            .filterValues { it.state == StreamState.Ready && it.url.isNotBlank() }
-            .keys
-            .firstOrNull { it != quality }
+            streams[q]?.let { it.state == StreamState.Ready && it.url.isNotBlank() } == true
+        } ?: candidates.firstOrNull { q -> streams[q]?.state == StreamState.Loading }
 
         if (next != null) {
             Log.d(TAG, "cascading $quality -> $next")

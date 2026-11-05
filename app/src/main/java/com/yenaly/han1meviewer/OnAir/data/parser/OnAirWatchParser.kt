@@ -30,7 +30,6 @@ object OnAirWatchParser {
 
         val title = cleanText(doc.selectFirst("h1.watch-title")?.text())
         val videoId = extractVideoId(doc, baseUrl)
-        val currentQuality = extractQualityFromPageUrl(baseUrl) ?: DEFAULT_QUALITY
 
         val infoCard = doc.selectFirst("div.watch-info-card")
         val uploaderAnchor = infoCard?.selectFirst("a.watch-uploader-name")
@@ -52,6 +51,7 @@ object OnAirWatchParser {
 
         val tags = parseVideoTags(doc)
         val qualityLinks = parseQualityLinks(doc, baseUrl)
+        val currentQuality = detectServedQuality(doc, baseUrl, qualityLinks)
         val qualityLinksByQuality = qualityLinks.associate { it.quality to it.url }
         val currentStream = parseCurrentStreamFromDoc(doc, baseUrl, currentQuality)
         val streamUrlByQuality = if (currentStream != null) {
@@ -111,15 +111,6 @@ object OnAirWatchParser {
             ?: return null
 
         val hlsAttr = videoEl.attr("data-hls-src").takeIf { it.isNotBlank() }
-        if (hlsAttr != null && quality == "original") {
-            val abs = resolveUrl(hlsAttr, baseUrl) ?: return null
-            return StreamResult(
-                quality = quality,
-                url = abs,
-                mediaType = "application/vnd.apple.mpegurl",
-                isHls = true,
-            )
-        }
 
         val sources = videoEl.select("source")
         for (source in sources) {
@@ -140,7 +131,7 @@ object OnAirWatchParser {
             }
         }
 
-        if (hlsAttr != null) {
+        if (hlsAttr != null && quality == "original") {
             val abs = resolveUrl(hlsAttr, baseUrl) ?: return null
             return StreamResult(
                 quality = quality,
@@ -151,6 +142,29 @@ object OnAirWatchParser {
         }
 
         return null
+    }
+
+    private fun detectServedQuality(
+        doc: Document,
+        baseUrl: String,
+        links: List<OnAirQualityLink>,
+    ): String {
+        links.firstOrNull { it.isActive }?.quality?.let { return it }
+
+        val videoEl = doc.selectFirst("video#watch-video")
+            ?: doc.selectFirst("video#watch-video-fallback")
+            ?: doc.selectFirst("video")
+        if (videoEl != null) {
+            for (source in videoEl.select("source")) {
+                val raw = source.attr("src").takeIf { it.isNotBlank() }
+                    ?: source.attr("data-savepage-src").takeIf { it.isNotBlank() }
+                    ?: continue
+                qualityOfStreamUrl(raw)?.let { return it }
+            }
+            if (videoEl.attr("data-hls-src").isNotBlank()) return "original"
+        }
+
+        return extractQualityFromPageUrl(baseUrl) ?: DEFAULT_QUALITY
     }
 
     fun qualityOfStreamUrl(url: String): String? {
@@ -178,12 +192,16 @@ object OnAirWatchParser {
 
     private fun resolveUrl(raw: String, baseUrl: String): String? {
         if (raw.isBlank()) return null
-        return when {
-            raw.startsWith("http://") || raw.startsWith("https://") -> raw
-            raw.startsWith("//") -> "http:$raw"
-            raw.startsWith("/") -> baseUrl.trimEnd('/') + raw
-            else -> baseUrl.trimEnd('/') + "/" + raw
-        }
+        if (raw.startsWith("http://") || raw.startsWith("https://")) return raw
+        if (raw.startsWith("//")) return "http:$raw"
+
+        return runCatching { java.net.URI(baseUrl).resolve(raw).toString() }.getOrNull()
+            ?: runCatching {
+                val u = java.net.URI(baseUrl)
+                if (raw.startsWith("/")) "${u.scheme}://${u.authority}$raw" else null
+            }.getOrNull()
+            ?: if (raw.startsWith("/")) baseUrl.trimEnd('/') + raw
+            else baseUrl.trimEnd('/') + "/" + raw
     }
 
     private fun extractVideoId(doc: Document, baseUrl: String): String {

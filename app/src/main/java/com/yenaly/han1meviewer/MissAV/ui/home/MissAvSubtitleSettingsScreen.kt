@@ -1,23 +1,39 @@
 package com.yenaly.han1meviewer.MissAV.ui.home
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -225,6 +241,7 @@ fun MissAvSubtitleSettingsScreen(onBack: () -> Unit) {
     var source by remember { mutableStateOf(MissAvSubtitleSettingsRepo.source()) }
     var catLanguage by remember { mutableStateOf(MissAvSubtitleSettingsRepo.subtitleCatLanguage()) }
     var translate by remember { mutableStateOf(Preferences.missAvSubtitleCatTranslate) }
+    var showLanguageDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -238,46 +255,164 @@ fun MissAvSubtitleSettingsScreen(onBack: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            SectionLabel("Subtitle source")
-            MissAvSubtitleSettingsRepo.sources.forEach { option ->
-                OptionRow(
-                    title = option.label,
-                    description = option.description,
-                    selected = source == option.value,
-                    onClick = {
-                        source = option.value
-                        Preferences.missAvSubtitleSource = option.value
-                    },
-                )
-            }
+            Text(
+                text = "Pick where MissAV subtitles come from. This is used by the subtitle " +
+                    "section on the video page.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(vertical = 4.dp),
+            )
 
-            if (source == MissAvSubtitleSettingsRepo.SOURCE_SUBTITLECAT) {
-                SectionLabel("SubtitleCat language")
-                SwitchRow(
-                    title = "Translate if not available",
-                    description = "When SubtitleCat has no subtitle in this language, translate it " +
-                        "with Google Translate from the original subtitle",
-                    checked = translate,
-                    onCheckedChange = {
-                        translate = it
-                        Preferences.missAvSubtitleCatTranslate = it
-                    },
-                )
-                MissAvSubtitleSettingsRepo.subtitleCatLanguages.forEach { lang ->
-                    OptionRow(
-                        title = lang.label,
-                        description = null,
-                        selected = catLanguage == lang.code,
+            SectionTitle("Source")
+            SettingsCard {
+                MissAvSubtitleSettingsRepo.sources.forEachIndexed { index, option ->
+                    if (index > 0) CardDivider()
+                    SourceRow(
+                        title = option.label,
+                        description = option.description,
+                        selected = source == option.value,
                         onClick = {
-                            catLanguage = lang.code
-                            Preferences.missAvSubtitleCatLanguage = lang.code
+                            source = option.value
+                            Preferences.missAvSubtitleSource = option.value
                         },
                     )
                 }
             }
+
+            AnimatedVisibility(
+                visible = source == MissAvSubtitleSettingsRepo.SOURCE_SUBTITLECAT,
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Spacer(Modifier.height(8.dp))
+                    SectionTitle("SubtitleCat")
+                    SettingsCard {
+                        ValueRow(
+                            title = "Subtitle language",
+                            value = MissAvSubtitleSettingsRepo.languageName(catLanguage),
+                            onClick = { showLanguageDialog = true },
+                        )
+                        CardDivider()
+                        SwitchRow(
+                            title = "Translate if not available",
+                            description = "If SubtitleCat has no subtitle in this language, " +
+                                "translate the original with Google Translate",
+                            checked = translate,
+                            onCheckedChange = {
+                                translate = it
+                                Preferences.missAvSubtitleCatTranslate = it
+                            },
+                        )
+                    }
+                }
+            }
         }
+    }
+
+    if (showLanguageDialog) {
+        LanguageDialog(
+            selected = catLanguage,
+            onSelect = {
+                catLanguage = it
+                Preferences.missAvSubtitleCatLanguage = it
+                showLanguageDialog = false
+            },
+            onDismiss = { showLanguageDialog = false },
+        )
+    }
+}
+
+@Composable
+private fun SectionTitle(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(start = 4.dp, top = 8.dp),
+    )
+}
+
+@Composable
+private fun SettingsCard(content: @Composable () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column { content() }
+    }
+}
+
+@Composable
+private fun CardDivider() {
+    Box(
+        modifier = Modifier
+            .padding(horizontal = 16.dp)
+            .fillMaxWidth()
+            .height(1.dp)
+            .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+    )
+}
+
+@Composable
+private fun SourceRow(
+    title: String,
+    description: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectable(selected = selected, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        RadioButton(selected = selected, onClick = null)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ValueRow(title: String, value: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(start = 16.dp, end = 8.dp, top = 14.dp, bottom = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Icon(
+            imageVector = Icons.Default.ArrowDropDown,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -313,50 +448,71 @@ private fun SwitchRow(
 }
 
 @Composable
-private fun SectionLabel(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
-    )
-}
-
-@Composable
-private fun OptionRow(
-    title: String,
-    description: String?,
-    selected: Boolean,
-    onClick: () -> Unit,
+private fun LanguageDialog(
+    selected: String,
+    onSelect: (String) -> Unit,
+    onDismiss: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .selectable(selected = selected, onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            if (description != null) {
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-        if (selected) {
-            Icon(
-                imageVector = Icons.Filled.CheckCircle,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-            )
+    var query by remember { mutableStateOf("") }
+    val filtered = remember(query) {
+        val q = query.trim()
+        if (q.isEmpty()) MissAvSubtitleSettingsRepo.subtitleCatLanguages
+        else MissAvSubtitleSettingsRepo.subtitleCatLanguages.filter {
+            it.label.contains(q, ignoreCase = true) || it.code.contains(q, ignoreCase = true)
         }
     }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Subtitle language") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    singleLine = true,
+                    placeholder = { Text("Search language") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                LazyColumn(modifier = Modifier.heightIn(max = 360.dp)) {
+                    items(filtered, key = { it.code }) { lang ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onSelect(lang.code) }
+                                .padding(vertical = 12.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = lang.label,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = if (lang.code == selected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f),
+                            )
+                            if (lang.code == selected) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                            }
+                        }
+                    }
+                    if (filtered.isEmpty()) {
+                        item {
+                            Text(
+                                text = "No matching language",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(12.dp),
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+    )
 }

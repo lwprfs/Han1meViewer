@@ -293,7 +293,8 @@ private fun startSiteDownload(
         )
         return
     }
-    val path = downloadUrl.substringBefore('?').lowercase()
+    val path = (runCatching { java.net.URI(downloadUrl).path }.getOrNull()
+        ?: downloadUrl.substringBefore('?')).lowercase()
     val suffix = if (path.contains(".m3u8")) {
         "ts"
     } else {

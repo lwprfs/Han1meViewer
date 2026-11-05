@@ -141,7 +141,10 @@ fun OnAirVideoScreen(
 
     val onAirConfig = com.yenaly.han1meviewer.ui.component.player.SitePlayerSettings.config(com.yenaly.han1meviewer.SiteType.ONAIR)
     var autoKicked by remember(videoId) { mutableStateOf(false) }
-    LaunchedEffect(videoId, playerState.activeUrl, playerState.playbackIntent, state) {
+    LaunchedEffect(
+        videoId, playerState.activeUrl, playerState.playbackIntent, state,
+        playerState.isSwitchLoading,
+    ) {
         if (!onAirConfig.autoPlay || playerState.playbackIntent != PlaybackIntent.NotStarted) return@LaunchedEffect
         if (state !is VideoLoadingState.Success) return@LaunchedEffect
         if (showResumeBanner && onAirConfig.resumePlayback) return@LaunchedEffect
@@ -395,11 +398,11 @@ fun OnAirVideoScreen(
                         title = detail.title,
                         coverUrl = detail.recommendedVideos.firstOrNull()?.thumbUrl,
                         webUrl = OnAirUrlUtils.normalizeVideoUrl(videoId),
+
                         downloadUrl = playerState.activeUrl,
                         downloadQuality = playerState.currentQuality,
                         resolveDownloadUrl = {
-
-                            val quality = playerState.currentQuality.ifBlank { "original" }
+                            val quality = playerState.currentQuality.ifBlank { onAirConfig.defaultQuality }
                             com.yenaly.han1meviewer.OnAir.data.remote.OnAirStreamFetcher
                                 .fetch(videoId, quality)?.url
                         },

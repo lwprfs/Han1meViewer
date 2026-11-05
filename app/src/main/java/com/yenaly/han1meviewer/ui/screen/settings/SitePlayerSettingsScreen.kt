@@ -91,7 +91,7 @@ fun SitePlayerSettingsScreen(site: SiteType, modifier: Modifier = Modifier) {
                         stringResource(R.string.site_choose_which_settings_are_listed_hidde),
                         style = MaterialTheme.typography.bodySmall,
                     )
-                    SitePlayerSettings.specs.forEach { spec ->
+                    SitePlayerSettings.specsFor(site).forEach { spec ->
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
@@ -125,7 +125,7 @@ fun SitePlayerSettingsScreen(site: SiteType, modifier: Modifier = Modifier) {
             )
         }
         items(
-            SitePlayerSettings.specs.filter { SitePlayerSettings.isListed(site, it.id) },
+            SitePlayerSettings.specsFor(site).filter { SitePlayerSettings.isListed(site, it.id) },
             key = { it.id },
         ) { spec ->
             when (spec) {

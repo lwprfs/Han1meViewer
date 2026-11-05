@@ -38,6 +38,7 @@ object SitePlayerSettings {
         class Choice(
             id: String, title: String, summary: String?,
             val options: List<Pair<String, String>>,
+            val onlySites: Set<SiteType>? = null,
             private val default: () -> String,
         ) : Spec(id, title, summary) {
             override fun appDefault(): String = default()
@@ -63,6 +64,7 @@ object SitePlayerSettings {
     const val ID_RESUME = "resume_playback"
     const val ID_AUTO_PLAY = "auto_play"
     const val ID_STRETCH = "stretch_fullscreen"
+    const val ID_DEFAULT_QUALITY = "default_quality"
 
     private val speedOptions = listOf(
         "0.5x" to "0.5", "0.75x" to "0.75", "1.0x" to "1.0", "1.25x" to "1.25",
@@ -74,7 +76,22 @@ object SitePlayerSettings {
         "3.5x" to "3.5", "4.0x" to "4.0",
     )
 
+    private val qualityOptions = listOf(
+        "Original (best)" to "original",
+        "720p" to "720",
+        "480p" to "480",
+        "360p" to "360",
+        "240p" to "240",
+        "144p" to "144",
+    )
+
     val specs: List<Spec> = listOf(
+        Spec.Choice(
+            ID_DEFAULT_QUALITY, "Default resolution",
+            "Quality used when a video opens. If it is not offered, the closest lower one is used",
+            qualityOptions,
+            onlySites = setOf(SiteType.ONAIR),
+        ) { "original" },
         Spec.Choice(
             ID_DEFAULT_SPEED, "Default playback speed", null, speedOptions,
         ) { Preferences.playerSpeed.toString() },
@@ -126,6 +143,11 @@ object SitePlayerSettings {
     }
 
     fun spec(id: String): Spec? = specs.firstOrNull { it.id == id }
+
+    fun specsFor(site: SiteType): List<Spec> = specs.filter {
+        val only = (it as? Spec.Choice)?.onlySites
+        only == null || site in only
+    }
 
     private fun hiddenKey(site: SiteType) = key(site, "hidden_settings")
 
@@ -190,6 +212,7 @@ object SitePlayerSettings {
             resumePlayback = bool(site, ID_RESUME),
             autoPlay = bool(site, ID_AUTO_PLAY),
             stretchFullscreen = getString(site, ID_STRETCH).toBooleanStrictOrNull() ?: false,
+            defaultQuality = getString(site, ID_DEFAULT_QUALITY).ifBlank { "original" },
         )
     }
 }
@@ -205,4 +228,5 @@ data class SitePlayerConfig(
     val resumePlayback: Boolean = true,
     val autoPlay: Boolean = true,
     val stretchFullscreen: Boolean = false,
+    val defaultQuality: String = "original",
 )
