@@ -21,7 +21,7 @@ import kotlin.time.Duration.Companion.days
 import kotlin.time.ExperimentalTime
 
 enum class SiteType {
-    HANIME, MISSAV, HENTAIMAMA, JAVCHU, ONAIR, FAPFOLDER
+    HANIME, MISSAV, HENTAIMAMA, JAVCHU, ONAIR, FAPFOLDER, SUPJAV
 }
 
 object MissAvConstants {
@@ -134,6 +134,9 @@ object Preferences {
 
     val fapFolderBaseUrl: String
         get() = com.yenaly.han1meviewer.FapFolder.common.FapFolderConstants.BASE_URL
+
+    val supJavBaseUrl: String
+        get() = com.yenaly.han1meviewer.SupJav.common.SupJavConstants.BASE_URL
 
     val javchuBaseUrl: String
         get() = preferenceSp.getString("javchu_base_url", "https://javchu.com") ?: "https://javchu.com"
@@ -266,6 +269,10 @@ object Preferences {
                 return fapFolderBaseUrl
             }
 
+            if (siteType == SiteType.SUPJAV) {
+                return supJavBaseUrl
+            }
+
             return HanimeConstants.HANIME_URL[0]
         }
 
@@ -283,6 +290,7 @@ object Preferences {
             SiteType.HENTAIMAMA -> hentaiMamaBaseUrl
             SiteType.ONAIR -> onAirBaseUrl
             SiteType.FAPFOLDER -> fapFolderBaseUrl
+            SiteType.SUPJAV -> supJavBaseUrl
         }
 
     val useCustomMirrorSite: Boolean
@@ -326,6 +334,7 @@ object Preferences {
             SiteType.HENTAIMAMA -> hentaiMamaBaseUrl
             SiteType.ONAIR -> onAirBaseUrl
             SiteType.FAPFOLDER -> fapFolderBaseUrl
+            SiteType.SUPJAV -> supJavBaseUrl
         }
 
     private fun String.toRetrofitBaseUrl(): String = if (endsWith('/')) this else "$this/"

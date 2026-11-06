@@ -67,6 +67,7 @@ object CrossSiteNavigator {
         SiteType.HENTAIMAMA -> "HentaiMama"
         SiteType.ONAIR -> "OnAir"
         SiteType.FAPFOLDER -> "FapFolder"
+        SiteType.SUPJAV -> "SupJav"
     }
 
     suspend fun validate(site: SiteType): Validation = when (site) {
@@ -150,5 +151,6 @@ object CrossSiteNavigator {
         SiteType.HENTAIMAMA -> HentaiMamaConstants.BASE_URL
         SiteType.ONAIR -> "https://check.torproject.org/"
         SiteType.FAPFOLDER -> FapFolderConstants.BASE_URL
+        SiteType.SUPJAV -> com.yenaly.han1meviewer.SupJav.common.SupJavConstants.BASE_URL
     }
 }

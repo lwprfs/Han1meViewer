@@ -47,6 +47,7 @@ object DownloadLayout {
         SiteType.HENTAIMAMA -> "HentaiMama"
         SiteType.ONAIR -> "OnAir"
         SiteType.FAPFOLDER -> "FapFolder"
+        SiteType.SUPJAV -> "SupJav"
     }
 
     fun segmentsFor(videoCode: String): List<String> {
@@ -165,6 +166,8 @@ object SiteDownloadClients {
                 .getOrDefault(ServiceCreator.downloadClient)
             SiteType.MISSAV -> runCatching { com.yenaly.han1meviewer.MissAV.data.remote.MissAvNetwork.downloadOkHttpClient }
                 .getOrDefault(ServiceCreator.downloadClient)
+            SiteType.SUPJAV -> runCatching { com.yenaly.han1meviewer.SupJav.data.remote.SupJavNetwork.sharedOkHttpClient }
+                .getOrDefault(ServiceCreator.downloadClient)
             else -> ServiceCreator.downloadClient
         }
 
@@ -200,6 +203,11 @@ object SiteDownloadClients {
                         }
                     }
                 }
+            }
+            SiteType.SUPJAV -> {
+                val referer = com.yenaly.han1meviewer.SupJav.data.remote.SupJavNetwork
+                    .streamRefererFor(SiteCheckIn.rawCodeOfDishCode(videoCode))
+                mapOf("Referer" to referer, "Origin" to referer.trimEnd('/'))
             }
             SiteType.FAPFOLDER -> mapOf(
                 "Referer" to FapFolderConstants.HEADER_REFERER,

@@ -16,6 +16,7 @@ object SitePlayerSettings {
         SiteType.HENTAIMAMA,
         SiteType.ONAIR,
         SiteType.FAPFOLDER,
+        SiteType.SUPJAV,
     )
 
     fun label(site: SiteType): String = when (site) {
@@ -25,6 +26,7 @@ object SitePlayerSettings {
         SiteType.HENTAIMAMA -> "HentaiMama"
         SiteType.ONAIR -> "OnAir"
         SiteType.FAPFOLDER -> "FapFolder"
+        SiteType.SUPJAV -> "SupJav"
     }
 
     sealed class Spec(val id: String, val title: String, val summary: String?) {
@@ -149,7 +151,6 @@ object SitePlayerSettings {
 
     fun spec(id: String): Spec? = specs.firstOrNull { it.id == id }
 
-    /** Specs that make sense for [site] (some, like resolution, are site specific). */
     fun specsFor(site: SiteType): List<Spec> = specs.filter {
         val only = (it as? Spec.Choice)?.onlySites
         only == null || site in only

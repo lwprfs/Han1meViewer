@@ -53,6 +53,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.yenaly.han1meviewer.FapFolder.data.local.FapFolderHistoryRepo
+import com.yenaly.han1meviewer.SupJav.data.repository.SupJavHistoryRepo
 import com.yenaly.han1meviewer.HentaiMama.data.local.HentaiMamaHistoryRepo
 import com.yenaly.han1meviewer.MissAV.data.repository.MissAvHistoryRepo
 import com.yenaly.han1meviewer.OnAir.data.local.OnAirHistoryRepo
@@ -110,12 +111,14 @@ class UnifiedHistoryViewModel(application: Application) : AndroidViewModel(appli
         HentaiMamaHistoryRepo.init(application)
         OnAirHistoryRepo.init(application)
         FapFolderHistoryRepo.init(application)
+        SupJavHistoryRepo.init(application)
     }
 
     private fun <T> safe(flow: kotlinx.coroutines.flow.Flow<List<T>>) =
         flow.catch { emit(emptyList()) }
 
     val items: StateFlow<List<UnifiedHistoryItem>?> = combine(
+        combine(
         safe(DatabaseRepo.WatchHistory.loadAll().map { it.toList() }),
         safe(MissAvHistoryRepo.loadAll()),
         safe(HentaiMamaHistoryRepo.loadAll()),
@@ -191,7 +194,25 @@ class UnifiedHistoryViewModel(application: Application) : AndroidViewModel(appli
                     )
                 )
             }
-        }.sortedByDescending { it.watchDate }
+        }
+    },
+        safe(SupJavHistoryRepo.loadAll()),
+    ) { base, supjav ->
+        (base + supjav.map {
+            UnifiedHistoryItem(
+                site = SiteType.SUPJAV,
+                code = it.videoCode,
+                title = it.title,
+                coverUrl = it.coverUrl,
+                watchDate = it.watchDate,
+                positionMs = it.lastPosition,
+                durationMs = it.totalDuration,
+                path = null,
+                subtitle = null,
+                completed = it.totalDuration > 0 &&
+                        it.lastPosition >= it.totalDuration - 3_000L,
+            )
+        }).sortedByDescending { it.watchDate }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     private fun WatchHistoryEntity.toItem() = UnifiedHistoryItem(
@@ -222,6 +243,7 @@ class UnifiedHistoryViewModel(application: Application) : AndroidViewModel(appli
                     SiteType.FAPFOLDER -> item.code.toLongOrNull()?.let {
                         FapFolderHistoryRepo.deleteByPostId(it)
                     }
+                    SiteType.SUPJAV -> SupJavHistoryRepo.deleteByVideoCode(item.code)
                 }
             }
         }
@@ -235,6 +257,7 @@ class UnifiedHistoryViewModel(application: Application) : AndroidViewModel(appli
                 if (site == null || site == SiteType.HENTAIMAMA) HentaiMamaHistoryRepo.deleteAll()
                 if (site == null || site == SiteType.ONAIR) OnAirHistoryRepo.deleteAll()
                 if (site == null || site == SiteType.FAPFOLDER) FapFolderHistoryRepo.deleteAll()
+                if (site == null || site == SiteType.SUPJAV) SupJavHistoryRepo.deleteAll()
             }
         }
     }
@@ -246,6 +269,7 @@ private val filterSites = listOf(
     SiteType.HENTAIMAMA,
     SiteType.ONAIR,
     SiteType.FAPFOLDER,
+    SiteType.SUPJAV,
 )
 
 private fun siteBadge(site: SiteType): String = when (site) {

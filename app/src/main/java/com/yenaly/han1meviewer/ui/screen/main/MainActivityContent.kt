@@ -28,6 +28,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.NavDestination.Companion.hasRoute
 import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderHomeRoute
+import com.yenaly.han1meviewer.SupJav.ui.navigation.SupJavHomeRoute
 import com.yenaly.han1meviewer.HentaiMama.ui.navigation.HentaiMamaHomeRoute
 import com.yenaly.han1meviewer.MissAV.ui.navigation.MissAvHomeRoute
 import com.yenaly.han1meviewer.OnAir.ui.navigation.OnAirHomeRoute
@@ -126,6 +127,7 @@ fun MainActivityContent(
                 SiteType.HENTAIMAMA -> d?.hasRoute(HentaiMamaHomeRoute::class) == true
                 SiteType.ONAIR -> d?.hasRoute(OnAirHomeRoute::class) == true
                 SiteType.FAPFOLDER -> d?.hasRoute(FapFolderHomeRoute::class) == true
+                SiteType.SUPJAV -> d?.hasRoute(SupJavHomeRoute::class) == true
                 else -> false
             }
         }

@@ -99,6 +99,13 @@ val DefaultSiteSwitchOptions: List<SiteSwitchOption> = listOf(
         logoRes = R.drawable.s_switch_fapfolder,
         accentColor = Color(0xFFD81B60),
     ),
+    SiteSwitchOption(
+        name = "SupJav",
+        description = "JAV streaming with multiple servers",
+        siteType = SiteType.SUPJAV,
+        logoRes = R.drawable.s_switch_supjav,
+        accentColor = Color(0xFF5E35B1),
+    ),
 )
 
 @OptIn(ExperimentalMaterial3Api::class)

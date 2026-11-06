@@ -26,6 +26,7 @@ object SiteCheckIn {
         SiteType.HENTAIMAMA -> "hentaimama"
         SiteType.ONAIR -> "onair"
         SiteType.FAPFOLDER -> "fapfolder"
+        SiteType.SUPJAV -> "supjav"
     }
 
     fun dishCode(site: SiteType, code: String): String {
@@ -41,6 +42,7 @@ object SiteCheckIn {
             "hentaimama" -> SiteType.HENTAIMAMA
             "onair" -> SiteType.ONAIR
             "fapfolder" -> SiteType.FAPFOLDER
+            "supjav" -> SiteType.SUPJAV
             else -> null
         }
     }
@@ -127,6 +129,18 @@ object SiteCheckIn {
                         releaseDate = 0L,
                         watchDate = it.watchDate,
                         videoCode = dishCode(SiteType.FAPFOLDER, it.postId.toString()),
+                    )
+                }
+        }
+        runCatching {
+            com.yenaly.han1meviewer.SupJav.data.local.SupJavDatabase.getInstance(context)
+                .supJavHistoryDao().getPage(limit, 0).forEach {
+                    result += WatchHistoryEntity(
+                        coverUrl = it.coverUrl,
+                        title = it.title,
+                        releaseDate = 0L,
+                        watchDate = it.watchDate,
+                        videoCode = dishCode(SiteType.SUPJAV, it.videoCode),
                     )
                 }
         }

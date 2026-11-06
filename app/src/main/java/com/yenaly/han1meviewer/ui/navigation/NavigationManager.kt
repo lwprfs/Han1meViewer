@@ -7,6 +7,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
 import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderHomeRoute
+import com.yenaly.han1meviewer.SupJav.ui.navigation.SupJavHistoryRoute
+import com.yenaly.han1meviewer.SupJav.ui.navigation.SupJavHomeRoute
+import com.yenaly.han1meviewer.SupJav.ui.navigation.SupJavSearchRoute
+import com.yenaly.han1meviewer.SupJav.ui.navigation.SupJavVideoRoute
 import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderPostRoute
 import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderSearchRoute
 import com.yenaly.han1meviewer.HentaiMama.ui.navigation.HentaiMamaHomeRoute
@@ -81,6 +85,11 @@ object NavigationManager {
                             FapFolderPostRoute(slugOrId = path ?: videoCode, autoPlay = autoPlay)
                         )
                     }
+                    SiteType.SUPJAV -> {
+                        navController.navigate(
+                            SupJavVideoRoute(videoCode = videoCode, resumePosition = resumePosition)
+                        )
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "navigateToVideo failed: ${e.message}")
@@ -106,6 +115,9 @@ object NavigationManager {
                     }
                     SiteType.FAPFOLDER -> {
                         navController.navigate(FapFolderSearchRoute(query = query))
+                    }
+                    SiteType.SUPJAV -> {
+                        navController.navigate(SupJavSearchRoute(query = query))
                     }
                 }
             } catch (e: Exception) {
@@ -141,6 +153,10 @@ object NavigationManager {
                     SiteType.FAPFOLDER -> {
                         navController.popBackStack(0, false)
                         navController.navigate(FapFolderHomeRoute)
+                    }
+                    SiteType.SUPJAV -> {
+                        navController.popBackStack(0, false)
+                        navController.navigate(SupJavHomeRoute)
                     }
                 }
             } catch (e: Exception) {
@@ -214,6 +230,7 @@ object NavigationManager {
                 SiteType.HENTAIMAMA -> destination.hasRoute(HentaiMamaHomeRoute::class)
                 SiteType.ONAIR -> destination.hasRoute(OnAirHomeRoute::class)
                 SiteType.FAPFOLDER -> destination.hasRoute(FapFolderHomeRoute::class)
+                SiteType.SUPJAV -> destination.hasRoute(SupJavHomeRoute::class)
             }
         } catch (e: Exception) {
             false

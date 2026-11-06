@@ -22,6 +22,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import coil3.compose.AsyncImage
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetwork
+import com.yenaly.han1meviewer.SupJav.ui.navigation.SupJavHistoryRoute
+import com.yenaly.han1meviewer.SupJav.ui.navigation.SupJavSearchRoute
+import com.yenaly.han1meviewer.SupJav.ui.navigation.SupJavSettingsRoute
 import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderCookiesRoute
 import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderLoginRoute
 import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderSearchHistoryRoute
@@ -165,6 +168,14 @@ fun siteLoginStatus(context: Context, site: SiteType): SiteLoginStatus = when (s
         onClick = null,
     )
 
+    SiteType.SUPJAV -> SiteLoginStatus(
+        title = context.getString(R.string.not_logged_in),
+        subtitle = context.getString(R.string.login_status_unavailable, CrossSiteNavigator.siteLabel(SiteType.SUPJAV)),
+        avatarUrl = null,
+        loggedIn = false,
+        onClick = null,
+    )
+
     SiteType.HANIME, SiteType.JAVCHU -> SiteLoginStatus(
         title = context.getString(R.string.not_logged_in),
         subtitle = "",
@@ -289,6 +300,25 @@ fun siteDrawerSections(context: Context, site: SiteType, loggedIn: Boolean): Lis
                     if (!loggedIn) add(entry(str(R.string.login), R.drawable.ic_baseline_unlock_24, FapFolderLoginRoute))
                     add(entry(str(R.string.cookies_label), R.drawable.ic_baseline_cookie_24, FapFolderCookiesRoute))
                 },
+            ),
+        )
+
+        SiteType.SUPJAV -> listOf(
+            SiteDrawerSection(
+                browse,
+                listOf(
+                    home,
+                    checkIn,
+                    entry(str(R.string.search), R.drawable.ic_baseline_search_24, SupJavSearchRoute()),
+                ),
+            ),
+            SiteDrawerSection(
+                library,
+                listOf(entry(str(R.string.watch_history), history, SupJavHistoryRoute)),
+            ),
+            SiteDrawerSection(
+                customize,
+                listOf(entry("Playback & servers", R.drawable.ic_video_quilty, SupJavSettingsRoute)),
             ),
         )
 
