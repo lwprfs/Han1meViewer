@@ -12,7 +12,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TextButton
+import com.yenaly.han1meviewer.MissAV.ui.home.MissAvSubtitleSettingsRepo
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -44,6 +48,35 @@ fun SupJavSettingsScreen(onBack: () -> Unit) {
     var fallback by remember { mutableStateOf(SupJavSettings.autoFallback) }
     var language by remember { mutableStateOf(SupJavSettings.language) }
     var cookiesCleared by remember { mutableStateOf(false) }
+    var subSource by remember { mutableStateOf(SupJavSettings.subtitleSource) }
+    var subLanguage by remember { mutableStateOf(SupJavSettings.subtitleLanguage) }
+    var subTranslate by remember { mutableStateOf(SupJavSettings.subtitleTranslate) }
+    var showLanguageDialog by remember { mutableStateOf(false) }
+
+    if (showLanguageDialog) {
+        AlertDialog(
+            onDismissRequest = { showLanguageDialog = false },
+            title = { Text("Subtitle language") },
+            text = {
+                LazyColumn {
+                    items(MissAvSubtitleSettingsRepo.subtitleCatLanguages, key = { it.code }) { lang ->
+                        RadioRow(
+                            title = lang.label,
+                            selected = subLanguage == lang.code,
+                            onClick = {
+                                subLanguage = lang.code
+                                SupJavSettings.subtitleLanguage = lang.code
+                                showLanguageDialog = false
+                            },
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showLanguageDialog = false }) { Text("Close") }
+            },
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -145,6 +178,67 @@ fun SupJavSettingsScreen(onBack: () -> Unit) {
             }
 
             item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
+            item { SectionHeader("Subtitles") }
+            item {
+                HintText(
+                    "Subtitles are searched by the video's JAV code from the video page and shown " +
+                            "over the player. Pick where they come from and in which language."
+                )
+            }
+            MissAvSubtitleSettingsRepo.sources.forEach { source ->
+                item(key = "subsource_${source.value}") {
+                    Column {
+                        RadioRow(
+                            title = source.label,
+                            selected = subSource == source.value,
+                            onClick = {
+                                subSource = source.value
+                                SupJavSettings.subtitleSource = source.value
+                            },
+                        )
+                        HintText(source.description)
+                    }
+                }
+            }
+            if (subSource == MissAvSubtitleSettingsRepo.SOURCE_SUBTITLECAT) {
+                item(key = "sublang") {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .selectable(selected = false, onClick = { showLanguageDialog = true })
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Subtitle language",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                text = MissAvSubtitleSettingsRepo.languageName(subLanguage),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+                item(key = "subtranslate") {
+                    SwitchRow(
+                        title = "Translate when missing",
+                        subtitle = "If the chosen language is not available, translate the original " +
+                                "subtitle with Google Translate",
+                        checked = subTranslate,
+                        onChange = {
+                            subTranslate = it
+                            SupJavSettings.subtitleTranslate = it
+                        },
+                    )
+                }
+            }
+
+            item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
             item { SectionHeader("Troubleshooting") }
             item {
                 Column(
@@ -173,6 +267,9 @@ fun SupJavSettingsScreen(onBack: () -> Unit) {
                             disabled = SupJavSettings.disabledServers
                             fallback = SupJavSettings.autoFallback
                             language = SupJavSettings.language
+                            subSource = SupJavSettings.subtitleSource
+                            subLanguage = SupJavSettings.subtitleLanguage
+                            subTranslate = SupJavSettings.subtitleTranslate
                         },
                         modifier = Modifier.fillMaxWidth(),
                     ) {

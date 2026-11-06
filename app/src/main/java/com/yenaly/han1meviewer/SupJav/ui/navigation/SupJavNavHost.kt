@@ -126,6 +126,7 @@ fun SupJavNavHost(
             SupJavSearchScreen(
                 initialQuery = route.query,
                 onBack = { navController.popBackStackSafely() },
+                onOpenOtherSite = { request -> activity.confirmCrossSiteOpen(request) },
                 onNavigateToVideo = { code ->
                     navController.navigateSafely(SupJavVideoRoute(code))
                 },

@@ -32,6 +32,8 @@ import `is`.xyz.mpv.MPVLib
 import java.net.ProxySelector
 import com.yenaly.han1meviewer.MissAV.data.remote.MissAvNetwork
 import com.yenaly.han1meviewer.MissAV.ui.video.MissAvSubtitleHelper
+import coil3.SingletonImageLoader
+import com.yenaly.han1meviewer.SupJav.common.SupJavImageLoader
 
 class HanimeApplication : YenalyApplication() {
 
@@ -75,6 +77,8 @@ class HanimeApplication : YenalyApplication() {
     override fun onCreate() {
         super.onCreate()
         if (!isMainProcess()) return
+
+        SingletonImageLoader.setSafe { context -> SupJavImageLoader.buildGlobal(context) }
 
         initNetworks()
 

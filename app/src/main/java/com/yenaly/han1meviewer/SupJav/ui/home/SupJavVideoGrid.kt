@@ -25,7 +25,9 @@ import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.ui.component.SiteEmptyContent
 import com.yenaly.han1meviewer.ui.component.SiteErrorContent
 import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
-import com.yenaly.han1meviewer.ui.component.VideoCardItem
+import androidx.compose.ui.platform.LocalContext
+import com.yenaly.han1meviewer.SupJav.common.SupJavImageLoader
+import com.yenaly.han1meviewer.ui.component.SiteVideoCard
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 
@@ -39,6 +41,7 @@ fun SupJavVideoGrid(
     emptyHint: String = "Nothing here",
     gridState: LazyGridState = rememberLazyGridState(),
 ) {
+    val imageLoader = SupJavImageLoader.get(LocalContext.current)
     when {
         state.isLoading && state.items.isEmpty() -> SiteLoadingContent(modifier = modifier)
         state.error != null && state.items.isEmpty() -> SiteErrorContent(
@@ -71,11 +74,12 @@ fun SupJavVideoGrid(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 items(state.items, key = { it.videoCode }) { video ->
-                    VideoCardItem(
-                        videoItem = video,
-                        isHorizontalCard = true,
-                        onClickVideosItem = { onOpenVideo(video.videoCode) },
-                        onLongClickVideosItem = { _, _ -> },
+                    SiteVideoCard(
+                        title = video.title,
+                        coverUrl = video.coverUrl,
+                        onClick = { onOpenVideo(video.videoCode) },
+                        aspectRatio = 320f / 216f,
+                        imageLoader = imageLoader,
                     )
                 }
                 if (state.isLoadingMore) {

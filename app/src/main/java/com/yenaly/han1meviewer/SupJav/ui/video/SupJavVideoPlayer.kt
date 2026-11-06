@@ -101,6 +101,7 @@ fun SupJavVideoPlayer(
     onSpeedSelect: (Float) -> Unit = {},
     onQualitySelect: (String) -> Unit = {},
     referer: String = "",
+    subtitleText: String = "",
 ) {
     val config = SitePlayerSettings.config(SiteType.SUPJAV)
     var tempSpeed by remember { mutableStateOf<Float?>(null) }
@@ -302,6 +303,11 @@ fun SupJavVideoPlayer(
                 update = { frame ->
                     fitState.stretched = stretched && isFullscreen
                     frame.getChildAt(0)?.let { fitVideoSurface(frame, it, fitState) }
+                    (frame.getChildAt(1) as? TextView)?.let { tv ->
+                        if (tv.text.toString() != subtitleText) tv.text = subtitleText
+                        tv.visibility =
+                            if (subtitleText.isBlank()) android.view.View.GONE else android.view.View.VISIBLE
+                    }
                 },
                 onRelease = { view ->
                     Log.d(PLAYER_TAG, "AndroidView onRelease: detaching surface")
@@ -414,6 +420,7 @@ fun SupJavVideoPlayer(
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
+                    imageLoader = com.yenaly.han1meviewer.SupJav.common.SupJavImageLoader.get(context),
                 )
             }
             Column(

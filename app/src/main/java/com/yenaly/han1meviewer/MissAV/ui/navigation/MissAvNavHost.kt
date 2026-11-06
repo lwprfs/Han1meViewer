@@ -200,6 +200,7 @@ fun MissAvNavHost(
                     navController.navigateSafely(MissAvVideoRoute(code, path))
                 },
                 viewModel = sharedMissAvViewModel,
+                onOpenOtherSite = { request -> activity.confirmCrossSiteOpen(request) },
             )
         }
 

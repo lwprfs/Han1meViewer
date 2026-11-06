@@ -13,6 +13,13 @@ object SupJavParser {
 
     private val CODE_REGEX = Regex("""/(\d+)\.html""")
 
+    private val JAV_CODE_REGEX = Regex("""\b(\d{0,3}[A-Za-z]{2,7})[-_]?(\d{2,5})\b""")
+
+    fun extractJavCode(title: String): String? {
+        val m = JAV_CODE_REGEX.find(title.substringAfter(']', title)) ?: return null
+        return "${m.groupValues[1].uppercase()}-${m.groupValues[2]}"
+    }
+
     fun extractCode(url: String): String? = CODE_REGEX.find(url)?.groupValues?.get(1)
 
     fun parseListPage(html: String): SupJavListPage {

@@ -2,6 +2,17 @@ package com.yenaly.han1meviewer.SupJav.ui.video
 
 import androidx.compose.ui.res.stringResource
 import com.yenaly.han1meviewer.SiteType
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import com.yenaly.han1meviewer.MissAV.ui.video.SubtitleCue
+import com.yenaly.han1meviewer.MissAV.ui.video.SubtitleParser
+import com.yenaly.han1meviewer.MissAV.ui.video.MissAvSubtitleSection
+import com.yenaly.han1meviewer.SupJav.common.SupJavSettings
+import com.yenaly.han1meviewer.SupJav.data.parser.SupJavParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -149,6 +160,7 @@ fun SupJavVideoScreen(
     viewModel: SupJavVideoViewModel = viewModel(),
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val activity = remember(context) { context.findHostActivity() }
 
     val detailState by viewModel.detailState.collectAsStateWithLifecycle()
@@ -158,10 +170,57 @@ fun SupJavVideoScreen(
     val referer by viewModel.referer.collectAsStateWithLifecycle()
 
     var pendingResume by remember { mutableLongStateOf(0L) }
+    var subtitleCues by remember { mutableStateOf<List<SubtitleCue>>(emptyList()) }
+    var subtitlesVisible by remember { mutableStateOf(true) }
     var resumeApplied by remember { mutableStateOf(false) }
     var showResumeDialog by remember { mutableStateOf(false) }
 
     val listState = rememberLazyListState()
+
+    val subtitleText = remember(subtitleCues, subtitlesVisible, playerState.position) {
+        if (!subtitlesVisible || subtitleCues.isEmpty()) ""
+        else subtitleCues.findLast { playerState.position >= it.startTime }
+            ?.takeIf { playerState.position <= it.endTime }?.text.orEmpty()
+    }
+
+    fun loadSubtitle(uri: Uri) {
+        scope.launch {
+            try {
+                val cues = withContext(Dispatchers.IO) { SubtitleParser.parseSRT(uri, context) }
+                if (cues.isNotEmpty()) {
+                    subtitleCues = cues
+                    subtitlesVisible = true
+                    Toast.makeText(
+                        context, context.getString(R.string.site_subtitle_loaded, cues.size),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                } else {
+                    subtitleCues = emptyList()
+                    Toast.makeText(
+                        context, context.getString(R.string.site_subtitle_none), Toast.LENGTH_LONG
+                    ).show()
+                }
+            } catch (e: Exception) {
+                subtitleCues = emptyList()
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.site_subtitle_load_failed, e.message.orEmpty()),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
+    fun removeSubtitle() {
+        subtitleCues = emptyList()
+        Toast.makeText(
+            context, context.getString(R.string.site_subtitle_removed), Toast.LENGTH_SHORT
+        ).show()
+    }
+
+    val subtitlePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri -> if (uri != null) loadSubtitle(uri) }
     val exoPlayer = remember { mutableStateOf<ExoPlayer?>(null) }
     val currentMediaUrl = remember { mutableStateOf<String?>(null) }
 
@@ -358,6 +417,7 @@ fun SupJavVideoScreen(
             onSpeedSelect = { viewModel.setSpeed(it) },
             onQualitySelect = { viewModel.setQuality(it) },
             referer = referer,
+            subtitleText = subtitleText,
         )
     }
 
@@ -417,6 +477,12 @@ fun SupJavVideoScreen(
                             viewModel = viewModel,
                             onNavigateToVideo = onNavigateToVideo,
                             onNavigateToSearch = onNavigateToSearch,
+                            subtitleCount = subtitleCues.size,
+                            subtitlesVisible = subtitlesVisible,
+                            onToggleSubtitles = { subtitlesVisible = it },
+                            onSubtitleDownloaded = { loadSubtitle(it) },
+                            onPickSubtitleFile = { subtitlePicker.launch("*/*") },
+                            onRemoveSubtitle = { removeSubtitle() },
                         )
                     },
                 )
@@ -437,6 +503,12 @@ private fun SupJavVideoContent(
     viewModel: SupJavVideoViewModel,
     onNavigateToVideo: (String) -> Unit,
     onNavigateToSearch: (String?) -> Unit,
+    subtitleCount: Int,
+    subtitlesVisible: Boolean,
+    onToggleSubtitles: (Boolean) -> Unit,
+    onSubtitleDownloaded: (Uri) -> Unit,
+    onPickSubtitleFile: () -> Unit,
+    onRemoveSubtitle: () -> Unit,
 ) {
     LazyColumn(
         state = listState,
@@ -565,6 +637,34 @@ private fun SupJavVideoContent(
             }
         }
 
+        item(key = "subtitles") {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SiteVideoSectionHeader(title = "Subtitles")
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    FilterChip(
+                        selected = subtitlesVisible && subtitleCount > 0,
+                        onClick = { onToggleSubtitles(!subtitlesVisible) },
+                        enabled = subtitleCount > 0,
+                        label = { Text(if (subtitleCount > 0) "Show ($subtitleCount lines)" else "No subtitle loaded") },
+                    )
+                    AssistChip(onClick = onPickSubtitleFile, label = { Text("Load .srt file") })
+                    if (subtitleCount > 0) {
+                        AssistChip(onClick = onRemoveSubtitle, label = { Text("Remove") })
+                    }
+                }
+                MissAvSubtitleSection(
+                    videoCode = (SupJavParser.extractJavCode(info.title) ?: info.code).lowercase(),
+                    onSubtitleDownloaded = onSubtitleDownloaded,
+                    source = SupJavSettings.subtitleSource,
+                    langCode = SupJavSettings.subtitleLanguage,
+                    translateEnabled = SupJavSettings.subtitleTranslate,
+                )
+            }
+        }
+
         if (info.related.isNotEmpty()) {
             item(key = "related_header") {
                 SiteVideoSectionHeader(title = "You may also like")
@@ -577,12 +677,14 @@ private fun SupJavVideoContent(
                     maxItemsInEachRow = 2,
                 ) {
                     info.related.forEach { item ->
-                        VideoCardItem(
+                        SiteVideoCard(
                             modifier = Modifier.weight(1f),
-                            videoItem = item,
-                            isHorizontalCard = true,
-                            onClickVideosItem = { onNavigateToVideo(item.videoCode) },
-                            onLongClickVideosItem = { _, _ -> },
+                            title = item.title,
+                            coverUrl = item.coverUrl,
+                            onClick = { onNavigateToVideo(item.videoCode) },
+                            aspectRatio = 320f / 216f,
+                            imageLoader = com.yenaly.han1meviewer.SupJav.common.SupJavImageLoader
+                                .get(LocalContext.current),
                         )
                     }
                     if (info.related.size % 2 == 1) Spacer(Modifier.weight(1f))

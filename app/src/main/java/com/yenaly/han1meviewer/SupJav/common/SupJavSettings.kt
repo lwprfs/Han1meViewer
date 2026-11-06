@@ -9,6 +9,9 @@ object SupJavSettings {
     private const val KEY_DISABLED = "supjav_servers_disabled"
     private const val KEY_FALLBACK = "supjav_auto_fallback"
     private const val KEY_LANGUAGE = "supjav_language"
+    private const val KEY_SUB_SOURCE = "supjav_subtitle_source"
+    private const val KEY_SUB_LANGUAGE = "supjav_subtitlecat_language"
+    private const val KEY_SUB_TRANSLATE = "supjav_subtitlecat_translate"
 
     private val sp get() = Preferences.preferenceSp
 
@@ -58,6 +61,25 @@ object SupJavSettings {
             sp.edit().putString(KEY_LANGUAGE, value).apply()
         }
 
+    var subtitleSource: String
+        get() = sp.getString(KEY_SUB_SOURCE, null)?.takeIf { it == "subtitlecat" || it == "subdog" }
+            ?: "subtitlecat"
+        set(value) {
+            sp.edit().putString(KEY_SUB_SOURCE, value).apply()
+        }
+
+    var subtitleLanguage: String
+        get() = sp.getString(KEY_SUB_LANGUAGE, null) ?: "en"
+        set(value) {
+            sp.edit().putString(KEY_SUB_LANGUAGE, value).apply()
+        }
+
+    var subtitleTranslate: Boolean
+        get() = sp.getBoolean(KEY_SUB_TRANSLATE, true)
+        set(value) {
+            sp.edit().putBoolean(KEY_SUB_TRANSLATE, value).apply()
+        }
+
     fun serverRank(name: String): Int =
         serverOrder.indexOfFirst { it.equals(name, ignoreCase = true) }.let { if (it < 0) Int.MAX_VALUE else it }
 
@@ -68,6 +90,9 @@ object SupJavSettings {
             .remove(KEY_DISABLED)
             .remove(KEY_FALLBACK)
             .remove(KEY_LANGUAGE)
+            .remove(KEY_SUB_SOURCE)
+            .remove(KEY_SUB_LANGUAGE)
+            .remove(KEY_SUB_TRANSLATE)
             .apply()
     }
 }

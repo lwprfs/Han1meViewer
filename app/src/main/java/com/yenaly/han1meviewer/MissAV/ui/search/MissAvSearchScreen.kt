@@ -90,6 +90,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yenaly.han1meviewer.MissAV.common.MissAvGroup
 import com.yenaly.han1meviewer.MissAV.common.MissAvOptions
 import com.yenaly.han1meviewer.MissAV.common.MissAvTag
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.mutableIntStateOf
+import com.yenaly.han1meviewer.SiteType
+import com.yenaly.han1meviewer.ui.component.CrossSiteHit
+import com.yenaly.han1meviewer.ui.component.CrossSiteResultsGrid
+import com.yenaly.han1meviewer.ui.component.CrossSiteSearch
+import com.yenaly.han1meviewer.ui.component.CrossSiteState
+import com.yenaly.han1meviewer.ui.component.CrossSiteToggle
+import com.yenaly.han1meviewer.ui.navigation.PendingVideoOpen
 import com.yenaly.han1meviewer.MissAV.viewmodel.MissAvViewModel
 import com.yenaly.han1meviewer.logic.model.HanimeInfo
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
@@ -112,6 +121,7 @@ fun MissAvSearchScreen(
     onBack: () -> Unit,
     onNavigateToVideo: (String, String) -> Unit,
     viewModel: MissAvViewModel,
+    onOpenOtherSite: (PendingVideoOpen) -> Unit = {},
 ) {
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val selectedSort by viewModel.selectedSort.collectAsStateWithLifecycle()
@@ -127,6 +137,14 @@ fun MissAvSearchScreen(
     var showSortFilterDialog by rememberSaveable { mutableStateOf(false) }
     var recentHistory by remember { mutableStateOf(MissAvSearchHistoryRepo.load()) }
 
+    val context = LocalContext.current
+    var crossEnabled by remember { mutableStateOf(false) }
+    var crossState by remember { mutableStateOf<CrossSiteState>(CrossSiteState.Idle) }
+    var crossRetry by remember { mutableIntStateOf(0) }
+    var submittedQuery by remember {
+        mutableStateOf(if (viewModel.hasSearched.value) viewModel.searchQuery.value.trim() else "")
+    }
+
     val gridState = rememberLazyGridState()
     val coroutineScope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
@@ -136,6 +154,7 @@ fun MissAvSearchScreen(
 
     LaunchedEffect(initialQuery) {
         if (initialQuery.isNullOrEmpty()) return@LaunchedEffect
+        submittedQuery = initialQuery.trim()
         if (viewModel.searchQuery.value == initialQuery && hasSearched) return@LaunchedEffect
         viewModel.setSearchQuery(initialQuery)
         MissAvSearchHistoryRepo.push(
@@ -176,8 +195,23 @@ fun MissAvSearchScreen(
         focusManager.clearFocus()
         keyboard?.hide()
         coroutineScope.launch { gridState.scrollToItem(0) }
+        submittedQuery = viewModel.searchQuery.value.trim()
         viewModel.performSearch(resetPage = true)
         persistCurrentHistory()
+    }
+
+    val queryIsCode = CrossSiteSearch.looksLikeJavCode(searchQuery)
+    val crossActive = crossEnabled && hasSearched && CrossSiteSearch.looksLikeJavCode(submittedQuery)
+
+    LaunchedEffect(queryIsCode) { if (!queryIsCode) crossEnabled = false }
+
+    LaunchedEffect(crossEnabled, hasSearched, submittedQuery, crossRetry) {
+        if (!crossEnabled || !hasSearched || !CrossSiteSearch.looksLikeJavCode(submittedQuery)) {
+            crossState = CrossSiteState.Idle
+            return@LaunchedEffect
+        }
+        crossState = CrossSiteState.Loading
+        crossState = CrossSiteSearch.search(context, SiteType.SUPJAV, submittedQuery)
     }
 
     fun clearEverything() {
@@ -290,6 +324,15 @@ fun MissAvSearchScreen(
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
+            if (queryIsCode) {
+                CrossSiteToggle(
+                    otherSite = SiteType.SUPJAV,
+                    enabled = crossEnabled,
+                    state = crossState,
+                    onToggle = { crossEnabled = it },
+                )
+            }
+
             AnimatedVisibility(
                 visible = activeChips.isNotEmpty(),
                 enter = fadeIn() + expandVertically(),
@@ -367,6 +410,25 @@ fun MissAvSearchScreen(
                                     MissAvSearchHistoryRepo.clear()
                                     recentHistory = emptyList()
                                 },
+                            )
+                        }
+
+                        crossActive && !(allVideos.isEmpty() &&
+                                (searchState == null || searchState is PageLoadingState.Loading)) -> {
+                            CrossSiteResultsGrid(
+                                ownSite = SiteType.MISSAV,
+                                ownHits = allVideos.map {
+                                    CrossSiteHit(SiteType.MISSAV, it.title, it.coverUrl, it.videoCode, "/en/${it.videoCode}")
+                                },
+                                otherSite = SiteType.SUPJAV,
+                                otherState = crossState,
+                                isLoadingMore = isLoadingMore,
+                                onReachEnd = { if (hasMorePages && !isLoadingMore) viewModel.loadNextPage() },
+                                onOpen = { hit ->
+                                    if (hit.site == SiteType.MISSAV) onNavigateToVideo(hit.videoCode, hit.path ?: "/en/${hit.videoCode}")
+                                    else onOpenOtherSite(hit.toOpenRequest())
+                                },
+                                onRetryOther = { crossRetry++ },
                             )
                         }
 

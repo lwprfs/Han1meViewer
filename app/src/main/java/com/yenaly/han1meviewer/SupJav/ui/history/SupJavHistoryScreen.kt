@@ -115,6 +115,7 @@ private fun HistoryRow(
                 .aspectRatio(16f / 9f)
                 .clip(RoundedCornerShape(8.dp)),
             contentScale = ContentScale.Crop,
+            imageLoader = com.yenaly.han1meviewer.SupJav.common.SupJavImageLoader.get(LocalContext.current),
         )
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(

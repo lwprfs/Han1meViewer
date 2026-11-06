@@ -537,11 +537,14 @@ fun MissAvSubtitleSection(
     videoCode: String,
     onSubtitleDownloaded: (Uri) -> Unit,
     modifier: Modifier = Modifier,
+    source: String = Preferences.missAvSubtitleSource,
+    langCode: String = Preferences.missAvSubtitleCatLanguage,
+    translateEnabled: Boolean = Preferences.missAvSubtitleCatTranslate,
 ) {
-    if (Preferences.missAvSubtitleSource == "subdog") {
+    if (source == "subdog") {
         MissAvSubDogSubtitleSection(videoCode, onSubtitleDownloaded, modifier)
     } else {
-        MissAvSubtitleCatSection(videoCode, onSubtitleDownloaded, modifier)
+        MissAvSubtitleCatSection(videoCode, onSubtitleDownloaded, modifier, langCode, translateEnabled)
     }
 }
 
@@ -613,6 +616,8 @@ private fun MissAvSubtitleCatSection(
     videoCode: String,
     onSubtitleDownloaded: (Uri) -> Unit,
     modifier: Modifier = Modifier,
+    langCode: String = Preferences.missAvSubtitleCatLanguage,
+    translateEnabled: Boolean = Preferences.missAvSubtitleCatTranslate,
 ) {
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
@@ -622,9 +627,7 @@ private fun MissAvSubtitleCatSection(
         true
     }
 
-    val langCode = Preferences.missAvSubtitleCatLanguage
     val langName = MissAvSubtitleSettingsRepo.languageName(langCode)
-    val translateEnabled = Preferences.missAvSubtitleCatTranslate
 
     var manualQuery by remember { mutableStateOf("") }
     var searchResults by remember { mutableStateOf<List<SubtitleResult>>(emptyList()) }

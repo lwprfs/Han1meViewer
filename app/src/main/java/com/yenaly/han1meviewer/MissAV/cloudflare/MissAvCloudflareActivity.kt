@@ -146,7 +146,8 @@ class MissAvCloudflareActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        if (onFinished != null && !isFinishing) {
+
+        if (onFinished != null) {
             onFinished?.invoke()
             onFinished = null
         }
