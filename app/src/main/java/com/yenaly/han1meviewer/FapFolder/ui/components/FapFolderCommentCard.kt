@@ -141,7 +141,7 @@ fun FapFolderCommentCard(
                                 color = MaterialTheme.colorScheme.tertiaryContainer,
                             ) {
                                 Text(
-                                    text = "GOLD",
+                                    text = stringResource(R.string.fap_gold),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onTertiaryContainer,
                                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
@@ -365,7 +365,7 @@ private fun NestedReplyRow(
                 if (reply.isGold) {
                     Spacer(Modifier.width(4.dp))
                     Text(
-                        text = "GOLD",
+                        text = stringResource(R.string.fap_gold),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.tertiary,
                     )

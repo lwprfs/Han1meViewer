@@ -565,7 +565,7 @@ fun SearchHistoryList(
                     ) {
                         Icon(
                             Icons.Default.Close,
-                            "删除",
+                            stringResource(R.string.delete),
                             Modifier.size(16.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )

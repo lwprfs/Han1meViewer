@@ -130,7 +130,7 @@ fun CalendarGrid(
                     if (count > 0) {
                         Text(
                             text = "x$count",
-                            fontSize = 10.sp,
+                            style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                         )
                     }

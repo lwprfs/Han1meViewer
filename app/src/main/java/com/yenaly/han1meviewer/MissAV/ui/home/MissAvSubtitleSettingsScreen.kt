@@ -1,5 +1,8 @@
 package com.yenaly.han1meviewer.MissAV.ui.home
 
+import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -58,16 +61,17 @@ object MissAvSubtitleSettingsRepo {
     const val SOURCE_SUBTITLECAT = "subtitlecat"
     const val SOURCE_SUBDOG = "subdog"
 
-    val sources = listOf(
+    val sources: List<MissAvSubtitleSourceOption>
+        get() = listOf(
         MissAvSubtitleSourceOption(
             SOURCE_SUBTITLECAT,
-            "SubtitleCat (English)",
-            "Search subtitlecat.com and download the English subtitle",
+            applicationContext.getString(R.string.missav_source_subtitlecat_title),
+            applicationContext.getString(R.string.missav_source_subtitlecat_desc),
         ),
         MissAvSubtitleSourceOption(
             SOURCE_SUBDOG,
-            "Sub-Dog (Chinese)",
-            "Chinese subtitles from the Sub-Dog (字幕狗) library",
+            applicationContext.getString(R.string.missav_source_subdog_title),
+            applicationContext.getString(R.string.missav_source_subdog_desc),
         ),
     )
 
@@ -246,7 +250,7 @@ fun MissAvSubtitleSettingsScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             SiteTopAppBar(
-                title = { Text("Video Subtitle") },
+                title = { Text(stringResource(R.string.missav_subtitle_title)) },
                 navigationIcon = { SiteBackButton(onClick = onBack) },
             )
         },
@@ -260,14 +264,13 @@ fun MissAvSubtitleSettingsScreen(onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                text = "Pick where MissAV subtitles come from. This is used by the subtitle " +
-                    "section on the video page.",
+                text = stringResource(R.string.missav_subtitle_intro),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(vertical = 4.dp),
             )
 
-            SectionTitle("Source")
+            SectionTitle(stringResource(R.string.missav_subtitle_source))
             SettingsCard {
                 MissAvSubtitleSettingsRepo.sources.forEachIndexed { index, option ->
                     if (index > 0) CardDivider()
@@ -291,15 +294,14 @@ fun MissAvSubtitleSettingsScreen(onBack: () -> Unit) {
                     SectionTitle("SubtitleCat")
                     SettingsCard {
                         ValueRow(
-                            title = "Subtitle language",
+                            title = stringResource(R.string.supjav_subtitle_language),
                             value = MissAvSubtitleSettingsRepo.languageName(catLanguage),
                             onClick = { showLanguageDialog = true },
                         )
                         CardDivider()
                         SwitchRow(
-                            title = "Translate if not available",
-                            description = "If SubtitleCat has no subtitle in this language, " +
-                                "translate the original with Google Translate",
+                            title = stringResource(R.string.missav_subtitle_translate_if_missing),
+                            description = stringResource(R.string.missav_subtitle_translate_if_missing_desc),
                             checked = translate,
                             onCheckedChange = {
                                 translate = it
@@ -464,14 +466,14 @@ private fun LanguageDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Subtitle language") },
+        title = { Text(stringResource(R.string.supjav_subtitle_language)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
                     singleLine = true,
-                    placeholder = { Text("Search language") },
+                    placeholder = { Text(stringResource(R.string.missav_subtitle_search_language)) },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -503,7 +505,7 @@ private fun LanguageDialog(
                     if (filtered.isEmpty()) {
                         item {
                             Text(
-                                text = "No matching language",
+                                text = stringResource(R.string.missav_subtitle_no_language),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(12.dp),
@@ -513,6 +515,6 @@ private fun LanguageDialog(
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) } },
     )
 }

@@ -91,7 +91,7 @@ fun HentaiMamaSettingsHubScreen(
         ),
         HubEntry(
             key = "recent_episodes",
-            title = "Recent Episodes",
+            title = stringResource(R.string.drawer_recent_episodes),
             subtitle = stringResource(R.string.hm_recent_episodes_subtitle),
             icon = Icons.Default.VideoLibrary,
             onClick = onNavigateToRecentEpisodes,
@@ -108,7 +108,7 @@ fun HentaiMamaSettingsHubScreen(
     Scaffold(
         topBar = {
             SiteTopAppBar(
-                title = { Text("HentaiMama Settings") },
+                title = { Text(stringResource(R.string.site_settings_2, "HentaiMama")) },
                 navigationIcon = { SiteBackButton(onClick = onBack) },
             )
         },

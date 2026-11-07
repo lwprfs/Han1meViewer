@@ -118,7 +118,7 @@ fun FapFolderLoginScreen(
                     }
                     is FapFolderAuthResult.SessionExpired -> {
                         isSubmitting = false
-                        errorMessage = "Session expired. Try again or paste fresh cookies."
+                        errorMessage = applicationContext.getString(R.string.fap_session_expired)
                     }
                     is FapFolderAuthResult.NetworkError -> {
                         isSubmitting = false

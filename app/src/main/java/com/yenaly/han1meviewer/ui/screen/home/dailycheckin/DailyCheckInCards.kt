@@ -72,7 +72,7 @@ fun TodayCheckInCard(
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = today.format(DateTimeFormatter.ofPattern("MM月dd日 EEEE")),
+                    text = today.format(DateTimeFormatter.ofPattern(stringResource(R.string.checkin_date_weekday_pattern))),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
@@ -104,7 +104,7 @@ fun TodayCheckInCard(
                     TextButton(onClick = onClear) {
                         Text(
                             stringResource(R.string.clear_checkin),
-                            fontSize = 12.sp,
+                            style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
                         )
                     }

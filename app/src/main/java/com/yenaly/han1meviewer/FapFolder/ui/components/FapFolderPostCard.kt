@@ -473,7 +473,7 @@ private fun VideoMediaBlock(
                 Text(
                     text = formatDuration(secs),
                     color = MaterialTheme.colorScheme.onSurface,
-                    fontSize = dimensionResource(R.dimen.video_view_and_time_and_duration).value.sp,
+                    style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.padding(horizontal = 2.dp),
                 )
             }

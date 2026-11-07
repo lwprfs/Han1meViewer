@@ -103,14 +103,14 @@ fun MissAvSortFilterSheet(
                     selected = selectedTab == MissAvGroup.SORT,
                     onClick = { selectedTab = MissAvGroup.SORT },
                     text = {
-                        Text(if (sort != null) "Sort •" else stringResource(R.string.site_sort_2))
+                        Text(stringResource(R.string.site_sort_2) + if (sort != null) " •" else "")
                     },
                 )
                 Tab(
                     selected = selectedTab == MissAvGroup.FILTER,
                     onClick = { selectedTab = MissAvGroup.FILTER },
                     text = {
-                        Text(if (filter != null) "Filter •" else stringResource(R.string.site_filter))
+                        Text(stringResource(R.string.site_filter) + if (filter != null) " •" else "")
                     },
                 )
             }

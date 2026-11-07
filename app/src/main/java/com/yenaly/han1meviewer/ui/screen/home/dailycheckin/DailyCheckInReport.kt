@@ -478,7 +478,7 @@ fun MonthContributionView(
                         if (count > 0) {
                             Text(
                                 text = stringResource(R.string.checkin_count_format, count),
-                                fontSize = 10.sp,
+                                style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
                             )
                         }

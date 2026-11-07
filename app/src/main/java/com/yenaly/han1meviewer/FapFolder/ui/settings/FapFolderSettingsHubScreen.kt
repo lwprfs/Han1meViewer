@@ -137,7 +137,7 @@ fun FapFolderSettingsHubScreen(
         add(
             FapFolderHubEntry(
                 key = "search_history",
-                title = "Search History",
+                title = stringResource(R.string.fap_search_history_title),
                 subtitle = stringResource(R.string.fap_browse_and_re_run_previous_searches),
                 icon = Icons.Filled.Search,
                 onClick = onOpenSearchHistory,

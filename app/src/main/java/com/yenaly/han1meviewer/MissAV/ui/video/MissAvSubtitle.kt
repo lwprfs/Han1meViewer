@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.MissAV.ui.video
 
+import androidx.compose.ui.res.stringResource
 import android.content.Context
 import android.net.Uri
 import android.util.Log
@@ -573,7 +574,7 @@ private fun MissAvSubDogSubtitleSection(
             try {
                 if (!MissAvSubtitleHelper.subDogExists(videoCode)) {
                     isError = true
-                    status = "Sub-Dog has no subtitle for this video"
+                    status = context.getString(R.string.missav_sub_subdog_none)
                     return@launch
                 }
                 val uri = MissAvSubtitleHelper.downloadSubDogSubtitle(
@@ -581,10 +582,10 @@ private fun MissAvSubDogSubtitleSection(
                 )
                 if (uri != null) {
                     onSubtitleDownloaded(uri)
-                    status = "Chinese subtitle loaded"
+                    status = context.getString(R.string.missav_sub_cn_loaded)
                 } else {
                     isError = true
-                    status = "Could not download the Sub-Dog subtitle"
+                    status = context.getString(R.string.missav_sub_subdog_failed)
                 }
             } finally {
                 busy = false
@@ -597,12 +598,12 @@ private fun MissAvSubDogSubtitleSection(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         SiteVideoSectionHeader(
-            title = "Subtitles (Sub-Dog, Chinese)",
-            actionText = if (busy) "Working…" else "Get subtitle",
+            title = stringResource(R.string.missav_sub_subdog_title),
+            actionText = if (busy) stringResource(R.string.missav_sub_working) else stringResource(R.string.missav_sub_get),
             onActionClick = { fetch() },
         )
         Text(
-            text = status ?: "Tap Get subtitle to load the Sub-Dog subtitle",
+            text = status ?: stringResource(R.string.missav_sub_subdog_tap),
             style = MaterialTheme.typography.bodySmall,
             color = if (isError) MaterialTheme.colorScheme.error
             else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -683,13 +684,13 @@ private fun MissAvSubtitleCatSection(
                 isLoading = false
 
                 if (results.isEmpty()) {
-                    errorMsg = "No subtitles found for \"$query\""
+                    errorMsg = context.getString(R.string.missav_sub_none_for_query, query)
                     return@launch
                 }
                 results.take(3).forEach { checkSingle(it) }
             } catch (e: Exception) {
                 Log.e("MissAvSubtitle", "Search error: ${e.message}")
-                errorMsg = "Failed to search subtitles"
+                errorMsg = context.getString(R.string.missav_sub_search_failed)
                 isLoading = false
             }
         }
@@ -725,19 +726,19 @@ private fun MissAvSubtitleCatSection(
                     onSubtitleDownloaded(uri)
                     snackbarHostState.showSnackbar(
                         if (status is SubtitleLangStatus.Translatable)
-                            "$langName subtitle translated and loaded"
-                        else "Subtitle downloaded successfully!",
+                            context.getString(R.string.missav_sub_translated_loaded, langName)
+                        else context.getString(R.string.missav_sub_downloaded),
                     )
                 } else {
                     snackbarHostState.showSnackbar(
                         if (status is SubtitleLangStatus.Translatable)
-                            "Translation failed"
-                        else "Failed to download subtitle",
+                            context.getString(R.string.missav_sub_translate_failed)
+                        else context.getString(R.string.missav_sub_download_failed),
                     )
                 }
             } catch (e: Exception) {
                 Log.e("MissAvSubtitle", "Download error: ${e.message}")
-                snackbarHostState.showSnackbar("Error: ${e.message}")
+                snackbarHostState.showSnackbar(context.getString(R.string.missav_sub_error_fmt, e.message.orEmpty()))
             } finally {
                 downloadStates = downloadStates + (key to false)
                 progressStates = progressStates - key
@@ -751,8 +752,8 @@ private fun MissAvSubtitleCatSection(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             SiteVideoSectionHeader(
-                title = "Subtitles (subtitlecat.com · $langName)",
-                actionText = if (isLoading) "Searching…" else "Search",
+                title = stringResource(R.string.missav_sub_cat_title, langName),
+                actionText = if (isLoading) stringResource(R.string.missav_sub_searching_action) else stringResource(R.string.search),
                 onActionClick = { if (!isLoading) searchSubtitles() },
             )
 
@@ -774,7 +775,7 @@ private fun MissAvSubtitleCatSection(
                             strokeWidth = 2.dp,
                         )
                         Text(
-                            text = "Searching for subtitles…",
+                            text = stringResource(R.string.missav_sub_searching),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -789,7 +790,7 @@ private fun MissAvSubtitleCatSection(
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.baseline_error_outline_24),
-                            contentDescription = "Error",
+                            contentDescription = stringResource(R.string.missav_sub_error),
                             modifier = Modifier.size(18.dp),
                             tint = MaterialTheme.colorScheme.error,
                         )
@@ -832,7 +833,7 @@ private fun MissAvSubtitleCatSection(
 
                 !hasSearched -> {
                     Text(
-                        text = "Tap Search to find $langName subtitles, or type a title above",
+                        text = stringResource(R.string.missav_sub_tap_search, langName),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(vertical = 4.dp),
@@ -870,7 +871,7 @@ private fun SubtitleSearchBar(
             Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
                 if (query.isEmpty()) {
                     Text(
-                        text = "Search subtitles manually…",
+                        text = stringResource(R.string.missav_sub_manual_hint),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -892,7 +893,7 @@ private fun SubtitleSearchBar(
                 IconButton(onClick = { onQueryChange("") }, modifier = Modifier.size(36.dp)) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Clear",
+                        contentDescription = stringResource(R.string.site_clear),
                         modifier = Modifier.size(18.dp),
                     )
                 }
@@ -900,7 +901,7 @@ private fun SubtitleSearchBar(
             IconButton(onClick = onSearch, modifier = Modifier.size(36.dp)) {
                 Icon(
                     imageVector = Icons.Default.Search,
-                    contentDescription = "Search",
+                    contentDescription = stringResource(R.string.search),
                     modifier = Modifier.size(20.dp),
                 )
             }
@@ -979,7 +980,7 @@ fun SubtitleResultItem(
                     ) {
                         if (progress >= 0) {
                             Text(
-                                text = "Translating $progress%",
+                                text = stringResource(R.string.missav_sub_translating, progress),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -993,7 +994,7 @@ fun SubtitleResultItem(
                 }
 
                 isAlreadyDownloaded -> StatusBadge(
-                    text = "Loaded",
+                    text = stringResource(R.string.missav_sub_loaded),
                     containerColor = MaterialTheme.colorScheme.tertiaryContainer,
                     contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
                 )
@@ -1008,7 +1009,7 @@ fun SubtitleResultItem(
 
                 status == null -> {
                     ActionSurface(
-                        text = "Check",
+                        text = stringResource(R.string.onair_check),
                         onClick = onCheck,
                         containerColor = MaterialTheme.colorScheme.secondaryContainer,
                         contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -1017,7 +1018,7 @@ fun SubtitleResultItem(
 
                 status is SubtitleLangStatus.Available -> {
                     ActionSurface(
-                        text = "Download",
+                        text = stringResource(R.string.download),
                         onClick = onDownload,
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -1026,7 +1027,7 @@ fun SubtitleResultItem(
 
                 status is SubtitleLangStatus.Translatable && translateEnabled -> {
                     ActionSurface(
-                        text = "Translate",
+                        text = stringResource(R.string.missav_sub_translate),
                         onClick = onDownload,
                         containerColor = MaterialTheme.colorScheme.tertiary,
                         contentColor = MaterialTheme.colorScheme.onTertiary,
@@ -1034,7 +1035,7 @@ fun SubtitleResultItem(
                 }
 
                 else -> StatusBadge(
-                    text = "No $languageName",
+                    text = stringResource(R.string.missav_sub_no_language, languageName),
                     containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                     contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

@@ -154,7 +154,7 @@ internal fun CreatorUploadingCard(
                 ) {
                     Text(
                         text = item.remoteVideoUrl.extractFileNameFromUrl()
-                            .ifBlank { "Unknown Source" },
+                            .ifBlank { stringResource(R.string.creator_unknown_source) },
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,

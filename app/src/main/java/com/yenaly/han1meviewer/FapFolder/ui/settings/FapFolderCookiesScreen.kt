@@ -128,7 +128,7 @@ fun FapFolderCookiesScreen(
                 )
             }
                             GlobalToasts.show(
-                                "Cookies copied",
+                                applicationContext.getString(R.string.cookies_copied_toast),
                                 level = GlobalToasts.ToastLevel.SUCCESS,
                             )
                         }) { Text(stringResource(R.string.copy_)) }
@@ -306,7 +306,7 @@ fun FapFolderCookiesScreen(
                     FapFolderProfileCache.clearAll()
                     profile = null
                     cookieInput = ""
-                    GlobalToasts.show("Cookies cleared", level = GlobalToasts.ToastLevel.INFO)
+                    GlobalToasts.show(applicationContext.getString(R.string.cookies_cleared_toast), level = GlobalToasts.ToastLevel.INFO)
                 }) {
                     Text(stringResource(R.string.site_clear), color = MaterialTheme.colorScheme.error)
                 }
@@ -435,9 +435,9 @@ private fun SignedInCard(
                     }
                     Text(
                         text = if (hasCookies) {
-                            "Session cookies active on this device"
+                            stringResource(R.string.cookies_session_active_device)
                         } else {
-                            "No session cookies on this device"
+                            stringResource(R.string.cookies_session_none_device)
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = if (hasCookies) {

@@ -143,10 +143,10 @@ fun SitePlayerSettingsScreen(site: SiteType, modifier: Modifier = Modifier) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 FilledTonalButton(onClick = { SitePlayerSettings.setAllSwitches(site, true) }) {
-                    Text("Enable all features")
+                    Text(stringResource(R.string.ui_site_enable_all))
                 }
                 OutlinedButton(onClick = { SitePlayerSettings.setAllSwitches(site, false) }) {
-                    Text("Disable all features")
+                    Text(stringResource(R.string.ui_site_disable_all))
                 }
             }
         }

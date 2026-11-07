@@ -174,7 +174,7 @@ fun OnAirGateScreen(
                         onSwitchSite = if (state.suggestSwitchSite) onSwitchSite else null,
                         onOpenCookies = onOpenCookies,
                         onOpenSettings = onOpenSettings,
-                        cookiesLabel = if (state.suggestRelogin) "Sign in / cookies" else stringResource(R.string.site_cookies),
+                        cookiesLabel = if (state.suggestRelogin) stringResource(R.string.onair_sign_in_cookies) else stringResource(R.string.site_cookies),
                     )
                 }
 

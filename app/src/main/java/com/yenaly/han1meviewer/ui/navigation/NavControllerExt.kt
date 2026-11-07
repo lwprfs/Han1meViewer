@@ -1,13 +1,12 @@
 package com.yenaly.han1meviewer.ui.navigation
 
-import android.util.Log
 import androidx.lifecycle.Lifecycle
 import androidx.navigation.NavController
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavOptionsBuilder
 
 fun NavController.canNavigateSafely(): Boolean {
     val currentState = currentBackStackEntry?.lifecycle?.currentState
-    Log.i("nav_state", currentState?.toString() ?: "BackStack is empty (null)")
     return currentState?.isAtLeast(Lifecycle.State.STARTED) ?: true
 }
 
@@ -36,4 +35,11 @@ fun NavController.popBackStackSafely(): Boolean {
     if (!current.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return false
     if (previousBackStackEntry == null) return false
     return popBackStack()
+}
+
+fun NavController.popToRootSafely(): Boolean = try {
+    popBackStack(graph.findStartDestination().id, inclusive = false)
+} catch (_: IllegalStateException) {
+
+    false
 }

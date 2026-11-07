@@ -140,31 +140,31 @@ fun FapFolderAccountScreen(
                     )
                     add(
                         AccountRow(
-                            stringResource(R.string.privacy), "Who can see your info, photos and groups",
+                            stringResource(R.string.privacy), stringResource(R.string.fap_account_privacy_summary),
                             Icons.Filled.Lock, onOpenPrivacy,
                         )
                     )
                     add(
                         AccountRow(
-                            stringResource(R.string.drawer_followed_communities), "Groups you follow",
+                            stringResource(R.string.drawer_followed_communities), stringResource(R.string.fap_account_followed_summary),
                             Icons.Filled.Groups, onOpenFollowed,
                         )
                     )
                     add(
                         AccountRow(
-                            "Saved posts", "Posts you bookmarked",
+                            stringResource(R.string.fap_account_saved_title), stringResource(R.string.fap_account_saved_summary),
                             Icons.Filled.Bookmark, onOpenSaved,
                         )
                     )
                     add(
                         AccountRow(
-                            "Watch history", stringResource(R.string.fap_posts_and_videos_you_opened),
+                            stringResource(R.string.watch_history), stringResource(R.string.fap_posts_and_videos_you_opened),
                             Icons.Filled.History, onOpenHistory,
                         )
                     )
                     add(
                         AccountRow(
-                            "Cookies & session", "Import, view or clear session cookies",
+                            stringResource(R.string.fap_account_cookies_title), stringResource(R.string.fap_account_cookies_summary),
                             Icons.Filled.Cookie, onOpenCookies,
                         )
                     )

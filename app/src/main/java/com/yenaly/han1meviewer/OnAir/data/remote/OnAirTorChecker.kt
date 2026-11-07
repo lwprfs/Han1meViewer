@@ -85,7 +85,7 @@ object OnAirTorChecker {
                 connected = false,
                 isTorExit = false,
                 ip = null,
-                message = "Timed out contacting check.torproject.org. Is Tor running?",
+                message = applicationContext.getString(R.string.onair_tor_timeout),
                 failure = TorFailure.Timeout,
             )
         } catch (e: UnknownHostException) {
@@ -94,7 +94,7 @@ object OnAirTorChecker {
                 connected = false,
                 isTorExit = false,
                 ip = null,
-                message = "Cannot resolve check.torproject.org. Turn on Tor and try again.",
+                message = applicationContext.getString(R.string.onair_tor_dns_failed),
                 failure = TorFailure.NetworkUnreachable,
             )
         } catch (e: Exception) {

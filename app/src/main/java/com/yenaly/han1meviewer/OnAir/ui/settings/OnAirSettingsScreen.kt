@@ -240,8 +240,8 @@ fun OnAirSettingsScreen(
                                     }
                                     if (isEmpty()) {
                                         append(
-                                            if (hasCookies) "Session cookies active"
-                                            else "No cookies on this device"
+                                            if (hasCookies) stringResource(R.string.onair_session_active_short)
+                                            else stringResource(R.string.onair_no_cookies_device)
                                         )
                                     } else {
                                         trimEnd(' ', '·')
@@ -282,7 +282,7 @@ fun OnAirSettingsScreen(
                                 onClick = onOpenCookies,
                                 modifier = Modifier.weight(1f),
                             ) {
-                                Text(if (hasCookies) "Manage cookies" else "Add cookies")
+                                Text(if (hasCookies) stringResource(R.string.onair_manage_cookies) else stringResource(R.string.onair_add_cookies))
                             }
                             if (!hasCookies) {
                                 OutlinedButton(
@@ -309,7 +309,7 @@ fun OnAirSettingsScreen(
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text(
-                            text = "Browse",
+                            text = stringResource(R.string.site_drawer_section_browse),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                         )

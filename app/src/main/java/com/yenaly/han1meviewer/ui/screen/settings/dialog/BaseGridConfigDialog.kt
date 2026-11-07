@@ -221,7 +221,7 @@ private fun GridConfigInputRow(option: GridRangeOption, isDecimal: Boolean) {
                     ) {
                         Icon(
                             imageVector = androidx.compose.material.icons.Icons.Default.Remove,
-                            contentDescription = "减少",
+                            contentDescription = stringResource(R.string.grid_decrease),
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -276,7 +276,7 @@ private fun GridConfigInputRow(option: GridRangeOption, isDecimal: Boolean) {
                     ) {
                         Icon(
                             imageVector = androidx.compose.material.icons.Icons.Default.Add,
-                            contentDescription = "增加",
+                            contentDescription = stringResource(R.string.grid_increase),
                             modifier = Modifier.size(16.dp)
                         )
                     }

@@ -220,8 +220,8 @@ fun siteDrawerSections(context: Context, site: SiteType, loggedIn: Boolean): Lis
                 listOf(
                     entry(str(R.string.drawer_home_categories), R.drawable.baseline_grid_24, MissAvHomeCategoriesRoute),
                     entry(str(R.string.drawer_host_mirror), R.drawable.baseline_domain_24, MissAvHostSettingsRoute),
-                    entry("Video Resolution", R.drawable.ic_video_quilty, MissAvQualitySettingsRoute),
-                    entry("Video Subtitle", R.drawable.ic_baseline_language_24, MissAvSubtitleSettingsRoute),
+                    entry(str(R.string.drawer_video_resolution), R.drawable.ic_video_quilty, MissAvQualitySettingsRoute),
+                    entry(str(R.string.missav_subtitle_title), R.drawable.ic_baseline_language_24, MissAvSubtitleSettingsRoute),
                     playerSettings,
                 ),
             ),
@@ -297,7 +297,7 @@ fun siteDrawerSections(context: Context, site: SiteType, loggedIn: Boolean): Lis
                 listOf(
                     entry(str(R.string.watch_history), history, FapFolderHistoryRoute),
                     entry(str(R.string.saved), R.drawable.ic_drawer_bookmark, FapFolderSavedRoute),
-                    entry("Downloaded photos", R.drawable.ic_baseline_image_24, FapFolderImageFolderRoute),
+                    entry(str(R.string.drawer_downloaded_photos), R.drawable.ic_baseline_image_24, FapFolderImageFolderRoute),
                     entry(str(R.string.drawer_followed_communities), R.drawable.ic_drawer_groups, FapFolderFollowedCommunitiesRoute),
                 ),
             ),
@@ -327,7 +327,7 @@ fun siteDrawerSections(context: Context, site: SiteType, loggedIn: Boolean): Lis
             SiteDrawerSection(
                 customize,
                 listOf(
-                    entry("Playback & servers", R.drawable.ic_video_quilty, SupJavSettingsRoute),
+                    entry(str(R.string.supjav_settings_playback_title), R.drawable.ic_video_quilty, SupJavSettingsRoute),
                     playerSettings,
                 ),
             ),

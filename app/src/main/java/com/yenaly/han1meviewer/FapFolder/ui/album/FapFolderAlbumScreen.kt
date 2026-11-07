@@ -182,7 +182,7 @@ fun FapFolderAlbumScreen(
                                     if (!owner.isBlank()) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Text(
-                                                text = "by ",
+                                                text = stringResource(R.string.fap_album_by) + " ",
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )

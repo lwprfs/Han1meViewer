@@ -112,13 +112,13 @@ object SitePlayerSettings {
         get() = listOf(
 
         Spec.Switch(
-            ID_AUTO_PLAY, "Auto play", "Start playing as soon as the video is ready",
+            ID_AUTO_PLAY, applicationContext.getString(R.string.site_player_auto_play_title), applicationContext.getString(R.string.site_player_auto_play_summary),
         ) { true },
         Spec.Switch(
-            ID_RESUME, "Resume playback", "Offer to continue where you stopped",
+            ID_RESUME, applicationContext.getString(R.string.site_player_resume_title), applicationContext.getString(R.string.site_player_resume_summary),
         ) { Preferences.allowResumePlayback },
         Spec.Choice(
-            ID_DEFAULT_SPEED, "Default playback speed", null, speedOptions,
+            ID_DEFAULT_SPEED, applicationContext.getString(R.string.site_player_default_speed_title), null, speedOptions,
         ) { Preferences.playerSpeed.toString() },
         Spec.Choice(
             ID_DEFAULT_QUALITY,
@@ -128,82 +128,83 @@ object SitePlayerSettings {
             onlySites = setOf(SiteType.ONAIR),
         ) { "original" },
         Spec.Switch(
-            ID_KEEP_SCREEN_ON, "Keep screen on", "Prevent the screen from sleeping while playing",
+            ID_KEEP_SCREEN_ON, applicationContext.getString(R.string.site_player_keep_screen_on_title), applicationContext.getString(R.string.site_player_keep_screen_on_summary),
         ) { true },
         Spec.Switch(
-            ID_STRETCH, "Fill screen in fullscreen", "Stretch the video to fill the screen by default",
+            ID_STRETCH, applicationContext.getString(R.string.site_player_stretch_title), applicationContext.getString(R.string.site_player_stretch_summary),
         ) { false },
 
         Spec.Switch(
-            ID_GESTURES, "Swipe gestures", "Master switch for all swipe gestures",
+            ID_GESTURES, applicationContext.getString(R.string.site_player_gestures_title), applicationContext.getString(R.string.site_player_gestures_summary),
         ) { true },
         Spec.Switch(
-            ID_GESTURE_SEEK, "Swipe to seek", "Swipe left or right to change progress",
+            ID_GESTURE_SEEK, applicationContext.getString(R.string.site_player_gesture_seek_title), applicationContext.getString(R.string.site_player_gesture_seek_summary),
         ) { true },
         Spec.Switch(
-            ID_GESTURE_BRIGHTNESS, "Swipe for brightness", "Swipe up or down on the left half",
+            ID_GESTURE_BRIGHTNESS, applicationContext.getString(R.string.site_player_gesture_brightness_title), applicationContext.getString(R.string.site_player_gesture_brightness_summary),
         ) { true },
         Spec.Switch(
-            ID_GESTURE_VOLUME, "Swipe for volume", "Swipe up or down on the right half",
+            ID_GESTURE_VOLUME, applicationContext.getString(R.string.site_player_gesture_volume_title), applicationContext.getString(R.string.site_player_gesture_volume_summary),
         ) { true },
         Spec.Slider(
-            ID_SLIDE_SENSITIVITY, "Slide sensitivity",
-            "How far a swipe moves progress, brightness and volume", 1..9, "",
+            ID_SLIDE_SENSITIVITY, applicationContext.getString(R.string.site_player_slide_sensitivity_title),
+            applicationContext.getString(R.string.site_player_slide_sensitivity_summary), 1..9, "",
         ) { Preferences.slideSensitivity },
         Spec.Switch(
-            ID_DOUBLE_TAP_ENABLED, "Double-tap to skip", "Double-tap the left or right side to skip",
+            ID_DOUBLE_TAP_ENABLED, applicationContext.getString(R.string.site_player_double_tap_enabled_title), applicationContext.getString(R.string.site_player_double_tap_enabled_summary),
         ) { true },
         Spec.Slider(
-            ID_DOUBLE_TAP_SEEK, "Skip length", "Seconds to skip on a double tap or skip button", 5..30, "s",
+            ID_DOUBLE_TAP_SEEK, applicationContext.getString(R.string.site_player_double_tap_seek_title), applicationContext.getString(R.string.site_player_double_tap_seek_summary), 5..30, "s",
         ) { 10 },
         Spec.Switch(
-            ID_DOUBLE_TAP_CENTER_PAUSE, "Double-tap center to pause",
-            "Double-tap the middle of the video to play or pause",
+            ID_DOUBLE_TAP_CENTER_PAUSE, applicationContext.getString(R.string.site_player_double_tap_center_pause_title),
+            applicationContext.getString(R.string.site_player_double_tap_center_pause_summary),
         ) { false },
         Spec.Switch(
-            ID_LONG_PRESS_ENABLED, "Long-press to speed up", "Hold the video to play faster",
+            ID_LONG_PRESS_ENABLED, applicationContext.getString(R.string.site_player_long_press_enabled_title), applicationContext.getString(R.string.site_player_long_press_enabled_summary),
         ) { true },
         Spec.Choice(
-            ID_LONG_PRESS_SPEED, "Long-press speed", "Speed while holding the video", longPressOptions,
+            ID_LONG_PRESS_SPEED, applicationContext.getString(R.string.site_player_long_press_speed_title), applicationContext.getString(R.string.site_player_long_press_speed_summary), longPressOptions,
         ) { Preferences.longPressSpeedTime.toString() },
 
         Spec.Switch(
-            ID_AUTO_HIDE, "Auto-hide controls", "Fade the controls out while playing",
+            ID_AUTO_HIDE, applicationContext.getString(R.string.site_player_auto_hide_title), applicationContext.getString(R.string.site_player_auto_hide_summary),
         ) { true },
         Spec.Slider(
-            ID_HIDE_DELAY, "Hide controls after", "Seconds before the controls fade out", 2..10, "s",
+            ID_HIDE_DELAY, applicationContext.getString(R.string.site_player_hide_delay_title), applicationContext.getString(R.string.site_player_hide_delay_summary), 2..10, "s",
         ) { 3 },
         Spec.Slider(
-            ID_CONTROLS_OPACITY, "Controls background opacity", "How solid the control bars look", 10..90, "%",
+            ID_CONTROLS_OPACITY, applicationContext.getString(R.string.site_player_controls_opacity_title), applicationContext.getString(R.string.site_player_controls_opacity_summary), 10..90, "%",
         ) { 32 },
         Spec.Switch(
-            ID_BOTTOM_PROGRESS, "Show bottom progress", "Thin progress line while controls are hidden",
+            ID_BOTTOM_PROGRESS, applicationContext.getString(R.string.site_player_bottom_progress_title), applicationContext.getString(R.string.site_player_bottom_progress_summary),
         ) { Preferences.showBottomProgress },
-        Spec.Switch(ID_SHOW_TITLE, "Show title", "Video title in the top bar") { true },
-        Spec.Switch(ID_SHOW_CLOCK, "Show clock", "Current time in the top bar") { true },
-        Spec.Switch(ID_SHOW_SPEED_BUTTON, "Show speed button", "Speed picker in the top bar") { true },
-        Spec.Switch(ID_SHOW_QUALITY_BUTTON, "Show quality button", "Quality label and picker") { true },
-        Spec.Switch(ID_SHOW_LOCK_BUTTON, "Show lock button", "Lock the controls and gestures") { true },
-        Spec.Switch(ID_SHOW_STRETCH_BUTTON, "Show stretch button", "Fill-screen toggle in fullscreen") { true },
-        Spec.Switch(ID_SHOW_FULLSCREEN_BUTTON, "Show fullscreen button", "Fullscreen toggle in the bottom bar") { true },
+        Spec.Switch(ID_SHOW_TITLE, applicationContext.getString(R.string.site_player_show_title_title), applicationContext.getString(R.string.site_player_show_title_summary)) { true },
+        Spec.Switch(ID_SHOW_CLOCK, applicationContext.getString(R.string.site_player_show_clock_title), applicationContext.getString(R.string.site_player_show_clock_summary)) { true },
+        Spec.Switch(ID_SHOW_SPEED_BUTTON, applicationContext.getString(R.string.site_player_show_speed_button_title), applicationContext.getString(R.string.site_player_show_speed_button_summary)) { true },
+        Spec.Switch(ID_SHOW_QUALITY_BUTTON, applicationContext.getString(R.string.site_player_show_quality_button_title), applicationContext.getString(R.string.site_player_show_quality_button_summary)) { true },
+        Spec.Switch(ID_SHOW_LOCK_BUTTON, applicationContext.getString(R.string.site_player_show_lock_button_title), applicationContext.getString(R.string.site_player_show_lock_button_summary)) { true },
+        Spec.Switch(ID_SHOW_STRETCH_BUTTON, applicationContext.getString(R.string.site_player_show_stretch_button_title), applicationContext.getString(R.string.site_player_show_stretch_button_summary)) { true },
+        Spec.Switch(ID_SHOW_FULLSCREEN_BUTTON, applicationContext.getString(R.string.site_player_show_fullscreen_button_title), applicationContext.getString(R.string.site_player_show_fullscreen_button_summary)) { true },
         Spec.Switch(
-            ID_SHOW_SKIP_BUTTONS, "Show skip buttons", "Rewind / forward buttons beside play",
+            ID_SHOW_SKIP_BUTTONS, applicationContext.getString(R.string.site_player_show_skip_buttons_title), applicationContext.getString(R.string.site_player_show_skip_buttons_summary),
         ) { false },
         Spec.Switch(
-            ID_SHOW_REMAINING, "Show remaining time", "Show time left instead of total length",
+            ID_SHOW_REMAINING, applicationContext.getString(R.string.site_player_show_remaining_title), applicationContext.getString(R.string.site_player_show_remaining_summary),
         ) { false },
     )
 
-    val groups: List<Pair<String, List<String>>> = listOf(
-        "Playback" to listOf(
+    val groups: List<Pair<String, List<String>>>
+        get() = listOf(
+        applicationContext.getString(R.string.site_player_group_playback) to listOf(
             ID_AUTO_PLAY, ID_RESUME, ID_DEFAULT_SPEED, ID_DEFAULT_QUALITY, ID_KEEP_SCREEN_ON, ID_STRETCH,
         ),
-        "Gestures" to listOf(
+        applicationContext.getString(R.string.site_player_group_gestures) to listOf(
             ID_GESTURES, ID_GESTURE_SEEK, ID_GESTURE_BRIGHTNESS, ID_GESTURE_VOLUME, ID_SLIDE_SENSITIVITY,
             ID_DOUBLE_TAP_ENABLED, ID_DOUBLE_TAP_SEEK, ID_DOUBLE_TAP_CENTER_PAUSE,
             ID_LONG_PRESS_ENABLED, ID_LONG_PRESS_SPEED,
         ),
-        "Controls" to listOf(
+        applicationContext.getString(R.string.site_player_group_controls) to listOf(
             ID_AUTO_HIDE, ID_HIDE_DELAY, ID_CONTROLS_OPACITY, ID_BOTTOM_PROGRESS, ID_SHOW_TITLE,
             ID_SHOW_CLOCK, ID_SHOW_SPEED_BUTTON, ID_SHOW_QUALITY_BUTTON, ID_SHOW_LOCK_BUTTON,
             ID_SHOW_STRETCH_BUTTON, ID_SHOW_FULLSCREEN_BUTTON, ID_SHOW_SKIP_BUTTONS, ID_SHOW_REMAINING,

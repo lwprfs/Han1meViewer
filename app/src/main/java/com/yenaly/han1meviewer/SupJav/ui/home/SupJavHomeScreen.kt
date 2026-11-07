@@ -54,7 +54,7 @@ fun SupJavHomeScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             SiteSearchTopBar(
-                hint = "Search SupJav",
+                hint = stringResource(R.string.supjav_search_hint),
                 onSearchClick = { onNavigateToSearch(null) },
                 leading = {
                     SiteBarIconButton(

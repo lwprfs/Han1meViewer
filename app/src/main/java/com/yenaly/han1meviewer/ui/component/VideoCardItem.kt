@@ -49,7 +49,6 @@ fun VideoCardItem(
     onClickVideosItem: (String) -> Unit,
     onLongClickVideosItem: (String, String) -> Unit,
 ) {
-    val textFontSize = dimensionResource(id = R.dimen.video_view_and_time_and_duration).value.sp
     val iconSize = dimensionResource(id = R.dimen.view_view_and_time_icon_size)
     val imageAspectRatio = if (isHorizontalCard) 16f / 9f else 3f / 4f
     Surface(
@@ -60,10 +59,10 @@ fun VideoCardItem(
                 onClick = { onClickVideosItem(videoItem.videoCode) },
                 onLongClick = { onLongClickVideosItem(videoItem.videoCode, videoItem.title) },
             ),
-        shape = RoundedCornerShape(12.dp),
-        tonalElevation = 2.dp,
-        shadowElevation = 1.dp,
-        color = MaterialTheme.colorScheme.surface,
+        shape = MaterialTheme.shapes.medium,
+        tonalElevation = 1.dp,
+        shadowElevation = 0.dp,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
         contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
         Column(
@@ -91,15 +90,13 @@ fun VideoCardItem(
                             .padding(top = 6.dp, end = 6.dp)
                             .background(
                                 color = Color.Black.copy(alpha = 0.65f),
-                                shape = RoundedCornerShape(4.dp)
+                                shape = MaterialTheme.shapes.extraSmall
                             )
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
                             text = stringResource(R.string.played),
                             color = Color.White,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.labelSmall
                         )
                     }
@@ -131,7 +128,7 @@ fun VideoCardItem(
                             modifier = Modifier.padding(horizontal = 2.dp),
                             text = DisplayTextLocalizer.localizeViews(it),
                             color = MaterialTheme.colorScheme.onSurface,
-                            fontSize = textFontSize,
+                            style = MaterialTheme.typography.labelSmall,
                         )
                     }
 
@@ -147,7 +144,7 @@ fun VideoCardItem(
                             modifier = Modifier.padding(horizontal = 2.dp),
                             text = it,
                             color = MaterialTheme.colorScheme.onSurface,
-                            fontSize = textFontSize,
+                            style = MaterialTheme.typography.labelSmall,
                         )
                     }
                 }
@@ -178,8 +175,6 @@ fun VideoCardItem(
                             Text(
                                 text = stringResource(R.string.now_playing),
                                 color = MaterialTheme.colorScheme.onPrimary,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
                                 style = MaterialTheme.typography.labelMedium
                             )
                         }
@@ -199,7 +194,7 @@ fun VideoCardItem(
                     .padding(horizontal = 8.dp),
             )
             Text(
-                text = videoItem.currentArtist ?: "作者",
+                text = videoItem.currentArtist ?: stringResource(R.string.video_card_unknown_artist),
                 maxLines = 1,
                 style = MaterialTheme.typography.labelSmall,
                 overflow = TextOverflow.Ellipsis,
@@ -225,7 +220,7 @@ fun VideoCardItem(
                     Spacer(modifier = Modifier.width(2.dp))
                     Text(
                         text = reviewsText,
-                        fontSize = 11.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -235,7 +230,7 @@ fun VideoCardItem(
                 if (!videoItem.uploadTime.isNullOrEmpty()) {
                     Text(
                         text = DisplayTextLocalizer.localizeRelativeTime(videoItem.uploadTime!!),
-                        fontSize = 11.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         color = MaterialTheme.colorScheme.onSurface,

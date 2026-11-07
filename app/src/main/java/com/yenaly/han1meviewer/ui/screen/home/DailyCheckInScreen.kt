@@ -197,7 +197,7 @@ fun DailyCheckInScreen(
         message = forgotDialogDate?.let {
             stringResource(
                 R.string.forgot_message,
-                it.format(DateTimeFormatter.ofPattern("MM月dd日"))
+                it.format(DateTimeFormatter.ofPattern(stringResource(R.string.checkin_date_pattern)))
             )
         } ?: "",
         confirmText = stringResource(R.string.forgot_confirm),
@@ -215,7 +215,7 @@ fun DailyCheckInScreen(
         message = calendarDialogDate?.let {
             stringResource(
                 R.string.calendar_dialog_message,
-                it.format(DateTimeFormatter.ofPattern("MM月dd日"))
+                it.format(DateTimeFormatter.ofPattern(stringResource(R.string.checkin_date_pattern)))
             )
         } ?: "",
         confirmText = stringResource(R.string.calendar_dialog_confirm),
@@ -233,7 +233,7 @@ fun DailyCheckInScreen(
         message = suckBackDialogDate?.let {
             stringResource(
                 R.string.suck_back_message,
-                it.format(DateTimeFormatter.ofPattern("MM月dd日")),
+                it.format(DateTimeFormatter.ofPattern(stringResource(R.string.checkin_date_pattern))),
                 uiState.records[it] ?: 0
             )
         } ?: "",

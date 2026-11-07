@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.ui.component
 
+import com.yenaly.han1meviewer.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -61,7 +63,7 @@ fun PaginationPager(
             onClick = { if (currentPage > 1) onPageSelected(currentPage - 1) },
             enabled = currentPage > 1
         ) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "pre")
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = stringResource(R.string.ui_page_previous))
         }
 
         val pages = remember(currentPage, totalPages, maxVisiblePages) {
@@ -95,7 +97,7 @@ fun PaginationPager(
             onClick = { if (currentPage < totalPages) onPageSelected(currentPage + 1) },
             enabled = currentPage < totalPages
         ) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "next")
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = stringResource(R.string.ui_page_next))
         }
     }
 }

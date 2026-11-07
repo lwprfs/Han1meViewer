@@ -523,7 +523,7 @@ private fun SupJavVideoContent(
     ) {
         item(key = "servers") {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SiteVideoSectionHeader(title = "Servers")
+                SiteVideoSectionHeader(title = stringResource(R.string.supjav_servers_header))
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -606,14 +606,14 @@ private fun SupJavVideoContent(
                 }
                 if (info.makers.isNotEmpty()) {
                     Text(
-                        text = "Maker: " + info.makers.joinToString { it.title },
+                        text = stringResource(R.string.supjav_maker, info.makers.joinToString { it.title }),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 if (info.cast.isNotEmpty()) {
                     Text(
-                        text = "Cast: " + info.cast.joinToString { it.title },
+                        text = stringResource(R.string.supjav_cast, info.cast.joinToString { it.title }),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -639,7 +639,7 @@ private fun SupJavVideoContent(
 
         item(key = "subtitles") {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SiteVideoSectionHeader(title = "Subtitles")
+                SiteVideoSectionHeader(title = stringResource(R.string.supjav_subtitles))
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -648,11 +648,11 @@ private fun SupJavVideoContent(
                         selected = subtitlesVisible && subtitleCount > 0,
                         onClick = { onToggleSubtitles(!subtitlesVisible) },
                         enabled = subtitleCount > 0,
-                        label = { Text(if (subtitleCount > 0) "Show ($subtitleCount lines)" else "No subtitle loaded") },
+                        label = { Text(if (subtitleCount > 0) stringResource(R.string.supjav_subtitle_show, subtitleCount) else stringResource(R.string.supjav_subtitle_none)) },
                     )
-                    AssistChip(onClick = onPickSubtitleFile, label = { Text("Load .srt file") })
+                    AssistChip(onClick = onPickSubtitleFile, label = { Text(stringResource(R.string.supjav_subtitle_load_srt)) })
                     if (subtitleCount > 0) {
-                        AssistChip(onClick = onRemoveSubtitle, label = { Text("Remove") })
+                        AssistChip(onClick = onRemoveSubtitle, label = { Text(stringResource(R.string.remove)) })
                     }
                 }
                 MissAvSubtitleSection(
@@ -667,7 +667,7 @@ private fun SupJavVideoContent(
 
         if (info.related.isNotEmpty()) {
             item(key = "related_header") {
-                SiteVideoSectionHeader(title = "You may also like")
+                SiteVideoSectionHeader(title = stringResource(R.string.supjav_related))
             }
             item(key = "related_grid") {
                 FlowRow(

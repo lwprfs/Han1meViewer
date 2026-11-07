@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.SupJav.ui.settings
 
+import com.yenaly.han1meviewer.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -56,7 +58,7 @@ fun SupJavSettingsScreen(onBack: () -> Unit) {
     if (showLanguageDialog) {
         AlertDialog(
             onDismissRequest = { showLanguageDialog = false },
-            title = { Text("Subtitle language") },
+            title = { Text(stringResource(R.string.supjav_subtitle_language)) },
             text = {
                 LazyColumn {
                     items(MissAvSubtitleSettingsRepo.subtitleCatLanguages, key = { it.code }) { lang ->
@@ -73,7 +75,7 @@ fun SupJavSettingsScreen(onBack: () -> Unit) {
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showLanguageDialog = false }) { Text("Close") }
+                TextButton(onClick = { showLanguageDialog = false }) { Text(stringResource(R.string.close)) }
             },
         )
     }
@@ -81,7 +83,7 @@ fun SupJavSettingsScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             SiteTopAppBar(
-                title = { Text("SupJav settings") },
+                title = { Text(stringResource(R.string.site_settings_2, "SupJav")) },
                 navigationIcon = { SiteBackButton(onClick = onBack) },
             )
         },
@@ -91,11 +93,10 @@ fun SupJavSettingsScreen(onBack: () -> Unit) {
                 .fillMaxSize()
                 .padding(padding),
         ) {
-            item { SectionHeader("Preferred quality") }
+            item { SectionHeader(stringResource(R.string.supjav_pref_quality)) }
             item {
                 HintText(
-                    "The stream closest to this resolution (never above it if possible) starts " +
-                            "first. You can still switch quality from the player."
+                    stringResource(R.string.supjav_pref_quality_hint)
                 )
             }
             SupJavConstants.QUALITIES.forEach { option ->
@@ -112,11 +113,10 @@ fun SupJavSettingsScreen(onBack: () -> Unit) {
             }
 
             item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
-            item { SectionHeader("Servers") }
+            item { SectionHeader(stringResource(R.string.supjav_servers)) }
             item {
                 HintText(
-                    "Servers are tried from top to bottom. Turn a server off to skip it " +
-                            "automatically; you can still pick it by hand on the video page."
+                    stringResource(R.string.supjav_servers_hint)
                 )
             }
             order.forEachIndexed { index, name ->
@@ -149,8 +149,8 @@ fun SupJavSettingsScreen(onBack: () -> Unit) {
             }
             item {
                 SwitchRow(
-                    title = "Try the next server automatically",
-                    subtitle = "If a server cannot be played, move on to the next enabled one",
+                    title = stringResource(R.string.supjav_auto_fallback),
+                    subtitle = stringResource(R.string.supjav_auto_fallback_summary),
                     checked = fallback,
                     onChange = {
                         fallback = it
@@ -160,9 +160,9 @@ fun SupJavSettingsScreen(onBack: () -> Unit) {
             }
 
             item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
-            item { SectionHeader("Site language") }
+            item { SectionHeader(stringResource(R.string.supjav_site_language)) }
             item {
-                HintText("Language of the SupJav listings and search results.")
+                HintText(stringResource(R.string.supjav_site_language_hint))
             }
             SupJavConstants.LANGUAGES.forEach { (code, title) ->
                 item(key = "lang_$code") {
@@ -178,11 +178,10 @@ fun SupJavSettingsScreen(onBack: () -> Unit) {
             }
 
             item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
-            item { SectionHeader("Subtitles") }
+            item { SectionHeader(stringResource(R.string.supjav_subtitles)) }
             item {
                 HintText(
-                    "Subtitles are searched by the video's JAV code from the video page and shown " +
-                            "over the player. Pick where they come from and in which language."
+                    stringResource(R.string.supjav_subtitles_hint)
                 )
             }
             MissAvSubtitleSettingsRepo.sources.forEach { source ->
@@ -212,7 +211,7 @@ fun SupJavSettingsScreen(onBack: () -> Unit) {
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Subtitle language",
+                                text = stringResource(R.string.supjav_subtitle_language),
                                 style = MaterialTheme.typography.titleSmall,
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
@@ -226,9 +225,8 @@ fun SupJavSettingsScreen(onBack: () -> Unit) {
                 }
                 item(key = "subtranslate") {
                     SwitchRow(
-                        title = "Translate when missing",
-                        subtitle = "If the chosen language is not available, translate the original " +
-                                "subtitle with Google Translate",
+                        title = stringResource(R.string.supjav_subtitle_translate),
+                        subtitle = stringResource(R.string.supjav_subtitle_translate_summary),
                         checked = subTranslate,
                         onChange = {
                             subTranslate = it
@@ -239,7 +237,7 @@ fun SupJavSettingsScreen(onBack: () -> Unit) {
             }
 
             item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
-            item { SectionHeader("Troubleshooting") }
+            item { SectionHeader(stringResource(R.string.supjav_troubleshooting)) }
             item {
                 Column(
                     modifier = Modifier
@@ -255,8 +253,8 @@ fun SupJavSettingsScreen(onBack: () -> Unit) {
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text(
-                            if (cookiesCleared) "Cloudflare cookies cleared"
-                            else "Clear Cloudflare cookies"
+                            if (cookiesCleared) stringResource(R.string.supjav_cf_cleared)
+                            else stringResource(R.string.supjav_cf_clear)
                         )
                     }
                     OutlinedButton(
@@ -273,7 +271,7 @@ fun SupJavSettingsScreen(onBack: () -> Unit) {
                         },
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text("Reset to defaults")
+                        Text(stringResource(R.string.supjav_reset_defaults))
                     }
                 }
             }

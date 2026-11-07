@@ -290,7 +290,6 @@ fun SiteVideoCard(
     contentScale: ContentScale = ContentScale.FillWidth,
     placeholder: androidx.compose.ui.graphics.painter.Painter? = null,
 ) {
-    val textFontSize = dimensionResource(id = R.dimen.video_view_and_time_and_duration).value.sp
     val iconSize = dimensionResource(id = R.dimen.view_view_and_time_icon_size)
 
     val resolvedContentScale =
@@ -349,8 +348,6 @@ fun SiteVideoCard(
                         Text(
                             text = topEndText,
                             color = Color.White,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.labelSmall,
                         )
                     }
@@ -370,8 +367,6 @@ fun SiteVideoCard(
                         Text(
                             text = bottomStartBadge,
                             color = MaterialTheme.colorScheme.onPrimary,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.labelSmall,
                         )
                     }
@@ -404,7 +399,7 @@ fun SiteVideoCard(
                                 modifier = Modifier.padding(horizontal = 2.dp),
                                 text = views,
                                 color = Color.White,
-                                fontSize = textFontSize,
+                                style = MaterialTheme.typography.labelSmall,
                                 maxLines = 1,
                             )
                         }
@@ -420,7 +415,7 @@ fun SiteVideoCard(
                                 modifier = Modifier.padding(horizontal = 2.dp),
                                 text = duration,
                                 color = Color.White,
-                                fontSize = textFontSize,
+                                style = MaterialTheme.typography.labelSmall,
                                 maxLines = 1,
                             )
                         }
@@ -468,7 +463,7 @@ fun SiteVideoCard(
                     Spacer(modifier = Modifier.width(2.dp))
                     Text(
                         text = reviews,
-                        fontSize = 11.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -478,7 +473,7 @@ fun SiteVideoCard(
                 if (!uploadTime.isNullOrEmpty()) {
                     Text(
                         text = uploadTime,
-                        fontSize = 11.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,

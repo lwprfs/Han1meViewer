@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.FapFolder.ui.components
 
+import com.yenaly.han1meviewer.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -92,7 +94,7 @@ fun FapFolderUserRowCard(
                 }
                 if (user.isFollowed) {
                     Text(
-                        text = "Following",
+                        text = stringResource(R.string.fap_following),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary,
                     )
@@ -144,8 +146,8 @@ fun FapFolderGroupRowCard(
                             color = MaterialTheme.colorScheme.errorContainer,
                         ) {
                             Text(
-                                text = if (group.visibility == GroupVisibility.PRIVATE) "Private"
-                                else "Secret",
+                                text = if (group.visibility == GroupVisibility.PRIVATE) stringResource(R.string.fap_group_private)
+                                else stringResource(R.string.fap_group_secret),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onErrorContainer,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),

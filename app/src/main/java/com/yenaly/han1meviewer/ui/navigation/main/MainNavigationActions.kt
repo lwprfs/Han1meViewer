@@ -24,16 +24,21 @@ fun NavHostController.navigateDrawerDestination(
     }
 
     when (destination) {
-        MainDrawerDestination.Home -> navigateSafely(HomeRoute)
-        MainDrawerDestination.Settings -> navigateSafely(HomeSettingsRoute)
-        MainDrawerDestination.DailyCheckIn -> navigateSafely(DailyCheckInRoute)
-        MainDrawerDestination.WatchLater -> navigateSafely(MyWatchLaterRoute)
-        MainDrawerDestination.FavVideo -> navigateSafely(MyFavVideoRoute)
-        MainDrawerDestination.Playlist -> navigateSafely(MyPlaylistRoute)
-        MainDrawerDestination.Subscription -> navigateSafely(SubscriptionRoute)
-        MainDrawerDestination.CreatorCenter -> navigateSafely(CreatorCenterRoute)
-        MainDrawerDestination.WatchHistory -> navigateSafely(WatchHistoryRoute)
-        MainDrawerDestination.Download -> navigateSafely(DownloadRoute)
+        MainDrawerDestination.Home -> {
+
+            if (!popBackStack(HomeRoute, inclusive = false)) {
+                navigateSafely(HomeRoute) { launchSingleTop = true }
+            }
+        }
+        MainDrawerDestination.Settings -> navigateSafely(HomeSettingsRoute) { launchSingleTop = true }
+        MainDrawerDestination.DailyCheckIn -> navigateSafely(DailyCheckInRoute) { launchSingleTop = true }
+        MainDrawerDestination.WatchLater -> navigateSafely(MyWatchLaterRoute) { launchSingleTop = true }
+        MainDrawerDestination.FavVideo -> navigateSafely(MyFavVideoRoute) { launchSingleTop = true }
+        MainDrawerDestination.Playlist -> navigateSafely(MyPlaylistRoute) { launchSingleTop = true }
+        MainDrawerDestination.Subscription -> navigateSafely(SubscriptionRoute) { launchSingleTop = true }
+        MainDrawerDestination.CreatorCenter -> navigateSafely(CreatorCenterRoute) { launchSingleTop = true }
+        MainDrawerDestination.WatchHistory -> navigateSafely(WatchHistoryRoute) { launchSingleTop = true }
+        MainDrawerDestination.Download -> navigateSafely(DownloadRoute) { launchSingleTop = true }
     }
     return true
 }

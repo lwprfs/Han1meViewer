@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.SupJav.ui.video
 
+import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.R
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -108,7 +110,7 @@ class SupJavVideoViewModel : ViewModel() {
         val order = orderedIndices(detail)
         if (order.isEmpty()) {
             _streamState.value =
-                SupJavStreamState.Failed("No supported server available for this video")
+                SupJavStreamState.Failed(applicationContext.getString(R.string.supjav_err_no_server))
             return
         }
         resolveFrom(detail, if (SupJavSettings.autoFallback) order else order.take(1))
@@ -120,7 +122,7 @@ class SupJavVideoViewModel : ViewModel() {
         _selectedServer.value = index
         if (!isSupported(detail.servers[index])) {
             _streamState.value = SupJavStreamState.Failed(
-                "${detail.servers[index].name} is not supported yet, try another server"
+                applicationContext.getString(R.string.supjav_err_unsupported_server, detail.servers[index].name)
             )
             return
         }
@@ -167,7 +169,7 @@ class SupJavVideoViewModel : ViewModel() {
                 return@launch
             }
             _streamState.value =
-                SupJavStreamState.Failed("Could not get a playable link from the available servers")
+                SupJavStreamState.Failed(applicationContext.getString(R.string.supjav_err_no_link))
         }
     }
 

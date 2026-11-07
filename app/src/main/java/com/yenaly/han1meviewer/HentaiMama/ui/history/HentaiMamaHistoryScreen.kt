@@ -155,7 +155,7 @@ fun HentaiMamaHistoryScreen(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             SiteEmptyContent(
                                 hint = stringResource(R.string.watch_history_empty_title),
-                                subHint = "Videos you watch will show up here.",
+                                subHint = stringResource(R.string.hm_history_empty_hint),
                             )
                             TextButton(onClick = onBrowseHome) {
                                 Text(stringResource(R.string.hm_browse_home))
@@ -389,7 +389,7 @@ private fun HistoryCard(
                         .padding(horizontal = 6.dp, vertical = 2.dp),
                 ) {
                     Text(
-                        text = "EP ${item.lastEpisodeNumber.toInt().coerceAtLeast(1)}",
+                        text = stringResource(R.string.hm_episode_short, item.lastEpisodeNumber.toInt().coerceAtLeast(1)),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.inverseOnSurface,
                     )

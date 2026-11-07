@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.ui.component.content
 
+import com.yenaly.han1meviewer.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,7 +21,7 @@ import com.yenaly.han1meviewer.ui.preview.ComponentPreview
 @Composable
 fun LoadingContent(
     modifier: Modifier = Modifier,
-    message: String = "加载中...",
+    message: String = stringResource(R.string.loading),
 ) {
     Column(
         modifier = modifier

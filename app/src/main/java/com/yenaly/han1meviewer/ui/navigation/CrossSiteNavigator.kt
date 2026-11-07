@@ -80,15 +80,15 @@ object CrossSiteNavigator {
         if (tor.isTorExit) return Validation.Ok
         val message = when (tor.failure) {
             TorFailure.Timeout ->
-                "Tor check timed out. Make sure the Tor daemon is running, then retry."
+                applicationContext.getString(R.string.cross_tor_timeout)
 
             TorFailure.NetworkUnreachable ->
-                "Cannot reach the Tor check service. Connect to Tor before opening OnAir."
+                applicationContext.getString(R.string.cross_tor_unreachable)
 
             TorFailure.NonTorExit ->
-                "This device is not exiting through the Tor network. Enable Tor and try again."
+                applicationContext.getString(R.string.cross_tor_non_exit)
 
-            else -> tor.message.ifBlank { "Tor is required to access OnAir." }
+            else -> tor.message.ifBlank { applicationContext.getString(R.string.cross_tor_required) }
         }
         return Validation.Failed(title = applicationContext.getString(R.string.onair_tor_not_connected), message = message)
     }

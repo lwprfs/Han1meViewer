@@ -10,3 +10,7 @@ val VideoNormalCardMinWidth = 145.dp
 val VideoSimplifiedCardMinWidth = 95.dp
 
 val ArtistIconSize = 72.dp
+
+val SpacingXLarge = 24.dp
+val ScreenHorizontalPadding = 16.dp
+val CardCornerRadius = 16.dp

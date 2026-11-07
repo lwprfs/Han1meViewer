@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.SupJav.ui.search
 
+import com.yenaly.han1meviewer.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -103,7 +105,7 @@ fun SupJavSearchScreen(
                             .fillMaxWidth()
                             .focusRequester(focus),
                         singleLine = true,
-                        placeholder = { Text("Search SupJav") },
+                        placeholder = { Text(stringResource(R.string.supjav_search_hint)) },
                         trailingIcon = {
                             if (query.isNotEmpty()) {
                                 IconButton(onClick = { query = "" }) {
@@ -143,7 +145,7 @@ fun SupJavSearchScreen(
             }
             if (submitted.isBlank()) {
                 Text(
-                    text = "Type a title, code or actress name, or paste a SupJav link / id:12345",
+                    text = stringResource(R.string.supjav_search_prompt),
                     modifier = Modifier.padding(16.dp),
                 )
             } else if (crossActive && !(state.items.isEmpty() && state.isLoading)) {
@@ -168,7 +170,7 @@ fun SupJavSearchScreen(
                     onRetry = { viewModel.refresh() },
                     onLoadMore = { viewModel.loadMore() },
                     onOpenVideo = onNavigateToVideo,
-                    emptyHint = "No results",
+                    emptyHint = stringResource(R.string.supjav_no_results),
                 )
             }
         }

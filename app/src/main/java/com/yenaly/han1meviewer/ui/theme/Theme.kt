@@ -4,8 +4,6 @@ import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Shapes
-import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import com.yenaly.han1meviewer.Preferences
@@ -32,8 +30,8 @@ fun HanimeTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography(),
-        shapes = Shapes(),
+        typography = AppTypography,
+        shapes = AppShapes,
         content = content,
     )
 }

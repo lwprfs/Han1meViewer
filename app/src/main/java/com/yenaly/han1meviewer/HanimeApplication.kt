@@ -187,13 +187,13 @@ class HanimeApplication : YenalyApplication() {
         val hanimeDownloadChannel = NotificationChannelCompat.Builder(
             DOWNLOAD_NOTIFICATION_CHANNEL,
             NotificationManagerCompat.IMPORTANCE_HIGH,
-        ).setName("Hanime Download").build()
+        ).setName(getString(R.string.notification_channel_download)).build()
         nm.createNotificationChannel(hanimeDownloadChannel)
 
         val appUpdateChannel = NotificationChannelCompat.Builder(
             UPDATE_NOTIFICATION_CHANNEL,
             NotificationManagerCompat.IMPORTANCE_HIGH,
-        ).setName("App Update").build()
+        ).setName(getString(R.string.notification_channel_update)).build()
         nm.createNotificationChannel(appUpdateChannel)
     }
 

@@ -6,15 +6,14 @@ import coil3.ImageLoader
 import coil3.disk.DiskCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.crossfade
+import com.yenaly.han1meviewer.SupJav.cloudflare.SupJavCloudflareCookieManager
+import com.yenaly.han1meviewer.SupJav.cloudflare.SupJavCloudflareInterceptor
+import com.yenaly.han1meviewer.SupJav.data.remote.SupJavNetwork
 import com.yenaly.han1meviewer.USER_AGENT
-import com.yenaly.han1meviewer.logic.network.HDns
-import com.yenaly.han1meviewer.logic.network.HProxySelector
 import okhttp3.Call
 import okhttp3.CookieJar
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
-import okhttp3.Response
-import java.io.IOException
 import okio.Path.Companion.toOkioPath
 import java.util.concurrent.TimeUnit
 
@@ -30,61 +29,31 @@ object SupJavImageLoader {
         host == "javchu.com" || host.endsWith(".javchu.com")
 
     private val supJavInterceptor = Interceptor { chain ->
-        val original = chain.request()
-        val request = original.newBuilder()
+        val builder = chain.request().newBuilder()
             .header("Referer", "${SupJavConstants.BASE_URL}/")
             .header("User-Agent", USER_AGENT)
-            .header("Accept", "image/avif,image/webp,image/apng,image/jpeg,image/png,*/*;q=0.8")
-            .removeHeader("Cookie")
-            .build()
-        var response = try {
-            chain.proceed(request)
-        } catch (e: IOException) {
-
-            val plain = plainUrl(request.url.toString()) ?: throw e
-            Log.w(TAG, "IO error for ${request.url}, retrying $plain: ${e.message}")
-            chain.proceed(request.newBuilder().url(plain).build())
+            .header("Accept", "image/webp,image/apng,image/jpeg,image/png,*/*;q=0.8")
+        val clearance = SupJavConstants.HOSTNAME.firstNotNullOfOrNull {
+            SupJavCloudflareCookieManager.getCloudflareCookie(it)
         }
+        if (clearance != null) builder.header("Cookie", "cf_clearance=$clearance")
+        val request = builder.build()
+        val response = chain.proceed(request)
         if (!response.isSuccessful) {
-            Log.w(TAG, "HTTP ${response.code} for ${request.url}")
-            val plain = plainUrl(request.url.toString())
-            if (plain != null) {
-                response.close()
-                response = chain.proceed(request.newBuilder().url(plain).build())
-                if (!response.isSuccessful) Log.w(TAG, "HTTP ${response.code} for $plain")
-            }
+            Log.w(TAG, "HTTP ${response.code} for ${request.url} (clearance cookie sent: ${clearance != null})")
         }
-        normalizeContentType(response)
-    }
-
-    private fun plainUrl(url: String): String? {
-        val idx = url.indexOf('!')
-        return if (idx > 0) url.substring(0, idx) else null
-    }
-
-    private fun normalizeContentType(response: Response): Response {
-        val type = response.header("Content-Type")?.substringBefore(';')?.trim()?.lowercase()
-        val fixed = when {
-            type == "image/jpg" -> "image/jpeg"
-            type == null || type == "application/octet-stream" -> "image/jpeg"
-            else -> return response
-        }
-        if (!response.isSuccessful) return response
-        return response.newBuilder().header("Content-Type", fixed).build()
+        response
     }
 
     private val supJavClient: OkHttpClient by lazy {
-        OkHttpClient.Builder()
+        val builder = SupJavNetwork.sharedOkHttpClient.newBuilder()
             .connectTimeout(20, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(20, TimeUnit.SECONDS)
-            .followRedirects(true)
-            .followSslRedirects(true)
+
             .cookieJar(CookieJar.NO_COOKIES)
-            .dns(HDns())
-            .proxySelector(HProxySelector())
-            .addInterceptor(supJavInterceptor)
-            .build()
+
+        builder.interceptors().removeAll { it is SupJavCloudflareInterceptor }
+        builder.addInterceptor(supJavInterceptor).build()
     }
 
     private val otherClient: OkHttpClient by lazy {

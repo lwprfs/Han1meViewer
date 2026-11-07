@@ -72,7 +72,7 @@ fun FapFolderSearchHistoryScreen(
     Scaffold(
         topBar = {
             SiteTopAppBar(
-                title = { Text("Search History") },
+                title = { Text(stringResource(R.string.fap_search_history_title)) },
                 navigationIcon = { SiteBackButton(onClick = onBack) },
                 actions = {
                     if (entries.isNotEmpty()) {

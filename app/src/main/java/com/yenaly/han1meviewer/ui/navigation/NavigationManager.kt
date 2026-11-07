@@ -135,33 +135,33 @@ object NavigationManager {
                 if (isAtHome(site)) return
                 when (site) {
                     SiteType.HANIME, SiteType.JAVCHU -> {
-                        navController.popBackStack(0, false)
-                        navController.navigate(HomeRoute)
+                        navController.popToRootSafely()
+                        if (!isAtHome(site)) navController.navigate(HomeRoute) { launchSingleTop = true }
                     }
                     SiteType.MISSAV -> {
-                        navController.popBackStack(0, false)
-                        navController.navigate(MissAvHomeRoute)
+                        navController.popToRootSafely()
+                        if (!isAtHome(site)) navController.navigate(MissAvHomeRoute) { launchSingleTop = true }
                     }
                     SiteType.HENTAIMAMA -> {
-                        navController.popBackStack(0, false)
-                        navController.navigate(HentaiMamaHomeRoute)
+                        navController.popToRootSafely()
+                        if (!isAtHome(site)) navController.navigate(HentaiMamaHomeRoute) { launchSingleTop = true }
                     }
                     SiteType.ONAIR -> {
-                        navController.popBackStack(0, false)
-                        navController.navigate(OnAirHomeRoute)
+                        navController.popToRootSafely()
+                        if (!isAtHome(site)) navController.navigate(OnAirHomeRoute) { launchSingleTop = true }
                     }
                     SiteType.FAPFOLDER -> {
-                        navController.popBackStack(0, false)
-                        navController.navigate(FapFolderHomeRoute)
+                        navController.popToRootSafely()
+                        if (!isAtHome(site)) navController.navigate(FapFolderHomeRoute) { launchSingleTop = true }
                     }
                     SiteType.SUPJAV -> {
-                        navController.popBackStack(0, false)
-                        navController.navigate(SupJavHomeRoute)
+                        navController.popToRootSafely()
+                        if (!isAtHome(site)) navController.navigate(SupJavHomeRoute) { launchSingleTop = true }
                     }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "navigateToHome failed: ${e.message}")
-                navController.popBackStack(0, false)
+                navController.popToRootSafely()
             }
         }
     }
@@ -171,7 +171,7 @@ object NavigationManager {
     }
 
     fun clearBackStack() {
-        currentNavController?.popBackStack(0, false)
+        currentNavController?.popToRootSafely()
     }
 
     fun switchSite(newSiteType: SiteType, thenOpen: PendingVideoOpen? = null) {
@@ -179,7 +179,7 @@ object NavigationManager {
         currentSiteType = newSiteType
         Preferences.siteType = newSiteType
         pendingToken++
-        currentNavController?.popBackStack(0, false)
+        currentNavController?.popToRootSafely()
         mainHandler.postDelayed({
             navigateToHome()
             if (thenOpen != null) schedulePendingOpen(thenOpen)

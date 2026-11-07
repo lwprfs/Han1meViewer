@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.SupJav.ui.navigation
 
+import com.yenaly.han1meviewer.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
@@ -97,15 +99,15 @@ fun SupJavNavHost(
                 siteEntries = listOf(
                     SiteSettingsEntry(
                         key = "playback",
-                        title = "Playback & servers",
-                        subtitle = "Preferred quality, server order and language",
+                        title = stringResource(R.string.supjav_settings_playback_title),
+                        subtitle = stringResource(R.string.supjav_settings_playback_summary),
                         icon = Icons.Default.HighQuality,
                         onClick = { navController.navigateSafely(SupJavSettingsRoute) },
                     ),
                     SiteSettingsEntry(
                         key = "history",
-                        title = "Watch history",
-                        subtitle = "Videos you watched on SupJav",
+                        title = stringResource(R.string.supjav_history_title),
+                        subtitle = stringResource(R.string.supjav_history_summary),
                         icon = Icons.Default.History,
                         onClick = { navController.navigateSafely(SupJavHistoryRoute) },
                     ),

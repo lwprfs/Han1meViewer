@@ -120,7 +120,7 @@ fun HentaiMamaRecentEpisodesScreen(
                 title = {
                     Column {
                         Text(
-                            text = "Recent Episodes",
+                            text = stringResource(R.string.drawer_recent_episodes),
                             style = MaterialTheme.typography.titleLarge,
                             maxLines = 1,
                         )
@@ -302,7 +302,7 @@ private fun RecentEpisodeCard(
                         shape = RoundedCornerShape(4.dp),
                     ) {
                         Text(
-                            text = "EP ${episode.episodeNumber}",
+                            text = stringResource(R.string.hm_episode_short, episode.episodeNumber),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.inverseOnSurface,

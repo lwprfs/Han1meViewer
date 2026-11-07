@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.ui.screen.home.dailycheckin
 
+import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.viewmodel.MonthlyStats
 
 internal const val STATS_TYPE_DISPLAY_COUNT = 6
@@ -122,7 +124,7 @@ fun buildExtraAchievementRules(
             check = { it.uniqueDishes >= 3 },
             emoji = "\uD83C\uDF7D\uFE0F",
             label = lb("dishVariety"),
-            value = "${stats.uniqueDishes}种",
+            value = applicationContext.getString(R.string.checkin_value_kinds, stats.uniqueDishes),
         )
     )
 
@@ -131,7 +133,7 @@ fun buildExtraAchievementRules(
             check = { it.topDishCount >= 3 },
             emoji = "\uD83C\uDFAF",
             label = stats.topDish,
-            value = "${lb("topDish")}·${stats.topDishCount}次",
+            value = applicationContext.getString(R.string.checkin_value_top_dish, lb("topDish"), stats.topDishCount),
             videoCode = stats.topDishVideoCode,
         )
     )
@@ -141,7 +143,7 @@ fun buildExtraAchievementRules(
             check = { it.maxDailyTypes >= 3 },
             emoji = "\uD83C\uDF08",
             label = lb("multiType"),
-            value = "${stats.maxDailyTypes}种",
+            value = applicationContext.getString(R.string.checkin_value_kinds, stats.maxDailyTypes),
         )
     )
 
@@ -150,7 +152,7 @@ fun buildExtraAchievementRules(
             check = { it.dominantPeriod == "22~02" },
             emoji = "\uD83E\uDD71",
             label = lb("nightOwl"),
-            value = "22~02時",
+            value = applicationContext.getString(R.string.checkin_value_hours, "22~02"),
         )
     )
 
@@ -159,7 +161,7 @@ fun buildExtraAchievementRules(
             check = { it.dominantPeriod == "05~10" },
             emoji = "\uD83C\uDF05",
             label = lb("morning"),
-            value = "05~10時",
+            value = applicationContext.getString(R.string.checkin_value_hours, "05~10"),
         )
     )
 

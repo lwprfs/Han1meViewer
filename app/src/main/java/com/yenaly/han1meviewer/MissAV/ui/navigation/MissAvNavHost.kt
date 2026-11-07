@@ -146,8 +146,8 @@ fun MissAvNavHost(
                     ),
                     SiteSettingsEntry(
                         key = "video_subtitle",
-                        title = "Video Subtitle",
-                        subtitle = "Choose the subtitle source and language",
+                        title = stringResource(R.string.missav_subtitle_title),
+                        subtitle = stringResource(R.string.missav_subtitle_entry_summary),
                         icon = Icons.Default.Subtitles,
                         onClick = { navController.navigateSafely(MissAvSubtitleSettingsRoute) },
                     ),

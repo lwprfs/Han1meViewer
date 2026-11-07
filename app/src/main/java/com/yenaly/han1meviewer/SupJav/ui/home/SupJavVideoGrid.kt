@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.SupJav.ui.home
 
+import com.yenaly.han1meviewer.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -38,7 +40,7 @@ fun SupJavVideoGrid(
     onLoadMore: () -> Unit,
     onOpenVideo: (String) -> Unit,
     modifier: Modifier = Modifier,
-    emptyHint: String = "Nothing here",
+    emptyHint: String = stringResource(R.string.supjav_nothing_here),
     gridState: LazyGridState = rememberLazyGridState(),
 ) {
     val imageLoader = SupJavImageLoader.get(LocalContext.current)

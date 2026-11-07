@@ -73,7 +73,7 @@ fun SupJavHistoryScreen(
         },
     ) { padding ->
         if (items.isEmpty()) {
-            Box(Modifier.padding(padding)) { SiteEmptyContent(hint = "No watch history yet") }
+            Box(Modifier.padding(padding)) { SiteEmptyContent(hint = stringResource(R.string.supjav_no_history)) }
         } else {
             LazyColumn(
                 modifier = Modifier

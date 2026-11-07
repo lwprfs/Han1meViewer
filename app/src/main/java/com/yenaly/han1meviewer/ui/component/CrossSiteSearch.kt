@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.ui.component
 
+import com.yenaly.han1meviewer.R
+import androidx.compose.ui.res.stringResource
 import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -110,7 +112,7 @@ object CrossSiteSearch {
         return try {
             when (target) {
                 SiteType.SUPJAV -> withTimeoutOrNull(SUPJAV_TIMEOUT_MS) { searchSupJav(code) }
-                    ?: CrossSiteState.Error("SupJav took too long to answer")
+                    ?: CrossSiteState.Error(context.getString(R.string.cross_supjav_timeout))
 
                 SiteType.MISSAV -> searchMissAv(context, code)
                 else -> CrossSiteState.Done(emptyList())
@@ -118,7 +120,7 @@ object CrossSiteSearch {
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {
-            CrossSiteState.Error(e.message ?: "Search failed")
+            CrossSiteState.Error(e.message ?: context.getString(R.string.cross_search_failed))
         }
     }
 
@@ -233,7 +235,7 @@ fun CrossSiteToggle(
         FilterChip(
             selected = enabled,
             onClick = { onToggle(!enabled) },
-            label = { Text("Also search $label") },
+            label = { Text(stringResource(R.string.ui_cross_search_also, label)) },
             leadingIcon = {
                 when {
                     enabled && state is CrossSiteState.Loading -> CircularProgressIndicator(
@@ -247,8 +249,8 @@ fun CrossSiteToggle(
             },
         )
         Text(
-            text = if (enabled) "Tap a $label result to open it there"
-            else "Off. Search $label by this code too",
+            text = if (enabled) stringResource(R.string.cross_tap_result, label)
+            else stringResource(R.string.cross_off_hint, label),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -331,7 +333,7 @@ fun CrossSiteResultsGrid(
                     ) {
                         CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                         Text(
-                            text = "Searching ${CrossSiteNavigator.siteLabel(otherSite)}...",
+                            text = stringResource(R.string.ui_cross_search_searching, CrossSiteNavigator.siteLabel(otherSite)),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -349,7 +351,7 @@ fun CrossSiteResultsGrid(
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.weight(1f),
                     )
-                    TextButton(onClick = onRetryOther) { Text("Retry") }
+                    TextButton(onClick = onRetryOther) { Text(stringResource(R.string.retry)) }
                 }
             }
 
@@ -357,7 +359,7 @@ fun CrossSiteResultsGrid(
                 if (otherState.hits.isEmpty()) {
                     item(key = "other_empty", span = { GridItemSpan(maxLineSpan) }) {
                         Text(
-                            text = "No match on ${CrossSiteNavigator.siteLabel(otherSite)}",
+                            text = stringResource(R.string.ui_cross_search_no_match, CrossSiteNavigator.siteLabel(otherSite)),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

@@ -101,7 +101,7 @@ val DefaultSiteSwitchOptions: List<SiteSwitchOption> = listOf(
     ),
     SiteSwitchOption(
         name = "SupJav",
-        description = "JAV streaming with multiple servers",
+        description = applicationContext.getString(R.string.site_supjav_description),
         siteType = SiteType.SUPJAV,
         logoRes = R.drawable.s_switch_supjav,
         accentColor = Color(0xFF5E35B1),
