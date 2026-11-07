@@ -35,19 +35,23 @@ import androidx.compose.ui.unit.dp
 import coil3.ImageLoader
 import com.yenaly.han1meviewer.MissAV.cloudflare.CloudflareChallengeException
 import com.yenaly.han1meviewer.MissAV.cloudflare.MissAvCloudflareSolver
-import com.yenaly.han1meviewer.MissAV.data.remote.MissAvNetworkRepo
 import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.SupJav.common.SupJavImageLoader
 import com.yenaly.han1meviewer.SupJav.data.remote.SupJavRepo
 import com.yenaly.han1meviewer.logic.exception.CloudFlareBlockedException
-import com.yenaly.han1meviewer.logic.model.HanimeInfo
-import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.ui.navigation.CrossSiteNavigator
 import com.yenaly.han1meviewer.ui.navigation.PendingVideoOpen
+import com.yenaly.han1meviewer.MissAV.data.remote.MissAvNetwork
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withTimeoutOrNull
+import org.jsoup.Jsoup
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.first
 
+/** One search result that remembers which site it came from. */
 data class CrossSiteHit(
     val site: SiteType,
     val title: String,
@@ -65,12 +69,18 @@ sealed interface CrossSiteState {
     data class Error(val message: String) : CrossSiteState
 }
 
+/**
+ * Searching MissAV and SupJav at the same time by JAV code. The feature is only offered between
+ * those two sites; callers keep the on/off state locally so it is off by default and off again
+ * as soon as the search screen is left.
+ */
 object CrossSiteSearch {
 
     private val CODE_REGEX = Regex("""^\s*(\d{0,3}[A-Za-z]{2,7})[-_ ]?(\d{2,5})\s*$""")
 
     fun looksLikeJavCode(query: String): Boolean = CODE_REGEX.matches(query)
 
+    /** `fsdss585` / `FSDSS 585` -> `FSDSS-585`; null when [query] is not a JAV code. */
     fun normalize(query: String): String? {
         val m = CODE_REGEX.find(query) ?: return null
         return "${m.groupValues[1].uppercase()}-${m.groupValues[2]}"
@@ -99,12 +109,29 @@ object CrossSiteSearch {
         return false
     }
 
+    private const val SUPJAV_TIMEOUT_MS = 150_000L // includes time to solve Cloudflare by hand
+    private const val MISSAV_PROBE_TIMEOUT_MS = 15_000L
+
+    /**
+     * Searches [target] for the JAV code in [rawQuery]. Never loads forever: every request has a
+     * timeout and ends in [CrossSiteState.Done] or [CrossSiteState.Error] (with a retry in the UI).
+     * Cloudflare is solved on the way: SupJav's client opens its verification screen by itself,
+     * MissAV's is opened here and the lookup is retried once afterwards.
+     */
     suspend fun search(context: Context, target: SiteType, rawQuery: String): CrossSiteState {
         val code = normalize(rawQuery) ?: return CrossSiteState.Done(emptyList())
-        return when (target) {
-            SiteType.SUPJAV -> searchSupJav(code)
-            SiteType.MISSAV -> searchMissAv(context, code)
-            else -> CrossSiteState.Done(emptyList())
+        return try {
+            when (target) {
+                SiteType.SUPJAV -> withTimeoutOrNull(SUPJAV_TIMEOUT_MS) { searchSupJav(code) }
+                    ?: CrossSiteState.Error("SupJav took too long to answer")
+
+                SiteType.MISSAV -> searchMissAv(context, code)
+                else -> CrossSiteState.Done(emptyList())
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            CrossSiteState.Error(e.message ?: "Search failed")
         }
     }
 
@@ -122,32 +149,93 @@ object CrossSiteSearch {
             onFailure = { CrossSiteState.Error(it.message ?: "SupJav is not reachable") },
         )
 
+    // ----------------------------------------------------------------------------- MissAV
+
+    private sealed interface Probe {
+        data class Found(val hit: CrossSiteHit) : Probe
+        data object NotFound : Probe
+        data object Cloudflare : Probe
+        data class Failed(val message: String) : Probe
+    }
+
+    /**
+     * MissAV's own search goes through a slow recommendation API (30 s timeouts, 3 retries), which
+     * is what made the cross search seem to load forever. A JAV code maps straight onto the video
+     * page URL (`/en/fsdss-585`, plus the uncensored / subtitled variants), so those few pages are
+     * requested directly, in parallel and with a short timeout.
+     */
     private suspend fun searchMissAv(context: Context, code: String): CrossSiteState {
-        suspend fun attempt(): PageLoadingState<List<HanimeInfo>> =
-            MissAvNetworkRepo.searchVideos(code.lowercase(), 1)
-                .first { it !is PageLoadingState.Loading }
+        MissAvNetwork.init(context)
+        val slug = code.lowercase()
+        val variants = listOf("", "-uncensored-leak", "-chinese-subtitle", "-english-subtitle")
 
-        var result = attempt()
-        if (result is PageLoadingState.Error && isCloudflare(result.throwable)) {
-            if (MissAvCloudflareSolver.solve(context)) result = attempt()
+        suspend fun probeAll(): List<Probe> = coroutineScope {
+            variants.map { suffix -> async(Dispatchers.IO) { probeMissAv(code, slug + suffix) } }
+                .awaitAll()
         }
-        return when (val r = result) {
-            is PageLoadingState.Success -> CrossSiteState.Done(
-                r.info.filter { matches(code, it.videoCode, it.title) }.map {
-                    CrossSiteHit(SiteType.MISSAV, it.title, it.coverUrl, it.videoCode, "/en/${it.videoCode}")
-                }
-            )
 
-            is PageLoadingState.Error -> CrossSiteState.Error(
-                if (isCloudflare(r.throwable)) "MissAV needs Cloudflare verification"
-                else r.throwable.message ?: "MissAV is not reachable"
-            )
+        var probes = probeAll()
+        if (probes.any { it is Probe.Cloudflare } && probes.none { it is Probe.Found }) {
+            if (MissAvCloudflareSolver.solve(context)) probes = probeAll()
+        }
+        val hits = probes.filterIsInstance<Probe.Found>().map { it.hit }
+        return when {
+            hits.isNotEmpty() -> CrossSiteState.Done(hits)
+            probes.any { it is Probe.Cloudflare } ->
+                CrossSiteState.Error("MissAV needs Cloudflare verification")
+
+            probes.all { it is Probe.Failed } ->
+                CrossSiteState.Error((probes.first() as Probe.Failed).message)
 
             else -> CrossSiteState.Done(emptyList())
         }
     }
+
+    private suspend fun probeMissAv(code: String, slug: String): Probe {
+        return try {
+            withTimeoutOrNull(MISSAV_PROBE_TIMEOUT_MS) {
+                val response = MissAvNetwork.missAvService.getVideoDetail("/en/$slug")
+                when {
+                    response.isSuccessful -> {
+                        val doc = Jsoup.parse(response.body()?.string().orEmpty())
+                        val title = doc.selectFirst("meta[property=og:title]")?.attr("content")
+                            ?.takeIf { it.isNotBlank() }
+                            ?: doc.title()
+                        if (!matches(code, title)) return@withTimeoutOrNull Probe.NotFound
+                        val cover = doc.selectFirst("meta[property=og:image]")?.attr("content")
+                            ?.takeIf { it.isNotBlank() }
+                            ?: "https://fourhoi.com/$slug/cover-t.jpg"
+                        Probe.Found(
+                            CrossSiteHit(
+                                SiteType.MISSAV,
+                                title.substringBefore(" - ").ifBlank { code },
+                                cover,
+                                slug,
+                                "/en/$slug",
+                            )
+                        )
+                    }
+
+                    response.code() == 404 -> Probe.NotFound
+                    response.code() == 403 || response.code() == 503 -> {
+                        val body = response.errorBody()?.string().orEmpty()
+                        if (body.contains("Just a moment") || body.contains("Cloudflare") ||
+                            body.contains("cf_")
+                        ) Probe.Cloudflare else Probe.Failed("HTTP ${response.code()}")
+                    }
+
+                    else -> Probe.Failed("HTTP ${response.code()}")
+                }
+            } ?: Probe.Failed("MissAV took too long to answer")
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            if (isCloudflare(e)) Probe.Cloudflare else Probe.Failed(e.message ?: "MissAV is not reachable")
+        }
+    }
 }
 
+/** The on/off trigger shown in the search screens when the query looks like a JAV code. */
 @Composable
 fun CrossSiteToggle(
     otherSite: SiteType,
@@ -195,6 +283,10 @@ private fun imageLoaderFor(context: Context, site: SiteType): ImageLoader? =
 private fun aspectFor(site: SiteType): Float =
     if (site == SiteType.SUPJAV) 320f / 216f else 16f / 9f
 
+/**
+ * Results of both sites in one grid: a header per site and the site name on top of every
+ * thumbnail. Tapping a card of the other site opens that site's video page directly.
+ */
 @Composable
 fun CrossSiteResultsGrid(
     ownSite: SiteType,
@@ -257,7 +349,20 @@ fun CrossSiteResultsGrid(
         }
         when (otherState) {
             is CrossSiteState.Loading, CrossSiteState.Idle ->
-                item(key = "other_loading", span = { GridItemSpan(maxLineSpan) }) { CenteredSpinner() }
+                item(key = "other_loading", span = { GridItemSpan(maxLineSpan) }) {
+                    Row(
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        Text(
+                            text = "Searching ${CrossSiteNavigator.siteLabel(otherSite)}...",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
 
             is CrossSiteState.Error -> item(key = "other_error", span = { GridItemSpan(maxLineSpan) }) {
                 Row(
