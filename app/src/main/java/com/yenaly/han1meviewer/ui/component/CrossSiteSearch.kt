@@ -51,7 +51,6 @@ import org.jsoup.Jsoup
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 
-/** One search result that remembers which site it came from. */
 data class CrossSiteHit(
     val site: SiteType,
     val title: String,
@@ -69,18 +68,12 @@ sealed interface CrossSiteState {
     data class Error(val message: String) : CrossSiteState
 }
 
-/**
- * Searching MissAV and SupJav at the same time by JAV code. The feature is only offered between
- * those two sites; callers keep the on/off state locally so it is off by default and off again
- * as soon as the search screen is left.
- */
 object CrossSiteSearch {
 
     private val CODE_REGEX = Regex("""^\s*(\d{0,3}[A-Za-z]{2,7})[-_ ]?(\d{2,5})\s*$""")
 
     fun looksLikeJavCode(query: String): Boolean = CODE_REGEX.matches(query)
 
-    /** `fsdss585` / `FSDSS 585` -> `FSDSS-585`; null when [query] is not a JAV code. */
     fun normalize(query: String): String? {
         val m = CODE_REGEX.find(query) ?: return null
         return "${m.groupValues[1].uppercase()}-${m.groupValues[2]}"
@@ -109,15 +102,9 @@ object CrossSiteSearch {
         return false
     }
 
-    private const val SUPJAV_TIMEOUT_MS = 150_000L // includes time to solve Cloudflare by hand
+    private const val SUPJAV_TIMEOUT_MS = 150_000L
     private const val MISSAV_PROBE_TIMEOUT_MS = 15_000L
 
-    /**
-     * Searches [target] for the JAV code in [rawQuery]. Never loads forever: every request has a
-     * timeout and ends in [CrossSiteState.Done] or [CrossSiteState.Error] (with a retry in the UI).
-     * Cloudflare is solved on the way: SupJav's client opens its verification screen by itself,
-     * MissAV's is opened here and the lookup is retried once afterwards.
-     */
     suspend fun search(context: Context, target: SiteType, rawQuery: String): CrossSiteState {
         val code = normalize(rawQuery) ?: return CrossSiteState.Done(emptyList())
         return try {
@@ -149,8 +136,6 @@ object CrossSiteSearch {
             onFailure = { CrossSiteState.Error(it.message ?: "SupJav is not reachable") },
         )
 
-    // ----------------------------------------------------------------------------- MissAV
-
     private sealed interface Probe {
         data class Found(val hit: CrossSiteHit) : Probe
         data object NotFound : Probe
@@ -158,12 +143,6 @@ object CrossSiteSearch {
         data class Failed(val message: String) : Probe
     }
 
-    /**
-     * MissAV's own search goes through a slow recommendation API (30 s timeouts, 3 retries), which
-     * is what made the cross search seem to load forever. A JAV code maps straight onto the video
-     * page URL (`/en/fsdss-585`, plus the uncensored / subtitled variants), so those few pages are
-     * requested directly, in parallel and with a short timeout.
-     */
     private suspend fun searchMissAv(context: Context, code: String): CrossSiteState {
         MissAvNetwork.init(context)
         val slug = code.lowercase()
@@ -235,7 +214,6 @@ object CrossSiteSearch {
     }
 }
 
-/** The on/off trigger shown in the search screens when the query looks like a JAV code. */
 @Composable
 fun CrossSiteToggle(
     otherSite: SiteType,
@@ -283,10 +261,6 @@ private fun imageLoaderFor(context: Context, site: SiteType): ImageLoader? =
 private fun aspectFor(site: SiteType): Float =
     if (site == SiteType.SUPJAV) 320f / 216f else 16f / 9f
 
-/**
- * Results of both sites in one grid: a header per site and the site name on top of every
- * thumbnail. Tapping a card of the other site opens that site's video page directly.
- */
 @Composable
 fun CrossSiteResultsGrid(
     ownSite: SiteType,

@@ -31,6 +31,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.AspectRatio
+import androidx.compose.material.icons.outlined.FastForward
+import androidx.compose.material.icons.outlined.FastRewind
 import androidx.compose.material.icons.outlined.Fullscreen
 import androidx.compose.material.icons.outlined.FullscreenExit
 import androidx.compose.material.icons.outlined.Lock
@@ -48,6 +50,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -63,6 +66,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -139,9 +143,17 @@ fun SitePlayerOverlay(
     val seekToNow by rememberUpdatedState(onSeekTo)
     val seekByNow by rememberUpdatedState(onSeekBy)
     val tempSpeedNow by rememberUpdatedState(onTemporarySpeed)
+    val playPauseNow by rememberUpdatedState(onPlayPause)
 
-    LaunchedEffect(controlsVisible, isPlaying, scrubbing, menuOpen, locked, config.controlsHideMs) {
-        if (controlsVisible && isPlaying && !scrubbing && !menuOpen) {
+    val view = LocalView.current
+    DisposableEffect(config.keepScreenOn, isPlaying) {
+        val keepOn = config.keepScreenOn && isPlaying
+        if (keepOn) view.keepScreenOn = true
+        onDispose { if (keepOn) view.keepScreenOn = false }
+    }
+
+    LaunchedEffect(controlsVisible, isPlaying, scrubbing, menuOpen, locked, config.controlsHideMs, config.autoHideControls) {
+        if (config.autoHideControls && controlsVisible && isPlaying && !scrubbing && !menuOpen) {
             delay(config.controlsHideMs)
             controlsVisible = false
         }
@@ -176,25 +188,43 @@ fun SitePlayerOverlay(
         Box(
             modifier = Modifier
                 .matchParentSize()
-                .pointerInput(locked, config.doubleTapSeekMs, config.longPressSpeed) {
+                .pointerInput(
+                    locked, config.doubleTapSeekMs, config.longPressSpeed, config.doubleTapEnabled,
+                    config.doubleTapCenterPause, config.longPressEnabled,
+                ) {
                     detectTapGestures(
                         onTap = { controlsVisible = !controlsVisible },
-                        onDoubleTap = { offset ->
-                            if (!locked) {
-                                val back = offset.x < size.width / 2f
-                                seekByNow(if (back) -config.doubleTapSeekMs else config.doubleTapSeekMs)
-                                showIndicator(
-                                    GestureIndicatorType.Progress,
-                                    if (durationNow > 0) positionNow.toFloat() / durationNow else 0f,
-                                    (if (back) "-" else "+") + (config.doubleTapSeekMs / 1000) + "s",
-                                )
+                        onDoubleTap = if (config.doubleTapEnabled) {
+                            { offset ->
+                                if (!locked) {
+                                    val third = size.width / 3f
+                                    if (config.doubleTapCenterPause &&
+                                        offset.x in third..(third * 2f)
+                                    ) {
+                                        playPauseNow()
+                                    } else {
+                                        val back = offset.x < size.width / 2f
+                                        seekByNow(if (back) -config.doubleTapSeekMs else config.doubleTapSeekMs)
+                                        showIndicator(
+                                            GestureIndicatorType.Progress,
+                                            if (durationNow > 0) positionNow.toFloat() / durationNow else 0f,
+                                            (if (back) "-" else "+") + (config.doubleTapSeekMs / 1000) + "s",
+                                        )
+                                    }
+                                }
                             }
+                        } else {
+                            null
                         },
-                        onLongPress = {
-                            if (!locked && isPlayingNow) {
-                                boosted = true
-                                tempSpeedNow(config.longPressSpeed)
+                        onLongPress = if (config.longPressEnabled) {
+                            {
+                                if (!locked && isPlayingNow) {
+                                    boosted = true
+                                    tempSpeedNow(config.longPressSpeed)
+                                }
                             }
+                        } else {
+                            null
                         },
                         onPress = {
                             tryAwaitRelease()
@@ -205,7 +235,10 @@ fun SitePlayerOverlay(
                         },
                     )
                 }
-                .pointerInput(locked, config.gesturesEnabled, config.slideSensitivity) {
+                .pointerInput(
+                    locked, config.gesturesEnabled, config.slideSensitivity, config.gestureSeek,
+                    config.gestureBrightness, config.gestureVolume,
+                ) {
                     if (locked || !config.gesturesEnabled) return@pointerInput
                     val factor = 0.5f + config.slideSensitivity * 0.15f
                     val audio = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
@@ -231,7 +264,7 @@ fun SitePlayerOverlay(
                             mode = if (offset.x < size.width / 2f) -2 else -3
                         },
                         onDragEnd = {
-                            if (mode == 1 && durationNow > 0) seekToNow(target)
+                            if (mode == 1 && config.gestureSeek && durationNow > 0) seekToNow(target)
                             mode = 0
                         },
                         onDragCancel = { mode = 0 },
@@ -248,7 +281,7 @@ fun SitePlayerOverlay(
                                 }
                             }
                             when (mode) {
-                                1 -> if (durationNow > 0) {
+                                1 -> if (config.gestureSeek && durationNow > 0) {
                                     val range = 30_000L + config.slideSensitivity * 15_000L
                                     target = (startPos + (dx / size.width * range).toLong())
                                         .coerceIn(0L, durationNow)
@@ -259,7 +292,7 @@ fun SitePlayerOverlay(
                                     )
                                 }
 
-                                2 -> {
+                                2 -> if (config.gestureBrightness) {
                                     val value = (startBrightness - dy / size.height * factor)
                                         .coerceIn(0.02f, 1f)
                                     activity?.window?.let { w ->
@@ -273,7 +306,7 @@ fun SitePlayerOverlay(
                                     )
                                 }
 
-                                3 -> if (audio != null) {
+                                3 -> if (audio != null && config.gestureVolume) {
                                     val max = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
                                         .coerceAtLeast(1)
                                     val value = (startVolume.toFloat() / max - dy / size.height * factor)
@@ -335,6 +368,7 @@ fun SitePlayerOverlay(
                     .then(if (isFullscreen) Modifier.statusBarsPadding() else Modifier)
                     .padding(horizontal = 12.dp, vertical = 6.dp),
                 corner = 20.dp,
+                alpha = config.controlsOpacity,
             ) {
                 Row(
                     modifier = Modifier
@@ -352,17 +386,21 @@ fun SitePlayerOverlay(
                         )
                     }
                     Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = title,
-                        color = Color.White.copy(alpha = 0.95f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.titleSmall,
-                        modifier = Modifier.weight(1f),
-                    )
+                    if (config.showTitle) {
+                        Text(
+                            text = title,
+                            color = Color.White.copy(alpha = 0.95f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.titleSmall,
+                            modifier = Modifier.weight(1f),
+                        )
+                    } else {
+                        Spacer(Modifier.weight(1f))
+                    }
                     Spacer(Modifier.width(8.dp))
                     extraActions()
-                    Box {
+                    if (config.showSpeedButton) Box {
                         var open by remember { mutableStateOf(false) }
                         ChipText(formatSpeedLabel(speed)) {
                             open = true
@@ -387,7 +425,7 @@ fun SitePlayerOverlay(
                             }
                         }
                     }
-                    if (clock.isNotBlank()) {
+                    if (config.showClock && clock.isNotBlank()) {
                         Spacer(Modifier.width(8.dp))
                         Text(
                             text = clock,
@@ -395,6 +433,39 @@ fun SitePlayerOverlay(
                             style = MaterialTheme.typography.labelSmall,
                         )
                     }
+                }
+            }
+        }
+
+        if (config.showSkipButtons && controlsVisible && !locked) {
+            Row(
+                modifier = Modifier.align(Alignment.Center),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(104.dp),
+            ) {
+                IconButton(
+                    onClick = { seekByNow(-config.doubleTapSeekMs) },
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(Color.Black.copy(alpha = 0.40f), CircleShape),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.FastRewind,
+                        contentDescription = null,
+                        tint = Color.White,
+                    )
+                }
+                IconButton(
+                    onClick = { seekByNow(config.doubleTapSeekMs) },
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(Color.Black.copy(alpha = 0.40f), CircleShape),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.FastForward,
+                        contentDescription = null,
+                        tint = Color.White,
+                    )
                 }
             }
         }
@@ -439,7 +510,7 @@ fun SitePlayerOverlay(
         }
 
         AnimatedVisibility(
-            visible = controlsVisible,
+            visible = controlsVisible && config.showLockButton,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier.align(Alignment.CenterEnd),
@@ -475,6 +546,7 @@ fun SitePlayerOverlay(
                     .then(if (isFullscreen) Modifier.navigationBarsPadding() else Modifier)
                     .padding(horizontal = 12.dp, vertical = 6.dp),
                 corner = 18.dp,
+                alpha = config.controlsOpacity,
             ) {
                 androidx.compose.foundation.layout.Column(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
@@ -519,12 +591,16 @@ fun SitePlayerOverlay(
                         Spacer(Modifier.width(4.dp))
                         val shownPos = scrub?.let { (it * durationMs).toLong() } ?: positionMs
                         Text(
-                            text = "${formatPlayerTime(shownPos)} / ${formatPlayerTime(durationMs)}",
+                            text = "${formatPlayerTime(shownPos)} / " + if (config.showRemainingTime) {
+                                "-" + formatPlayerTime((durationMs - shownPos).coerceAtLeast(0L))
+                            } else {
+                                formatPlayerTime(durationMs)
+                            },
                             color = Color.White.copy(alpha = 0.88f),
                             style = MaterialTheme.typography.labelSmall,
                         )
                         Spacer(Modifier.weight(1f))
-                        if (qualityLabel.isNotBlank()) {
+                        if (config.showQualityButton && qualityLabel.isNotBlank()) {
                             Box {
                                 var open by remember { mutableStateOf(false) }
                                 Text(
@@ -561,7 +637,7 @@ fun SitePlayerOverlay(
                                 }
                             }
                         }
-                        if (onToggleStretch != null && isFullscreen) {
+                        if (onToggleStretch != null && isFullscreen && config.showStretchButton) {
                             IconButton(onClick = onToggleStretch, modifier = Modifier.size(28.dp)) {
                                 Icon(
                                     imageVector = Icons.Outlined.AspectRatio,
@@ -571,7 +647,7 @@ fun SitePlayerOverlay(
                                 )
                             }
                         }
-                        IconButton(onClick = onToggleFullscreen, modifier = Modifier.size(28.dp)) {
+                        if (config.showFullscreenButton || isFullscreen) IconButton(onClick = onToggleFullscreen, modifier = Modifier.size(28.dp)) {
                             Icon(
                                 imageVector = if (isFullscreen) Icons.Outlined.FullscreenExit
                                 else Icons.Outlined.Fullscreen,
@@ -634,13 +710,14 @@ fun SitePlayerOverlay(
 private fun GlassBar(
     modifier: Modifier = Modifier,
     corner: androidx.compose.ui.unit.Dp,
+    alpha: Float = 0.32f,
     content: @Composable () -> Unit,
 ) {
     Box(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(corner))
-            .background(Color.Black.copy(alpha = 0.32f))
+            .background(Color.Black.copy(alpha = alpha))
             .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(corner)),
     ) {
         content()

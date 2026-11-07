@@ -13,6 +13,9 @@ object HomeSettingsRoute
 object PlayerSettingsRoute
 
 @Serializable
+data class SitePlayerSettingsRoute(val site: String)
+
+@Serializable
 object NetworkSettingsRoute
 
 @Serializable

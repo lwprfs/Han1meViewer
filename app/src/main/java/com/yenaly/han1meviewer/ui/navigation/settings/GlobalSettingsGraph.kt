@@ -20,6 +20,7 @@ import com.yenaly.han1meviewer.ui.navigation.main.VideoRouteScreen
 import androidx.navigation.toRoute
 import com.yenaly.han1meviewer.ui.navigation.navigateSafely
 import com.yenaly.han1meviewer.ui.screen.history.UnifiedHistoryScreen
+import com.yenaly.han1meviewer.ui.screen.settings.SitePlayerSettingsPage
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -58,6 +59,11 @@ fun NavGraphBuilder.registerGlobalSettingsRoutes(
                 onNavigateToMpvSettings = { navController.navigateSafely(MpvPlayerSettingsRoute) },
             )
         }
+    }
+    composable<SitePlayerSettingsRoute> { entry ->
+        val route = entry.toRoute<SitePlayerSettingsRoute>()
+        val site = runCatching { SiteType.valueOf(route.site) }.getOrDefault(SiteType.SUPJAV)
+        SitePlayerSettingsPage(site = site, onBack = { navController.popBackStackSafely() })
     }
     composable<NetworkSettingsRoute> {
         SettingsScaffold(

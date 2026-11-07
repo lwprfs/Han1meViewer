@@ -144,6 +144,7 @@ fun MissAvSearchScreen(
     var submittedQuery by remember {
         mutableStateOf(if (viewModel.hasSearched.value) viewModel.searchQuery.value.trim() else "")
     }
+    val crossActive = crossEnabled && hasSearched && CrossSiteSearch.looksLikeJavCode(submittedQuery)
 
     val gridState = rememberLazyGridState()
     val coroutineScope = rememberCoroutineScope()
@@ -171,7 +172,7 @@ fun MissAvSearchScreen(
             if (total == 0) return@derivedStateOf false
             val last = info.visibleItemsInfo.lastOrNull()?.index ?: return@derivedStateOf false
             last >= total - 4 && total > 4 && hasMorePages && !isLoadingMore &&
-                    hasSearched && allVideos.isNotEmpty()
+                    hasSearched && allVideos.isNotEmpty() && !crossActive
         }
     }
 
@@ -201,7 +202,6 @@ fun MissAvSearchScreen(
     }
 
     val queryIsCode = CrossSiteSearch.looksLikeJavCode(searchQuery)
-    val crossActive = crossEnabled && hasSearched && CrossSiteSearch.looksLikeJavCode(submittedQuery)
 
     LaunchedEffect(queryIsCode) { if (!queryIsCode) crossEnabled = false }
 
@@ -423,7 +423,12 @@ fun MissAvSearchScreen(
                                 otherSite = SiteType.SUPJAV,
                                 otherState = crossState,
                                 isLoadingMore = isLoadingMore,
-                                onReachEnd = { if (hasMorePages && !isLoadingMore) viewModel.loadNextPage() },
+
+                                onReachEnd = {
+                                    if (allVideos.size > 4 && hasMorePages && !isLoadingMore) {
+                                        viewModel.loadNextPage()
+                                    }
+                                },
                                 onOpen = { hit ->
                                     if (hit.site == SiteType.MISSAV) onNavigateToVideo(hit.videoCode, hit.path ?: "/en/${hit.videoCode}")
                                     else onOpenOtherSite(hit.toOpenRequest())

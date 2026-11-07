@@ -60,6 +60,7 @@ import com.yenaly.han1meviewer.ui.navigation.main.MainDestinationSpec
 import com.yenaly.han1meviewer.ui.navigation.settings.HomeSettingsRoute
 import com.yenaly.han1meviewer.ui.navigation.settings.NetworkSettingsRoute
 import com.yenaly.han1meviewer.ui.navigation.settings.PlayerSettingsRoute
+import com.yenaly.han1meviewer.ui.navigation.settings.SitePlayerSettingsRoute
 import com.yenaly.han1meviewer.ui.navigation.settings.UnifiedHistoryRoute
 import com.yenaly.han1meviewer.ui.navigation.settings.registerGlobalSettingsRoutes
 import com.yenaly.han1meviewer.ui.screen.settings.SiteSettingsEntry
@@ -278,7 +279,7 @@ fun OnAirNavHost(
                     siteEntries = onAirHubEntries(navController, signedInContent = true),
                     onBack = { navController.popBackStackSafely() },
                     onOpenAppSettings = { navController.navigateSafely(HomeSettingsRoute) },
-                    onOpenPlayerSettings = { navController.navigateSafely(PlayerSettingsRoute) },
+                    onOpenPlayerSettings = { navController.navigateSafely(SitePlayerSettingsRoute(SiteType.ONAIR.name)) },
                     onOpenNetworkSettings = { navController.navigateSafely(NetworkSettingsRoute) },
                     onOpenUnifiedHistory = { navController.navigateSafely(UnifiedHistoryRoute) },
                 )
@@ -392,7 +393,7 @@ fun OnAirNavHost(
                     siteEntries = onAirHubEntries(navController, signedInContent = false),
                     onBack = { navController.popBackStackSafely() },
                     onOpenAppSettings = { navController.navigateSafely(HomeSettingsRoute) },
-                    onOpenPlayerSettings = { navController.navigateSafely(PlayerSettingsRoute) },
+                    onOpenPlayerSettings = { navController.navigateSafely(SitePlayerSettingsRoute(SiteType.ONAIR.name)) },
                     onOpenNetworkSettings = { navController.navigateSafely(NetworkSettingsRoute) },
                     onOpenUnifiedHistory = { navController.navigateSafely(UnifiedHistoryRoute) },
                 )

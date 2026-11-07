@@ -43,6 +43,7 @@ import com.yenaly.han1meviewer.SupJav.data.repository.SupJavHistoryRepo
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteEmptyContent
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
+import com.yenaly.han1meviewer.ui.component.SiteVideoRow
 import kotlinx.coroutines.launch
 
 @Composable
@@ -99,40 +100,20 @@ private fun HistoryRow(
     onClick: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        AsyncImage(
-            model = entry.coverUrl,
-            contentDescription = entry.title,
-            modifier = Modifier
-                .width(128.dp)
-                .aspectRatio(16f / 9f)
-                .clip(RoundedCornerShape(8.dp)),
-            contentScale = ContentScale.Crop,
-            imageLoader = com.yenaly.han1meviewer.SupJav.common.SupJavImageLoader.get(LocalContext.current),
-        )
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(
-                text = entry.title,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (entry.totalDuration > 0L) {
-                LinearProgressIndicator(
-                    progress = { (entry.lastPosition.toFloat() / entry.totalDuration).coerceIn(0f, 1f) },
-                    modifier = Modifier.fillMaxWidth(),
-                )
+    SiteVideoRow(
+        title = entry.title,
+        coverUrl = entry.coverUrl,
+        onClick = onClick,
+        progress = if (entry.totalDuration > 0L) {
+            entry.lastPosition.toFloat() / entry.totalDuration
+        } else {
+            null
+        },
+        imageLoader = com.yenaly.han1meviewer.SupJav.common.SupJavImageLoader.get(LocalContext.current),
+        trailing = {
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Default.Close, contentDescription = null)
             }
-        }
-        IconButton(onClick = onDelete) {
-            Icon(Icons.Default.Close, contentDescription = null)
-        }
-    }
+        },
+    )
 }

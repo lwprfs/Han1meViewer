@@ -42,6 +42,7 @@ import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.ui.navigation.settings.HomeSettingsRoute
 import com.yenaly.han1meviewer.ui.navigation.settings.NetworkSettingsRoute
 import com.yenaly.han1meviewer.ui.navigation.settings.PlayerSettingsRoute
+import com.yenaly.han1meviewer.ui.navigation.settings.SitePlayerSettingsRoute
 import com.yenaly.han1meviewer.ui.navigation.settings.UnifiedHistoryRoute
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -203,6 +204,9 @@ fun siteDrawerSections(context: Context, site: SiteType, loggedIn: Boolean): Lis
     val library = str(R.string.site_drawer_section_library)
     val account = str(R.string.site_drawer_section_account)
     val customize = str(R.string.site_drawer_section_customize)
+    val playerSettings = entry(
+        str(R.string.player_settings), R.drawable.baseline_player_24, SitePlayerSettingsRoute(site.name),
+    )
 
     return when (site) {
         SiteType.MISSAV -> listOf(
@@ -218,6 +222,7 @@ fun siteDrawerSections(context: Context, site: SiteType, loggedIn: Boolean): Lis
                     entry(str(R.string.drawer_host_mirror), R.drawable.baseline_domain_24, MissAvHostSettingsRoute),
                     entry("Video Resolution", R.drawable.ic_video_quilty, MissAvQualitySettingsRoute),
                     entry("Video Subtitle", R.drawable.ic_baseline_language_24, MissAvSubtitleSettingsRoute),
+                    playerSettings,
                 ),
             ),
         )
@@ -244,6 +249,7 @@ fun siteDrawerSections(context: Context, site: SiteType, loggedIn: Boolean): Lis
                 listOf(
                     entry(str(R.string.drawer_video_card_size), R.drawable.ic_drawer_card_size, HentaiMamaVideoSettingsRoute(target = "all")),
                     entry(str(R.string.drawer_home_categories), R.drawable.baseline_grid_24, HentaiMamaHomeSettingsRoute),
+                    playerSettings,
                 ),
             ),
         )
@@ -273,6 +279,7 @@ fun siteDrawerSections(context: Context, site: SiteType, loggedIn: Boolean): Lis
                     }
                 },
             ),
+            SiteDrawerSection(customize, listOf(playerSettings)),
         )
 
         SiteType.FAPFOLDER -> listOf(
@@ -301,6 +308,7 @@ fun siteDrawerSections(context: Context, site: SiteType, loggedIn: Boolean): Lis
                     add(entry(str(R.string.cookies_label), R.drawable.ic_baseline_cookie_24, FapFolderCookiesRoute))
                 },
             ),
+            SiteDrawerSection(customize, listOf(playerSettings)),
         )
 
         SiteType.SUPJAV -> listOf(
@@ -318,7 +326,10 @@ fun siteDrawerSections(context: Context, site: SiteType, loggedIn: Boolean): Lis
             ),
             SiteDrawerSection(
                 customize,
-                listOf(entry("Playback & servers", R.drawable.ic_video_quilty, SupJavSettingsRoute)),
+                listOf(
+                    entry("Playback & servers", R.drawable.ic_video_quilty, SupJavSettingsRoute),
+                    playerSettings,
+                ),
             ),
         )
 

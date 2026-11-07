@@ -5,13 +5,20 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -79,7 +86,7 @@ fun SiteSearchTopBar(
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 2.dp,
+        tonalElevation = 3.dp,
         modifier = modifier.fillMaxWidth(),
     ) {
         Row(
@@ -95,7 +102,7 @@ fun SiteSearchTopBar(
                     .weight(1f)
                     .height(48.dp)
                     .clip(RoundedCornerShape(28.dp))
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest)
                     .clickable(
                         indication = null,
                         interactionSource = remember { MutableInteractionSource() },
@@ -177,6 +184,17 @@ fun SiteOverflowMenu(items: List<Pair<String, () -> Unit>>) {
 }
 
 @Composable
+private fun SiteAccentBar() {
+    Box(
+        modifier = Modifier
+            .width(4.dp)
+            .height(18.dp)
+            .clip(RoundedCornerShape(2.dp))
+            .background(MaterialTheme.colorScheme.primary),
+    )
+}
+
+@Composable
 fun SiteSectionHeader(
     title: String,
     modifier: Modifier = Modifier,
@@ -186,8 +204,10 @@ fun SiteSectionHeader(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
+        SiteAccentBar()
+        Spacer(Modifier.width(10.dp))
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
@@ -200,7 +220,7 @@ fun SiteSectionHeader(
         if (onMoreClick != null) {
             Text(
                 text = stringResource(R.string.more),
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
                     .clip(RoundedCornerShape(16.dp))
@@ -219,37 +239,34 @@ fun SiteVideoSectionHeader(
     actionText: String? = null,
     onActionClick: (() -> Unit)? = null,
 ) {
-    Column(
-        modifier = modifier.padding(start = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
+        SiteAccentBar()
+        Spacer(Modifier.width(10.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Bold,
+            )
+            subtitle?.takeIf { it.isNotBlank() }?.let {
                 Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold,
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                subtitle?.takeIf { it.isNotBlank() }?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-            if (!actionText.isNullOrBlank() && onActionClick != null) {
-                TextButton(onClick = onActionClick) {
-                    Text(actionText)
-                }
             }
         }
-        HorizontalDivider()
+        if (!actionText.isNullOrBlank() && onActionClick != null) {
+            TextButton(onClick = onActionClick) {
+                Text(actionText)
+            }
+        }
     }
 }
 
@@ -290,11 +307,10 @@ fun SiteVideoCard(
                 onClick = onClick,
                 onLongClick = onLongClick,
             ),
-        shape = RoundedCornerShape(12.dp),
-        tonalElevation = 2.dp,
-        shadowElevation = 1.dp,
-        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
         contentColor = MaterialTheme.colorScheme.onSurface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -325,10 +341,10 @@ fun SiteVideoCard(
                             .align(Alignment.TopEnd)
                             .padding(top = 6.dp, end = 6.dp)
                             .background(
-                                color = Color.Black.copy(alpha = 0.65f),
-                                shape = RoundedCornerShape(4.dp),
+                                color = Color.Black.copy(alpha = 0.70f),
+                                shape = RoundedCornerShape(8.dp),
                             )
-                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
                     ) {
                         Text(
                             text = topEndText,
@@ -347,9 +363,9 @@ fun SiteVideoCard(
                             .padding(top = 6.dp, start = 6.dp)
                             .background(
                                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
-                                shape = RoundedCornerShape(4.dp),
+                                shape = RoundedCornerShape(8.dp),
                             )
-                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
                     ) {
                         Text(
                             text = bottomStartBadge,
@@ -371,7 +387,7 @@ fun SiteVideoCard(
                                 Brush.verticalGradient(
                                     colors = listOf(
                                         Color.Transparent,
-                                        MaterialTheme.colorScheme.surfaceVariant,
+                                        Color.Black.copy(alpha = 0.72f),
                                     ),
                                 ),
                             )
@@ -381,13 +397,13 @@ fun SiteVideoCard(
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_baseline_play_circle_outline_24),
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                tint = Color.White.copy(alpha = 0.9f),
                                 modifier = Modifier.size(iconSize),
                             )
                             Text(
                                 modifier = Modifier.padding(horizontal = 2.dp),
                                 text = views,
-                                color = MaterialTheme.colorScheme.onSurface,
+                                color = Color.White,
                                 fontSize = textFontSize,
                                 maxLines = 1,
                             )
@@ -397,13 +413,13 @@ fun SiteVideoCard(
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_baseline_access_time_24),
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                tint = Color.White.copy(alpha = 0.9f),
                                 modifier = Modifier.size(iconSize),
                             )
                             Text(
                                 modifier = Modifier.padding(horizontal = 2.dp),
                                 text = duration,
-                                color = MaterialTheme.colorScheme.onSurface,
+                                color = Color.White,
                                 fontSize = textFontSize,
                                 maxLines = 1,
                             )
@@ -417,11 +433,12 @@ fun SiteVideoCard(
                 maxLines = 2,
                 minLines = 2,
                 style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
                 overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp),
+                    .padding(start = 10.dp, end = 10.dp, top = 8.dp),
             )
 
             Text(
@@ -432,13 +449,13 @@ fun SiteVideoCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp),
+                    .padding(horizontal = 10.dp),
             )
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .padding(horizontal = 8.dp)
+                    .padding(start = 10.dp, end = 10.dp, bottom = 8.dp)
                     .fillMaxWidth(),
             ) {
                 if (!reviews.isNullOrEmpty()) {
@@ -464,7 +481,7 @@ fun SiteVideoCard(
                         fontSize = 11.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 if (reviews.isNullOrEmpty() && uploadTime.isNullOrEmpty()) {
@@ -478,7 +495,7 @@ fun SiteVideoCard(
 
 @Composable
 fun SiteBackButton(onClick: () -> Unit) {
-    FilledIconButton(onClick = onClick) {
+    FilledTonalIconButton(onClick = onClick) {
         Icon(
             painter = painterResource(R.drawable.ic_baseline_arrow_back_24),
             contentDescription = stringResource(R.string.back),
@@ -499,7 +516,11 @@ fun SiteTopAppBar(
         title = title,
         navigationIcon = navigationIcon,
         actions = actions,
-        colors = TopAppBarDefaults.topAppBarColors(),
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+            titleContentColor = MaterialTheme.colorScheme.onSurface,
+        ),
     )
 }
 
@@ -523,7 +544,7 @@ fun SiteLoadingContent(
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -563,14 +584,14 @@ fun SiteErrorContent(
                 Text(
                     text = message,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                     maxLines = 6,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
             if (onRetry != null) {
-                Button(onClick = onRetry) {
+                FilledTonalButton(onClick = onRetry) {
                     Text(retryText)
                 }
             }
@@ -603,14 +624,18 @@ fun SiteEmptyContent(
             )
             Text(
                 text = hint,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,
             )
-            Text(
-                text = subHint,
-                style = MaterialTheme.typography.bodySmall,
-                textAlign = TextAlign.Center,
-            )
+            if (subHint.isNotBlank()) {
+                Text(
+                    text = subHint,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
         }
     }
 }
@@ -655,5 +680,105 @@ fun SiteIconBadge(
             tint = MaterialTheme.colorScheme.onPrimaryContainer,
             modifier = Modifier.size(22.dp),
         )
+    }
+}
+
+@Composable
+fun SiteVideoRow(
+    title: String,
+    coverUrl: Any,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    progress: Float? = null,
+    imageLoader: ImageLoader? = null,
+    trailing: @Composable () -> Unit = {},
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+    ) {
+        Row(
+            modifier = Modifier.padding(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(128.dp)
+                    .aspectRatio(16f / 9f)
+                    .clip(RoundedCornerShape(10.dp)),
+            ) {
+                RetryableImage(
+                    model = coverUrl,
+                    contentDescription = title,
+                    modifier = Modifier.fillMaxSize(),
+                    placeholder = painterResource(R.drawable.h_chan_loading),
+                    error = painterResource(R.drawable.h_chan_load_failed),
+                    contentScale = ContentScale.Crop,
+                    imageLoader = imageLoader,
+                )
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                if (!subtitle.isNullOrBlank()) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (progress != null) {
+                    LinearProgressIndicator(
+                        progress = { progress.coerceIn(0f, 1f) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(2.dp)),
+                    )
+                }
+            }
+            trailing()
+        }
+    }
+}
+
+@Composable
+fun <T> SiteChipRow(
+    options: List<T>,
+    selected: T,
+    label: (T) -> String,
+    onSelect: (T) -> Unit,
+    modifier: Modifier = Modifier,
+    key: ((T) -> Any)? = null,
+) {
+    LazyRow(
+        modifier = modifier,
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        items(options, key = key) { item ->
+            FilterChip(
+                selected = item == selected,
+                onClick = { onSelect(item) },
+                label = { Text(label(item)) },
+                shape = RoundedCornerShape(20.dp),
+            )
+        }
     }
 }

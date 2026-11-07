@@ -42,6 +42,7 @@ import com.yenaly.han1meviewer.ui.navigation.main.MainDestinationSpec
 import com.yenaly.han1meviewer.ui.navigation.settings.HomeSettingsRoute
 import com.yenaly.han1meviewer.ui.navigation.settings.NetworkSettingsRoute
 import com.yenaly.han1meviewer.ui.navigation.settings.PlayerSettingsRoute
+import com.yenaly.han1meviewer.ui.navigation.settings.SitePlayerSettingsRoute
 import com.yenaly.han1meviewer.ui.navigation.settings.UnifiedHistoryRoute
 import com.yenaly.han1meviewer.ui.navigation.settings.registerGlobalSettingsRoutes
 import com.yenaly.han1meviewer.ui.screen.settings.SiteSettingsEntry
@@ -444,7 +445,7 @@ fun HentaiMamaNavHost(
                 ),
                 onBack = { navController.popBackStackSafely() },
                 onOpenAppSettings = { open(HomeSettingsRoute) },
-                onOpenPlayerSettings = { open(PlayerSettingsRoute) },
+                onOpenPlayerSettings = { open(SitePlayerSettingsRoute(SiteType.HENTAIMAMA.name)) },
                 onOpenNetworkSettings = { open(NetworkSettingsRoute) },
                 onOpenUnifiedHistory = { open(UnifiedHistoryRoute) },
             )

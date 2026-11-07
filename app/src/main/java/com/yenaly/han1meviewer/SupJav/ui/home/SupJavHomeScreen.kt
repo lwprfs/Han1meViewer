@@ -28,6 +28,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.SupJav.common.SupJavConstants
 import com.yenaly.han1meviewer.ui.component.SiteBarIconButton
+import com.yenaly.han1meviewer.ui.component.SiteChipRow
 import com.yenaly.han1meviewer.ui.component.SiteSearchTopBar
 import com.yenaly.han1meviewer.ui.component.SiteSwitchButton
 
@@ -76,18 +77,13 @@ fun SupJavHomeScreen(
         Column(modifier = modifier
             .fillMaxSize()
             .padding(padding)) {
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                items(SupJavConstants.CATEGORIES, key = { it.key }) { category ->
-                    FilterChip(
-                        selected = category.key == selectedKey,
-                        onClick = { selectedKey = category.key },
-                        label = { Text(category.title) },
-                    )
-                }
-            }
+            SiteChipRow(
+                options = SupJavConstants.CATEGORIES,
+                selected = selected,
+                label = { it.title },
+                onSelect = { selectedKey = it.key },
+                key = { it.key },
+            )
             SupJavVideoGrid(
                 state = state,
                 onRetry = { viewModel.refresh() },

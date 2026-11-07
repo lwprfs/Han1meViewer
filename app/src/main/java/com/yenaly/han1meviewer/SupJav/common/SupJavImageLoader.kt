@@ -6,21 +6,18 @@ import coil3.ImageLoader
 import coil3.disk.DiskCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.crossfade
-import com.yenaly.han1meviewer.SupJav.cloudflare.SupJavCloudflareInterceptor
-import com.yenaly.han1meviewer.SupJav.data.remote.SupJavNetwork
 import com.yenaly.han1meviewer.USER_AGENT
+import com.yenaly.han1meviewer.logic.network.HDns
+import com.yenaly.han1meviewer.logic.network.HProxySelector
 import okhttp3.Call
+import okhttp3.CookieJar
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
+import okhttp3.Response
+import java.io.IOException
 import okio.Path.Companion.toOkioPath
 import java.util.concurrent.TimeUnit
 
-/**
- * SupJav's image host (img.supjav.com) rejects hotlinked requests, so every image request
- * to a SupJav host must carry `Referer: https://supjav.com/`. On top of that the images have to
- * be fetched through the same network setup as the SupJav pages (custom DNS / proxy settings),
- * otherwise they are unreachable on networks where the plain system resolver is blocked.
- */
 object SupJavImageLoader {
 
     private const val TAG = "SupJavImage"
@@ -32,31 +29,64 @@ object SupJavImageLoader {
     private fun isJavchuHost(host: String): Boolean =
         host == "javchu.com" || host.endsWith(".javchu.com")
 
-    /** Adds referer + user agent to SupJav image requests and logs the ones that fail. */
     private val supJavInterceptor = Interceptor { chain ->
-        val request = chain.request().newBuilder()
+        val original = chain.request()
+        val request = original.newBuilder()
             .header("Referer", "${SupJavConstants.BASE_URL}/")
             .header("User-Agent", USER_AGENT)
-            .header("Accept", "image/webp,image/apng,image/jpeg,image/png,*/*;q=0.8")
+            .header("Accept", "image/avif,image/webp,image/apng,image/jpeg,image/png,*/*;q=0.8")
+            .removeHeader("Cookie")
             .build()
-        val response = chain.proceed(request)
+        var response = try {
+            chain.proceed(request)
+        } catch (e: IOException) {
+
+            val plain = plainUrl(request.url.toString()) ?: throw e
+            Log.w(TAG, "IO error for ${request.url}, retrying $plain: ${e.message}")
+            chain.proceed(request.newBuilder().url(plain).build())
+        }
         if (!response.isSuccessful) {
             Log.w(TAG, "HTTP ${response.code} for ${request.url}")
+            val plain = plainUrl(request.url.toString())
+            if (plain != null) {
+                response.close()
+                response = chain.proceed(request.newBuilder().url(plain).build())
+                if (!response.isSuccessful) Log.w(TAG, "HTTP ${response.code} for $plain")
+            }
         }
-        response
+        normalizeContentType(response)
     }
 
-    /** Client for SupJav hosts: the SupJav network config minus the Cloudflare page handling. */
+    private fun plainUrl(url: String): String? {
+        val idx = url.indexOf('!')
+        return if (idx > 0) url.substring(0, idx) else null
+    }
+
+    private fun normalizeContentType(response: Response): Response {
+        val type = response.header("Content-Type")?.substringBefore(';')?.trim()?.lowercase()
+        val fixed = when {
+            type == "image/jpg" -> "image/jpeg"
+            type == null || type == "application/octet-stream" -> "image/jpeg"
+            else -> return response
+        }
+        if (!response.isSuccessful) return response
+        return response.newBuilder().header("Content-Type", fixed).build()
+    }
+
     private val supJavClient: OkHttpClient by lazy {
-        val builder = SupJavNetwork.sharedOkHttpClient.newBuilder()
+        OkHttpClient.Builder()
             .connectTimeout(20, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
-        // Images must never pop up the Cloudflare verification screen.
-        builder.interceptors().removeAll { it is SupJavCloudflareInterceptor }
-        builder.addInterceptor(supJavInterceptor).build()
+            .writeTimeout(20, TimeUnit.SECONDS)
+            .followRedirects(true)
+            .followSslRedirects(true)
+            .cookieJar(CookieJar.NO_COOKIES)
+            .dns(HDns())
+            .proxySelector(HProxySelector())
+            .addInterceptor(supJavInterceptor)
+            .build()
     }
 
-    /** Client for every other host: untouched except for javchu.com, which also checks referers. */
     private val otherClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
             .connectTimeout(20, TimeUnit.SECONDS)
@@ -80,17 +110,11 @@ object SupJavImageLoader {
     @Volatile
     private var instance: ImageLoader? = null
 
-    /** Dedicated loader with its own disk cache, used explicitly by the SupJav screens. */
     fun get(context: Context): ImageLoader =
         instance ?: synchronized(this) {
             instance ?: build(context.applicationContext, "supjav_image_cache").also { instance = it }
         }
 
-    /**
-     * Loader for the app-wide singleton: behaves like the default loader for every other site but
-     * routes SupJav hosts through the SupJav client, so SupJav covers also work in shared
-     * screens (history, check-in...).
-     */
     fun buildGlobal(context: Context): ImageLoader = build(context.applicationContext, null)
 
     private fun build(context: Context, cacheDirName: String?): ImageLoader {
