@@ -1,6 +1,8 @@
 package com.yenaly.han1meviewer.RouVideo.data.model
 
 import com.yenaly.han1meviewer.RouVideo.common.RouVideoSettings
+import com.yenaly.han1meviewer.RouVideo.common.RouVideoTagLabels
+import com.yenaly.han1meviewer.RouVideo.common.RouVideoTranslation
 
 data class RouVideoCard(
     val id: String,
@@ -17,7 +19,7 @@ data class RouVideoCard(
     val isPoster: Boolean = false,
     val seriesLabel: String? = null,
 ) {
-    val displayTitle: String get() = RouVideoSettings.pick(title, titleZh)
+    val displayTitle: String get() = RouVideoTranslation.title(RouVideoSettings.pick(title, titleZh))
 }
 
 data class RouVideoListPage(
@@ -56,7 +58,7 @@ data class RouVideoEpisode(
     val viewCount: Long = 0L,
     val coverUrl: String = "",
 ) {
-    val displayTitle: String get() = RouVideoSettings.pick(title, titleZh)
+    val displayTitle: String get() = RouVideoTranslation.title(RouVideoSettings.pick(title, titleZh))
 }
 
 data class RouVideoSeriesInfo(
@@ -71,7 +73,7 @@ data class RouVideoSeriesInfo(
     val tags: List<String> = emptyList(),
     val viewCount: Long = 0L,
 ) {
-    val displayTitle: String get() = RouVideoSettings.pick(title, titleZh)
+    val displayTitle: String get() = RouVideoTranslation.title(RouVideoSettings.pick(title, titleZh))
     val isCompleted: Boolean get() = status.equals("COMPLETED", ignoreCase = true)
 }
 
@@ -94,12 +96,13 @@ data class RouVideoDetail(
     val episodes: List<RouVideoEpisode> = emptyList(),
     val related: List<RouVideoCard> = emptyList(),
 ) {
-    val displayTitle: String get() = RouVideoSettings.pick(title, titleZh)
+    val displayTitle: String get() = RouVideoTranslation.title(RouVideoSettings.pick(title, titleZh))
 
     fun displayTagAt(index: Int): String =
-        if (RouVideoSettings.titleLanguage == RouVideoSettings.LANG_SIMPLIFIED)
-            tagsZh.getOrNull(index)?.takeIf { it.isNotBlank() } ?: tags[index]
-        else tags[index]
+        RouVideoTagLabels.label(tags[index]).takeIf { it != tags[index] }
+            ?: if (RouVideoSettings.titleLanguage == RouVideoSettings.LANG_SIMPLIFIED)
+                tagsZh.getOrNull(index)?.takeIf { it.isNotBlank() } ?: tags[index]
+            else tags[index]
 }
 
 data class RouVideoSearchLanding(

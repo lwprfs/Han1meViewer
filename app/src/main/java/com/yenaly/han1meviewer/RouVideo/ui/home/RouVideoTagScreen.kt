@@ -17,6 +17,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.RouVideo.common.RouVideoTagLabels
 import com.yenaly.han1meviewer.RouVideo.common.RouVideoConstants.Sort
 import com.yenaly.han1meviewer.RouVideo.data.model.RouVideoTagCount
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
@@ -45,7 +46,7 @@ fun RouVideoTagScreen(
     Scaffold(
         topBar = {
             SiteTopAppBar(
-                title = { Text(text = tag, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                title = { Text(text = RouVideoTagLabels.label(tag), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = { SiteBackButton(onClick = onBack) },
             )
         },
@@ -65,7 +66,7 @@ fun RouVideoTagScreen(
                 SiteChipRow(
                     options = state.siblings,
                     selected = RouVideoTagCount(tag),
-                    label = { "${it.id} (${it.count})" },
+                    label = { "${RouVideoTagLabels.label(it.id)} (${it.count})" },
                     onSelect = { onNavigateToTag(it.id) },
                     key = { it.id },
                 )

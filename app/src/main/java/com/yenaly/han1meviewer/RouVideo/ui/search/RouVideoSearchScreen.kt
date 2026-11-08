@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.RouVideo.common.RouVideoTagLabels
 import com.yenaly.han1meviewer.RouVideo.common.RouVideoConstants
 import com.yenaly.han1meviewer.RouVideo.common.RouVideoConstants.Sort
 import com.yenaly.han1meviewer.RouVideo.data.model.RouVideoSearchLanding
@@ -146,7 +147,7 @@ fun RouVideoSearchScreen(
             SiteChipRow(
                 options = tagOptions,
                 selected = tagFilter.takeIf { it in tagOptions } ?: "",
-                label = { if (it.isEmpty()) allLabel else it },
+                label = { if (it.isEmpty()) allLabel else RouVideoTagLabels.label(it) },
                 onSelect = { tagFilter = it },
             )
             if (!inResultMode) {
@@ -234,7 +235,7 @@ private fun SearchLanding(
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         data.cats.forEach { cat ->
-                            AssistChip(onClick = { onTag(cat.id) }, label = { Text(cat.id) })
+                            AssistChip(onClick = { onTag(cat.id) }, label = { Text(RouVideoTagLabels.label(cat.id)) })
                         }
                     }
                 }

@@ -52,7 +52,10 @@ fun RouVideoHomeScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    val tabs = remember { RouVideoSettings.visibleTabs() }
+    val tagsTranslated = com.yenaly.han1meviewer.RouVideo.common.RouVideoTranslation.isActive(
+        com.yenaly.han1meviewer.RouVideo.common.RouVideoTranslation.Kind.TAG
+    )
+    val tabs = remember(tagsTranslated) { RouVideoSettings.visibleTabs() }
     var selectedKey by rememberSaveable { mutableStateOf(tabs.first().key) }
     val tab = tabs.firstOrNull { it.key == selectedKey } ?: tabs.first()
 

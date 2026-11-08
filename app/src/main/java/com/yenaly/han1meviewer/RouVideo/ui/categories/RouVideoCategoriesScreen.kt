@@ -50,6 +50,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.RouVideo.common.RouVideoTagLabels
 import com.yenaly.han1meviewer.RouVideo.common.RouVideoImageLoader
 import com.yenaly.han1meviewer.RouVideo.data.model.RouVideoTagCount
 import com.yenaly.han1meviewer.RouVideo.data.model.RouVideoTaxonomy
@@ -126,7 +127,7 @@ fun RouVideoCategoriesScreen(
             is RouVideoCategoriesState.Success -> {
                 val tax = s.taxonomy
                 val needle = filter.trim()
-                fun matches(tag: String) = needle.isEmpty() || tag.contains(needle, ignoreCase = true)
+                fun matches(tag: String) = needle.isEmpty() || RouVideoTagLabels.matches(tag, needle)
 
                 val cats = tax.cats.filter { matches(it.id) }
                 val genres = tax.genre.filter { matches(it.id) }
@@ -190,7 +191,7 @@ fun RouVideoCategoriesScreen(
                                     if (!cat.coverUrl.isNullOrBlank()) {
                                         AsyncImage(
                                             model = cat.coverUrl,
-                                            contentDescription = cat.id,
+                                            contentDescription = RouVideoTagLabels.label(cat.id),
                                             imageLoader = RouVideoImageLoader.get(context),
                                             contentScale = ContentScale.Crop,
                                             modifier = Modifier.fillMaxSize(),
@@ -208,7 +209,7 @@ fun RouVideoCategoriesScreen(
                                             .padding(10.dp),
                                     ) {
                                         Text(
-                                            text = cat.id,
+                                            text = RouVideoTagLabels.label(cat.id),
                                             color = Color.White,
                                             style = MaterialTheme.typography.titleMedium,
                                             fontWeight = FontWeight.Bold,
@@ -241,7 +242,7 @@ fun RouVideoCategoriesScreen(
                             val shown = if (open) studios else studios.take(STUDIOS_COLLAPSED)
                             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 SiteVideoSectionHeader(
-                                    title = stringResource(R.string.rouvideo_studios_of, parent),
+                                    title = stringResource(R.string.rouvideo_studios_of, RouVideoTagLabels.label(parent)),
                                     actionText = if (!open && studios.size > STUDIOS_COLLAPSED) {
                                         stringResource(R.string.rouvideo_show_all, studios.size)
                                     } else null,
@@ -267,7 +268,10 @@ private fun TagChips(tags: List<RouVideoTagCount>, onOpenTag: (String) -> Unit) 
         tags.forEach { tag ->
             AssistChip(
                 onClick = { onOpenTag(tag.id) },
-                label = { Text(if (tag.count > 0) "${tag.id} · ${tag.count}" else tag.id) },
+                label = {
+                    val name = RouVideoTagLabels.label(tag.id)
+                    Text(if (tag.count > 0) "$name · ${tag.count}" else name)
+                },
             )
         }
     }

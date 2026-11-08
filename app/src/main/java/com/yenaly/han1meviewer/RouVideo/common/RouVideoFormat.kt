@@ -39,6 +39,7 @@ object RouVideoFormat {
 
     fun displayTag(card: RouVideoCard, skipTag: String? = null): String? =
         card.tags.firstOrNull { it !in SKIPPED_TAGS && it != skipTag }
+            ?.let { RouVideoTagLabels.label(it) }
 
     fun badge(card: RouVideoCard): String? = when {
         card.isSeries -> card.seriesLabel

@@ -468,7 +468,10 @@ private fun RouVideoVideoContent(
                         color = MaterialTheme.colorScheme.primary,
                     )
                     series.description?.takeIf { it.isNotBlank() }?.let {
-                        Text(text = it, style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            text = com.yenaly.han1meviewer.RouVideo.common.RouVideoTranslation.description(it),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
                     }
                 }
             }

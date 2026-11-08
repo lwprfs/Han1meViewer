@@ -989,6 +989,25 @@
 
     <!-- 肉視頻 -->
     <string name="site_rouvideo_name">肉視頻</string>
+    <string name="rouvideo_tr_title">翻譯</string>
+    <string name="rouvideo_tr_privacy">將中文標籤、標題與簡介翻譯成英文。內建詞庫以外的文字會傳送到 Google 翻譯。</string>
+    <string name="rouvideo_tr_enable">啟用翻譯</string>
+    <string name="rouvideo_tr_enable_desc">總開關，關閉後全部顯示原文</string>
+    <string name="rouvideo_tr_tags">標籤與分類</string>
+    <string name="rouvideo_tr_tags_desc">分類、題材與片商</string>
+    <string name="rouvideo_tr_titles">影片標題</string>
+    <string name="rouvideo_tr_titles_desc">捲動時翻譯標題；可能被 Google 限流</string>
+    <string name="rouvideo_tr_descriptions">系列簡介</string>
+    <string name="rouvideo_tr_descriptions_desc">翻譯影集簡介文字</string>
+    <string name="rouvideo_tr_paused">Google 暫時限制翻譯，約 %1$d 分鐘後重試</string>
+    <string name="rouvideo_tr_cache">翻譯快取</string>
+    <string name="rouvideo_tr_cache_usage">%1$s · %2$d 項</string>
+    <string name="rouvideo_tr_cache_breakdown">標籤 %1$d · 標題 %2$d · 簡介 %3$d</string>
+    <string name="rouvideo_tr_view">查看已翻譯內容</string>
+    <string name="rouvideo_tr_clear">清除翻譯快取</string>
+    <string name="rouvideo_tr_clear_confirm">刪除全部 %1$d 項翻譯快取？</string>
+    <string name="rouvideo_tr_empty">尚無翻譯內容</string>
+    <string name="rouvideo_tr_filter_all">全部</string>
     <string name="site_rouvideo_description">國產、探花、自拍與 AI 短劇影音站</string>
     <string name="rouvideo_all">全部</string>
     <string name="rouvideo_categories">分類</string>

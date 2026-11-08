@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -18,6 +19,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.RouVideo.common.RouVideoTranslation
 import com.yenaly.han1meviewer.RouVideo.ui.categories.RouVideoCategoriesScreen
 import com.yenaly.han1meviewer.RouVideo.ui.history.RouVideoHistoryScreen
 import com.yenaly.han1meviewer.RouVideo.ui.home.RouVideoHomeScreen
@@ -25,6 +27,8 @@ import com.yenaly.han1meviewer.RouVideo.ui.home.RouVideoTagScreen
 import com.yenaly.han1meviewer.RouVideo.ui.search.RouVideoSearchScreen
 import com.yenaly.han1meviewer.RouVideo.ui.settings.RouVideoHostSettingsScreen
 import com.yenaly.han1meviewer.RouVideo.ui.settings.RouVideoSettingsScreen
+import com.yenaly.han1meviewer.RouVideo.ui.settings.RouVideoTranslationCacheScreen
+import com.yenaly.han1meviewer.RouVideo.ui.settings.RouVideoTranslationSettingsScreen
 import com.yenaly.han1meviewer.RouVideo.ui.video.RouVideoVideoScreen
 import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.ui.activity.MainActivity
@@ -69,6 +73,12 @@ object RouVideoSettingsRoute
 @Serializable
 object RouVideoHostSettingsRoute
 
+@Serializable
+object RouVideoTranslationSettingsRoute
+
+@Serializable
+object RouVideoTranslationCacheRoute
+
 @Composable
 fun RouVideoNavHost(
     activity: MainActivity,
@@ -108,7 +118,7 @@ fun RouVideoNavHost(
             SiteSettingsHubScreen(
                 activity = activity,
                 site = SiteType.ROUVIDEO,
-                siteEntries = listOf(
+                siteEntries = listOfNotNull(
                     SiteSettingsEntry(
                         key = "host",
                         title = stringResource(R.string.drawer_host_mirror),
@@ -123,6 +133,13 @@ fun RouVideoNavHost(
                         icon = Icons.Default.Tune,
                         onClick = { navController.navigateSafely(RouVideoSettingsRoute) },
                     ),
+                    SiteSettingsEntry(
+                        key = "translation",
+                        title = stringResource(R.string.rouvideo_tr_title),
+                        subtitle = stringResource(R.string.rouvideo_tr_privacy),
+                        icon = Icons.Default.Translate,
+                        onClick = { navController.navigateSafely(RouVideoTranslationSettingsRoute) },
+                    ).takeIf { RouVideoTranslation.available },
                     SiteSettingsEntry(
                         key = "categories",
                         title = stringResource(R.string.rouvideo_categories),
@@ -150,6 +167,17 @@ fun RouVideoNavHost(
 
         composable<RouVideoSettingsRoute> {
             RouVideoSettingsScreen(onBack = { navController.popBackStackSafely() })
+        }
+
+        composable<RouVideoTranslationSettingsRoute> {
+            RouVideoTranslationSettingsScreen(
+                onBack = { navController.popBackStackSafely() },
+                onOpenCache = { navController.navigateSafely(RouVideoTranslationCacheRoute) },
+            )
+        }
+
+        composable<RouVideoTranslationCacheRoute> {
+            RouVideoTranslationCacheScreen(onBack = { navController.popBackStackSafely() })
         }
 
         composable<RouVideoHostSettingsRoute> {

@@ -101,7 +101,7 @@ private fun HistoryRow(
     onDelete: () -> Unit,
 ) {
     SiteVideoRow(
-        title = entry.title,
+        title = com.yenaly.han1meviewer.RouVideo.common.RouVideoTranslation.title(entry.title),
         coverUrl = entry.coverUrl,
         onClick = onClick,
         progress = if (entry.totalDuration > 0L) {

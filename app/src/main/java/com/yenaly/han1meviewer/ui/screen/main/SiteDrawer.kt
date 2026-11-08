@@ -30,6 +30,8 @@ import com.yenaly.han1meviewer.RouVideo.ui.navigation.RouVideoHistoryRoute
 import com.yenaly.han1meviewer.RouVideo.ui.navigation.RouVideoHostSettingsRoute
 import com.yenaly.han1meviewer.RouVideo.ui.navigation.RouVideoSearchRoute
 import com.yenaly.han1meviewer.RouVideo.ui.navigation.RouVideoSettingsRoute
+import com.yenaly.han1meviewer.RouVideo.ui.navigation.RouVideoTranslationSettingsRoute
+import com.yenaly.han1meviewer.RouVideo.common.RouVideoTranslation
 import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderCookiesRoute
 import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderLoginRoute
 import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderSearchHistoryRoute
@@ -365,6 +367,10 @@ fun siteDrawerSections(context: Context, site: SiteType, loggedIn: Boolean): Lis
                 listOf(
                     entry(str(R.string.drawer_host_mirror), R.drawable.baseline_domain_24, RouVideoHostSettingsRoute),
                     entry(str(R.string.rouvideo_settings_title), R.drawable.ic_video_quilty, RouVideoSettingsRoute),
+                ) + listOfNotNull(
+                    if (RouVideoTranslation.available) {
+                        entry(str(R.string.rouvideo_tr_title), R.drawable.ic_translate_24, RouVideoTranslationSettingsRoute)
+                    } else null,
                     playerSettings,
                 ),
             ),
