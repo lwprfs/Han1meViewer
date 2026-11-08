@@ -3,6 +3,8 @@ package com.yenaly.han1meviewer.HentaiMama.data.remote
 import com.yenaly.han1meviewer.HentaiMama.cloudflare.HentaiMamaCloudflareInterceptor
 import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaConstants
 import com.yenaly.han1meviewer.Preferences
+import com.yenaly.han1meviewer.logic.network.HDns
+import com.yenaly.han1meviewer.logic.network.HProxySelector
 import com.yenaly.han1meviewer.logic.network.interceptor.UrlLoggingInterceptor
 import com.yenaly.han1meviewer.logic.network.interceptor.UserAgentInterceptor
 import com.yenaly.yenaly_libs.utils.applicationContext
@@ -70,6 +72,8 @@ object HentaiMamaNetwork {
             .addInterceptor(UrlLoggingInterceptor())
             .cookieJar(getOrCreateCookieJar())
             .addInterceptor(HentaiMamaCloudflareInterceptor(applicationContext))
+            .dns(HDns())
+            .proxySelector(HProxySelector())
             .addInterceptor { chain ->
                 val request = chain.request().newBuilder()
                     .addHeader("Referer", baseUrl)

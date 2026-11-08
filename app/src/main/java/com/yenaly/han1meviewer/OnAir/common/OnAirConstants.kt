@@ -48,7 +48,10 @@ object OnAirConstants {
     const val SORT_LONGEST = "longest"
     const val SORT_SHORTEST = "shortest"
 
-    fun getPrimaryUrl(): String = OnAirSitePreferences.selectedBaseUrl
+    fun getPrimaryUrl(): String = com.yenaly.han1meviewer.Preferences.onAirBaseUrl
 
-    fun getPrimaryHost(): String = OnAirSitePreferences.currentHostname()
+    fun getPrimaryHost(): String =
+        com.yenaly.han1meviewer.logic.network.SiteNetworkPrefs.customMirrorHost(
+            com.yenaly.han1meviewer.SiteType.ONAIR
+        ) ?: OnAirSitePreferences.currentHostname()
 }

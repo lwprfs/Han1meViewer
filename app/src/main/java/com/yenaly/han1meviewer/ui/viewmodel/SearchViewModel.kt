@@ -92,7 +92,7 @@ class SearchViewModel(
     var brandMap = SparseArray<Set<SearchOption>>()
 
     val genres by unsafeLazy {
-        loadAssetAs<List<SearchOption>>(if (Preferences.baseUrl == HANIME_URL[3]) "search_options/genre_av.json" else "search_options/genre.json").orEmpty()
+        loadAssetAs<List<SearchOption>>(if (Preferences.isAvSite) "search_options/genre_av.json" else "search_options/genre.json").orEmpty()
     }
 
     val tags by unsafeLazy {

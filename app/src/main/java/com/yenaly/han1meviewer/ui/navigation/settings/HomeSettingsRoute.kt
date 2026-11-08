@@ -741,6 +741,6 @@ private fun buildHomeSettingsUiState(
         homeCategoryItems = defaultHomeCategoryPreferenceItems,
         homeCategoryOrder = homeCategoryOrder,
         hiddenHomeCategoryKeys = hiddenHomeCategoryKeys,
-        useAvHomeCategoryTitles = Preferences.baseUrl == HanimeConstants.HANIME_URL[3],
+        useAvHomeCategoryTitles = Preferences.isAvSite,
     )
 }

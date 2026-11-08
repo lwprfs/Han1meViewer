@@ -51,7 +51,7 @@ object Parser {
     }
 
     fun homePageVer2(body: String): WebsiteState<HomePage> {
-        val isAVSite = Preferences.baseUrl == HANIME_URL[3]
+        val isAVSite = Preferences.isAvSite
         val parseBody = Jsoup.parse(body).body()
         val csrfToken = parseBody.selectFirst("input[name=_token]")?.attr("value")
         val homePageParse = parseBody.select("div[id=home-rows-wrapper] > div")
@@ -318,7 +318,7 @@ object Parser {
     }
 
     private fun fixAvCdnHost(url: String): String {
-        if (Preferences.baseUrl != HANIME_URL[3]) return url
+        if (!Preferences.isAvSite) return url
         return Regex.avCdnHost.replace(url) { "${it.groupValues[1]}t33.cdn2020.com" }
     }
 

@@ -5,7 +5,11 @@ object HentaiMamaConstants {
     const val API_URL = "$BASE_URL/wp-admin/admin-ajax.php"
     const val ACTION_PLAYER = "get_player_contents"
 
-    val HOSTNAME = arrayOf("hentaimama.io", "hentaimama.com", "hentaimama.net")
+    val HOSTNAME: Array<String>
+        get() = com.yenaly.han1meviewer.logic.network.SiteNetworkPrefs.knownHosts(
+            com.yenaly.han1meviewer.SiteType.HENTAIMAMA,
+            listOf("hentaimama.io", "hentaimama.com", "hentaimama.net"),
+        )
 
     const val PATH_GENRE = "genre"
     const val PATH_SERIES = "hentai-series"

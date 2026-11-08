@@ -114,7 +114,7 @@ fun VideoRouteHostScreen(
     }
     val genres = remember(Preferences.baseUrl) {
         loadAssetAs<List<SearchOption>>(
-            if (Preferences.baseUrl == com.yenaly.han1meviewer.HanimeConstants.HANIME_URL[3]) {
+            if (Preferences.isAvSite) {
                 "search_options/genre_av.json"
             } else {
                 "search_options/genre.json"

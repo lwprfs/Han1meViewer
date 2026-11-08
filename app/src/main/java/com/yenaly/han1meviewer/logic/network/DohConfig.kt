@@ -1,6 +1,7 @@
 package com.yenaly.han1meviewer.logic.network
 
 import com.yenaly.han1meviewer.Preferences
+import com.yenaly.han1meviewer.SiteType
 
 data class DohPreset(
     val key: String,
@@ -9,6 +10,10 @@ data class DohPreset(
     val bootstrapIps: List<String>,
 )
 
+/**
+ * DoH settings are stored per site (see [SiteNetworkPrefs]); every accessor takes the site and
+ * defaults to the site that is currently open.
+ */
 object DohConfig {
     val presets = listOf(
         DohPreset(
@@ -31,28 +36,31 @@ object DohConfig {
         ),
     )
 
-    fun selectedPreset(): DohPreset = presets.firstOrNull { it.key == Preferences.dohPreset } ?: presets.first()
+    fun selectedPreset(site: SiteType = Preferences.siteType): DohPreset =
+        presets.firstOrNull { it.key == SiteNetworkPrefs.dohPreset(site) } ?: presets.first()
 
-    fun customUrl(): String = Preferences.dohCustomUrl.trim()
+    fun customUrl(site: SiteType = Preferences.siteType): String =
+        SiteNetworkPrefs.dohCustomUrl(site).trim()
 
-    fun bootstrapIps(): List<String> {
-        val customBootstrapIps = Preferences.dohBootstrapIps
+    fun bootstrapIps(site: SiteType = Preferences.siteType): List<String> {
+        val customBootstrapIps = SiteNetworkPrefs.dohBootstrapIps(site)
             .split(',', '\n', ';', ' ')
             .map { it.trim() }
             .filter { it.isNotBlank() }
             .distinct()
         if (customBootstrapIps.isNotEmpty()) return customBootstrapIps
-        if (Preferences.dohPreset == "custom") return emptyList()
-        return selectedPreset().bootstrapIps
+        if (SiteNetworkPrefs.dohPreset(site) == "custom") return emptyList()
+        return selectedPreset(site).bootstrapIps
     }
 
-    fun timeoutSeconds(): Int = Preferences.dohTimeoutSeconds.coerceIn(1, 60)
+    fun timeoutSeconds(site: SiteType = Preferences.siteType): Int =
+        SiteNetworkPrefs.dohTimeoutSeconds(site).coerceIn(1, 60)
 
-    fun resolveUrl(): String? {
-        if (!Preferences.useDoH) return null
-        return when (Preferences.dohPreset) {
-            "custom" -> customUrl().takeIf { it.isNotBlank() }
-            else -> selectedPreset().url
+    fun resolveUrl(site: SiteType = Preferences.siteType): String? {
+        if (!SiteNetworkPrefs.useDoH(site)) return null
+        return when (SiteNetworkPrefs.dohPreset(site)) {
+            "custom" -> customUrl(site).takeIf { it.isNotBlank() }
+            else -> selectedPreset(site).url
         }
     }
 }

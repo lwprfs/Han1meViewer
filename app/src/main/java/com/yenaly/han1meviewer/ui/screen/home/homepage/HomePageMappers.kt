@@ -46,7 +46,7 @@ fun buildHomeHeroItems(
 }
 
 fun buildCategoryList(homePage: HomePage): List<HomeCategory> {
-    val isAVSite = Preferences.baseUrl == HanimeConstants.HANIME_URL[3]
+    val isAVSite = Preferences.isAvSite
 
     return listOfNotNull(
         HomeCategory(

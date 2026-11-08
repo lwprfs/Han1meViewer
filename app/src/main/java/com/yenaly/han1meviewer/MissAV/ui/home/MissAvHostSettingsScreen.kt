@@ -34,11 +34,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.preference.PreferenceManager
-import com.yenaly.han1meviewer.Preferences
+import com.yenaly.han1meviewer.SiteType
+import com.yenaly.han1meviewer.logic.network.SiteNetworkPrefs
+import com.yenaly.han1meviewer.logic.network.SiteNetworks
 
 import com.yenaly.han1meviewer.MissAV.data.remote.MissAvNetwork
 private const val PREF_HOST = "missav_host"
-private const val PREF_BASE_URL = "missav_base_url"
 
 data class MissAvHostOption(
     val hostname: String,
@@ -48,16 +49,20 @@ data class MissAvHostOption(
 
 object MissAvHostRepo {
 
-    val options: List<MissAvHostOption> = listOf(
-        MissAvHostOption("missav.ws", "https://missav.ws/", "missav.ws (default)"),
-        MissAvHostOption("missav.live", "https://missav.live/", "missav.live (mirror)"),
-        MissAvHostOption("missav.ai", "https://missav.ai/", "missav.ai (mirror)"),
-    )
+    /** Default mirrors plus every MissAV mirror known to the mirror hub. */
+    val options: List<MissAvHostOption>
+        get() = SiteNetworks.forSite(SiteType.MISSAV).mirrors.mapIndexed { index, node ->
+            MissAvHostOption(
+                hostname = node.host,
+                url = node.baseUrl,
+                label = if (index == 0) "${node.host} (default)" else node.host,
+            )
+        }
 
     fun current(context: Context): MissAvHostOption {
-        val saved = PreferenceManager.getDefaultSharedPreferences(context)
-            .getString(PREF_HOST, null)
-        return options.firstOrNull { it.hostname == saved } ?: options.first()
+        val all = options
+        val selected = SiteNetworkPrefs.selectedMirrorUrl(SiteType.MISSAV)
+        return all.firstOrNull { it.url.trimEnd('/') == selected.trimEnd('/') } ?: all.first()
     }
 
     fun setCurrent(context: Context, option: MissAvHostOption) {
@@ -66,9 +71,7 @@ object MissAvHostRepo {
             .putString(PREF_HOST, option.hostname)
             .apply()
 
-        Preferences.preferenceSp.edit()
-            .putString(PREF_BASE_URL, option.url)
-            .apply()
+        SiteNetworkPrefs.setSelectedMirrorUrl(SiteType.MISSAV, option.url)
 
         MissAvNetwork.rebuildNetwork()
     }

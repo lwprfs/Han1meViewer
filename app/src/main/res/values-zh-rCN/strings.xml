@@ -957,4 +957,20 @@
     <string name="month">月份</string>
     <string name="pause_video">暂停视频</string>
     <string name="play_video">播放视频</string>
+
+    <!-- Per-site network settings / mirror latency -->
+    <string name="mirror_latency_title">%s 镜像与延迟</string>
+    <string name="mirror_latency_hint">延迟越低通常体验越好。每个镜像都会通过当前的代理 / DNS 设置检测。</string>
+    <string name="mirror_latency_use_fastest">使用最快线路</string>
+    <string name="mirror_latency_retest">重新测速</string>
+    <string name="mirror_latency_testing">测速中…</string>
+    <string name="mirror_latency_abnormal">线路异常（HTTP %d）</string>
+    <string name="mirror_latency_use">使用</string>
+    <string name="mirror_latency_in_use">使用中</string>
+    <string name="mirror_latency_entry">镜像站与延迟</string>
+    <string name="mirror_latency_entry_summary">共 %d 个镜像，可测速并切换到最快线路</string>
+    <string name="network_settings_site">站点</string>
+    <string name="network_settings_site_summary">以下所有设置仅对所选站点生效</string>
+    <string name="network_inherited_suffix">（沿用 Hanime1 设置）</string>
+    <string name="custom_hosts_format_ext">用逗号分隔的 IP 将应用于该站点所有域名（1.2.3.4,5.6.7.8），或每行一个域名（example.com=1.2.3.4）</string>
 </resources>

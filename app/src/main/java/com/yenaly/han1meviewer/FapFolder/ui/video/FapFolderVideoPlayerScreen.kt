@@ -148,7 +148,9 @@ private fun isTrustedMediaHost(host: String?): Boolean {
     if (host.isNullOrBlank()) return false
     val h = host.lowercase()
 
-    return h == "fapfolder.club" || h.endsWith(".fapfolder.club")
+    val site = FapFolderConstants.SITE_HOST
+    return h == "fapfolder.club" || h.endsWith(".fapfolder.club") ||
+        h == site || h.endsWith(".$site")
 }
 
 @Composable

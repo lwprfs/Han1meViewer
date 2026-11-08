@@ -957,4 +957,20 @@ hanime1.me以外のドメインは、特定の時間帯にhanime1.meにリダイ
     <string name="month">月</string>
     <string name="pause_video">動画を一時停止</string>
     <string name="play_video">動画を再生</string>
+
+    <!-- Per-site network settings / mirror latency -->
+    <string name="mirror_latency_title">%s ミラーと遅延</string>
+    <string name="mirror_latency_hint">遅延が低いほど快適です。各ミラーは現在のプロキシ / DNS 設定で確認されます。</string>
+    <string name="mirror_latency_use_fastest">最速を使用</string>
+    <string name="mirror_latency_retest">再テスト</string>
+    <string name="mirror_latency_testing">テスト中…</string>
+    <string name="mirror_latency_abnormal">異常（HTTP %d）</string>
+    <string name="mirror_latency_use">使用</string>
+    <string name="mirror_latency_in_use">使用中</string>
+    <string name="mirror_latency_entry">ミラーサイトと遅延</string>
+    <string name="mirror_latency_entry_summary">%d 個のミラー - 遅延を測定して最速に切り替え</string>
+    <string name="network_settings_site">サイト</string>
+    <string name="network_settings_site_summary">以下の設定は選択したサイトにのみ適用されます</string>
+    <string name="network_inherited_suffix">（Hanime1 の設定を継承）</string>
+    <string name="custom_hosts_format_ext">カンマ区切りの IP はサイトの全ホストに適用（1.2.3.4,5.6.7.8）、または 1 行に 1 ホスト（example.com=1.2.3.4）</string>
 </resources>

@@ -5,19 +5,19 @@
 
 <table>
   <tr>
-    <td><img src="readme_08.jpg" width="100%" style="object-fit: cover;"></td>
-    <td><img src="readme_09.jpg" width="100%" style="object-fit: cover;"></td>
-    <td><img src="readme_10.jpg" width="100%" style="object-fit: cover;"></td>
+    <td><img src="images/readme_08.jpg" width="100%" style="object-fit: cover;"></td>
+    <td><img src="images/readme_09.jpg" width="100%" style="object-fit: cover;"></td>
+    <td><img src="images/readme_10.jpg" width="100%" style="object-fit: cover;"></td>
   </tr>
   <tr>
-    <td><img src="readme_11.jpg" width="100%" style="object-fit: cover;"></td>
-    <td><img src="readme_12.jpg" width="100%" style="object-fit: cover;"></td>
-    <td><img src="readme_13.jpg" width="100%" style="object-fit: cover;"></td>
+    <td><img src="images/readme_11.jpg" width="100%" style="object-fit: cover;"></td>
+    <td><img src="images/readme_12.jpg" width="100%" style="object-fit: cover;"></td>
+    <td><img src="images/readme_13.jpg" width="100%" style="object-fit: cover;"></td>
   </tr>
   <tr>
-    <td><img src="readme_14.jpg" width="100%" style="object-fit: cover;"></td>
-    <td><img src="readme_15.jpg" width="100%" style="object-fit: cover;"></td>
-    <td><img src="readme_16.jpg" width="100%" style="object-fit: cover;"></td>
+    <td><img src="images/readme_14.jpg" width="100%" style="object-fit: cover;"></td>
+    <td><img src="images/readme_15.jpg" width="100%" style="object-fit: cover;"></td>
+    <td><img src="images/readme_16.jpg" width="100%" style="object-fit: cover;"></td>
   </tr>
 </table>
 
@@ -159,17 +159,17 @@ Telegram 群组：[https://t.me/Han1meViewer](https://t.me/Han1meViewer)
 
 <table>
   <tr>
-    <td><img src="readme_01.png" width="100%" height="150"></td>
-    <td><img src="readme_02.png" width="100%" height="150"></td>
+    <td><img src="images/readme_01.png" width="100%" height="150"></td>
+    <td><img src="images/readme_02.png" width="100%" height="150"></td>
   </tr>
   <tr>
-    <td><img src="readme_03.png" width="100%" height="150"></td>
-    <td><img src="readme_04.png" width="100%" height="150"></td>
-    <td><img src="readme_05.png" width="100%" height="150"></td>
+    <td><img src="images/readme_03.png" width="100%" height="150"></td>
+    <td><img src="images/readme_04.png" width="100%" height="150"></td>
+    <td><img src="images/readme_05.png" width="100%" height="150"></td>
   </tr>
   <tr>
-    <td><img src="readme_06.png" width="100%" height="150"></td>
-    <td><img src="readme_07.png" width="100%" height="150"></td>
+    <td><img src="images/readme_06.png" width="100%" height="150"></td>
+    <td><img src="images/readme_07.png" width="100%" height="150"></td>
     <td></td>
   </tr>
 </table>

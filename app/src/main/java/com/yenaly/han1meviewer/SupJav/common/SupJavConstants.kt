@@ -1,9 +1,15 @@
 package com.yenaly.han1meviewer.SupJav.common
 
 object SupJavConstants {
-    const val BASE_URL = "https://supjav.com"
+    /** Follows the mirror / custom mirror chosen in the network settings. */
+    val BASE_URL: String
+        get() = com.yenaly.han1meviewer.Preferences.supJavBaseUrl.trimEnd('/')
 
-    val HOSTNAME = arrayOf("supjav.com", "supjav.fun")
+    val HOSTNAME: Array<String>
+        get() = com.yenaly.han1meviewer.logic.network.SiteNetworkPrefs.knownHosts(
+            com.yenaly.han1meviewer.SiteType.SUPJAV,
+            listOf("supjav.com", "supjav.fun"),
+        )
 
     const val PROTECTOR_URL = "https://lk1.supremejav.com"
 

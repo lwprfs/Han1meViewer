@@ -6,6 +6,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaConstants
+import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
 import com.yenaly.han1meviewer.ui.component.GlobalToasts
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -42,7 +43,7 @@ object HentaiMamaCloudflareManager {
     private suspend fun awaitVerificationResult(): Boolean =
         withContext(Dispatchers.IO) {
             val checker = HentaiMamaCloudflareCookieManager
-            val host = HentaiMamaConstants.BASE_URL.toHttpUrlOrNull()?.host
+            val host = HentaiMamaNetwork.baseUrl.toHttpUrlOrNull()?.host
             val deadline = System.currentTimeMillis() + VERIFICATION_TIMEOUT_MS
 
             while (System.currentTimeMillis() < deadline) {

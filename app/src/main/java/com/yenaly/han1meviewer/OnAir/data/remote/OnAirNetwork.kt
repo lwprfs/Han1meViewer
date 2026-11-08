@@ -47,7 +47,7 @@ object OnAirNetwork {
         }
 
     val baseUrl: String
-        get() = OnAirSitePreferences.selectedBaseUrl
+        get() = com.yenaly.han1meviewer.Preferences.onAirBaseUrl
 
     val service: OnAirService
         get() {

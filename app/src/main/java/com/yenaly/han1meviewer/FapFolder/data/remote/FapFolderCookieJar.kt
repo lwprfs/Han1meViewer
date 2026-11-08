@@ -42,10 +42,11 @@ class FapFolderCookieJar : CookieJar {
         private fun isDeletedValue(value: String): Boolean =
             value.isBlank() || value.equals("deleted", ignoreCase = true)
 
-        private val SEED_HOSTS = listOf(
-            "fapfolder.club",
-            "www.fapfolder.club",
-        )
+        private val SEED_HOSTS: List<String>
+            get() {
+                val host = FapFolderConstants.SITE_HOST
+                return listOf("fapfolder.club", "www.fapfolder.club", host, "www.$host").distinct()
+            }
 
         private val FORBIDDEN_HOSTS = setOf(
             "fap.onl",

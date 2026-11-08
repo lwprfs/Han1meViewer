@@ -8,11 +8,8 @@ object HentaiMamaUrlUtils {
     private val EPISODE_SLUG_REGEX =
         Regex(""".+-episode-\d+(-[\w-]+)?/?$""", RegexOption.IGNORE_CASE)
 
-    private val KNOWN_HOSTS = arrayOf(
-        "hentaimama.io",
-        "hentaimama.com",
-        "hentaimama.net",
-    )
+    private val KNOWN_HOSTS: Array<String>
+        get() = HentaiMamaConstants.HOSTNAME
 
     fun normalizeEpisodeUrl(path: String): String {
         if (path.isBlank()) return path

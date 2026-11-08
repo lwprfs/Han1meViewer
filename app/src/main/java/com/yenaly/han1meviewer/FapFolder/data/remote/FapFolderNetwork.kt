@@ -238,20 +238,10 @@ object FapFolderNetwork {
             .followSslRedirects(true)
             .cookieJar(getOrCreateCookieJar())
 
-        val useCustomDoh = runCatching { Preferences.useDoH }.getOrDefault(false)
-        if (useCustomDoh) {
-            builder.dns(HDns())
-        } else {
-            builder.dns(Dns.SYSTEM)
-        }
-
-        val proxyType = runCatching { Preferences.proxyType }
-            .getOrDefault(HProxySelector.TYPE_SYSTEM)
-        if (proxyType != HProxySelector.TYPE_DIRECT &&
-            proxyType != HProxySelector.TYPE_SYSTEM
-        ) {
-            builder.proxySelector(HProxySelector())
-        }
+        // HDns falls back to the system resolver, and HProxySelector honours Direct / System,
+        // so both can always be installed (per-site mirror, DNS mapping, DoH and proxy).
+        builder.dns(HDns())
+        builder.proxySelector(HProxySelector())
 
         builder.addInterceptor(BrotliInterceptor)
 

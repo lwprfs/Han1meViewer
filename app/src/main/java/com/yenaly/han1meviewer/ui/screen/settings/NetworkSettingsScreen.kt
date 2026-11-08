@@ -100,6 +100,19 @@ fun NetworkSettingsScreen(
     isCustomMirrorTesting: Boolean,
     showCustomMirror: Boolean = true,
     isJavchu: Boolean = false,
+    showBackupMediaCdn: Boolean = true,
+    siteName: String = "",
+    siteOptions: List<Pair<String, String>> = emptyList(),
+    selectedSiteKey: String = "",
+    onSiteChange: (String) -> Unit = {},
+    mirrorRows: List<MirrorRowUi> = emptyList(),
+    isMirrorDialogOpen: Boolean = false,
+    isMirrorTesting: Boolean = false,
+    onOpenMirrorLatency: () -> Unit = {},
+    onUseMirror: (String) -> Unit = {},
+    onUseFastestMirror: () -> Unit = {},
+    onRetestMirrors: () -> Unit = {},
+    onDismissMirrorLatency: () -> Unit = {},
     onDomainChange: (String) -> Unit,
     onSaveCustomMirrorSite: (Boolean, String, Boolean) -> Unit,
     onTestCustomMirrorSite: (String, Boolean) -> Unit,
@@ -120,6 +133,32 @@ fun NetworkSettingsScreen(
     var showDohDialog by rememberSaveable { mutableStateOf(false) }
     var showCustomHostsDialog by rememberSaveable { mutableStateOf(false) }
     var showCustomMirrorSiteDialog by rememberSaveable { mutableStateOf(false) }
+    var showSiteDialog by rememberSaveable { mutableStateOf(false) }
+
+    if (showSiteDialog) {
+        NetworkChoiceDialog(
+            title = stringResource(R.string.network_settings_site),
+            selectedValue = selectedSiteKey,
+            options = siteOptions,
+            onDismiss = { showSiteDialog = false },
+            onSelect = {
+                showSiteDialog = false
+                onSiteChange(it)
+            },
+        )
+    }
+
+    if (isMirrorDialogOpen) {
+        MirrorLatencyDialog(
+            siteName = siteName,
+            rows = mirrorRows,
+            isTesting = isMirrorTesting,
+            onUse = { row -> onUseMirror(row.host) },
+            onUseFastest = onUseFastestMirror,
+            onRetest = onRetestMirrors,
+            onDismiss = onDismissMirrorLatency,
+        )
+    }
 
     if (showDomainDialog) {
         NetworkChoiceDialog(
@@ -210,6 +249,18 @@ fun NetworkSettingsScreen(
         contentPadding = PaddingValues(vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
+        if (siteOptions.isNotEmpty()) {
+            item {
+                SettingNavigationItem(
+                    title = stringResource(R.string.network_settings_site),
+                    summary = stringResource(R.string.network_settings_site_summary),
+                    valueText = siteName,
+                    iconRes = R.drawable.baseline_domain_24,
+                    onClick = { showSiteDialog = true },
+                )
+            }
+        }
+
         item {
             SettingNavigationItem(
                 title = stringResource(R.string.domain_name),
@@ -217,6 +268,17 @@ fun NetworkSettingsScreen(
                 iconRes = R.drawable.baseline_domain_24,
                 onClick = { showDomainDialog = true },
             )
+        }
+
+        if (mirrorRows.isNotEmpty()) {
+            item {
+                SettingNavigationItem(
+                    title = stringResource(R.string.mirror_latency_entry),
+                    summary = stringResource(R.string.mirror_latency_entry_summary, mirrorRows.size),
+                    iconRes = R.drawable.baseline_delay_24,
+                    onClick = onOpenMirrorLatency,
+                )
+            }
         }
 
         if (showCustomMirror) {
@@ -252,14 +314,16 @@ fun NetworkSettingsScreen(
             )
         }
 
-        item {
-            SettingSwitchItem(
-                title = stringResource(R.string.use_backup_media_cdn),
-                summary = stringResource(R.string.use_backup_media_cdn_summary),
-                checked = useBackupMediaCdn,
-                iconRes = R.drawable.baseline_domain_24,
-                onCheckedChange = onUseBackupMediaCdnChange,
-            )
+        if (showBackupMediaCdn) {
+            item {
+                SettingSwitchItem(
+                    title = stringResource(R.string.use_backup_media_cdn),
+                    summary = stringResource(R.string.use_backup_media_cdn_summary),
+                    checked = useBackupMediaCdn,
+                    iconRes = R.drawable.baseline_domain_24,
+                    onCheckedChange = onUseBackupMediaCdnChange,
+                )
+            }
         }
 
         item { NetworkGroupTitle(stringResource(R.string.builtin_dns)) }
@@ -644,8 +708,9 @@ private fun CustomHostsDialog(
                     onValueChange = { text = it },
                     label = { Text(stringResource(R.string.host_or_ipv4)) },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    supportingText = { Text(stringResource(R.string.custom_hosts_format)) },
+                    minLines = 2,
+                    maxLines = 6,
+                    supportingText = { Text(stringResource(R.string.custom_hosts_format_ext)) },
                 )
             }
         },

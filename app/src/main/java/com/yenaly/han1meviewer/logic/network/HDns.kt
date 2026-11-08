@@ -1,13 +1,14 @@
 package com.yenaly.han1meviewer.logic.network
 
 import android.util.Log
-import com.yenaly.han1meviewer.HanimeConstants.HANIME_HOSTNAME
 import com.yenaly.han1meviewer.Preferences
+import com.yenaly.han1meviewer.SiteType
 import okhttp3.Dns
 import okhttp3.dnsoverhttps.DnsOverHttps
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import java.net.InetAddress
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 class HDns : Dns {
@@ -18,30 +19,23 @@ class HDns : Dns {
         val timeoutSeconds: Int,
     )
 
-    @Volatile
-    private var cachedDohConfig: DohRuntimeConfig? = null
-
-    @Volatile
-    private var cachedDohDns: Dns? = null
+    /** Parsed content of the "custom hosts" field. */
+    data class HostsMapping(
+        /** Plain IP lists (legacy format): applied to every host of the site. */
+        val globalIps: List<String>,
+        /** `host=ip,ip` lines: applied to that host only. */
+        val hostIps: Map<String, List<String>>,
+    )
 
     companion object {
-
-        private val cloudFlareIps = listOf(
-            "172.64.229.154", "162.159.0.1", "108.162.192.1", "172.64.33.1", "104.19.0.1",
-            "2606:4700:3035::ac43:bb8d", "2606:4700:3030::6815:746", "2606:4700:3030::6815:714"
-        )
 
         private val getchuIps = listOf("210.155.150.166", "210.155.150.145")
 
         private const val GETCHU_HOSTNAME = "www.getchu.com"
 
-        private operator fun MutableMap<String, List<InetAddress>>.set(
-            host: String, ips: List<String>,
-        ) {
-            this[host] = ips.map {
-                InetAddress.getByAddress(host, InetAddress.getByName(it).address)
-            }
-        }
+        private val dohCache = ConcurrentHashMap<DohRuntimeConfig, Dns>()
+
+        private val mappingCache = ConcurrentHashMap<String, HostsMapping>()
 
         fun parseCustomIps(raw: String): List<String> {
             return raw.split(",")
@@ -49,18 +43,58 @@ class HDns : Dns {
                 .filter { it.isNotEmpty() }
         }
 
+        /**
+         * Accepted formats (one entry per line, `;` also separates entries):
+         *  - `1.2.3.4, 5.6.7.8`        -> used for every host of the site (legacy format)
+         *  - `host.example=1.2.3.4`    -> used for that host only
+         */
+        fun parseHostsMapping(raw: String): HostsMapping {
+            val global = mutableListOf<String>()
+            val perHost = LinkedHashMap<String, List<String>>()
+            raw.split('\n', ';')
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+                .forEach { line ->
+                    val eq = line.indexOf('=')
+                    if (eq > 0) {
+                        val host = line.substring(0, eq).trim().lowercase()
+                        val ips = parseCustomIps(line.substring(eq + 1).replace(' ', ','))
+                        if (host.isNotEmpty() && ips.isNotEmpty()) perHost[host] = ips
+                    } else {
+                        global += parseCustomIps(line.replace(' ', ','))
+                    }
+                }
+            return HostsMapping(global, perHost)
+        }
+
         fun validateCustomHosts(raw: String): List<String> {
             val errors = mutableListOf<String>()
             if (raw.isBlank()) return errors
-            val ips = parseCustomIps(raw)
-            if (ips.isEmpty()) {
-                errors.add("No IP addresses entered")
-                return errors
-            }
-            ips.forEach { ip ->
-                if (!isValidIpAddress(ip)) {
-                    errors.add("Invalid IP address: \"$ip\"")
+            val lines = raw.split('\n', ';').map { it.trim() }.filter { it.isNotEmpty() }
+            var anyIp = false
+            lines.forEach { line ->
+                val eq = line.indexOf('=')
+                val ipPart = if (eq > 0) {
+                    if (line.substring(0, eq).isBlank()) {
+                        errors.add("Missing host name: \"$line\"")
+                    }
+                    line.substring(eq + 1)
+                } else {
+                    line
                 }
+                val ips = parseCustomIps(ipPart.replace(' ', ','))
+                if (ips.isEmpty()) {
+                    errors.add("No IP addresses entered: \"$line\"")
+                }
+                ips.forEach { ip ->
+                    anyIp = true
+                    if (!isValidIpAddress(ip)) {
+                        errors.add("Invalid IP address: \"$ip\"")
+                    }
+                }
+            }
+            if (!anyIp && errors.isEmpty()) {
+                errors.add("No IP addresses entered")
             }
             return errors
         }
@@ -72,30 +106,48 @@ class HDns : Dns {
                     .removeSuffix("]")
             }.getOrDefault(false)
         }
+
+        private fun toAddresses(host: String, ips: List<String>): List<InetAddress> {
+            return ips.map { InetAddress.getByAddress(host, InetAddress.getByName(it).address) }
+        }
+
+        private fun mappingFor(raw: String): HostsMapping {
+            return mappingCache.getOrPut(raw) { parseHostsMapping(raw) }
+        }
+
+        /** IPs the user (or the built-in table) wants for [host] on [site], or null. */
+        private fun mappedIps(site: SiteType, host: String): List<String>? {
+            val owner = SiteNetworks.siteForHost(host, allowSubdomains = false) ?: return null
+            if (!SiteNetworkPrefs.useBuiltInHosts(site)) return null
+            val mapping = mappingFor(SiteNetworkPrefs.customHostsData(site))
+            val lower = host.lowercase()
+            val specific = mapping.hostIps[lower] ?: mapping.hostIps[lower.removePrefix("www.")]
+            if (!specific.isNullOrEmpty()) return specific
+            if (mapping.globalIps.isNotEmpty()) return mapping.globalIps
+            return owner.builtInIps.takeIf { it.isNotEmpty() }
+        }
     }
 
     override fun lookup(hostname: String): List<InetAddress> {
         if (hostname == GETCHU_HOSTNAME) {
-            return getchuIps.map {
-                InetAddress.getByAddress(hostname, InetAddress.getByName(it).address)
-            }
+            return toAddresses(hostname, getchuIps)
         }
 
-        if (Preferences.useBuiltInHosts && HANIME_HOSTNAME.contains(hostname)) {
-            val customIps = resolveCustomIps()
-            if (!customIps.isNullOrEmpty()) {
-                return customIps.map {
-                    InetAddress.getByAddress(hostname, InetAddress.getByName(it).address)
-                }
-            }
-            return cloudFlareIps.map {
-                InetAddress.getByAddress(hostname, InetAddress.getByName(it).address)
-            }
+        val owner = SiteNetworks.siteForHost(hostname, allowSubdomains = false)
+        val site = owner?.siteType ?: Preferences.siteType
+
+        mappedIps(site, hostname)?.let { ips ->
+            return toAddresses(hostname, ips)
         }
 
-        val dohUrl = DohConfig.resolveUrl()
+        // Never leak onion lookups to a DoH provider.
+        if (hostname.endsWith(".onion")) {
+            return Dns.SYSTEM.lookup(hostname)
+        }
+
+        val dohUrl = DohConfig.resolveUrl(site)
         if (!dohUrl.isNullOrBlank()) {
-            return runCatching { lookupByDoH(dohUrl, hostname) }
+            return runCatching { lookupByDoH(site, dohUrl, hostname) }
                 .getOrElse {
                     Log.w("DOH", "lookup failed for $hostname: ${it.message}")
                     Dns.SYSTEM.lookup(hostname)
@@ -105,11 +157,11 @@ class HDns : Dns {
         return Dns.SYSTEM.lookup(hostname)
     }
 
-    private fun lookupByDoH(dohUrl: String, hostname: String): List<InetAddress> {
+    private fun lookupByDoH(site: SiteType, dohUrl: String, hostname: String): List<InetAddress> {
         val config = DohRuntimeConfig(
             url = dohUrl,
-            bootstrapIps = DohConfig.bootstrapIps(),
-            timeoutSeconds = DohConfig.timeoutSeconds(),
+            bootstrapIps = DohConfig.bootstrapIps(site),
+            timeoutSeconds = DohConfig.timeoutSeconds(site),
         )
         val dns = getOrCreateDohDns(config)
         return dns.lookup(hostname).also {
@@ -117,18 +169,20 @@ class HDns : Dns {
         }
     }
 
-    fun lookupByDoHOnly(hostname: String): List<InetAddress> {
-        val dohUrl = DohConfig.resolveUrl() ?: error("DoH is disabled")
-        return lookupByDoH(dohUrl, hostname)
+    /** DoH lookup using the DoH settings of [site] (defaults to the current site). */
+    fun lookupByDoHOnly(
+        hostname: String,
+        site: SiteType = Preferences.siteType,
+    ): List<InetAddress> {
+        val dohUrl = DohConfig.resolveUrl(site) ?: error("DoH is disabled")
+        return lookupByDoH(site, dohUrl, hostname)
     }
 
     private fun getOrCreateDohDns(config: DohRuntimeConfig): Dns {
-        val currentDns = cachedDohDns
-        if (currentDns != null && cachedDohConfig == config) return currentDns
+        dohCache[config]?.let { return it }
 
-        synchronized(this) {
-            val dnsAgain = cachedDohDns
-            if (dnsAgain != null && cachedDohConfig == config) return dnsAgain
+        synchronized(dohCache) {
+            dohCache[config]?.let { return it }
 
             val client = OkHttpClient.Builder()
                 .connectTimeout(config.timeoutSeconds.toLong(), TimeUnit.SECONDS)
@@ -149,23 +203,25 @@ class HDns : Dns {
             }
             val dns = dnsBuilder.build()
 
-            cachedDohConfig = config
-            cachedDohDns = dns
+            dohCache[config] = dns
             return dns
         }
     }
 
-    fun getCDNList(host: String): List<String> {
+    /**
+     * The IPs the app would connect to for [host]. [site] is only used for hosts that do not
+     * belong to any site (it defaults to the current site).
+     */
+    fun getCDNList(host: String, site: SiteType? = null): List<String> {
         if (host == GETCHU_HOSTNAME) {
             return getchuIps.distinct()
         }
 
-        if (Preferences.useBuiltInHosts && HANIME_HOSTNAME.contains(host)) {
-            val customIps = resolveCustomIps()
-            if (!customIps.isNullOrEmpty()) {
-                return customIps.distinct()
-            }
-            return cloudFlareIps.distinct()
+        val owner = SiteNetworks.siteForHost(host, allowSubdomains = false)
+        val effectiveSite = owner?.siteType ?: site ?: Preferences.siteType
+
+        mappedIps(effectiveSite, host)?.let { ips ->
+            return ips.distinct()
         }
 
         return runCatching {
@@ -174,24 +230,6 @@ class HDns : Dns {
             it.printStackTrace()
             emptyList()
         }
-    }
-
-    @Volatile
-    private var cachedCustomIps: List<String>? = null
-
-    @Volatile
-    private var cachedCustomIpsRaw: String? = null
-
-    private fun resolveCustomIps(): List<String>? {
-        val raw = Preferences.customHostsData
-        if (raw.isBlank()) return null
-        if (raw == cachedCustomIpsRaw && cachedCustomIps != null) {
-            return cachedCustomIps
-        }
-        val result = parseCustomIps(raw)
-        cachedCustomIpsRaw = raw
-        cachedCustomIps = result
-        return result
     }
 
 }

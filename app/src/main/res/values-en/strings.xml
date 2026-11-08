@@ -954,4 +954,20 @@ Recommendations are as follows:\n
     <string name="play_video">Play Video</string>
     <string name="switched_to_site">Switched to %s</string>
     <string name="site_selection">Select Site</string>
+
+    <!-- Per-site network settings / mirror latency -->
+    <string name="mirror_latency_title">%s mirrors &amp; latency</string>
+    <string name="mirror_latency_hint">Lower latency usually means a better experience. Each mirror is checked through your current proxy / DNS settings.</string>
+    <string name="mirror_latency_use_fastest">Use fastest</string>
+    <string name="mirror_latency_retest">Retest</string>
+    <string name="mirror_latency_testing">Testing…</string>
+    <string name="mirror_latency_abnormal">Abnormal (HTTP %d)</string>
+    <string name="mirror_latency_use">Use</string>
+    <string name="mirror_latency_in_use">In use</string>
+    <string name="mirror_latency_entry">Mirror sites &amp; latency</string>
+    <string name="mirror_latency_entry_summary">%d mirrors - test latency and switch to the fastest</string>
+    <string name="network_settings_site">Site</string>
+    <string name="network_settings_site_summary">Every setting below applies to the selected site</string>
+    <string name="network_inherited_suffix">(inherited from Hanime1)</string>
+    <string name="custom_hosts_format_ext">IPs separated by commas for all hosts of the site (1.2.3.4,5.6.7.8), or one host per line (example.com=1.2.3.4)</string>
 </resources>

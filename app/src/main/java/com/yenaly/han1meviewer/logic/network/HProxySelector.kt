@@ -10,14 +10,13 @@ import java.net.ProxySelector
 import java.net.SocketAddress
 import java.net.URI
 
+/**
+ * Picks the proxy per request: hosts that belong to a site use that site's proxy setting,
+ * everything else (CDNs, players, ...) follows the site that is currently open.
+ */
 class HProxySelector : ProxySelector() {
 
-    private var delegation: ProxySelector? = null
     private val alternative: ProxySelector = getDefault() ?: NullProxySelector
-
-    init {
-        updateProxy()
-    }
 
     companion object {
         const val TYPE_DIRECT = 0
@@ -54,20 +53,12 @@ class HProxySelector : ProxySelector() {
         }
     }
 
-    private fun updateProxy() {
-        delegation = when (Preferences.proxyType) {
-            TYPE_DIRECT -> NullProxySelector
-            TYPE_SYSTEM -> alternative
-            TYPE_HTTP, TYPE_SOCKS -> null
-            else -> NullProxySelector
-        }
-    }
-
     override fun select(uri: URI?): MutableList<Proxy> {
-        val type = Preferences.proxyType
+        val site = SiteNetworks.siteForHost(uri?.host)?.siteType ?: Preferences.siteType
+        val type = SiteNetworkPrefs.proxyType(site)
         if (type == TYPE_HTTP || type == TYPE_SOCKS) {
-            val ip = Preferences.proxyIp
-            val port = Preferences.proxyPort
+            val ip = SiteNetworkPrefs.proxyIp(site)
+            val port = SiteNetworkPrefs.proxyPort(site)
             if (ip.isNotBlank() && port != -1) {
                 val inetAddress = InetAddress.getByName(ip)
                 val socketAddress = InetSocketAddress(inetAddress, port)
@@ -80,10 +71,12 @@ class HProxySelector : ProxySelector() {
             }
         }
 
-        return delegation?.select(uri) ?: alternative.select(uri)
+        if (type == TYPE_DIRECT) return mutableListOf(Proxy.NO_PROXY)
+
+        return alternative.select(uri)
     }
 
     override fun connectFailed(uri: URI?, sa: SocketAddress?, ioe: IOException?) {
-        delegation?.select(uri)
+        // Nothing to do: the proxy is re-evaluated on every request.
     }
 }

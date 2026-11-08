@@ -1010,4 +1010,20 @@
     <string name="month">月份</string>
     <string name="pause_video">暫停影片</string>
     <string name="play_video">播放影片</string>
+
+    <!-- Per-site network settings / mirror latency -->
+    <string name="mirror_latency_title">%s 鏡像與延遲</string>
+    <string name="mirror_latency_hint">延遲越低通常體驗越好。每個鏡像都會透過目前的代理 / DNS 設定檢測。</string>
+    <string name="mirror_latency_use_fastest">使用最快線路</string>
+    <string name="mirror_latency_retest">重新測速</string>
+    <string name="mirror_latency_testing">測速中…</string>
+    <string name="mirror_latency_abnormal">線路異常（HTTP %d）</string>
+    <string name="mirror_latency_use">使用</string>
+    <string name="mirror_latency_in_use">使用中</string>
+    <string name="mirror_latency_entry">鏡像站與延遲</string>
+    <string name="mirror_latency_entry_summary">共 %d 個鏡像，可測速並切換到最快線路</string>
+    <string name="network_settings_site">站點</string>
+    <string name="network_settings_site_summary">以下所有設定僅對所選站點生效</string>
+    <string name="network_inherited_suffix">（沿用 Hanime1 設定）</string>
+    <string name="custom_hosts_format_ext">以逗號分隔的 IP 將套用於該站點所有網域（1.2.3.4,5.6.7.8），或每行一個網域（example.com=1.2.3.4）</string>
 </resources>

@@ -1,12 +1,17 @@
 package com.yenaly.han1meviewer.FapFolder.common
 
 import com.yenaly.han1meviewer.USER_AGENT
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 object FapFolderConstants {
 
-    const val BASE_URL = "https://fapfolder.club/"
-    const val SITE_HOST = "fapfolder.club"
-    const val AJAX_BASE = "https://fapfolder.club/includes/ajax/"
+    /** Follow the mirror / custom mirror chosen in the network settings. */
+    val BASE_URL: String
+        get() = com.yenaly.han1meviewer.Preferences.fapFolderBaseUrl.trimEnd('/') + "/"
+    val SITE_HOST: String
+        get() = BASE_URL.toHttpUrlOrNull()?.host ?: "fapfolder.club"
+    val AJAX_BASE: String
+        get() = BASE_URL + "includes/ajax/"
     const val UPLOADS_BASE = "https://fap.onl/uploads/"
     const val UPLOADS_HOST = "fap.onl"
     const val SIGNIN_PATH = "signin"
@@ -99,9 +104,12 @@ object FapFolderConstants {
     const val FOLLOW_ACTION_BLOCK = "block"
     const val FOLLOW_ACTION_UNBLOCK = "unblock"
 
-    const val HEADER_ORIGIN = "https://fapfolder.club"
-    const val HEADER_REFERER = "https://fapfolder.club/"
-    const val HEADER_REFERER_SIGNIN = "https://fapfolder.club/signin"
+    val HEADER_ORIGIN: String
+        get() = BASE_URL.trimEnd('/')
+    val HEADER_REFERER: String
+        get() = BASE_URL
+    val HEADER_REFERER_SIGNIN: String
+        get() = BASE_URL + "signin"
     const val AJAX_REQUESTED_WITH = "XMLHttpRequest"
 
     const val ACCEPT_PAGE =

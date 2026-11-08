@@ -5,7 +5,7 @@ import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.preference.PreferenceManager
 import com.yenaly.han1meviewer.HanimeConstants.HANIME_URL
-import com.yenaly.han1meviewer.logic.network.HProxySelector
+import com.yenaly.han1meviewer.logic.network.SiteNetworkPrefs
 import com.yenaly.han1meviewer.logic.network.interceptor.SpeedLimitInterceptor
 import com.yenaly.han1meviewer.ui.navigation.settings.SettingsPreferenceKeys
 import com.yenaly.han1meviewer.ui.view.video.HJzvdStd
@@ -107,7 +107,7 @@ object Preferences {
         set(value) = preferenceSp.edit { putString("site_type", value.name) }
 
     val missAvBaseUrl: String
-        get() = preferenceSp.getString("missav_base_url", MissAvConstants.MISSAV_URL[0]) ?: MissAvConstants.MISSAV_URL[0]
+        get() = SiteNetworkPrefs.baseUrl(SiteType.MISSAV)
 
     var missAvLockQuality: Boolean
         get() = preferenceSp.getBoolean("missav_lock_quality", false)
@@ -130,19 +130,19 @@ object Preferences {
         set(value) = preferenceSp.edit { putString("missav_preferred_quality", value) }
 
     val hentaiMamaBaseUrl: String
-        get() = preferenceSp.getString("hentaimama_base_url", HentaiMamaConstants.BASE_URL) ?: HentaiMamaConstants.BASE_URL
+        get() = SiteNetworkPrefs.baseUrl(SiteType.HENTAIMAMA)
 
     val fapFolderBaseUrl: String
-        get() = com.yenaly.han1meviewer.FapFolder.common.FapFolderConstants.BASE_URL
+        get() = SiteNetworkPrefs.baseUrl(SiteType.FAPFOLDER)
 
     val supJavBaseUrl: String
-        get() = com.yenaly.han1meviewer.SupJav.common.SupJavConstants.BASE_URL
+        get() = SiteNetworkPrefs.baseUrl(SiteType.SUPJAV)
 
     val javchuBaseUrl: String
-        get() = preferenceSp.getString("javchu_base_url", "https://javchu.com") ?: "https://javchu.com"
+        get() = SiteNetworkPrefs.baseUrl(SiteType.JAVCHU)
 
     val onAirBaseUrl: String
-        get() = com.yenaly.han1meviewer.OnAir.common.OnAirSitePreferences.selectedBaseUrl
+        get() = SiteNetworkPrefs.baseUrl(SiteType.ONAIR)
 
     val switchPlayerKernel: String
         get() = preferenceSp.getString(
@@ -237,140 +237,55 @@ object Preferences {
             SettingsPreferenceKeys.FAKE_LAUNCHER_ICON,
             "com.yenaly.han1meviewer.LauncherAliasDefault") ?: "com.yenaly.han1meviewer.LauncherAliasDefault"
 
+    /** True while the Javchu ("av") flavour of the Hanime client is active. */
+    val isAvSite: Boolean
+        get() = siteType == SiteType.JAVCHU || baseUrl == HANIME_URL[3]
+
     val baseUrl: String
-        get() {
-
-            if (siteType == SiteType.JAVCHU) {
-                return "https://javchu.com/"
-            }
-
-            if (siteType == SiteType.HANIME) {
-                if (useCustomMirrorSite && customMirrorSite.isNotBlank()) {
-                    val url = if (appendCustomMirrorPath) customMirrorSite else customMirrorSite.toRootUrl()
-                    return url.toRetrofitBaseUrl()
-                }
-                return preferenceSp.getString(SettingsPreferenceKeys.DOMAIN_NAME, HanimeConstants.HANIME_URL[0])
-                    ?: HanimeConstants.HANIME_URL[0]
-            }
-
-            if (siteType == SiteType.MISSAV) {
-                return missAvBaseUrl
-            }
-
-            if (siteType == SiteType.HENTAIMAMA) {
-                return hentaiMamaBaseUrl
-            }
-
-            if (siteType == SiteType.ONAIR) {
-                return onAirBaseUrl
-            }
-
-            if (siteType == SiteType.FAPFOLDER) {
-                return fapFolderBaseUrl
-            }
-
-            if (siteType == SiteType.SUPJAV) {
-                return supJavBaseUrl
-            }
-
-            return HanimeConstants.HANIME_URL[0]
-        }
+        get() = SiteNetworkPrefs.baseUrl(siteType)
 
     val homeUrl: String
-        get() = when (siteType) {
-            SiteType.JAVCHU -> "https://javchu.com"
-            SiteType.HANIME -> {
-                if (useCustomMirrorSite && customMirrorSite.isNotBlank()) {
-                    customMirrorSite
-                } else {
-                    baseUrl
-                }
-            }
-            SiteType.MISSAV -> missAvBaseUrl
-            SiteType.HENTAIMAMA -> hentaiMamaBaseUrl
-            SiteType.ONAIR -> onAirBaseUrl
-            SiteType.FAPFOLDER -> fapFolderBaseUrl
-            SiteType.SUPJAV -> supJavBaseUrl
-        }
+        get() = SiteNetworkPrefs.homeUrl(siteType)
 
     val useCustomMirrorSite: Boolean
-        get() {
-
-            if (siteType == SiteType.JAVCHU) {
-                return false
-            }
-            return preferenceSp.getBoolean(SettingsPreferenceKeys.USE_CUSTOM_MIRROR_SITE, false)
-        }
+        get() = SiteNetworkPrefs.useCustomMirror(siteType)
 
     val customMirrorSite: String
-        get() {
-
-            if (siteType == SiteType.JAVCHU) {
-                return ""
-            }
-            return preferenceSp.getString(SettingsPreferenceKeys.CUSTOM_MIRROR_SITE, EMPTY_STRING).orEmpty()
-        }
+        get() = SiteNetworkPrefs.customMirror(siteType)
 
     val appendCustomMirrorPath: Boolean
-        get() {
-
-            if (siteType == SiteType.JAVCHU) {
-                return true
-            }
-            return preferenceSp.getBoolean(SettingsPreferenceKeys.APPEND_CUSTOM_MIRROR_PATH, true)
-        }
+        get() = SiteNetworkPrefs.appendCustomPath(siteType)
 
     val displayUrl: String
-        get() = when (siteType) {
-            SiteType.JAVCHU -> "https://javchu.com (Fixed)"
-            SiteType.HANIME -> {
-                if (useCustomMirrorSite && customMirrorSite.isNotBlank()) {
-                    "$customMirrorSite (Custom)"
-                } else {
-                    baseUrl
-                }
-            }
-            SiteType.MISSAV -> missAvBaseUrl
-            SiteType.HENTAIMAMA -> hentaiMamaBaseUrl
-            SiteType.ONAIR -> onAirBaseUrl
-            SiteType.FAPFOLDER -> fapFolderBaseUrl
-            SiteType.SUPJAV -> supJavBaseUrl
-        }
-
-    private fun String.toRetrofitBaseUrl(): String = if (endsWith('/')) this else "$this/"
-
-    private fun String.toRootUrl(): String {
-        val uri = toUri()
-        return "${uri.scheme}://${uri.encodedAuthority}"
-    }
+        get() = SiteNetworkPrefs.displayUrl(siteType)
 
     val selectedBaseUrl: String
         get() = preferenceSp.getString(SettingsPreferenceKeys.SELECTED_BASE_URL, HANIME_URL[0])
             ?: HANIME_URL[0]
 
     val useBuiltInHosts: Boolean
-        get() = preferenceSp.getBoolean(SettingsPreferenceKeys.USE_BUILT_IN_HOSTS, false)
+        get() = SiteNetworkPrefs.useBuiltInHosts(siteType)
 
     val useBackupMediaCdn: Boolean
         get() = preferenceSp.getBoolean(SettingsPreferenceKeys.USE_BACKUP_MEDIA_CDN, false)
 
     val customHostsData: String
-        get() = preferenceSp.getString(SettingsPreferenceKeys.CUSTOM_HOSTS_DATA, EMPTY_STRING).orEmpty()
+        get() = SiteNetworkPrefs.customHostsData(siteType)
 
     val useDoH: Boolean
-        get() = preferenceSp.getBoolean(SettingsPreferenceKeys.USE_DOH, false)
+        get() = SiteNetworkPrefs.useDoH(siteType)
 
     val dohPreset: String
-        get() = preferenceSp.getString(SettingsPreferenceKeys.DOH_PRESET, "alidns") ?: "alidns"
+        get() = SiteNetworkPrefs.dohPreset(siteType)
 
     val dohCustomUrl: String
-        get() = preferenceSp.getString(SettingsPreferenceKeys.DOH_CUSTOM_URL, EMPTY_STRING).orEmpty()
+        get() = SiteNetworkPrefs.dohCustomUrl(siteType)
 
     val dohBootstrapIps: String
-        get() = preferenceSp.getString(SettingsPreferenceKeys.DOH_BOOTSTRAP_IPS, EMPTY_STRING).orEmpty()
+        get() = SiteNetworkPrefs.dohBootstrapIps(siteType)
 
     val dohTimeoutSeconds: Int
-        get() = preferenceSp.getInt(SettingsPreferenceKeys.DOH_TIMEOUT_SECONDS, 10)
+        get() = SiteNetworkPrefs.dohTimeoutSeconds(siteType)
 
     val whenCountdownRemind: Int
         get() = preferenceSp.getInt(
@@ -403,16 +318,13 @@ object Preferences {
         )
 
     val proxyType: Int
-        get() = preferenceSp.getInt(
-            SettingsPreferenceKeys.PROXY_TYPE,
-            HProxySelector.TYPE_SYSTEM
-        )
+        get() = SiteNetworkPrefs.proxyType(siteType)
 
     val proxyIp: String
-        get() = preferenceSp.getString(SettingsPreferenceKeys.PROXY_IP, EMPTY_STRING).orEmpty()
+        get() = SiteNetworkPrefs.proxyIp(siteType)
 
     val proxyPort: Int
-        get() = preferenceSp.getInt(SettingsPreferenceKeys.PROXY_PORT, -1)
+        get() = SiteNetworkPrefs.proxyPort(siteType)
 
     val isAnalyticsEnabled: Boolean
         get() = preferenceSp.getBoolean(SettingsPreferenceKeys.USE_ANALYTICS, true)

@@ -338,70 +338,15 @@ class MainActivity : FrameActivity(), PermissionRequester {
         Preferences.siteType = siteType
 
         when (siteType) {
-            SiteType.HANIME -> {
-                val savedCustomMirror = Preferences.preferenceSp.getString(
-                    SettingsPreferenceKeys.CUSTOM_MIRROR_SITE, ""
-                ) ?: ""
-                val savedUseCustomMirror = Preferences.preferenceSp.getBoolean(
-                    SettingsPreferenceKeys.USE_CUSTOM_MIRROR_SITE, false
-                )
-
-                if (savedCustomMirror.isNotBlank() &&
-                    (savedCustomMirror.contains("hanime1.me") ||
-                     savedCustomMirror.contains("hanime1.com") ||
-                     savedUseCustomMirror)
-                ) {
-                    Log.d(TAG, "Restoring custom mirror: $savedCustomMirror")
-                } else {
-
-                    val hanimeDomains = HanimeConstants.HANIME_URL.take(3)
-                    val currentDomain = Preferences.preferenceSp
-                        .getString(SettingsPreferenceKeys.DOMAIN_NAME, "").orEmpty()
-                    val lastDomain = Preferences.preferenceSp
-                        .getString("last_hanime_domain", "").orEmpty()
-                    val restoredDomain = hanimeDomains.firstOrNull { it == currentDomain }
-                        ?: hanimeDomains.firstOrNull { it == lastDomain }
-                        ?: HanimeConstants.HANIME_URL[0]
-                    Preferences.preferenceSp.edit(true) {
-                        putString(SettingsPreferenceKeys.DOMAIN_NAME, restoredDomain)
-                        putString(SettingsPreferenceKeys.SELECTED_BASE_URL, restoredDomain)
-                        putString(SettingsPreferenceKeys.CUSTOM_MIRROR_SITE, "")
-                        putBoolean(SettingsPreferenceKeys.USE_CUSTOM_MIRROR_SITE, false)
-                        putBoolean(SettingsPreferenceKeys.APPEND_CUSTOM_MIRROR_PATH, true)
-                    }
-                }
-                HanimeNetwork.rebuildNetwork()
-            }
-
-            SiteType.JAVCHU -> {
-                val currentDomain = Preferences.preferenceSp
-                    .getString(SettingsPreferenceKeys.DOMAIN_NAME, "").orEmpty()
-                if (HanimeConstants.HANIME_URL.take(3).contains(currentDomain)) {
-                    Preferences.preferenceSp.edit(true) { putString("last_hanime_domain", currentDomain) }
-                }
-                Preferences.preferenceSp.edit(true) {
-                    putString(SettingsPreferenceKeys.DOMAIN_NAME, "https://javchu.com")
-                    putString(SettingsPreferenceKeys.SELECTED_BASE_URL, "https://javchu.com")
-                    putString(SettingsPreferenceKeys.CUSTOM_MIRROR_SITE, "")
-                    putBoolean(SettingsPreferenceKeys.USE_CUSTOM_MIRROR_SITE, false)
-                    putBoolean(SettingsPreferenceKeys.APPEND_CUSTOM_MIRROR_PATH, true)
-                }
+            SiteType.HANIME, SiteType.JAVCHU -> {
                 HanimeNetwork.rebuildNetwork()
             }
 
             SiteType.MISSAV -> {
-                Preferences.preferenceSp.edit(true) {
-                    putString("missav_base_url", MissAvConstants.MISSAV_URL[0])
-                    putBoolean(SettingsPreferenceKeys.USE_CUSTOM_MIRROR_SITE, false)
-                }
                 MissAvNetwork.rebuildNetwork()
             }
 
             SiteType.HENTAIMAMA -> {
-                Preferences.preferenceSp.edit(true) {
-                    putString("hentaimama_base_url", HentaiMamaConstants.BASE_URL)
-                    putBoolean(SettingsPreferenceKeys.USE_CUSTOM_MIRROR_SITE, false)
-                }
                 HentaiMamaNetwork.rebuildNetwork()
             }
 

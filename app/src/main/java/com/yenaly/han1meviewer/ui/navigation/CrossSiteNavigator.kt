@@ -129,28 +129,7 @@ object CrossSiteNavigator {
         }
 
     private fun targetUrl(site: SiteType): String = when (site) {
-        SiteType.HANIME -> {
-            val sp = Preferences.preferenceSp
-            val custom = sp.getString(SettingsPreferenceKeys.CUSTOM_MIRROR_SITE, "").orEmpty()
-            val useCustom = sp.getBoolean(SettingsPreferenceKeys.USE_CUSTOM_MIRROR_SITE, false)
-            val hanimeDomains = HanimeConstants.HANIME_URL.take(3)
-            val current = sp.getString(SettingsPreferenceKeys.DOMAIN_NAME, "").orEmpty()
-            val last = sp.getString("last_hanime_domain", "").orEmpty()
-            when {
-                custom.startsWith("http") && (useCustom ||
-                        custom.contains("hanime1.me") || custom.contains("hanime1.com")) -> custom
-
-                current in hanimeDomains -> current
-                last in hanimeDomains -> last
-                else -> HanimeConstants.HANIME_URL[0]
-            }
-        }
-
-        SiteType.JAVCHU -> "https://javchu.com"
-        SiteType.MISSAV -> MissAvConstants.MISSAV_URL[0]
-        SiteType.HENTAIMAMA -> HentaiMamaConstants.BASE_URL
         SiteType.ONAIR -> "https://check.torproject.org/"
-        SiteType.FAPFOLDER -> FapFolderConstants.BASE_URL
-        SiteType.SUPJAV -> com.yenaly.han1meviewer.SupJav.common.SupJavConstants.BASE_URL
+        else -> com.yenaly.han1meviewer.logic.network.SiteNetworkPrefs.homeUrl(site)
     }
 }

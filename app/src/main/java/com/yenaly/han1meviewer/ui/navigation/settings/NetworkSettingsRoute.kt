@@ -13,6 +13,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -21,49 +22,60 @@ import androidx.compose.ui.res.stringResource
 import androidx.core.content.edit
 import androidx.core.net.toUri
 import com.yenaly.han1meviewer.EMPTY_STRING
+import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetwork
+import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
+import com.yenaly.han1meviewer.MissAV.data.remote.MissAvNetwork
+import com.yenaly.han1meviewer.OnAir.data.remote.OnAirNetwork
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.SiteType
+import com.yenaly.han1meviewer.SupJav.data.remote.SupJavNetwork
 import com.yenaly.han1meviewer.logic.Parser
 import com.yenaly.han1meviewer.logic.network.DohConfig
 import com.yenaly.han1meviewer.logic.network.HDns
 import com.yenaly.han1meviewer.logic.network.HProxySelector
 import com.yenaly.han1meviewer.logic.network.HanimeNetwork
+import com.yenaly.han1meviewer.logic.network.MirrorLatency
+import com.yenaly.han1meviewer.logic.network.MirrorProbeResult
 import com.yenaly.han1meviewer.logic.network.ServiceCreator
+import com.yenaly.han1meviewer.logic.network.SiteNetworkPrefs
+import com.yenaly.han1meviewer.logic.network.SiteNetworks
 import com.yenaly.han1meviewer.logic.state.WebsiteState
 import com.yenaly.han1meviewer.logout
 import com.yenaly.han1meviewer.ui.component.ConfirmDialog
 import com.yenaly.han1meviewer.ui.component.GlobalToasts
 import com.yenaly.han1meviewer.ui.screen.settings.DelayResultUi
 import com.yenaly.han1meviewer.ui.screen.settings.DohTestResultUi
+import com.yenaly.han1meviewer.ui.screen.settings.MirrorRowUi
 import com.yenaly.han1meviewer.ui.screen.settings.NetworkSettingsScreen
 import com.yenaly.han1meviewer.ui.screen.settings.NetworkSettingsUiState
 import com.yenaly.yenaly_libs.ActivityManager
 import com.yenaly.yenaly_libs.utils.applicationContext
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Request
 import java.net.InetAddress
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicInteger
 
-private const val NETWORK_PROXY_TYPE = "proxy_type"
-private const val NETWORK_PROXY_IP = "proxy_ip"
-private const val NETWORK_PROXY_PORT = "proxy_port"
-private const val NETWORK_DOMAIN_NAME = "domain_name"
-private const val NETWORK_SELECTED_BASE_URL = "selectedBaseUrl"
-private const val NETWORK_USE_CUSTOM_MIRROR_SITE = "use_custom_mirror_site"
-private const val NETWORK_CUSTOM_MIRROR_SITE = "custom_mirror_site"
-private const val NETWORK_APPEND_CUSTOM_MIRROR_PATH = "append_custom_mirror_path"
-private const val NETWORK_USE_BUILT_IN_HOSTS = "use_built_in_hosts"
 private const val NETWORK_USE_BACKUP_MEDIA_CDN = "use_backup_media_cdn"
-private const val NETWORK_CUSTOM_HOSTS_DATA = "custom_hosts_data"
-private const val NETWORK_USE_DOH = "use_doh"
-private const val NETWORK_DOH_PRESET = "doh_preset"
-private const val NETWORK_DOH_CUSTOM_URL = "doh_custom_url"
-private const val NETWORK_DOH_BOOTSTRAP_IPS = "doh_bootstrap_ips"
-private const val NETWORK_DOH_TIMEOUT_SECONDS = "doh_timeout_seconds"
 
 private enum class DohConflictTarget {
     EnableDoH,
     EnableBuiltInHosts,
+}
+
+/** Sites whose settings share the Hanime login, so a mirror change signs the user out. */
+private fun SiteType.sharesHanimeLogin(): Boolean =
+    this == SiteType.HANIME || this == SiteType.JAVCHU
+
+/** Drop every cached client so the new mirror / proxy / DNS settings are picked up. */
+private fun rebuildAllNetworks() {
+    runCatching { HanimeNetwork.rebuildNetwork() }
+    runCatching { MissAvNetwork.rebuildNetwork() }
+    runCatching { HentaiMamaNetwork.rebuildNetwork() }
+    runCatching { OnAirNetwork.rebuildNetwork() }
+    runCatching { SupJavNetwork.rebuildNetwork() }
+    runCatching { FapFolderNetwork.rebuildNetwork() }
 }
 
 @SuppressLint("LocalContextGetResourceValueCall")
@@ -71,7 +83,12 @@ private enum class DohConflictTarget {
 fun NetworkSettingsRouteScreen() {
     val context = LocalContext.current
     var refreshKey by remember { mutableIntStateOf(0) }
-    var currentHost by remember { mutableStateOf(Preferences.baseUrl) }
+
+    // Every setting on this screen belongs to the site picked here (defaults to the open site).
+    var editingSite by remember { mutableStateOf(Preferences.siteType) }
+    val profile = SiteNetworks.forSite(editingSite)
+
+    var currentHost by remember { mutableStateOf(SiteNetworkPrefs.baseUrl(editingSite)) }
     var isDelayTesting by remember { mutableStateOf(false) }
     var isDohTesting by remember { mutableStateOf(false) }
     var isCustomMirrorTesting by remember { mutableStateOf(false) }
@@ -84,27 +101,35 @@ fun NetworkSettingsRouteScreen() {
     var showDohConflictConfirm by remember { mutableStateOf(false) }
     var showSocks5Warning by remember { mutableStateOf(false) }
     var pendingDomainValue by remember { mutableStateOf("") }
-    var pendingUseCustomMirrorSite by remember { mutableStateOf(Preferences.useCustomMirrorSite) }
-    var pendingCustomMirrorSite by remember { mutableStateOf(Preferences.customMirrorSite) }
-    var pendingAppendCustomMirrorPath by remember { mutableStateOf(Preferences.appendCustomMirrorPath) }
+    var pendingSite by remember { mutableStateOf(editingSite) }
+    var pendingUseCustomMirrorSite by remember { mutableStateOf(false) }
+    var pendingCustomMirrorSite by remember { mutableStateOf("") }
+    var pendingAppendCustomMirrorPath by remember { mutableStateOf(true) }
     var pendingDohConflictTarget by remember { mutableStateOf(DohConflictTarget.EnableDoH) }
-    var pendingDohEnabled by remember { mutableStateOf(Preferences.useDoH) }
-    var pendingDohPreset by remember { mutableStateOf(Preferences.dohPreset) }
-    var pendingDohCustomUrl by remember { mutableStateOf(Preferences.dohCustomUrl) }
-    var pendingDohBootstrapIps by remember { mutableStateOf(Preferences.dohBootstrapIps) }
-    var pendingDohTimeoutSeconds by remember { mutableIntStateOf(Preferences.dohTimeoutSeconds) }
+    var pendingDohEnabled by remember { mutableStateOf(false) }
+    var pendingDohPreset by remember { mutableStateOf("alidns") }
+    var pendingDohCustomUrl by remember { mutableStateOf("") }
+    var pendingDohBootstrapIps by remember { mutableStateOf("") }
+    var pendingDohTimeoutSeconds by remember { mutableIntStateOf(10) }
 
-    val isJavchu = Preferences.siteType == SiteType.JAVCHU
-    val showCustomMirror = !isJavchu
+    var isMirrorDialogOpen by remember { mutableStateOf(false) }
+    var isMirrorTesting by remember { mutableStateOf(false) }
+    val mirrorResults = remember { mutableStateMapOf<String, MirrorProbeResult>() }
+    val mirrorRun = remember { AtomicInteger(0) }
 
     val delayResults = remember { mutableStateListOf<DelayResultUi>() }
     val dohTestResults = remember { mutableStateListOf<DohTestResultUi>() }
     val delayHandler = remember { Handler(Looper.getMainLooper()) }
     val dohHandler = remember { Handler(Looper.getMainLooper()) }
+    val mainHandler = remember { Handler(Looper.getMainLooper()) }
     val executor = remember { Executors.newCachedThreadPool() }
-    val uiState = remember(refreshKey, context) { buildNetworkSettingsUiState(context) }
+    val mirrorExecutor = remember { Executors.newFixedThreadPool(6) }
+    val uiState = remember(refreshKey, editingSite, context) {
+        buildNetworkSettingsUiState(context, editingSite)
+    }
     val networkTimeoutText = stringResource(R.string.network_timeout_text)
     val invalidIpOrPort = stringResource(R.string.invalid_ip_or_port)
+    val defaultLabel = stringResource(R.string.default_)
 
     fun stopDelayTest() {
         isDelayTesting = false
@@ -146,15 +171,20 @@ fun NetworkSettingsRouteScreen() {
         delayHandler.postDelayed({ scheduleNextTest(ipList) }, 2000)
     }
 
+    fun currentSiteHost(): String =
+        SiteNetworkPrefs.baseUrl(editingSite).toHttpUrlOrNull()?.host
+            ?: applicationContext.getString(R.string.unknow)
+
     fun runDohTest() {
         if (isDohTesting) return
-        val host = Preferences.baseUrl.toUri().host ?: applicationContext.getString(R.string.unknow)
-        currentHost = Preferences.baseUrl
+        val site = editingSite
+        val host = currentSiteHost()
+        currentHost = SiteNetworkPrefs.baseUrl(site)
         dohTestResults.clear()
         isDohTesting = true
         executor.execute {
             val start = System.currentTimeMillis()
-            val result = runCatching { HDns().lookupByDoHOnly(host) }
+            val result = runCatching { HDns().lookupByDoHOnly(host, site) }
             val delay = (System.currentTimeMillis() - start).toInt()
             dohHandler.post {
                 dohTestResults.clear()
@@ -183,61 +213,148 @@ fun NetworkSettingsRouteScreen() {
         }
     }
 
+    fun startMirrorTest() {
+        val run = mirrorRun.incrementAndGet()
+        val nodes = SiteNetworks.forSite(editingSite).mirrors
+        mirrorResults.clear()
+        nodes.forEach { mirrorResults[it.host] = MirrorProbeResult.Pending }
+        isMirrorTesting = nodes.isNotEmpty()
+        val remaining = AtomicInteger(nodes.size)
+        nodes.forEach { node ->
+            mirrorExecutor.execute {
+                val result = if (mirrorRun.get() == run) MirrorLatency.probe(node) else null
+                mainHandler.post {
+                    if (mirrorRun.get() == run) {
+                        if (result != null) mirrorResults[node.host] = result
+                        if (remaining.decrementAndGet() == 0) isMirrorTesting = false
+                    }
+                }
+            }
+        }
+    }
+
+    fun stopMirrorTest() {
+        mirrorRun.incrementAndGet()
+        isMirrorTesting = false
+        isMirrorDialogOpen = false
+    }
+
+    fun requestMirrorChange(baseUrl: String) {
+        val origin = SiteNetworkPrefs.selectedMirrorUrl(editingSite)
+        val changesCustom = SiteNetworkPrefs.useCustomMirror(editingSite)
+        if (baseUrl.trimEnd('/') == origin.trimEnd('/') && !changesCustom) return
+        pendingSite = editingSite
+        pendingDomainValue = baseUrl
+        // Picking a mirror from the list switches the custom mirror off, as before.
+        pendingUseCustomMirrorSite = false
+        pendingCustomMirrorSite = SiteNetworkPrefs.customMirror(editingSite)
+        pendingAppendCustomMirrorPath = SiteNetworkPrefs.appendCustomPath(editingSite)
+        showDomainRestartConfirm = true
+    }
+
     DisposableEffect(Unit) {
         onDispose {
             stopDelayTest()
             stopDohTest()
+            mirrorRun.incrementAndGet()
             executor.shutdownNow()
+            mirrorExecutor.shutdownNow()
         }
+    }
+
+    val selectedMirrorUrl = SiteNetworkPrefs.selectedMirrorUrl(editingSite)
+    val selectedMirrorHost = selectedMirrorUrl.toHttpUrlOrNull()?.host
+    val customMirrorActive = SiteNetworkPrefs.useCustomMirror(editingSite)
+    val mirrorRows = profile.mirrors.mapIndexed { index, node ->
+        MirrorRowUi(
+            host = node.host,
+            baseUrl = node.baseUrl,
+            isDefault = index == 0,
+            selected = !customMirrorActive && node.host == selectedMirrorHost,
+            result = mirrorResults[node.host] ?: MirrorProbeResult.Pending,
+        )
+    }
+    val domainOptions = profile.mirrors.mapIndexed { index, node ->
+        (if (index == 0) "${node.host} ($defaultLabel)" else node.host) to node.baseUrl
     }
 
     NetworkSettingsScreen(
         state = uiState,
-        domainOptions = buildDomainOptions(),
+        domainOptions = domainOptions,
         currentHost = currentHost,
         delayResults = delayResults,
         dohTestResults = dohTestResults,
         isDelayTesting = isDelayTesting,
         isDohTesting = isDohTesting,
-        proxyType = Preferences.proxyType,
-        proxyIp = Preferences.proxyIp,
-        proxyPort = Preferences.proxyPort,
-        dohEnabled = Preferences.useDoH,
-        dohPreset = Preferences.dohPreset,
-        dohCustomUrl = Preferences.dohCustomUrl,
-        dohBootstrapIps = Preferences.dohBootstrapIps,
-        dohTimeoutSeconds = Preferences.dohTimeoutSeconds,
-        useCustomMirrorSite = if (isJavchu) false else Preferences.useCustomMirrorSite,
-        customMirrorSite = if (isJavchu) "" else Preferences.customMirrorSite,
-        appendCustomMirrorPath = if (isJavchu) true else Preferences.appendCustomMirrorPath,
+        proxyType = SiteNetworkPrefs.proxyType(editingSite),
+        proxyIp = SiteNetworkPrefs.proxyIp(editingSite),
+        proxyPort = SiteNetworkPrefs.proxyPort(editingSite),
+        dohEnabled = SiteNetworkPrefs.useDoH(editingSite),
+        dohPreset = SiteNetworkPrefs.dohPreset(editingSite),
+        dohCustomUrl = SiteNetworkPrefs.dohCustomUrl(editingSite),
+        dohBootstrapIps = SiteNetworkPrefs.dohBootstrapIps(editingSite),
+        dohTimeoutSeconds = SiteNetworkPrefs.dohTimeoutSeconds(editingSite),
+        useCustomMirrorSite = SiteNetworkPrefs.useCustomMirror(editingSite),
+        customMirrorSite = SiteNetworkPrefs.customMirror(editingSite),
+        appendCustomMirrorPath = SiteNetworkPrefs.appendCustomPath(editingSite),
         customMirrorTestResult = customMirrorTestResult,
         isCustomMirrorTesting = isCustomMirrorTesting,
-        showCustomMirror = showCustomMirror,
-        isJavchu = isJavchu,
-        onDomainChange = { newValue ->
-            val origin = Preferences.baseUrl
-            if (newValue != origin) {
-                pendingDomainValue = newValue
-
-                pendingUseCustomMirrorSite = false
-                pendingCustomMirrorSite = Preferences.customMirrorSite
-                pendingAppendCustomMirrorPath = Preferences.appendCustomMirrorPath
-                showDomainRestartConfirm = true
+        showCustomMirror = true,
+        isJavchu = false,
+        showBackupMediaCdn = editingSite == SiteType.HANIME,
+        siteName = profile.displayName,
+        siteOptions = SiteNetworks.profiles.map { it.displayName to it.siteType.name },
+        selectedSiteKey = editingSite.name,
+        onSiteChange = { key ->
+            val next = runCatching { SiteType.valueOf(key) }.getOrNull()
+            if (next != null && next != editingSite) {
+                stopDelayTest()
+                stopDohTest()
+                stopMirrorTest()
+                mirrorResults.clear()
+                customMirrorTestResult = null
+                editingSite = next
+                currentHost = SiteNetworkPrefs.baseUrl(next)
+                refreshKey++
             }
         },
+        mirrorRows = mirrorRows,
+        isMirrorDialogOpen = isMirrorDialogOpen,
+        isMirrorTesting = isMirrorTesting,
+        onOpenMirrorLatency = {
+            isMirrorDialogOpen = true
+            startMirrorTest()
+        },
+        onUseMirror = { host ->
+            profile.mirrors.firstOrNull { it.host == host }?.let { node ->
+                stopMirrorTest()
+                requestMirrorChange(node.baseUrl)
+            }
+        },
+        onUseFastestMirror = {
+            val fastest = MirrorLatency.fastestHost(mirrorResults.toMap())
+            val node = profile.mirrors.firstOrNull { it.host == fastest }
+            if (node != null) {
+                stopMirrorTest()
+                requestMirrorChange(node.baseUrl)
+            }
+        },
+        onRetestMirrors = { startMirrorTest() },
+        onDismissMirrorLatency = { stopMirrorTest() },
+        onDomainChange = { newValue -> requestMirrorChange(newValue) },
         onSaveCustomMirrorSite = { enabled, url, appendPath ->
-            if (isJavchu) return@NetworkSettingsScreen
-
             val normalizedUrl = normalizeCustomMirrorSite(url)
             if (enabled && normalizedUrl == null) {
                 showCustomMirrorValidationError = true
                 return@NetworkSettingsScreen
             }
             val customMirrorSite = normalizedUrl.orEmpty()
-            if (enabled != Preferences.useCustomMirrorSite ||
-                customMirrorSite != Preferences.customMirrorSite ||
-                appendPath != Preferences.appendCustomMirrorPath
+            if (enabled != SiteNetworkPrefs.useCustomMirror(editingSite) ||
+                customMirrorSite != SiteNetworkPrefs.customMirror(editingSite) ||
+                appendPath != SiteNetworkPrefs.appendCustomPath(editingSite)
             ) {
+                pendingSite = editingSite
+                pendingDomainValue = ""
                 pendingUseCustomMirrorSite = enabled
                 pendingCustomMirrorSite = customMirrorSite
                 pendingAppendCustomMirrorPath = appendPath
@@ -249,8 +366,6 @@ fun NetworkSettingsRouteScreen() {
             }
         },
         onTestCustomMirrorSite = { url, appendPath ->
-            if (isJavchu) return@NetworkSettingsScreen
-
             val normalizedUrl = normalizeCustomMirrorSite(url)
             if (normalizedUrl == null) {
                 customMirrorTestResult = context.getString(R.string.custom_mirror_site_invalid)
@@ -259,8 +374,9 @@ fun NetworkSettingsRouteScreen() {
             if (isCustomMirrorTesting) return@NetworkSettingsScreen
             isCustomMirrorTesting = true
             customMirrorTestResult = context.getString(R.string.custom_mirror_site_testing)
+            val site = editingSite
             executor.execute {
-                val result = testCustomMirrorSite(context, normalizedUrl, appendPath)
+                val result = testCustomMirrorSite(context, site, normalizedUrl, appendPath)
                 Handler(Looper.getMainLooper()).post {
                     customMirrorTestResult = result
                     isCustomMirrorTesting = false
@@ -274,13 +390,14 @@ fun NetworkSettingsRouteScreen() {
             showHostsRestartConfirm = true
         },
         onUseBuiltInHostsChange = { value ->
-            if (value && Preferences.useDoH) {
+            if (value && SiteNetworkPrefs.useDoH(editingSite)) {
                 showDohConflictConfirm = true
                 pendingDohConflictTarget = DohConflictTarget.EnableBuiltInHosts
                 return@NetworkSettingsScreen
             }
-            Preferences.preferenceSp.edit { putBoolean(NETWORK_USE_BUILT_IN_HOSTS, value) }
+            SiteNetworkPrefs.setUseBuiltInHosts(editingSite, value)
             refreshKey++
+            rebuildAllNetworks()
             showHostsRestartConfirm = true
         },
         onSaveCustomHosts = { data ->
@@ -289,45 +406,37 @@ fun NetworkSettingsRouteScreen() {
                 showCustomHostsValidationError = errors
                 return@NetworkSettingsScreen
             }
-            Preferences.preferenceSp.edit(commit = true) {
-                putString(NETWORK_CUSTOM_HOSTS_DATA, data)
-            }
+            SiteNetworkPrefs.setCustomHostsData(editingSite, data)
             refreshKey++
-            if (Preferences.useBuiltInHosts) {
-                HanimeNetwork.rebuildNetwork()
+            if (SiteNetworkPrefs.useBuiltInHosts(editingSite)) {
+                rebuildAllNetworks()
             }
         },
-        customHostsData = Preferences.customHostsData,
+        customHostsData = SiteNetworkPrefs.customHostsData(editingSite),
         onSaveDohSettings = { enabled, preset, url, bootstrapIps, timeoutSeconds ->
             pendingDohEnabled = enabled
             pendingDohPreset = preset
             pendingDohCustomUrl = url
             pendingDohBootstrapIps = bootstrapIps
             pendingDohTimeoutSeconds = timeoutSeconds
-            if (enabled && Preferences.useBuiltInHosts) {
+            if (enabled && SiteNetworkPrefs.useBuiltInHosts(editingSite)) {
                 showDohConflictConfirm = true
                 pendingDohConflictTarget = DohConflictTarget.EnableDoH
                 return@NetworkSettingsScreen
             }
-            Preferences.preferenceSp.edit(commit = true) {
-                putBoolean(NETWORK_USE_DOH, enabled)
-                putString(NETWORK_DOH_PRESET, preset)
-                putString(NETWORK_DOH_CUSTOM_URL, url)
-                putString(NETWORK_DOH_BOOTSTRAP_IPS, bootstrapIps)
-                putInt(NETWORK_DOH_TIMEOUT_SECONDS, timeoutSeconds.coerceIn(1, 60))
-            }
-            currentHost = Preferences.baseUrl
+            SiteNetworkPrefs.setDoH(editingSite, enabled, preset, url, bootstrapIps, timeoutSeconds)
+            currentHost = SiteNetworkPrefs.baseUrl(editingSite)
             refreshKey++
-            HanimeNetwork.rebuildNetwork()
+            rebuildAllNetworks()
         },
         onOpenDelayTest = {
-            val host =
-                Preferences.baseUrl.toUri().host ?: applicationContext.getString(R.string.unknow)
-            currentHost = Preferences.baseUrl
+            val site = editingSite
+            val host = currentSiteHost()
+            currentHost = SiteNetworkPrefs.baseUrl(site)
             delayResults.clear()
             isDelayTesting = true
             executor.execute {
-                val ipList = HDns().getCDNList(host)
+                val ipList = HDns().getCDNList(host, site)
                 Handler(Looper.getMainLooper()).post {
                     Log.i("delayTest", ipList.toString())
                     delayResults.clear()
@@ -355,13 +464,9 @@ fun NetworkSettingsRouteScreen() {
             if (type == HProxySelector.TYPE_SOCKS) {
                 showSocks5Warning = true
             }
-            Preferences.preferenceSp.edit(commit = true) {
-                putInt(NETWORK_PROXY_TYPE, type)
-                putString(NETWORK_PROXY_IP, ip)
-                putInt(NETWORK_PROXY_PORT, port)
-            }
+            SiteNetworkPrefs.setProxy(editingSite, type, ip, port)
             HProxySelector.rebuildNetwork()
-            HanimeNetwork.rebuildNetwork()
+            rebuildAllNetworks()
             refreshKey++
         },
     )
@@ -374,23 +479,22 @@ fun NetworkSettingsRouteScreen() {
         dismissText = stringResource(R.string.cancel),
         cancelable = false,
         onConfirm = {
-            Preferences.preferenceSp.edit(commit = true) {
-                if (pendingDomainValue.isNotEmpty()) {
-                    putString(NETWORK_DOMAIN_NAME, pendingDomainValue)
-                    putString(NETWORK_SELECTED_BASE_URL, pendingDomainValue)
-                }
-                putBoolean(NETWORK_USE_CUSTOM_MIRROR_SITE, pendingUseCustomMirrorSite)
-                putString(NETWORK_CUSTOM_MIRROR_SITE, pendingCustomMirrorSite)
-                putBoolean(NETWORK_APPEND_CUSTOM_MIRROR_PATH, pendingAppendCustomMirrorPath)
+            if (pendingDomainValue.isNotEmpty()) {
+                SiteNetworkPrefs.setSelectedMirrorUrl(pendingSite, pendingDomainValue)
             }
-            logout()
+            SiteNetworkPrefs.setCustomMirror(
+                pendingSite,
+                pendingUseCustomMirrorSite,
+                pendingCustomMirrorSite,
+                pendingAppendCustomMirrorPath,
+            )
+            if (pendingSite.sharesHanimeLogin()) {
+                logout()
+            }
             ActivityManager.restart(killProcess = true)
         },
         onDismiss = {
             pendingDomainValue = ""
-            pendingUseCustomMirrorSite = Preferences.useCustomMirrorSite
-            pendingCustomMirrorSite = Preferences.customMirrorSite
-            pendingAppendCustomMirrorPath = Preferences.appendCustomMirrorPath
             showDomainRestartConfirm = false
         },
     )
@@ -445,9 +549,6 @@ fun NetworkSettingsRouteScreen() {
             showDomainRestartConfirm = true
         },
         onDismiss = {
-            pendingUseCustomMirrorSite = Preferences.useCustomMirrorSite
-            pendingCustomMirrorSite = Preferences.customMirrorSite
-            pendingAppendCustomMirrorPath = Preferences.appendCustomMirrorPath
             showCustomMirrorWarningConfirm = false
         },
     )
@@ -460,26 +561,34 @@ fun NetworkSettingsRouteScreen() {
         dismissText = stringResource(R.string.cancel),
         cancelable = false,
         onConfirm = {
-            Preferences.preferenceSp.edit(commit = true) {
-                when (pendingDohConflictTarget) {
-                    DohConflictTarget.EnableDoH -> {
-                        putBoolean(NETWORK_USE_BUILT_IN_HOSTS, false)
-                        putBoolean(NETWORK_USE_DOH, pendingDohEnabled)
-                        putString(NETWORK_DOH_PRESET, pendingDohPreset)
-                        putString(NETWORK_DOH_CUSTOM_URL, pendingDohCustomUrl)
-                        putString(NETWORK_DOH_BOOTSTRAP_IPS, pendingDohBootstrapIps)
-                        putInt(NETWORK_DOH_TIMEOUT_SECONDS, pendingDohTimeoutSeconds.coerceIn(1, 60))
-                    }
+            when (pendingDohConflictTarget) {
+                DohConflictTarget.EnableDoH -> {
+                    SiteNetworkPrefs.setUseBuiltInHosts(editingSite, false)
+                    SiteNetworkPrefs.setDoH(
+                        editingSite,
+                        pendingDohEnabled,
+                        pendingDohPreset,
+                        pendingDohCustomUrl,
+                        pendingDohBootstrapIps,
+                        pendingDohTimeoutSeconds,
+                    )
+                }
 
-                    DohConflictTarget.EnableBuiltInHosts -> {
-                        putBoolean(NETWORK_USE_DOH, false)
-                        putBoolean(NETWORK_USE_BUILT_IN_HOSTS, true)
-                    }
+                DohConflictTarget.EnableBuiltInHosts -> {
+                    SiteNetworkPrefs.setDoH(
+                        editingSite,
+                        false,
+                        SiteNetworkPrefs.dohPreset(editingSite),
+                        SiteNetworkPrefs.dohCustomUrl(editingSite),
+                        SiteNetworkPrefs.dohBootstrapIps(editingSite),
+                        SiteNetworkPrefs.dohTimeoutSeconds(editingSite),
+                    )
+                    SiteNetworkPrefs.setUseBuiltInHosts(editingSite, true)
                 }
             }
             showDohConflictConfirm = false
             refreshKey++
-            HanimeNetwork.rebuildNetwork()
+            rebuildAllNetworks()
         },
         onDismiss = { showDohConflictConfirm = false },
     )
@@ -498,55 +607,64 @@ fun NetworkSettingsRouteScreen() {
     }
 }
 
-private fun buildNetworkSettingsUiState(context: Context): NetworkSettingsUiState {
+private fun buildNetworkSettingsUiState(context: Context, site: SiteType): NetworkSettingsUiState {
+    val profile = SiteNetworks.forSite(site)
+    val selected = SiteNetworkPrefs.selectedMirrorUrl(site)
+    val inheritedSuffix = " " + context.getString(R.string.network_inherited_suffix)
+    val proxyInherited = site != SiteType.HANIME && SiteNetworkPrefs.isProxyInherited(site)
+    val proxyText = when (SiteNetworkPrefs.proxyType(site)) {
+        HProxySelector.TYPE_DIRECT -> context.getString(R.string.direct)
+        HProxySelector.TYPE_SYSTEM -> context.getString(R.string.system_proxy)
+        HProxySelector.TYPE_HTTP -> context.getString(
+            R.string.http_proxy,
+            SiteNetworkPrefs.proxyIp(site),
+            SiteNetworkPrefs.proxyPort(site)
+        )
+
+        HProxySelector.TYPE_SOCKS -> context.getString(
+            R.string.socks_proxy,
+            SiteNetworkPrefs.proxyIp(site),
+            SiteNetworkPrefs.proxyPort(site)
+        )
+
+        else -> context.getString(R.string.direct)
+    }
     return NetworkSettingsUiState(
-        domainName = Preferences.baseUrl,
-        domainDisplay = buildDomainOptions().firstOrNull { it.second == Preferences.baseUrl }?.first
-            ?: Preferences.baseUrl,
-        proxySummary = when (Preferences.proxyType) {
-            HProxySelector.TYPE_DIRECT -> context.getString(R.string.direct)
-            HProxySelector.TYPE_SYSTEM -> context.getString(R.string.system_proxy)
-            HProxySelector.TYPE_HTTP -> context.getString(
-                R.string.http_proxy,
-                Preferences.proxyIp,
-                Preferences.proxyPort
-            )
-
-            HProxySelector.TYPE_SOCKS -> context.getString(
-                R.string.socks_proxy,
-                Preferences.proxyIp,
-                Preferences.proxyPort
-            )
-
-            else -> context.getString(R.string.direct)
-        },
-        useBuiltInHosts = Preferences.useBuiltInHosts,
+        domainName = selected,
+        domainDisplay = profile.mirrors.firstOrNull { it.baseUrl == selected }?.host ?: selected,
+        proxySummary = if (proxyInherited) proxyText + inheritedSuffix else proxyText,
+        useBuiltInHosts = SiteNetworkPrefs.useBuiltInHosts(site),
         useBackupMediaCdn = Preferences.useBackupMediaCdn,
-        useCustomMirrorSite = Preferences.useCustomMirrorSite,
-        customMirrorSite = Preferences.customMirrorSite,
-        appendCustomMirrorPath = Preferences.appendCustomMirrorPath,
-        useDoH = Preferences.useDoH,
-        dohSummary = buildDohSummary(context),
+        useCustomMirrorSite = SiteNetworkPrefs.useCustomMirror(site),
+        customMirrorSite = SiteNetworkPrefs.customMirror(site),
+        appendCustomMirrorPath = SiteNetworkPrefs.appendCustomPath(site),
+        useDoH = SiteNetworkPrefs.useDoH(site),
+        dohSummary = buildDohSummary(context, site),
         delaySummary = context.getString(R.string.node_latency_sum),
     )
 }
 
-private fun buildDomainOptions(): List<Pair<String, String>> {
-    return listOf(
-        "hanime1.me (Default)" to "https://hanime1.me/",
-        "hanime1.com (Backup)" to "https://hanime1.com/",
-    )
-}
-
+/** Same rules as before, but https only - plus plain http for `.onion` addresses. */
 private fun normalizeCustomMirrorSite(url: String): String? {
     val trimmed = url.trim().trimEnd('/')
     val uri = runCatching { trimmed.toUri() }.getOrNull() ?: return null
-    if (uri.scheme != "https" || uri.host.isNullOrBlank()) return null
+    val host = uri.host
+    if (host.isNullOrBlank()) return null
+    val schemeOk = uri.scheme == "https" || (uri.scheme == "http" && host.endsWith(".onion"))
+    if (!schemeOk) return null
     if (!uri.query.isNullOrBlank() || !uri.fragment.isNullOrBlank()) return null
     return url.trim()
 }
 
-private fun testCustomMirrorSite(context: Context, homeUrl: String, appendPath: Boolean): String {
+private fun testCustomMirrorSite(
+    context: Context,
+    site: SiteType,
+    homeUrl: String,
+    appendPath: Boolean,
+): String {
+    if (site != SiteType.HANIME && site != SiteType.JAVCHU) {
+        return testGenericMirrorSite(context, homeUrl, appendPath)
+    }
     return runCatching {
         val request = Request.Builder().url(homeUrl).get().build()
         ServiceCreator.hClient.newCall(request).execute().use { response ->
@@ -599,6 +717,34 @@ private fun testCustomMirrorSite(context: Context, homeUrl: String, appendPath: 
     }
 }
 
+/**
+ * Sites other than Hanime/Javchu have their own page formats, so the check is limited to
+ * "does the address answer" (a Cloudflare challenge still counts: the node is up).
+ */
+private fun testGenericMirrorSite(context: Context, homeUrl: String, appendPath: Boolean): String {
+    return runCatching {
+        val request = Request.Builder().url(homeUrl).get().build()
+        MirrorLatency.httpClient.newCall(request).execute().use { response ->
+            val finalUrl = response.request.url.toString()
+            val code = response.code
+            if (code >= 500 || (code in 400..499 && code != 403)) {
+                context.getString(R.string.custom_mirror_site_test_failed_http, code, finalUrl)
+            } else {
+                context.getString(
+                    R.string.custom_mirror_site_test_success,
+                    finalUrl,
+                    buildCustomMirrorApiBaseUrl(homeUrl, appendPath),
+                )
+            }
+        }
+    }.getOrElse { throwable ->
+        context.getString(
+            R.string.custom_mirror_site_test_failed,
+            throwable.message ?: throwable::class.java.simpleName,
+        )
+    }
+}
+
 private fun testCustomMirrorWatchUrl(context: Context, apiBaseUrl: String): String? {
     return runCatching {
         val url = apiBaseUrl + "search"
@@ -630,14 +776,19 @@ private fun buildCustomMirrorApiBaseUrl(homeUrl: String, appendPath: Boolean): S
     return if (url.endsWith('/')) url else "$url/"
 }
 
-private fun buildDohSummary(context: Context): String {
-    if (!Preferences.useDoH) return context.getString(R.string.doh_disabled_summary)
-    if (Preferences.useBuiltInHosts) return context.getString(R.string.doh_conflict_message)
-    val core = if (Preferences.dohPreset == "custom") {
-        Preferences.dohCustomUrl.ifBlank { context.getString(R.string.custom) }
+private fun buildDohSummary(context: Context, site: SiteType): String {
+    if (!SiteNetworkPrefs.useDoH(site)) return context.getString(R.string.doh_disabled_summary)
+    if (SiteNetworkPrefs.useBuiltInHosts(site)) return context.getString(R.string.doh_conflict_message)
+    val core = if (SiteNetworkPrefs.dohPreset(site) == "custom") {
+        SiteNetworkPrefs.dohCustomUrl(site).ifBlank { context.getString(R.string.custom) }
     } else {
-        DohConfig.selectedPreset().title
+        DohConfig.selectedPreset(site).title
     }
-    val bootstrap = DohConfig.bootstrapIps().takeIf { it.isNotEmpty() }?.joinToString()
-    return if (bootstrap != null) "$core\nBootstrap: $bootstrap" else core
+    val bootstrap = DohConfig.bootstrapIps(site).takeIf { it.isNotEmpty() }?.joinToString()
+    val text = if (bootstrap != null) "$core\nBootstrap: $bootstrap" else core
+    return if (site != SiteType.HANIME && SiteNetworkPrefs.isDohInherited(site)) {
+        text + "\n" + context.getString(R.string.network_inherited_suffix)
+    } else {
+        text
+    }
 }

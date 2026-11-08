@@ -3,6 +3,7 @@ package com.yenaly.han1meviewer.HentaiMama.cloudflare
 import android.content.Context
 import android.util.Log
 import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaConstants
+import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
 import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
 import okhttp3.Protocol
@@ -100,7 +101,8 @@ class HentaiMamaCloudflareInterceptor(
             return true
         }
         return runCatching {
-            HentaiMamaConstants.BASE_URL.contains(normalized, ignoreCase = true)
+            HentaiMamaConstants.BASE_URL.contains(normalized, ignoreCase = true) ||
+                    HentaiMamaNetwork.baseUrl.contains(normalized, ignoreCase = true)
         }.getOrDefault(false)
     }
 }
