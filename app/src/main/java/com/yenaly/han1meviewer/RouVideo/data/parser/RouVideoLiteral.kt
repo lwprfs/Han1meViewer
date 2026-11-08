@@ -11,12 +11,22 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
+/**
+ * Reads the page data rou.video embeds in its HTML (TanStack Start / "seroval" literal).
+ *
+ * The literal is JavaScript, not JSON: keys are unquoted, booleans are `!0` / `!1`,
+ * values may be prefixed with `$R[n]=`, `undefined` is `void 0`. This is a small
+ * recursive-descent reader that turns it straight into a [JsonObject].
+ *
+ * Kept isolated on purpose: if the site changes its page format this is a one-file fix.
+ */
 internal object RouVideoLiteral {
 
-    private val LOADER_START = Regex("""l:\$R\[\d+]=\{""")
+    private val LOADER_START = Regex("""l:\${'$'}R\[\d+]=\{""")
 
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
+    /** The page loader object: the first `l:$R[n]={ ... }` of the document. */
     fun loaderObject(html: String): JsonObject {
         val match = LOADER_START.find(html)
             ?: error("Page data not found (the site layout may have changed)")
@@ -24,6 +34,7 @@ internal object RouVideoLiteral {
         return value as? JsonObject ?: error("Page data is not an object")
     }
 
+    /** Reverses the site's `ev` obfuscation: base64, then every char shifted by [k]. */
     fun decodeEv(d: String, k: Int): String {
         val bytes = try {
             Base64.decode(d, Base64.DEFAULT)
@@ -35,6 +46,7 @@ internal object RouVideoLiteral {
         return sb.toString()
     }
 
+    /** `videoUrl` of the decoded `ev` object, or null when it cannot be decoded. */
     fun streamPathFromEv(ev: JsonObject?): String? {
         ev ?: return null
         val d = ev["d"]?.jsonPrimitive?.contentOrNull ?: return null
@@ -152,12 +164,13 @@ internal object RouVideoLiteral {
             val start = i
             while (i < s.length && (s[i].isDigit() || s[i] in "+-.eE")) i++
             val text = s.substring(start, i)
-            if (s.getOrNull(i) == 'n') i++
+            if (s.getOrNull(i) == 'n') i++ // BigInt suffix
             text.toLongOrNull()?.let { return JsonPrimitive(it) }
             val d = text.toDoubleOrNull() ?: fail("bad number '$text'")
             return JsonPrimitive(d)
         }
 
+        /** `$R[n]=value` (strip the prefix) or a bare `$R[n]` back-reference (null). */
         private fun readRef(): JsonElement {
             if (!s.startsWith("\$R[", i)) fail("unexpected '$'")
             val close = s.indexOf(']', i)
