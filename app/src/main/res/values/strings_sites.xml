@@ -987,7 +987,8 @@
     <string name="cross_tor_non_exit">此裝置目前並未經由 Tor 網路連線。請啟用 Tor 後再試。</string>
     <string name="cross_tor_required">存取 OnAir 需要 Tor。</string>
 
-    <!-- rou.video -->
+    <!-- 肉視頻 -->
+    <string name="site_rouvideo_name">肉視頻</string>
     <string name="site_rouvideo_description">國產、探花、自拍與 AI 短劇影音站</string>
     <string name="rouvideo_all">全部</string>
     <string name="rouvideo_categories">分類</string>
@@ -1000,15 +1001,15 @@
     <string name="rouvideo_episodes">劇集</string>
     <string name="rouvideo_filter_tags">篩選標籤</string>
     <string name="rouvideo_genres">題材 / 屬性</string>
-    <string name="rouvideo_history_summary">你在 rou.video 觀看過的影片</string>
+    <string name="rouvideo_history_summary">你在 肉視頻 觀看過的影片</string>
     <string name="rouvideo_history_title">觀看紀錄</string>
     <string name="rouvideo_home_tabs">首頁分頁</string>
     <string name="rouvideo_home_tabs_hint">調整首頁分頁的順序，或關閉不想顯示的分頁。</string>
     <string name="rouvideo_host_custom_active">目前使用自訂鏡像站：%1$s。選擇下方網域會取代它。</string>
     <string name="rouvideo_host_default">%1$s（預設）</string>
-    <string name="rouvideo_host_hint">選擇 App 連線 rou.video 時使用的網域。延遲測試、自訂鏡像站、代理、DoH 與 DNS 請至 設定 → 網路設定。</string>
+    <string name="rouvideo_host_hint">選擇 App 連線 肉視頻 時使用的網域。延遲測試、自訂鏡像站、代理、DoH 與 DNS 請至 設定 → 網路設定。</string>
     <string name="rouvideo_host_open_address_page">開啟地址發布頁</string>
-    <string name="rouvideo_host_subtitle">選擇 rou.video 網域與鏡像站</string>
+    <string name="rouvideo_host_subtitle">選擇 肉視頻 網域與鏡像站</string>
     <string name="rouvideo_host_switch">切換網域</string>
     <string name="rouvideo_host_switch_message">切換到 %1$s？目前頁面將重新載入。</string>
     <string name="rouvideo_hot_searches">熱門搜尋</string>
@@ -1028,8 +1029,8 @@
     <string name="rouvideo_report_plays_summary">開始播放時通知網站計入一次觀看（預設關閉）</string>
     <string name="rouvideo_reset_defaults">還原為預設值</string>
     <string name="rouvideo_search_for">搜尋「%1$s」</string>
-    <string name="rouvideo_search_hint">搜尋 rou.video</string>
-    <string name="rouvideo_search_prompt">輸入關鍵字，或貼上 rou.video 影片連結 / id:影片ID</string>
+    <string name="rouvideo_search_hint">搜尋 肉視頻</string>
+    <string name="rouvideo_search_prompt">輸入關鍵字，或貼上 肉視頻 影片連結 / id:影片ID</string>
     <string name="rouvideo_series_completed">已完結</string>
     <string name="rouvideo_series_filter_all">全部狀態</string>
     <string name="rouvideo_series_filter_completed">已完結</string>
@@ -1041,7 +1042,7 @@
     <string name="rouvideo_series_sort_most">集數最多</string>
     <string name="rouvideo_series_sort_updated">最新更新</string>
     <string name="rouvideo_settings_summary">首頁分頁、標題字體與播放選項</string>
-    <string name="rouvideo_settings_title">rou.video 設定</string>
+    <string name="rouvideo_settings_title">肉視頻 設定</string>
     <string name="rouvideo_show_all">顯示全部 %1$d 個</string>
     <string name="rouvideo_sort_likes">最多喜歡</string>
     <string name="rouvideo_sort_newest">最新發布</string>

@@ -107,7 +107,7 @@ val DefaultSiteSwitchOptions: List<SiteSwitchOption> = listOf(
         accentColor = Color(0xFF5E35B1),
     ),
     SiteSwitchOption(
-        name = "rou.video",
+        name = applicationContext.getString(R.string.site_rouvideo_name),
         description = applicationContext.getString(R.string.site_rouvideo_description),
         siteType = SiteType.ROUVIDEO,
         logoRes = R.drawable.s_switch_rouvideo,

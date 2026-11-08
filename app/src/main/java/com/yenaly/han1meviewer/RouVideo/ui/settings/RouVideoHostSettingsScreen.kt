@@ -201,7 +201,7 @@ fun RouVideoHostSettingsScreen(onBack: () -> Unit) {
             )
         }
         MirrorLatencyDialog(
-            siteName = "rou.video",
+            siteName = stringResource(R.string.site_rouvideo_name),
             rows = rows,
             isTesting = testing,
             onUse = { row ->

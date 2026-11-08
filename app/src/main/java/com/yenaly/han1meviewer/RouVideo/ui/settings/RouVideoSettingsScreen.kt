@@ -48,7 +48,7 @@ fun RouVideoSettingsScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             SiteTopAppBar(
-                title = { Text(stringResource(R.string.site_settings_2, "rou.video")) },
+                title = { Text(stringResource(R.string.site_settings_2, stringResource(R.string.site_rouvideo_name))) },
                 navigationIcon = { SiteBackButton(onClick = onBack) },
             )
         },

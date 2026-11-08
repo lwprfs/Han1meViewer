@@ -987,7 +987,8 @@
     <string name="cross_tor_non_exit">This device is not exiting through the Tor network. Enable Tor and try again.</string>
     <string name="cross_tor_required">Tor is required to access OnAir.</string>
 
-    <!-- rou.video -->
+    <!-- Rou Video -->
+    <string name="site_rouvideo_name">Rou Video</string>
     <string name="site_rouvideo_description">Chinese amateur, AI short drama and more</string>
     <string name="rouvideo_all">All</string>
     <string name="rouvideo_categories">Categories</string>
@@ -1000,15 +1001,15 @@
     <string name="rouvideo_episodes">Episodes</string>
     <string name="rouvideo_filter_tags">Filter tags</string>
     <string name="rouvideo_genres">Themes / attributes</string>
-    <string name="rouvideo_history_summary">Videos you watched on rou.video</string>
+    <string name="rouvideo_history_summary">Videos you watched on Rou Video</string>
     <string name="rouvideo_history_title">Watch history</string>
     <string name="rouvideo_home_tabs">Home tabs</string>
     <string name="rouvideo_home_tabs_hint">Reorder the home tabs or hide the ones you do not want.</string>
     <string name="rouvideo_host_custom_active">A custom mirror is in use: %1$s. Picking a domain below replaces it.</string>
     <string name="rouvideo_host_default">%1$s (default)</string>
-    <string name="rouvideo_host_hint">Choose which domain the app uses for rou.video. Latency tests, custom mirror, proxy, DoH and DNS are in Settings → Network.</string>
+    <string name="rouvideo_host_hint">Choose which domain the app uses for Rou Video. Latency tests, custom mirror, proxy, DoH and DNS are in Settings → Network.</string>
     <string name="rouvideo_host_open_address_page">Open the address page</string>
-    <string name="rouvideo_host_subtitle">Choose the rou.video domain and mirrors</string>
+    <string name="rouvideo_host_subtitle">Choose the Rou Video domain and mirrors</string>
     <string name="rouvideo_host_switch">Switch domain</string>
     <string name="rouvideo_host_switch_message">Switch to %1$s? The current page will reload.</string>
     <string name="rouvideo_hot_searches">Hot searches</string>
@@ -1028,8 +1029,8 @@
     <string name="rouvideo_report_plays_summary">Tell the site to count a view when playback starts (off by default)</string>
     <string name="rouvideo_reset_defaults">Reset to defaults</string>
     <string name="rouvideo_search_for">Search for \"%1$s\"</string>
-    <string name="rouvideo_search_hint">Search rou.video</string>
-    <string name="rouvideo_search_prompt">Enter a keyword, or paste a rou.video link / id:VIDEOID</string>
+    <string name="rouvideo_search_hint">Search Rou Video</string>
+    <string name="rouvideo_search_prompt">Enter a keyword, or paste a Rou Video link / id:VIDEOID</string>
     <string name="rouvideo_series_completed">Completed</string>
     <string name="rouvideo_series_filter_all">All statuses</string>
     <string name="rouvideo_series_filter_completed">Completed</string>
@@ -1041,7 +1042,7 @@
     <string name="rouvideo_series_sort_most">Most episodes</string>
     <string name="rouvideo_series_sort_updated">Recently updated</string>
     <string name="rouvideo_settings_summary">Home tabs, title script and playback options</string>
-    <string name="rouvideo_settings_title">rou.video settings</string>
+    <string name="rouvideo_settings_title">Rou Video settings</string>
     <string name="rouvideo_show_all">Show all %1$d</string>
     <string name="rouvideo_sort_likes">Most liked</string>
     <string name="rouvideo_sort_newest">Newest</string>

@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.logic.network
 
+import com.yenaly.han1meviewer.R
+import com.yenaly.yenaly_libs.utils.applicationContext
 import com.yenaly.han1meviewer.OnAir.common.OnAirConstants
 import com.yenaly.han1meviewer.SiteType
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
@@ -137,7 +139,7 @@ object SiteNetworks {
         ),
         SiteNetworkProfile(
             siteType = SiteType.ROUVIDEO,
-            displayName = "rou.video",
+            displayName = applicationContext.getString(R.string.site_rouvideo_name),
 
             catalogKey = "rou_video",
             defaultUrls = { listOf("https://rou.video") },

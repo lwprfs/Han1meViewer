@@ -28,7 +28,7 @@ object SitePlayerSettings {
         SiteType.ONAIR -> "OnAir"
         SiteType.FAPFOLDER -> "FapFolder"
         SiteType.SUPJAV -> "SupJav"
-        SiteType.ROUVIDEO -> "rou.video"
+        SiteType.ROUVIDEO -> applicationContext.getString(R.string.site_rouvideo_name)
     }
 
     sealed class Spec(val id: String, val title: String, val summary: String?) {

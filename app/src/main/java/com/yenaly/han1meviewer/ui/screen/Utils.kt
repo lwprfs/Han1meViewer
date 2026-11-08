@@ -43,10 +43,12 @@ fun RetryableImage(
     val resolvedLoader = imageLoader ?: SingletonImageLoader.get(context)
 
     var retryCount by remember(model) { mutableIntStateOf(0) }
-    val request = remember(model, retryCount) {
+    val request = remember(model, retryCount, contentScale) {
         ImageRequest.Builder(context)
             .data(model)
-            .crossfade(true)
+            // Coil's crossfade painter stretches the bitmap to the box on fresh loads
+            // when contentScale is Crop/FillWidth; cached loads skip it (looked fine).
+            .crossfade(contentScale == ContentScale.Fit || contentScale == ContentScale.Inside)
             .memoryCacheKey("$model#r$retryCount")
             .diskCacheKey("$model#r$retryCount")
             .listener(

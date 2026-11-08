@@ -68,7 +68,7 @@ object CrossSiteNavigator {
         SiteType.ONAIR -> "OnAir"
         SiteType.FAPFOLDER -> "FapFolder"
         SiteType.SUPJAV -> "SupJav"
-        SiteType.ROUVIDEO -> "rou.video"
+        SiteType.ROUVIDEO -> applicationContext.getString(R.string.site_rouvideo_name)
     }
 
     suspend fun validate(site: SiteType): Validation = when (site) {
