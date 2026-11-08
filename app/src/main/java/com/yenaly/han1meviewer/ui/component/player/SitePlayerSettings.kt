@@ -17,6 +17,7 @@ object SitePlayerSettings {
         SiteType.ONAIR,
         SiteType.FAPFOLDER,
         SiteType.SUPJAV,
+        SiteType.ROUVIDEO,
     )
 
     fun label(site: SiteType): String = when (site) {
@@ -27,6 +28,7 @@ object SitePlayerSettings {
         SiteType.ONAIR -> "OnAir"
         SiteType.FAPFOLDER -> "FapFolder"
         SiteType.SUPJAV -> "SupJav"
+        SiteType.ROUVIDEO -> "rou.video"
     }
 
     sealed class Spec(val id: String, val title: String, val summary: String?) {

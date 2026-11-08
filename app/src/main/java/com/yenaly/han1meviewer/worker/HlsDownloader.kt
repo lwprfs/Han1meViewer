@@ -266,7 +266,9 @@ class HlsDownloader(
     companion object {
         fun isHls(url: String?): Boolean {
             if (url.isNullOrBlank()) return false
-            return url.substringBefore('#').lowercase().contains(".m3u8")
+            val clean = url.substringBefore('#').lowercase()
+            // rou.video's playlist endpoint has no .m3u8 extension (it 302s to a wrapped playlist).
+            return clean.contains(".m3u8") || clean.contains("/api/hls/")
         }
     }
 }

@@ -74,6 +74,7 @@ import androidx.preference.PreferenceManager
 import com.google.android.material.snackbar.Snackbar
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetwork
 import com.yenaly.han1meviewer.SupJav.data.remote.SupJavNetwork
+import com.yenaly.han1meviewer.RouVideo.data.remote.RouVideoNetwork
 import com.yenaly.han1meviewer.HanimeConstants
 import com.yenaly.han1meviewer.OnAir.common.OnAirSitePreferences
 import com.yenaly.han1meviewer.OnAir.data.remote.OnAirNetwork
@@ -361,6 +362,10 @@ class MainActivity : FrameActivity(), PermissionRequester {
 
             SiteType.SUPJAV -> {
                 SupJavNetwork.rebuildNetwork()
+            }
+
+            SiteType.ROUVIDEO -> {
+                RouVideoNetwork.rebuildNetwork()
             }
         }
 

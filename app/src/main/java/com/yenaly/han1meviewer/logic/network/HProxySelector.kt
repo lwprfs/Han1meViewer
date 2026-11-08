@@ -10,10 +10,6 @@ import java.net.ProxySelector
 import java.net.SocketAddress
 import java.net.URI
 
-/**
- * Picks the proxy per request: hosts that belong to a site use that site's proxy setting,
- * everything else (CDNs, players, ...) follows the site that is currently open.
- */
 class HProxySelector : ProxySelector() {
 
     private val alternative: ProxySelector = getDefault() ?: NullProxySelector
@@ -77,6 +73,6 @@ class HProxySelector : ProxySelector() {
     }
 
     override fun connectFailed(uri: URI?, sa: SocketAddress?, ioe: IOException?) {
-        // Nothing to do: the proxy is re-evaluated on every request.
+
     }
 }

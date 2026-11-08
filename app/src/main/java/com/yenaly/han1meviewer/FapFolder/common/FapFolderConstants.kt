@@ -5,7 +5,6 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 object FapFolderConstants {
 
-    /** Follow the mirror / custom mirror chosen in the network settings. */
     val BASE_URL: String
         get() = com.yenaly.han1meviewer.Preferences.fapFolderBaseUrl.trimEnd('/') + "/"
     val SITE_HOST: String

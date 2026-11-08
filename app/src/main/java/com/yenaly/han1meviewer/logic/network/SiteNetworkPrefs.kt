@@ -8,16 +8,6 @@ import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.ui.navigation.settings.SettingsPreferenceKeys
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
-/**
- * Network settings stored per site.
- *
- * Storage layout (keeps every pre-existing preference working):
- *  - [SiteType.HANIME] keeps using the original, un-suffixed keys.
- *  - every other site uses `<key>__<site>` (for example `proxy_type__missav`).
- *  - proxy and DoH of a site that never configured its own fall back to the Hanime values,
- *    which were global before per-site settings existed. Mirror, custom mirror and the
- *    built-in DNS mapping never inherit.
- */
 object SiteNetworkPrefs {
 
     private const val SEP = "__"
@@ -29,8 +19,6 @@ object SiteNetworkPrefs {
     private fun key(base: String, site: SiteType): String =
         if (site == SiteType.HANIME) base else base + SEP + site.name.lowercase()
 
-    // ------------------------------------------------------------------ mirror
-
     private fun mirrorKey(site: SiteType): String = when (site) {
         SiteType.HANIME -> SettingsPreferenceKeys.DOMAIN_NAME
         SiteType.MISSAV -> "missav_base_url"
@@ -39,7 +27,6 @@ object SiteNetworkPrefs {
         else -> "site_base_url" + SEP + site.name.lowercase()
     }
 
-    /** The mirror picked from the list (ignores the custom mirror). */
     fun selectedMirrorUrl(site: SiteType): String {
         if (site == SiteType.ONAIR) return OnAirSitePreferences.selectedBaseUrl
         val profile = SiteNetworks.forSite(site)
@@ -47,7 +34,7 @@ object SiteNetworkPrefs {
         if (site == SiteType.HANIME && raw != null &&
             raw.toHttpUrlOrNull()?.host.equals("javchu.com", ignoreCase = true)
         ) {
-            // Older builds parked the Javchu address in the shared Hanime key.
+
             raw = sp.getString(LAST_HANIME_DOMAIN, null)
         }
         return if (raw.isNullOrBlank()) profile.defaultBaseUrl else profile.normalizeBase(raw)
@@ -69,8 +56,6 @@ object SiteNetworkPrefs {
         }
     }
 
-    // ----------------------------------------------------------- custom mirror
-
     fun useCustomMirror(site: SiteType): Boolean =
         sp.getBoolean(key(SettingsPreferenceKeys.USE_CUSTOM_MIRROR_SITE, site), false)
 
@@ -88,7 +73,6 @@ object SiteNetworkPrefs {
         }
     }
 
-    /** Host of the active custom mirror, or null when none is in use. */
     fun customMirrorHost(site: SiteType): String? {
         if (!useCustomMirror(site)) return null
         return customMirror(site).trim().toHttpUrlOrNull()?.host
@@ -99,7 +83,6 @@ object SiteNetworkPrefs {
         return parsed.newBuilder().encodedPath("/").query(null).fragment(null).build().toString()
     }
 
-    /** URL the site's network client is built on. */
     fun baseUrl(site: SiteType): String {
         val custom = customMirror(site).trim()
         if (useCustomMirror(site) && custom.isNotBlank()) {
@@ -109,13 +92,11 @@ object SiteNetworkPrefs {
         return selectedMirrorUrl(site)
     }
 
-    /** [defaults] plus the host the site is currently pointed at (mirror or custom mirror). */
     fun knownHosts(site: SiteType, defaults: List<String>): Array<String> {
         val current = baseUrl(site).toHttpUrlOrNull()?.host
         return (defaults + listOfNotNull(current)).distinct().toTypedArray()
     }
 
-    /** URL the home page is fetched from. */
     fun homeUrl(site: SiteType): String {
         val custom = customMirror(site).trim()
         if (useCustomMirror(site) && custom.isNotBlank()) return custom
@@ -128,8 +109,6 @@ object SiteNetworkPrefs {
         if (useCustomMirror(site) && custom.isNotBlank()) return "$custom (Custom)"
         return baseUrl(site)
     }
-
-    // ------------------------------------------------------------------- proxy
 
     private fun proxyOwned(site: SiteType): Boolean =
         site == SiteType.HANIME || sp.contains(key(SettingsPreferenceKeys.PROXY_TYPE, site))
@@ -158,8 +137,6 @@ object SiteNetworkPrefs {
             putInt(key(SettingsPreferenceKeys.PROXY_PORT, site), port)
         }
     }
-
-    // --------------------------------------------------------------------- DoH
 
     private fun dohOwned(site: SiteType): Boolean =
         site == SiteType.HANIME || sp.contains(key(SettingsPreferenceKeys.USE_DOH, site))
@@ -204,9 +181,6 @@ object SiteNetworkPrefs {
         }
     }
 
-    // ------------------------------------------------------- built-in DNS (hosts)
-
-    /** Javchu used to share the Hanime hosts toggle, so it keeps following it until changed. */
     private fun hostsSite(site: SiteType): SiteType =
         if (site == SiteType.JAVCHU &&
             !sp.contains(key(SettingsPreferenceKeys.USE_BUILT_IN_HOSTS, site))

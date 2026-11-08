@@ -11,6 +11,9 @@ import com.yenaly.han1meviewer.SupJav.ui.navigation.SupJavHistoryRoute
 import com.yenaly.han1meviewer.SupJav.ui.navigation.SupJavHomeRoute
 import com.yenaly.han1meviewer.SupJav.ui.navigation.SupJavSearchRoute
 import com.yenaly.han1meviewer.SupJav.ui.navigation.SupJavVideoRoute
+import com.yenaly.han1meviewer.RouVideo.ui.navigation.RouVideoHomeRoute
+import com.yenaly.han1meviewer.RouVideo.ui.navigation.RouVideoSearchRoute
+import com.yenaly.han1meviewer.RouVideo.ui.navigation.RouVideoVideoRoute
 import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderPostRoute
 import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderSearchRoute
 import com.yenaly.han1meviewer.HentaiMama.ui.navigation.HentaiMamaHomeRoute
@@ -90,6 +93,11 @@ object NavigationManager {
                             SupJavVideoRoute(videoCode = videoCode, resumePosition = resumePosition)
                         )
                     }
+                    SiteType.ROUVIDEO -> {
+                        navController.navigate(
+                            RouVideoVideoRoute(videoCode = videoCode, resumePosition = resumePosition)
+                        )
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "navigateToVideo failed: ${e.message}")
@@ -118,6 +126,9 @@ object NavigationManager {
                     }
                     SiteType.SUPJAV -> {
                         navController.navigate(SupJavSearchRoute(query = query))
+                    }
+                    SiteType.ROUVIDEO -> {
+                        navController.navigate(RouVideoSearchRoute(query = query))
                     }
                 }
             } catch (e: Exception) {
@@ -157,6 +168,10 @@ object NavigationManager {
                     SiteType.SUPJAV -> {
                         navController.popToRootSafely()
                         if (!isAtHome(site)) navController.navigate(SupJavHomeRoute) { launchSingleTop = true }
+                    }
+                    SiteType.ROUVIDEO -> {
+                        navController.popToRootSafely()
+                        if (!isAtHome(site)) navController.navigate(RouVideoHomeRoute) { launchSingleTop = true }
                     }
                 }
             } catch (e: Exception) {
@@ -231,6 +246,7 @@ object NavigationManager {
                 SiteType.ONAIR -> destination.hasRoute(OnAirHomeRoute::class)
                 SiteType.FAPFOLDER -> destination.hasRoute(FapFolderHomeRoute::class)
                 SiteType.SUPJAV -> destination.hasRoute(SupJavHomeRoute::class)
+                SiteType.ROUVIDEO -> destination.hasRoute(RouVideoHomeRoute::class)
             }
         } catch (e: Exception) {
             false

@@ -30,6 +30,7 @@ import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.SupJav.data.remote.SupJavNetwork
+import com.yenaly.han1meviewer.RouVideo.data.remote.RouVideoNetwork
 import com.yenaly.han1meviewer.logic.Parser
 import com.yenaly.han1meviewer.logic.network.DohConfig
 import com.yenaly.han1meviewer.logic.network.HDns
@@ -64,17 +65,16 @@ private enum class DohConflictTarget {
     EnableBuiltInHosts,
 }
 
-/** Sites whose settings share the Hanime login, so a mirror change signs the user out. */
 private fun SiteType.sharesHanimeLogin(): Boolean =
     this == SiteType.HANIME || this == SiteType.JAVCHU
 
-/** Drop every cached client so the new mirror / proxy / DNS settings are picked up. */
 private fun rebuildAllNetworks() {
     runCatching { HanimeNetwork.rebuildNetwork() }
     runCatching { MissAvNetwork.rebuildNetwork() }
     runCatching { HentaiMamaNetwork.rebuildNetwork() }
     runCatching { OnAirNetwork.rebuildNetwork() }
     runCatching { SupJavNetwork.rebuildNetwork() }
+    runCatching { RouVideoNetwork.rebuildNetwork() }
     runCatching { FapFolderNetwork.rebuildNetwork() }
 }
 
@@ -84,7 +84,6 @@ fun NetworkSettingsRouteScreen() {
     val context = LocalContext.current
     var refreshKey by remember { mutableIntStateOf(0) }
 
-    // Every setting on this screen belongs to the site picked here (defaults to the open site).
     var editingSite by remember { mutableStateOf(Preferences.siteType) }
     val profile = SiteNetworks.forSite(editingSite)
 
@@ -245,7 +244,7 @@ fun NetworkSettingsRouteScreen() {
         if (baseUrl.trimEnd('/') == origin.trimEnd('/') && !changesCustom) return
         pendingSite = editingSite
         pendingDomainValue = baseUrl
-        // Picking a mirror from the list switches the custom mirror off, as before.
+
         pendingUseCustomMirrorSite = false
         pendingCustomMirrorSite = SiteNetworkPrefs.customMirror(editingSite)
         pendingAppendCustomMirrorPath = SiteNetworkPrefs.appendCustomPath(editingSite)
@@ -644,7 +643,6 @@ private fun buildNetworkSettingsUiState(context: Context, site: SiteType): Netwo
     )
 }
 
-/** Same rules as before, but https only - plus plain http for `.onion` addresses. */
 private fun normalizeCustomMirrorSite(url: String): String? {
     val trimmed = url.trim().trimEnd('/')
     val uri = runCatching { trimmed.toUri() }.getOrNull() ?: return null
@@ -717,10 +715,6 @@ private fun testCustomMirrorSite(
     }
 }
 
-/**
- * Sites other than Hanime/Javchu have their own page formats, so the check is limited to
- * "does the address answer" (a Cloudflare challenge still counts: the node is up).
- */
 private fun testGenericMirrorSite(context: Context, homeUrl: String, appendPath: Boolean): String {
     return runCatching {
         val request = Request.Builder().url(homeUrl).get().build()

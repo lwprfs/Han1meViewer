@@ -64,6 +64,15 @@ object SupJavImageLoader {
                 val request = chain.request()
                 if (isJavchuHost(request.url.host) && request.header("Referer") == null) {
                     chain.proceed(request.newBuilder().header("Referer", JAVCHU_REFERER).build())
+                } else if (request.header("Referer") == null &&
+                    com.yenaly.han1meviewer.RouVideo.common.RouVideoImageLoader.isCoverUrl(request.url)
+                ) {
+
+                    chain.proceed(
+                        request.newBuilder()
+                            .header("Referer", com.yenaly.han1meviewer.RouVideo.common.RouVideoConstants.REFERER)
+                            .build()
+                    )
                 } else {
                     chain.proceed(request)
                 }

@@ -1,7 +1,7 @@
 package com.yenaly.han1meviewer.SupJav.common
 
 object SupJavConstants {
-    /** Follows the mirror / custom mirror chosen in the network settings. */
+
     val BASE_URL: String
         get() = com.yenaly.han1meviewer.Preferences.supJavBaseUrl.trimEnd('/')
 

@@ -315,6 +315,7 @@ object DatabaseRepo {
             SiteType.ONAIR -> "OnAir"
             SiteType.FAPFOLDER -> "FapFolder"
             SiteType.SUPJAV -> "SupJav"
+            SiteType.ROUVIDEO -> "rou.video"
         }
 
         fun siteOfVideoCode(videoCode: String): SiteType =

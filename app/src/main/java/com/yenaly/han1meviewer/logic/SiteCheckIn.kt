@@ -27,6 +27,7 @@ object SiteCheckIn {
         SiteType.ONAIR -> "onair"
         SiteType.FAPFOLDER -> "fapfolder"
         SiteType.SUPJAV -> "supjav"
+        SiteType.ROUVIDEO -> "rouvideo"
     }
 
     fun dishCode(site: SiteType, code: String): String {
@@ -43,6 +44,7 @@ object SiteCheckIn {
             "onair" -> SiteType.ONAIR
             "fapfolder" -> SiteType.FAPFOLDER
             "supjav" -> SiteType.SUPJAV
+            "rouvideo" -> SiteType.ROUVIDEO
             else -> null
         }
     }
@@ -141,6 +143,18 @@ object SiteCheckIn {
                         releaseDate = 0L,
                         watchDate = it.watchDate,
                         videoCode = dishCode(SiteType.SUPJAV, it.videoCode),
+                    )
+                }
+        }
+        runCatching {
+            com.yenaly.han1meviewer.RouVideo.data.local.RouVideoDatabase.getInstance(context)
+                .rouVideoHistoryDao().getPage(limit, 0).forEach {
+                    result += WatchHistoryEntity(
+                        coverUrl = it.coverUrl,
+                        title = it.title,
+                        releaseDate = 0L,
+                        watchDate = it.watchDate,
+                        videoCode = dishCode(SiteType.ROUVIDEO, it.videoCode),
                     )
                 }
         }

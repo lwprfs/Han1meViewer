@@ -4,34 +4,24 @@ import com.yenaly.han1meviewer.OnAir.common.OnAirConstants
 import com.yenaly.han1meviewer.SiteType
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
-/** One selectable mirror (domain) of a site. */
 data class MirrorNode(
     val host: String,
-    /** URL in the same style the site's code expects (trailing slash or not). */
+
     val baseUrl: String,
-    /** `https://<host>/status.html` health endpoint when the hub provides one. */
+
     val statusUrl: String?,
 )
 
-/**
- * Everything the network layer needs to know about one site of the app.
- *
- * To add a new site later:
- *  1. add a value to `SiteType`,
- *  2. append a [SiteNetworkProfile] to [SiteNetworks.profiles].
- *
- * Mirrors from [SiteMirrorCatalog] are attached automatically through [catalogKey].
- */
 class SiteNetworkProfile(
     val siteType: SiteType,
     val displayName: String,
-    /** Key into [SiteMirrorCatalog], or null when the hub has no mirrors for this site. */
+
     private val catalogKey: String?,
-    /** Mirrors the app already shipped with (first one is the default). */
+
     private val defaultUrls: () -> List<String>,
-    /** Whether this site's code expects its base URL to end with `/`. */
+
     val trailingSlash: Boolean,
-    /** Whether the site sits behind Cloudflare (enables the built-in Cloudflare IP mapping). */
+
     val cloudflareFronted: Boolean,
 ) {
 
@@ -40,7 +30,6 @@ class SiteNetworkProfile(
     val defaultBaseUrl: String
         get() = mirrors.first().baseUrl
 
-    /** IPs used by the "built-in DNS mapping" when the user has not typed custom ones. */
     val builtInIps: List<String>
         get() = if (cloudflareFronted) SiteNetworks.CLOUDFLARE_IPS else emptyList()
 
@@ -146,9 +135,17 @@ object SiteNetworks {
             trailingSlash = false,
             cloudflareFronted = true,
         ),
+        SiteNetworkProfile(
+            siteType = SiteType.ROUVIDEO,
+            displayName = "rou.video",
+
+            catalogKey = "rou_video",
+            defaultUrls = { listOf("https://rou.video") },
+            trailingSlash = false,
+            cloudflareFronted = true,
+        ),
     )
 
-    /** Every site the mirror hub knows about, including ones this app has no client for yet. */
     val hubSites: List<HubSite>
         get() = SiteMirrorCatalog.sites
 
@@ -166,13 +163,6 @@ object SiteNetworks {
         map
     }
 
-    /**
-     * Which site a host belongs to.
-     *
-     * Matches every known mirror (with or without `www.`), the custom mirror the user typed
-     * for a site, and - when [allowSubdomains] is set - subdomains of those hosts.
-     * Returns null for CDN / third-party hosts.
-     */
     fun siteForHost(host: String?, allowSubdomains: Boolean = true): SiteNetworkProfile? {
         if (host.isNullOrBlank()) return null
         val normalized = normalizeHost(host)

@@ -25,6 +25,11 @@ import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetwork
 import com.yenaly.han1meviewer.SupJav.ui.navigation.SupJavHistoryRoute
 import com.yenaly.han1meviewer.SupJav.ui.navigation.SupJavSearchRoute
 import com.yenaly.han1meviewer.SupJav.ui.navigation.SupJavSettingsRoute
+import com.yenaly.han1meviewer.RouVideo.ui.navigation.RouVideoCategoriesRoute
+import com.yenaly.han1meviewer.RouVideo.ui.navigation.RouVideoHistoryRoute
+import com.yenaly.han1meviewer.RouVideo.ui.navigation.RouVideoHostSettingsRoute
+import com.yenaly.han1meviewer.RouVideo.ui.navigation.RouVideoSearchRoute
+import com.yenaly.han1meviewer.RouVideo.ui.navigation.RouVideoSettingsRoute
 import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderCookiesRoute
 import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderLoginRoute
 import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderSearchHistoryRoute
@@ -172,6 +177,14 @@ fun siteLoginStatus(context: Context, site: SiteType): SiteLoginStatus = when (s
     SiteType.SUPJAV -> SiteLoginStatus(
         title = context.getString(R.string.not_logged_in),
         subtitle = context.getString(R.string.login_status_unavailable, CrossSiteNavigator.siteLabel(SiteType.SUPJAV)),
+        avatarUrl = null,
+        loggedIn = false,
+        onClick = null,
+    )
+
+    SiteType.ROUVIDEO -> SiteLoginStatus(
+        title = context.getString(R.string.not_logged_in),
+        subtitle = context.getString(R.string.login_status_unavailable, CrossSiteNavigator.siteLabel(SiteType.ROUVIDEO)),
         avatarUrl = null,
         loggedIn = false,
         onClick = null,
@@ -328,6 +341,30 @@ fun siteDrawerSections(context: Context, site: SiteType, loggedIn: Boolean): Lis
                 customize,
                 listOf(
                     entry(str(R.string.supjav_settings_playback_title), R.drawable.ic_video_quilty, SupJavSettingsRoute),
+                    playerSettings,
+                ),
+            ),
+        )
+
+        SiteType.ROUVIDEO -> listOf(
+            SiteDrawerSection(
+                browse,
+                listOf(
+                    home,
+                    checkIn,
+                    entry(str(R.string.search), R.drawable.ic_baseline_search_24, RouVideoSearchRoute()),
+                    entry(str(R.string.rouvideo_categories), R.drawable.baseline_grid_24, RouVideoCategoriesRoute),
+                ),
+            ),
+            SiteDrawerSection(
+                library,
+                listOf(entry(str(R.string.watch_history), history, RouVideoHistoryRoute)),
+            ),
+            SiteDrawerSection(
+                customize,
+                listOf(
+                    entry(str(R.string.drawer_host_mirror), R.drawable.baseline_domain_24, RouVideoHostSettingsRoute),
+                    entry(str(R.string.rouvideo_settings_title), R.drawable.ic_video_quilty, RouVideoSettingsRoute),
                     playerSettings,
                 ),
             ),

@@ -36,10 +36,6 @@ private fun MirrorRowUi.sortKey(): Int = when (val r = result) {
     is MirrorProbeResult.Failed -> 300_000
 }
 
-/**
- * Lists every mirror of a site with its latency (like the hub page does), lets the user pick
- * one, or jump straight to the fastest.
- */
 @Composable
 fun MirrorLatencyDialog(
     siteName: String,

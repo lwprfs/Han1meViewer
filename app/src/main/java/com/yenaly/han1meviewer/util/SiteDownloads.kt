@@ -48,6 +48,7 @@ object DownloadLayout {
         SiteType.ONAIR -> "OnAir"
         SiteType.FAPFOLDER -> "FapFolder"
         SiteType.SUPJAV -> "SupJav"
+        SiteType.ROUVIDEO -> "RouVideo"
     }
 
     fun segmentsFor(videoCode: String): List<String> {
@@ -168,6 +169,9 @@ object SiteDownloadClients {
                 .getOrDefault(ServiceCreator.downloadClient)
             SiteType.SUPJAV -> runCatching { com.yenaly.han1meviewer.SupJav.data.remote.SupJavNetwork.sharedOkHttpClient }
                 .getOrDefault(ServiceCreator.downloadClient)
+
+            SiteType.ROUVIDEO -> runCatching { com.yenaly.han1meviewer.RouVideo.data.remote.RouVideoNetwork.streamClient }
+                .getOrDefault(ServiceCreator.downloadClient)
             else -> ServiceCreator.downloadClient
         }
 
@@ -209,6 +213,10 @@ object SiteDownloadClients {
                     .streamRefererFor(SiteCheckIn.rawCodeOfDishCode(videoCode))
                 mapOf("Referer" to referer, "Origin" to referer.trimEnd('/'))
             }
+            SiteType.ROUVIDEO -> mapOf(
+                "Referer" to com.yenaly.han1meviewer.RouVideo.common.RouVideoConstants.REFERER,
+                "Origin" to com.yenaly.han1meviewer.RouVideo.common.RouVideoConstants.ORIGIN,
+            )
             SiteType.FAPFOLDER -> mapOf(
                 "Referer" to FapFolderConstants.HEADER_REFERER,
                 "Origin" to FapFolderConstants.HEADER_ORIGIN,

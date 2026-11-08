@@ -10,10 +10,6 @@ data class DohPreset(
     val bootstrapIps: List<String>,
 )
 
-/**
- * DoH settings are stored per site (see [SiteNetworkPrefs]); every accessor takes the site and
- * defaults to the site that is currently open.
- */
 object DohConfig {
     val presets = listOf(
         DohPreset(

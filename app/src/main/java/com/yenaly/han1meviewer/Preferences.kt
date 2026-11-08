@@ -21,7 +21,7 @@ import kotlin.time.Duration.Companion.days
 import kotlin.time.ExperimentalTime
 
 enum class SiteType {
-    HANIME, MISSAV, HENTAIMAMA, JAVCHU, ONAIR, FAPFOLDER, SUPJAV
+    HANIME, MISSAV, HENTAIMAMA, JAVCHU, ONAIR, FAPFOLDER, SUPJAV, ROUVIDEO
 }
 
 object MissAvConstants {
@@ -138,6 +138,9 @@ object Preferences {
     val supJavBaseUrl: String
         get() = SiteNetworkPrefs.baseUrl(SiteType.SUPJAV)
 
+    val rouVideoBaseUrl: String
+        get() = SiteNetworkPrefs.baseUrl(SiteType.ROUVIDEO)
+
     val javchuBaseUrl: String
         get() = SiteNetworkPrefs.baseUrl(SiteType.JAVCHU)
 
@@ -237,7 +240,6 @@ object Preferences {
             SettingsPreferenceKeys.FAKE_LAUNCHER_ICON,
             "com.yenaly.han1meviewer.LauncherAliasDefault") ?: "com.yenaly.han1meviewer.LauncherAliasDefault"
 
-    /** True while the Javchu ("av") flavour of the Hanime client is active. */
     val isAvSite: Boolean
         get() = siteType == SiteType.JAVCHU || baseUrl == HANIME_URL[3]
 

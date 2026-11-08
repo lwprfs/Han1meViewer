@@ -1,29 +1,15 @@
 package com.yenaly.han1meviewer.logic.network
 
-/**
- * Mirror catalog taken from the "X99 resource navigation" hub page (x99dh.net).
- *
- * Every entry in the hub is kept here, including sites this app does not (yet) have a
- * client for, so adding a new site later only needs a new [SiteNetworkProfile] in
- * [SiteNetworks] that points at the right catalog key.
- *
- * Each mirror is health-checked by the hub with `GET https://<host>/status.html`
- * which answers with the plain text `ok`. A few mirrors are probed on a different
- * host than the one that is opened (e.g. `wnacg.my` is probed on `www.wnacg.my`);
- * those are listed in [HubSite.testHosts].
- *
- * To add / refresh a site: append a [HubSite] to [SiteMirrorCatalog.sites].
- */
 data class HubSite(
-    /** Stable lowercase id used as the lookup key. */
+
     val key: String,
-    /** Display name as shown by the hub. */
+
     val name: String,
-    /** Landing path the hub opens on every mirror (informational). */
+
     val entryPath: String,
-    /** Every mirror host the hub knows for this site, in hub order. */
+
     val hosts: List<String>,
-    /** Host -> host that the hub probes instead (only where they differ). */
+
     val testHosts: Map<String, String> = emptyMap(),
 ) {
     fun statusUrl(host: String): String = "https://${testHosts[host] ?: host}/status.html"

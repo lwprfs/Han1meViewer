@@ -29,6 +29,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.NavDestination.Companion.hasRoute
 import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderHomeRoute
 import com.yenaly.han1meviewer.SupJav.ui.navigation.SupJavHomeRoute
+import com.yenaly.han1meviewer.RouVideo.ui.navigation.RouVideoHomeRoute
 import com.yenaly.han1meviewer.HentaiMama.ui.navigation.HentaiMamaHomeRoute
 import com.yenaly.han1meviewer.MissAV.ui.navigation.MissAvHomeRoute
 import com.yenaly.han1meviewer.OnAir.ui.navigation.OnAirHomeRoute
@@ -128,6 +129,7 @@ fun MainActivityContent(
                 SiteType.ONAIR -> d?.hasRoute(OnAirHomeRoute::class) == true
                 SiteType.FAPFOLDER -> d?.hasRoute(FapFolderHomeRoute::class) == true
                 SiteType.SUPJAV -> d?.hasRoute(SupJavHomeRoute::class) == true
+                SiteType.ROUVIDEO -> d?.hasRoute(RouVideoHomeRoute::class) == true
                 else -> false
             }
         }

@@ -238,8 +238,6 @@ object FapFolderNetwork {
             .followSslRedirects(true)
             .cookieJar(getOrCreateCookieJar())
 
-        // HDns falls back to the system resolver, and HProxySelector honours Direct / System,
-        // so both can always be installed (per-site mirror, DNS mapping, DoH and proxy).
         builder.dns(HDns())
         builder.proxySelector(HProxySelector())
 

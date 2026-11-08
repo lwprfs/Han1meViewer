@@ -68,6 +68,12 @@
             android:exported="false"
             android:launchMode="singleTask"/>
 
+        <activity
+            android:name=".RouVideo.cloudflare.RouVideoCloudflareActivity"
+            android:theme="@style/Theme.Hanime"
+            android:exported="false"
+            android:launchMode="singleTask"/>
+
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"
             android:foregroundServiceType="dataSync"

@@ -49,7 +49,6 @@ data class MissAvHostOption(
 
 object MissAvHostRepo {
 
-    /** Default mirrors plus every MissAV mirror known to the mirror hub. */
     val options: List<MissAvHostOption>
         get() = SiteNetworks.forSite(SiteType.MISSAV).mirrors.mapIndexed { index, node ->
             MissAvHostOption(

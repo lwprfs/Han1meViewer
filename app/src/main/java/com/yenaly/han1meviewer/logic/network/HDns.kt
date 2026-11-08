@@ -19,11 +19,10 @@ class HDns : Dns {
         val timeoutSeconds: Int,
     )
 
-    /** Parsed content of the "custom hosts" field. */
     data class HostsMapping(
-        /** Plain IP lists (legacy format): applied to every host of the site. */
+
         val globalIps: List<String>,
-        /** `host=ip,ip` lines: applied to that host only. */
+
         val hostIps: Map<String, List<String>>,
     )
 
@@ -43,11 +42,6 @@ class HDns : Dns {
                 .filter { it.isNotEmpty() }
         }
 
-        /**
-         * Accepted formats (one entry per line, `;` also separates entries):
-         *  - `1.2.3.4, 5.6.7.8`        -> used for every host of the site (legacy format)
-         *  - `host.example=1.2.3.4`    -> used for that host only
-         */
         fun parseHostsMapping(raw: String): HostsMapping {
             val global = mutableListOf<String>()
             val perHost = LinkedHashMap<String, List<String>>()
@@ -115,7 +109,6 @@ class HDns : Dns {
             return mappingCache.getOrPut(raw) { parseHostsMapping(raw) }
         }
 
-        /** IPs the user (or the built-in table) wants for [host] on [site], or null. */
         private fun mappedIps(site: SiteType, host: String): List<String>? {
             val owner = SiteNetworks.siteForHost(host, allowSubdomains = false) ?: return null
             if (!SiteNetworkPrefs.useBuiltInHosts(site)) return null
@@ -140,7 +133,6 @@ class HDns : Dns {
             return toAddresses(hostname, ips)
         }
 
-        // Never leak onion lookups to a DoH provider.
         if (hostname.endsWith(".onion")) {
             return Dns.SYSTEM.lookup(hostname)
         }
@@ -169,7 +161,6 @@ class HDns : Dns {
         }
     }
 
-    /** DoH lookup using the DoH settings of [site] (defaults to the current site). */
     fun lookupByDoHOnly(
         hostname: String,
         site: SiteType = Preferences.siteType,
@@ -208,10 +199,6 @@ class HDns : Dns {
         }
     }
 
-    /**
-     * The IPs the app would connect to for [host]. [site] is only used for hosts that do not
-     * belong to any site (it defaults to the current site).
-     */
     fun getCDNList(host: String, site: SiteType? = null): List<String> {
         if (host == GETCHU_HOSTNAME) {
             return getchuIps.distinct()

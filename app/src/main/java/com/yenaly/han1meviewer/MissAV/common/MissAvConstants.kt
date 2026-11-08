@@ -1,7 +1,6 @@
 package com.yenaly.han1meviewer.MissAV.common
 object MissAvConstants {
 
-    /** Default mirrors plus whatever mirror / custom mirror is selected in the network settings. */
     val MISSAV_HOSTNAME: Array<String>
         get() = com.yenaly.han1meviewer.logic.network.SiteNetworkPrefs.knownHosts(
             com.yenaly.han1meviewer.SiteType.MISSAV,
