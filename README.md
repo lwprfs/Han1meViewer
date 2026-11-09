@@ -1,3 +1,5 @@
+**简体中文** | [English](README-en.md)
+
 # MissAV, HentaiMama, OnAir, FapFolder, Han1me
 [missav](missav.ws)  [hentaimama](hentaimama.io)  [FapFolder](fapfolder.club)
 
@@ -31,11 +33,11 @@
 
 HANiEX（Han1meViewer Extended）是基于 Han1meViewer 的扩展分支，应用名称为 **HANiEX**，应用包名（applicationId）为 `com.yenaly.hani.extended`。它是一个使用 Kotlin 开发的 Android 客户端，用于浏览、搜索、播放和管理 hanime 相关公开视频页面内容。当前项目以 Jetpack Compose、Navigation Compose、ViewModel、StateFlow、Retrofit、Jsoup、Room、WorkManager、Media3/JZVD/MPV 为主要技术栈，围绕视频浏览、详情播放、搜索、用户列表、下载管理、评论、订阅、设置和隐私保护等功能组织。
 
-本应用没有任何官方网站。本分支仓库 [lwprfs/Han1meViewer](https://github.com/lwprfs/Han1meViewer) 的 GitHub Release 与 CI 构建产物是唯一下载及更新渠道。
+本应用没有任何官方网站。本分支仓库 [lwprfs/HANiEX](https://github.com/lwprfs/HANiEX) 的 GitHub Release 与 CI 构建产物是唯一下载及更新渠道。
 
 ## 📜 项目来源与许可
 
-此项目最初 Fork 自 [YenalyLiew/Han1meViewer](https://github.com/YenalyLiew/Han1meViewer)，当前直接上游为 [misaka10032w/Han1meViewer](https://github.com/misaka10032w/Han1meViewer)，本分支为 [lwprfs/Han1meViewer](https://github.com/lwprfs/Han1meViewer)。感谢各位作者的贡献。原项目采用 [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)。
+此项目最初 Fork 自 [YenalyLiew/Han1meViewer](https://github.com/YenalyLiew/Han1meViewer)，当前直接上游为 [misaka10032w/Han1meViewer](https://github.com/misaka10032w/Han1meViewer)，本分支为 [lwprfs/HANiEX](https://github.com/lwprfs/HANiEX)。感谢各位作者的贡献。原项目采用 [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)。
 
 本分支相对上游的主要修改：
 
@@ -167,7 +169,7 @@ Telegram 群组：[https://t.me/Han1meViewer](https://t.me/Han1meViewer)
 
 ## 🔄 应用更新
 
-应用通过 GitHub 检查并下载更新，无需打开 GitHub 页面。更新来源为本分支 `lwprfs/Han1meViewer`（见 `Constants.kt` 中的 `HA1_GITHUB_URL` / `HA1_GITHUB_API_URL`）。
+应用通过 GitHub 检查并下载更新，无需打开 GitHub 页面。更新来源为本分支 `lwprfs/HANiEX`（见 `Constants.kt` 中的 `HA1_GITHUB_URL` / `HA1_GITHUB_API_URL`）。
 
 📡 更新渠道（设置 → 更新）：
 
@@ -321,7 +323,7 @@ DownloadScreen -> DownloadViewModel -> HanimeDownloadManagerV2 -> WorkManager Wo
 1. 克隆项目：
 
    ```bash
-   git clone https://github.com/lwprfs/Han1meViewer.git
+   git clone https://github.com/lwprfs/HANiEX.git
    ```
 
 2. 使用 Android Studio 打开项目根目录。
@@ -388,7 +390,7 @@ DownloadScreen -> DownloadViewModel -> HanimeDownloadManagerV2 -> WorkManager Wo
 ## 🗺️ 目录速查
 
 ```text
-Han1meViewer/                    仓库目录名（应用名为 HANiEX）
+HANiEX/                          仓库根目录
 ├── .github/
 │   ├── workflows/ci.yml          CI：构建、缓存、增量补丁、发布
 │   └── scripts/make-delta.sh     生成 bsdiff 增量补丁包
@@ -403,7 +405,8 @@ Han1meViewer/                    仓库目录名（应用名为 HANiEX）
 ├── yenaly_libs/                  项目内公共库
 ├── buildSrc/                     Gradle 构建辅助代码
 ├── gradle/libs.versions.toml     依赖版本目录
-├── README.md                     项目说明
+├── README.md                     项目说明（中文）
+├── README-en.md                  项目说明（English）
 └── README_TECH.md                历史技术说明与部分实现笔记
 ```
 
