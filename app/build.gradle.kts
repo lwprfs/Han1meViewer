@@ -223,6 +223,8 @@ dependencies {
     // debugImplementation(libs.leak.canary)
     implementation("com.squareup.okhttp3:okhttp-brotli:4.12.0")
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    // 增量更新：bspatch 需要解压 bzip2
+    implementation("org.apache.commons:commons-compress:1.27.1")
 }
 
 /**

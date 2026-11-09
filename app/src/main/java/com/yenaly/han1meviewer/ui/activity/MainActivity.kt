@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.ui.activity
 
+import com.yenaly.han1meviewer.ui.component.player.PlayerMediaControl
+import android.view.KeyEvent
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.KeyguardManager
@@ -216,6 +218,11 @@ class MainActivity : FrameActivity(), PermissionRequester {
                 )
             }
         }
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (PlayerMediaControl.handleKey(event)) return true
+        return super.dispatchKeyEvent(event)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

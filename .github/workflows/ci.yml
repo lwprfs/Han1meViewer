@@ -1,5 +1,6 @@
 permissions:
   contents: read
+  actions: read
 name: CI
 
 on:
@@ -52,11 +53,65 @@ jobs:
           HA_GITHUB_TOKEN: ${{ secrets.HA_GITHUB_TOKEN }}
           HA1_VERSION_SOURCE: 'ci'
 
+      # ---- Delta update (CI channel): diff against the previous successful CI build ----
+      - name: Find previous successful CI build
+        id: previous
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          JSON=$(gh run list --repo "${{ github.repository }}" --workflow ci.yml --branch main \
+            --event push --status success --limit 5 --json databaseId,headSha || echo '[]')
+          RUN=$(echo "$JSON" | jq -r --arg sha "$GITHUB_SHA" \
+            '[.[] | select(.headSha != $sha)][0] // empty | "\(.databaseId) \(.headSha)"')
+          if [ -z "$RUN" ]; then
+            echo "No previous successful CI build found."
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "run_id=${RUN%% *}" >> "$GITHUB_OUTPUT"
+          echo "sha=${RUN##* }" >> "$GITHUB_OUTPUT"
+          echo "available=true" >> "$GITHUB_OUTPUT"
+
+      - name: Download previous CI APK
+        id: previous_apk
+        if: steps.previous.outputs.available == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p previous
+          gh run download "${{ steps.previous.outputs.run_id }}" \
+            --repo "${{ github.repository }}" \
+            --name "app-release-${{ steps.previous.outputs.sha }}" \
+            --dir previous
+
+      - name: Generate CI delta patch
+        id: ci_delta
+        if: steps.previous_apk.outcome == 'success'
+        continue-on-error: true
+        run: |
+          command -v bsdiff >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq bsdiff; }
+          OLD_APK=$(find previous -name 'Han1meViewer-v*.apk' | head -n 1)
+          NEW_APK=$(ls app/build/outputs/apk/release/Han1meViewer-v*.apk | head -n 1)
+          bash .github/scripts/make-delta.sh "$OLD_APK" "$NEW_APK" delta-ci
+          if [ -f delta-ci/update.json ]; then
+            echo "base=$(jq -r '.baseSha256[0:16]' delta-ci/update.json)" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Upload APK Zip
         uses: actions/upload-artifact@v4
         with:
           name: app-release-${{ github.sha }}
           path: app/build/outputs/apk/release/Han1meViewer-v*.apk
+
+      - name: Upload CI delta package
+        if: steps.ci_delta.outputs.base != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: delta-${{ github.sha }}-base-${{ steps.ci_delta.outputs.base }}
+          path: |
+            delta-ci/update.json
+            delta-ci/update.patch
 
       - name: Extract version from APK
         id: version
@@ -92,6 +147,29 @@ jobs:
             echo "EOF"
           } >> $GITHUB_OUTPUT
 
+      # ---- Delta update (Release channel): diff against the previous release APK ----
+      - name: Generate release delta patch
+        id: release_delta
+        if: contains(github.event.head_commit.message, '[release]') && steps.prev_tag.outputs.prev_tag != ''
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PREV_TAG: ${{ steps.prev_tag.outputs.prev_tag }}
+        run: |
+          command -v bsdiff >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq bsdiff; }
+          mkdir -p previous-release
+          gh release download "$PREV_TAG" --repo "${{ github.repository }}" \
+            --pattern 'Han1meViewer-v*.apk' --dir previous-release
+          OLD_APK=$(find previous-release -name 'Han1meViewer-v*.apk' | head -n 1)
+          NEW_APK=$(ls app/build/outputs/apk/release/Han1meViewer-v*.apk | head -n 1)
+          bash .github/scripts/make-delta.sh "$OLD_APK" "$NEW_APK" delta-release
+          if [ -f delta-release/update.json ]; then
+            BASE=$(jq -r '.baseSha256[0:16]' delta-release/update.json)
+            ZIP="Han1meViewer-delta-base-${BASE}.zip"
+            (cd delta-release && zip -q "$ZIP" update.json update.patch)
+            echo "zip=delta-release/$ZIP" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Create Release
         if: contains(github.event.head_commit.message, '[release]')
         uses: softprops/action-gh-release@v2
@@ -99,5 +177,7 @@ jobs:
           tag_name: ${{ steps.version.outputs.version }}
           name: ${{ steps.version.outputs.version }}
           body: ${{ steps.notes.outputs.notes }}
-          files: app/build/outputs/apk/release/Han1meViewer-v*.apk
+          files: |
+            app/build/outputs/apk/release/Han1meViewer-v*.apk
+            ${{ steps.release_delta.outputs.zip }}
           token: ${{ secrets.APP_TOKEN }}

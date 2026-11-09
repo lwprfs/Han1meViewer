@@ -27,6 +27,22 @@ object HUpdater {
 
     private val linefeedRegex = Regex("\\n{2,}")
 
+    /** CI 里完整 APK artifact 的名字前缀（`app-release-<sha>`）。 */
+    private const val APK_ARTIFACT_PREFIX = "app-release-"
+
+    /** CI 里增量包 artifact 的名字前缀（`delta-<sha>-base-<旧 APK 的 sha256 前 16 位>`）。 */
+    private const val DELTA_ARTIFACT_PREFIX = "delta-"
+
+    /** Release 里增量包 asset 的名字（`Han1meViewer-delta-base-<前 16 位>.zip`）。 */
+    private const val DELTA_ASSET_MARKER = "-delta-"
+
+    private val baseHashRegex = Regex("base-([0-9a-f]{16})", RegexOption.IGNORE_CASE)
+
+    private fun deltaOf(name: String, link: String) = Latest.Delta(
+        downloadLink = link,
+        baseSha256Prefix = baseHashRegex.find(name)?.groupValues?.get(1),
+    )
+
     enum class Channel(val logName: String) {
 
         CI("CI Artifact"),
@@ -85,7 +101,12 @@ object HUpdater {
         }
 
         val artifacts = requestArtifacts(workflowRun.artifactsUrl)
-        val artifact = artifacts.artifacts.firstOrNull()
+        // 同一次 run 里可能还有增量包 artifact，这里必须按名字挑出完整 APK
+        val artifact = artifacts.artifacts.firstOrNull { it.name.startsWith(APK_ARTIFACT_PREFIX) }
+            ?: artifacts.artifacts.firstOrNull { !it.name.startsWith(DELTA_ARTIFACT_PREFIX) }
+        val deltaArtifact = artifacts.artifacts.firstOrNull {
+            it.name.startsWith(DELTA_ARTIFACT_PREFIX)
+        }
         val archiveUrl = artifact?.downloadLink
         val nodeId = artifact?.nodeId.orEmpty()
         if (archiveUrl.isNullOrBlank()) {
@@ -101,13 +122,19 @@ object HUpdater {
         val changelog = runSuspendCatching {
             requestCommitComparison(curSha, shortSha).commits.toChangelogPrettyString()
         }.getOrNull() ?: workflowRun.title
-        return Latest("$shortSha (CI)", changelog, archiveUrl, nodeId)
+        val delta = deltaArtifact?.let { deltaOf(it.name, it.downloadLink) }
+        return Latest("$shortSha (CI)", changelog, archiveUrl, nodeId, delta)
     }
 
     private suspend fun checkReleaseChannel(): Latest? {
         val ver = requestLatestRelease()
         if (!checkNeedUpdate(ver.tagName)) return null
-        val asset = ver.assets.firstOrNull()
+        // Release 里除了 APK 还可能有增量包，不能再盲取第一个 asset
+        val asset = ver.assets.firstOrNull { it.name.endsWith(".apk", ignoreCase = true) }
+            ?: ver.assets.firstOrNull { !it.name.contains(DELTA_ASSET_MARKER) }
+        val deltaAsset = ver.assets.firstOrNull {
+            it.name.contains(DELTA_ASSET_MARKER) && it.name.endsWith(".zip", ignoreCase = true)
+        }
         if (asset == null) {
 
             Log.w(TAG, "Release ${ver.tagName} 没有任何可下载的 asset")
@@ -117,7 +144,8 @@ object HUpdater {
                 reason = HUpdaterException.VersionCheck.Reason.NO_RELEASE,
             )
         }
-        return Latest(ver.tagName, ver.body, asset.browserDownloadURL, asset.nodeID)
+        val delta = deltaAsset?.let { deltaOf(it.name, it.browserDownloadURL) }
+        return Latest(ver.tagName, ver.body, asset.browserDownloadURL, asset.nodeID, delta)
     }
 
     private suspend fun requestLatestRelease() = try {
@@ -160,7 +188,17 @@ object HUpdater {
         )
     }
 
-    suspend fun File.injectUpdate(url: String, progress: (suspend (Int, Long, Long) -> Unit)? = null) {
+    suspend fun File.injectUpdate(
+        url: String,
+        delta: Latest.Delta? = null,
+        progress: (suspend (Int, Long, Long) -> Unit)? = null,
+    ) {
+        if (delta != null) {
+            Log.d(TAG, "尝试增量更新：${delta.downloadLink}")
+            if (HDeltaUpdater.tryApply(this, delta, progress)) return
+            Log.d(TAG, "增量更新不可用，回退到完整 APK")
+            delete()
+        }
         val isZip = url.endsWith("zip")
         Log.d(TAG, "开始下载更新包（${if (isZip) "CI zip" else "release"}）：$url")
         downloadTo(url, isZip, progress)

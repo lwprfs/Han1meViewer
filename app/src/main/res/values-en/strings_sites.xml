@@ -992,6 +992,28 @@
 
     <!-- Rou Video -->
     <string name="site_rouvideo_name">Rou Video</string>
+    <string name="player_media_title">Media controls (Bluetooth &amp; keys)</string>
+    <string name="player_media_summary">Bluetooth, headset buttons and volume keys control the video player</string>
+    <string name="player_media_enable">Enable media controls</string>
+    <string name="player_media_play_pause">Play / pause button</string>
+    <string name="player_media_volume">Volume up / down keys</string>
+    <string name="player_media_next_prev">Next / previous buttons (next or previous video, otherwise seek)</string>
+    <string name="player_media_ff_rew">Fast-forward / rewind buttons</string>
+    <string name="player_media_noisy">Pause when headphones or Bluetooth disconnect</string>
+    <string name="player_media_info">Share the video title with Bluetooth devices</string>
+    <string name="player_media_seek_step">Seek step</string>
+    <string name="player_media_seconds">%1$d s</string>
+    <string name="player_media_enable_desc">Master switch. When off, Bluetooth and buttons no longer control the player.</string>
+    <string name="player_media_section_buttons">Buttons</string>
+    <string name="player_media_section_behavior">Behavior</string>
+    <string name="player_media_play_pause_desc">Play, pause and stop buttons on headsets and Bluetooth devices</string>
+    <string name="player_media_volume_desc">Volume keys change the media volume, even while paused</string>
+    <string name="player_media_next_prev_desc">Previous / next video on FapFolder, seek on other sites</string>
+    <string name="player_media_ff_rew_desc">Seek forward or back by the step below</string>
+    <string name="player_media_seek_step_desc">How far one seek button press jumps</string>
+    <string name="player_media_noisy_desc">Pause when headphones are unplugged or Bluetooth disconnects</string>
+    <string name="player_media_info_desc">Show the title and length on car displays and watches</string>
+    <string name="rouvideo_tr_what">What to translate</string>
     <string name="player_fullscreen_orientation">Fullscreen orientation</string>
     <string name="player_fullscreen_orientation_summary">Open fullscreen in portrait or landscape on every site. The rotate button in the player can switch at any time.</string>
     <string name="player_orientation_auto">Auto (default)</string>

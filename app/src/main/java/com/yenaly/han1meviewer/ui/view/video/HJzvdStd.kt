@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.ui.view.video
 
+import com.yenaly.han1meviewer.ui.component.player.PlayerMediaControl
 import com.yenaly.han1meviewer.util.PlayerOrientation
 import android.annotation.SuppressLint
 import android.content.Context
@@ -679,6 +680,7 @@ class HJzvdStd @JvmOverloads constructor(
         this.clarityPopWindow.showAtLocation(this.textureViewContainer, 8388613, 0, 0)
     }
 
+    /** Rotate button: go fullscreen if needed, then flip portrait <-> landscape. */
     private fun clickRotate() {
         val activity = JZUtils.scanForActivity(jzvdContext) ?: return
         val target = PlayerOrientation.rotateTarget(activity)
@@ -1181,10 +1183,43 @@ class HJzvdStd @JvmOverloads constructor(
         state = STATE_PLAYING
         startProgressTimer()
         changeUiToPlayingClearSafe()
+        PlayerMediaControl.update()
     }
     override fun onStatePause() {
         super.onStatePause()
         onVideoStateChanged?.invoke(STATE_PAUSE)
+        PlayerMediaControl.update()
+    }
+
+    // ---- Bluetooth / headset / media keys ----
+    private var mediaController: PlayerMediaControl.Controller? = null
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        if (mediaController != null) return
+        val controller = PlayerMediaControl.Controller(
+            title = { titleTextView?.text?.toString().orEmpty() },
+            isPlaying = { state == STATE_PLAYING },
+            positionMs = { runCatching { currentPositionWhenPlaying }.getOrDefault(0L) },
+            durationMs = { runCatching { duration }.getOrDefault(0L) },
+            play = { if (state == STATE_PAUSE) startButton.performClick() },
+            pause = { if (state == STATE_PLAYING) startButton.performClick() },
+            seekBy = { delta ->
+                if (state == STATE_PLAYING || state == STATE_PAUSE) {
+                    val total = runCatching { duration }.getOrDefault(0L)
+                    val target = (currentPositionWhenPlaying + delta).coerceAtLeast(0L)
+                    mediaInterface?.seekTo(if (total > 0) target.coerceAtMost(total) else target)
+                }
+            },
+        )
+        mediaController = controller
+        PlayerMediaControl.register(controller)
+    }
+
+    override fun onDetachedFromWindow() {
+        mediaController?.let { PlayerMediaControl.unregister(it) }
+        mediaController = null
+        super.onDetachedFromWindow()
     }
     override fun onStateAutoComplete() {
         super.onStateAutoComplete()

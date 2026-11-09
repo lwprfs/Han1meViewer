@@ -124,18 +124,45 @@ fun SitePlayerOverlay(
     stretched: Boolean = false,
     onToggleStretch: (() -> Unit)? = null,
     onRotate: (() -> Unit)? = null,
+    onMediaPrevious: (() -> Unit)? = null,
+    onMediaNext: (() -> Unit)? = null,
     onTemporarySpeed: (Float?) -> Unit = {},
     extraActions: @Composable RowScope.() -> Unit = {},
 ) {
     val context = LocalContext.current
     val activity = remember(context) { context.findPlayerActivity() }
+    val mediaTitle by rememberUpdatedState(title)
+    val mediaPlaying by rememberUpdatedState(isPlaying)
+    val mediaPosition by rememberUpdatedState(positionMs)
+    val mediaDuration by rememberUpdatedState(durationMs)
+    val mediaPlayPause by rememberUpdatedState(onPlayPause)
+    val mediaSeekBy by rememberUpdatedState(onSeekBy)
+    val mediaPrevious by rememberUpdatedState(onMediaPrevious)
+    val mediaNext by rememberUpdatedState(onMediaNext)
+    DisposableEffect(Unit) {
+        // Bluetooth / headset / media keys control this player while it is on screen
+        val controller = PlayerMediaControl.Controller(
+            title = { mediaTitle },
+            isPlaying = { mediaPlaying },
+            positionMs = { mediaPosition },
+            durationMs = { mediaDuration },
+            play = { if (!mediaPlaying) mediaPlayPause() },
+            pause = { if (mediaPlaying) mediaPlayPause() },
+            seekBy = { mediaSeekBy(it) },
+            previous = if (onMediaPrevious != null) ({ mediaPrevious?.invoke() }) else null,
+            next = if (onMediaNext != null) ({ mediaNext?.invoke() }) else null,
+        )
+        PlayerMediaControl.register(controller)
+        onDispose { PlayerMediaControl.unregister(controller) }
+    }
+    LaunchedEffect(isPlaying, title, durationMs) { PlayerMediaControl.update() }
     DisposableEffect(Unit) {
         PlayerOrientation.overlayEntered()
         onDispose { PlayerOrientation.overlayLeft(activity) }
     }
     val rotateAction: () -> Unit = onRotate ?: {
         activity?.let { act ->
-
+            // From inline, rotating means "go fullscreen in the other orientation".
             if (!isFullscreen) onToggleFullscreen()
             PlayerOrientation.rotate(act)
         }

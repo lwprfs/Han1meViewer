@@ -37,6 +37,9 @@ object HKeyframeSettingsRoute
 object TranslationSettingsRoute
 
 @Serializable
+object MediaControlsSettingsRoute
+
+@Serializable
 object TranslationCacheRoute
 
 enum class SettingsDestinationSpec(

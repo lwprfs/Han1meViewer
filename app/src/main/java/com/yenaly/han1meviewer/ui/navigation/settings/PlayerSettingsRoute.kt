@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.ui.navigation.settings
 
+import com.yenaly.han1meviewer.ui.screen.settings.PlayerMediaControlsSetting
 import com.yenaly.han1meviewer.ui.component.SettingNavigationItem
 import com.yenaly.han1meviewer.ui.component.ChoiceDialog
 import com.yenaly.han1meviewer.util.PlayerOrientation
@@ -37,6 +38,7 @@ private const val PLAYER_LONG_PRESS_SPEED_TIMES = "long_press_speed_times"
 @Composable
 fun PlayerSettingsRouteScreen(
     onNavigateToMpvSettings: () -> Unit,
+    onNavigateToMediaControls: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var refreshKey by remember { mutableIntStateOf(0) }
@@ -45,6 +47,7 @@ fun PlayerSettingsRouteScreen(
     var selectedSite by rememberSaveable { mutableStateOf(SiteType.HANIME) }
     Column(modifier = Modifier.fillMaxSize()) {
         FullscreenOrientationSetting()
+        PlayerMediaControlsSetting(onClick = onNavigateToMediaControls)
         PlayerSiteChips(selected = selectedSite, onSelect = { selectedSite = it })
         if (selectedSite != SiteType.HANIME && selectedSite != SiteType.JAVCHU) {
             SitePlayerSettingsScreen(site = selectedSite, modifier = Modifier.weight(1f))
@@ -122,6 +125,7 @@ private fun FullscreenOrientationSetting() {
     SettingNavigationItem(
         title = stringResource(R.string.player_fullscreen_orientation),
         summary = stringResource(R.string.player_fullscreen_orientation_summary),
+        iconRes = R.drawable.ic_screen_rotation_24,
         valueText = options.firstOrNull { it.second == mode }?.first,
         onClick = { showDialog = true },
     )

@@ -810,6 +810,8 @@ fun FapFolderVideoPlayerScreen(
                             )
                         }
                     },
+                    onMediaPrevious = onPrevious,
+                    onMediaNext = onNext,
                     onRotate = {
                         val nowLandscape = activity?.resources?.configuration?.orientation ==
                             android.content.res.Configuration.ORIENTATION_LANDSCAPE

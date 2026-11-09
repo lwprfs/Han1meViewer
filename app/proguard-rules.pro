@@ -33,3 +33,10 @@
 -keep class androidx.window.extensions.embedding.** { *; }
 -keep class is.xyz.mpv.** { *; }
 -keep class lis.xyz.mpv.** { *; }
+
+# commons-compress：只用到 bzip2，其余编解码器依赖的可选库不存在
+-dontwarn org.apache.commons.compress.**
+-dontwarn org.tukaani.xz.**
+-dontwarn com.github.luben.zstd.**
+-dontwarn org.brotli.dec.**
+-dontwarn javax.naming.**

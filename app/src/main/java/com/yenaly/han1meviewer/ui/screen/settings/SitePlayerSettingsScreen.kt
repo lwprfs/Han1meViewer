@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.ui.screen.settings
 
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -40,6 +41,33 @@ import com.yenaly.han1meviewer.ui.component.SettingNavigationItem
 import com.yenaly.han1meviewer.ui.component.SettingSliderItem
 import com.yenaly.han1meviewer.ui.component.SettingSwitchItem
 import com.yenaly.han1meviewer.ui.component.player.SitePlayerSettings
+
+/** XML vector icon for each player setting id (every row gets an icon). */
+private fun specIcon(id: String): Int = when (id) {
+    SitePlayerSettings.ID_DEFAULT_SPEED, SitePlayerSettings.ID_SHOW_SPEED_BUTTON -> R.drawable.baseline_speed_24
+    SitePlayerSettings.ID_LONG_PRESS_SPEED -> R.drawable.baseline_speed2_24
+    SitePlayerSettings.ID_SLIDE_SENSITIVITY -> R.drawable.ic_settings_tune_24
+    SitePlayerSettings.ID_BOTTOM_PROGRESS -> R.drawable.ic_settings_linear_scale_24
+    SitePlayerSettings.ID_DOUBLE_TAP_SEEK, SitePlayerSettings.ID_GESTURE_SEEK -> R.drawable.ic_settings_fast_forward_24
+    SitePlayerSettings.ID_HIDE_DELAY, SitePlayerSettings.ID_AUTO_HIDE,
+    SitePlayerSettings.ID_SHOW_REMAINING -> R.drawable.ic_settings_timer_24
+    SitePlayerSettings.ID_GESTURES, SitePlayerSettings.ID_DOUBLE_TAP_ENABLED,
+    SitePlayerSettings.ID_LONG_PRESS_ENABLED -> R.drawable.ic_settings_touch_app_24
+    SitePlayerSettings.ID_RESUME -> R.drawable.ic_settings_replay_24
+    SitePlayerSettings.ID_AUTO_PLAY -> R.drawable.ic_baseline_play_arrow_24
+    SitePlayerSettings.ID_STRETCH, SitePlayerSettings.ID_SHOW_STRETCH_BUTTON -> R.drawable.ic_settings_aspect_ratio_24
+    SitePlayerSettings.ID_DEFAULT_QUALITY, SitePlayerSettings.ID_SHOW_QUALITY_BUTTON -> R.drawable.ic_settings_hd_24
+    SitePlayerSettings.ID_KEEP_SCREEN_ON, SitePlayerSettings.ID_GESTURE_BRIGHTNESS -> R.drawable.ic_settings_brightness_24
+    SitePlayerSettings.ID_GESTURE_VOLUME -> R.drawable.ic_settings_volume_up_24
+    SitePlayerSettings.ID_DOUBLE_TAP_CENTER_PAUSE -> R.drawable.ic_settings_pause_24
+    SitePlayerSettings.ID_CONTROLS_OPACITY -> R.drawable.ic_settings_opacity_24
+    SitePlayerSettings.ID_SHOW_TITLE -> R.drawable.ic_settings_title_24
+    SitePlayerSettings.ID_SHOW_CLOCK -> R.drawable.ic_settings_schedule_24
+    SitePlayerSettings.ID_SHOW_LOCK_BUTTON -> R.drawable.ic_settings_lock_24
+    SitePlayerSettings.ID_SHOW_FULLSCREEN_BUTTON -> R.drawable.ic_settings_fullscreen_24
+    SitePlayerSettings.ID_SHOW_SKIP_BUTTONS -> R.drawable.ic_settings_skip_next_24
+    else -> R.drawable.ic_baseline_settings_24
+}
 
 @Composable
 fun PlayerSiteChips(
@@ -129,6 +157,7 @@ fun SitePlayerSettingsScreen(site: SiteType, modifier: Modifier = Modifier) {
                 } else {
                     stringResource(R.string.site_keeps_its_own_player_settings, SitePlayerSettings.label(site))
                 },
+                iconRes = R.drawable.ic_baseline_settings_24,
                 checked = synced,
                 onCheckedChange = { on ->
                     if (on) SitePlayerSettings.resetToApp(site) else SitePlayerSettings.separate(site)
@@ -154,12 +183,15 @@ fun SitePlayerSettingsScreen(site: SiteType, modifier: Modifier = Modifier) {
             val rows = ids.mapNotNull { listedSpecs[it] }
             if (rows.isEmpty()) return@forEach
             item(key = "group_$groupTitle") {
-                Text(
-                    text = groupTitle,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 6.dp),
-                )
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = groupTitle,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    )
+                    HorizontalDivider()
+                }
             }
             items(rows, key = { it.id }) { spec ->
                 val enabled = SitePlayerSettings.isEnabled(site, spec.id)
@@ -167,6 +199,7 @@ fun SitePlayerSettingsScreen(site: SiteType, modifier: Modifier = Modifier) {
                     is SitePlayerSettings.Spec.Switch -> SettingSwitchItem(
                         title = spec.title,
                         summary = spec.summary,
+                        iconRes = specIcon(spec.id),
                         checked = SitePlayerSettings.getString(site, spec.id).toBooleanStrictOrNull() ?: true,
                         enabled = enabled,
                         onCheckedChange = { SitePlayerSettings.setString(site, spec.id, it.toString()) },
@@ -178,6 +211,7 @@ fun SitePlayerSettingsScreen(site: SiteType, modifier: Modifier = Modifier) {
                             title = spec.title,
                             summary = spec.summary,
                             valueText = spec.options.firstOrNull { it.second == value }?.first ?: value,
+                            iconRes = specIcon(spec.id),
                             enabled = enabled,
                             onClick = { dialogSpec = spec.id },
                         )
@@ -190,6 +224,7 @@ fun SitePlayerSettingsScreen(site: SiteType, modifier: Modifier = Modifier) {
                             SettingSliderItem(
                                 title = spec.title,
                                 summary = (spec.summary?.plus(" · ") ?: "") + value + spec.unit,
+                                iconRes = specIcon(spec.id),
                                 value = value,
                                 valueRange = spec.range,
                                 onValueChange = { SitePlayerSettings.setString(site, spec.id, it.toString()) },

@@ -992,6 +992,28 @@
 
     <!-- 肉視頻 -->
     <string name="site_rouvideo_name">肉視頻</string>
+    <string name="player_media_title">媒體控制（藍牙與按鍵）</string>
+    <string name="player_media_summary">藍牙耳機、耳機按鍵與音量鍵可控制影片播放器</string>
+    <string name="player_media_enable">啟用媒體控制</string>
+    <string name="player_media_play_pause">播放 / 暫停按鈕</string>
+    <string name="player_media_volume">音量加 / 減鍵</string>
+    <string name="player_media_next_prev">上一個 / 下一個按鈕（上一部 / 下一部，或快轉）</string>
+    <string name="player_media_ff_rew">快轉 / 倒轉按鈕</string>
+    <string name="player_media_noisy">耳機或藍牙中斷時自動暫停</string>
+    <string name="player_media_info">將影片標題分享給藍牙裝置</string>
+    <string name="player_media_seek_step">快轉 / 倒轉秒數</string>
+    <string name="player_media_seconds">%1$d 秒</string>
+    <string name="player_media_enable_desc">總開關，關閉後藍牙與按鍵不再控制播放器</string>
+    <string name="player_media_section_buttons">按鈕</string>
+    <string name="player_media_section_behavior">行為</string>
+    <string name="player_media_play_pause_desc">耳機或藍牙的播放、暫停與停止按鈕</string>
+    <string name="player_media_volume_desc">音量鍵調整媒體音量，暫停時也有效</string>
+    <string name="player_media_next_prev_desc">FapFolder 切換上一部 / 下一部，其他網站則快轉 / 倒轉</string>
+    <string name="player_media_ff_rew_desc">依下方秒數快轉或倒轉</string>
+    <string name="player_media_seek_step_desc">快轉 / 倒轉一次的秒數</string>
+    <string name="player_media_noisy_desc">拔出耳機或藍牙斷線時暫停播放</string>
+    <string name="player_media_info_desc">在車用螢幕或手錶上顯示標題與長度</string>
+    <string name="rouvideo_tr_what">翻譯內容</string>
     <string name="player_fullscreen_orientation">全螢幕方向</string>
     <string name="player_fullscreen_orientation_summary">進入全螢幕時以直向或橫向開啟（所有網站）。播放器上的旋轉按鈕可隨時切換。</string>
     <string name="player_orientation_auto">自動（預設）</string>

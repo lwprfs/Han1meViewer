@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -16,9 +17,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -30,17 +29,39 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.RouVideo.common.RouVideoTranslation
-import com.yenaly.han1meviewer.SiteType
-import com.yenaly.han1meviewer.ui.navigation.CrossSiteNavigator
 import com.yenaly.han1meviewer.RouVideo.common.RouVideoTranslation.Kind
+import com.yenaly.han1meviewer.ui.component.SettingNavigationItem
+import com.yenaly.han1meviewer.ui.component.SettingSwitchItem
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteChipRow
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
+import com.yenaly.han1meviewer.ui.navigation.CrossSiteNavigator
+
+private fun kindIcon(kind: Kind): Int = when (kind) {
+    Kind.TAG -> R.drawable.ic_settings_label_24
+    Kind.TITLE -> R.drawable.ic_settings_movie_24
+    Kind.DESC -> R.drawable.ic_settings_notes_24
+    Kind.COMMENT -> R.drawable.ic_baseline_comment_24
+}
+
+@Composable
+private fun SettingsSectionTitle(title: String) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+        )
+        HorizontalDivider()
+    }
+}
 
 @Composable
 fun RouVideoTranslationSettingsScreen(
@@ -65,76 +86,95 @@ fun RouVideoTranslationSettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             item {
-                Text(
-                    text = stringResource(R.string.rouvideo_tr_privacy),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-            }
-            item {
-                TrSwitchRow(
+                SettingSwitchItem(
                     title = stringResource(R.string.rouvideo_tr_enable),
-                    subtitle = stringResource(R.string.rouvideo_tr_enable_desc),
+                    summary = stringResource(R.string.rouvideo_tr_privacy),
+                    iconRes = R.drawable.ic_translate_24,
                     checked = enabled,
-                    onChange = { RouVideoTranslation.enabled = it },
+                    onCheckedChange = { RouVideoTranslation.enabled = it },
                 )
             }
-            item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
+
+            item { SettingsSectionTitle(stringResource(R.string.rouvideo_tr_what)) }
             item {
-                TrSwitchRow(
+                SettingSwitchItem(
                     title = stringResource(R.string.rouvideo_tr_tags),
-                    subtitle = stringResource(R.string.rouvideo_tr_tags_desc),
+                    summary = stringResource(R.string.rouvideo_tr_tags_desc),
+                    iconRes = R.drawable.ic_settings_label_24,
                     checked = RouVideoTranslation.tagsEnabled,
                     enabled = enabled,
-                    onChange = { RouVideoTranslation.tagsEnabled = it },
+                    onCheckedChange = { RouVideoTranslation.tagsEnabled = it },
                 )
             }
             item {
-                TrSwitchRow(
+                SettingSwitchItem(
                     title = stringResource(R.string.rouvideo_tr_titles),
-                    subtitle = stringResource(R.string.rouvideo_tr_titles_desc),
+                    summary = stringResource(R.string.rouvideo_tr_titles_desc),
+                    iconRes = R.drawable.ic_settings_movie_24,
                     checked = RouVideoTranslation.titlesEnabled,
                     enabled = enabled,
-                    onChange = { RouVideoTranslation.titlesEnabled = it },
+                    onCheckedChange = { RouVideoTranslation.titlesEnabled = it },
                 )
             }
             item {
-                TrSwitchRow(
+                SettingSwitchItem(
                     title = stringResource(R.string.rouvideo_tr_descriptions),
-                    subtitle = stringResource(R.string.rouvideo_tr_descriptions_desc),
+                    summary = stringResource(R.string.rouvideo_tr_descriptions_desc),
+                    iconRes = R.drawable.ic_settings_notes_24,
                     checked = RouVideoTranslation.descriptionsEnabled,
                     enabled = enabled,
-                    onChange = { RouVideoTranslation.descriptionsEnabled = it },
+                    onCheckedChange = { RouVideoTranslation.descriptionsEnabled = it },
                 )
             }
             item {
-                TrSwitchRow(
+                SettingSwitchItem(
                     title = stringResource(R.string.rouvideo_tr_comments),
-                    subtitle = stringResource(R.string.rouvideo_tr_comments_desc),
+                    summary = stringResource(R.string.rouvideo_tr_comments_desc),
+                    iconRes = R.drawable.ic_baseline_comment_24,
                     checked = RouVideoTranslation.commentsEnabled,
                     enabled = enabled,
-                    onChange = { RouVideoTranslation.commentsEnabled = it },
+                    onCheckedChange = { RouVideoTranslation.commentsEnabled = it },
                 )
             }
-            item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
-            item {
-                Text(
-                    text = stringResource(R.string.rouvideo_tr_sites),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp),
-                )
-            }
+
+            item { SettingsSectionTitle(stringResource(R.string.rouvideo_tr_sites)) }
             items(RouVideoTranslation.SUPPORTED_SITES, key = { "site_" + it.name }) { site ->
-                TrSwitchRow(
+                SettingSwitchItem(
                     title = CrossSiteNavigator.siteLabel(site),
-                    subtitle = stringResource(R.string.rouvideo_tr_sites_desc),
+                    summary = stringResource(R.string.rouvideo_tr_sites_desc),
+                    iconRes = R.drawable.ic_settings_public_24,
                     checked = RouVideoTranslation.siteEnabled(site),
                     enabled = enabled,
-                    onChange = { RouVideoTranslation.setSiteEnabled(site, it) },
+                    onCheckedChange = { RouVideoTranslation.setSiteEnabled(site, it) },
+                )
+            }
+
+            item { SettingsSectionTitle(stringResource(R.string.rouvideo_tr_cache)) }
+            item {
+                SettingNavigationItem(
+                    title = stringResource(R.string.rouvideo_tr_view),
+                    summary = stringResource(
+                        R.string.rouvideo_tr_cache_breakdown,
+                        stats.tags, stats.titles, stats.descriptions, stats.comments,
+                    ),
+                    valueText = stringResource(
+                        R.string.rouvideo_tr_cache_usage,
+                        Formatter.formatShortFileSize(context, stats.bytes),
+                        stats.total,
+                    ),
+                    iconRes = R.drawable.ic_settings_list_24,
+                    onClick = onOpenCache,
+                )
+            }
+            item {
+                SettingNavigationItem(
+                    title = stringResource(R.string.rouvideo_tr_clear),
+                    iconRes = R.drawable.ic_baseline_delete_24,
+                    enabled = stats.total > 0,
+                    onClick = { confirmClear = true },
                 )
             }
             if (paused > 0) {
@@ -148,58 +188,6 @@ fun RouVideoTranslationSettingsScreen(
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     )
-                }
-            }
-
-            item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
-            item {
-                Text(
-                    text = stringResource(R.string.rouvideo_tr_cache),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp),
-                )
-            }
-            item {
-                Column(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                ) {
-                    Text(
-                        text = stringResource(
-                            R.string.rouvideo_tr_cache_usage,
-                            Formatter.formatShortFileSize(context, stats.bytes),
-                            stats.total,
-                        ),
-                        style = MaterialTheme.typography.titleSmall,
-                    )
-                    Text(
-                        text = stringResource(
-                            R.string.rouvideo_tr_cache_breakdown,
-                            stats.tags, stats.titles, stats.descriptions, stats.comments,
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-            item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    OutlinedButton(onClick = onOpenCache, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.rouvideo_tr_view))
-                    }
-                    OutlinedButton(
-                        onClick = { confirmClear = true },
-                        enabled = stats.total > 0,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(stringResource(R.string.rouvideo_tr_clear))
-                    }
                 }
             }
         }
@@ -270,9 +258,16 @@ fun RouVideoTranslationCacheScreen(onBack: () -> Unit) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(start = 16.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
+                                .padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
+                            Icon(
+                                painter = painterResource(kindIcon(entry.kind)),
+                                contentDescription = labels.getValue(entry.kind),
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(22.dp),
+                            )
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = entry.text,
@@ -287,11 +282,6 @@ fun RouVideoTranslationCacheScreen(onBack: () -> Unit) {
                                     maxLines = 3,
                                     overflow = TextOverflow.Ellipsis,
                                 )
-                                Text(
-                                    text = labels.getValue(entry.kind),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary,
-                                )
                             }
                             IconButton(onClick = { RouVideoTranslation.delete(entry) }) {
                                 Icon(
@@ -305,37 +295,5 @@ fun RouVideoTranslationCacheScreen(onBack: () -> Unit) {
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun TrSwitchRow(
-    title: String,
-    subtitle: String,
-    checked: Boolean,
-    onChange: (Boolean) -> Unit,
-    enabled: Boolean = true,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                color = if (enabled) MaterialTheme.colorScheme.onSurface
-                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Switch(checked = checked, onCheckedChange = onChange, enabled = enabled)
     }
 }

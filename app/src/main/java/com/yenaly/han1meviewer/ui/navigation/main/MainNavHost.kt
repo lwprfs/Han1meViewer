@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.ui.navigation.main
 
+import com.yenaly.han1meviewer.ui.navigation.settings.MediaControlsSettingsRoute
+import com.yenaly.han1meviewer.ui.screen.settings.MediaControlsSettingsScreen
 import com.yenaly.han1meviewer.RouVideo.ui.settings.RouVideoTranslationCacheScreen
 import com.yenaly.han1meviewer.RouVideo.ui.settings.RouVideoTranslationSettingsScreen
 import com.yenaly.han1meviewer.ui.navigation.settings.TranslationCacheRoute
@@ -220,6 +222,9 @@ fun MainNavHost(
                 )
             }
         }
+        composable<MediaControlsSettingsRoute> {
+            MediaControlsSettingsScreen(onBack = { navController.popBackStackSafely() })
+        }
         composable<TranslationSettingsRoute> {
             RouVideoTranslationSettingsScreen(
                 onBack = { navController.popBackStackSafely() },
@@ -236,6 +241,7 @@ fun MainNavHost(
             ) {
                 PlayerSettingsRouteScreen(
                     onNavigateToMpvSettings = { navController.navigateSafely(MpvPlayerSettingsRoute) },
+                    onNavigateToMediaControls = { navController.navigateSafely(MediaControlsSettingsRoute) },
                 )
             }
         }
