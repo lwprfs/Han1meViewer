@@ -1,6 +1,5 @@
 package com.yenaly.han1meviewer.SupJav.ui.video
 
-import com.yenaly.han1meviewer.util.translatedTitle
 import androidx.compose.ui.res.stringResource
 import com.yenaly.han1meviewer.SiteType
 import android.net.Uri
@@ -439,7 +438,7 @@ fun SupJavVideoScreen(
             SiteTopAppBar(
                 title = {
                     Text(
-                        text = detail?.title?.let { translatedTitle(it) } ?: stringResource(R.string.video),
+                        text = detail?.title ?: stringResource(R.string.video),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -594,7 +593,7 @@ private fun SupJavVideoContent(
         item(key = "header") {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    text = translatedTitle(info.title),
+                    text = info.title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                 )

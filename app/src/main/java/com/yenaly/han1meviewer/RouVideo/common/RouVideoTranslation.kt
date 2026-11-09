@@ -107,7 +107,11 @@ object RouVideoTranslation {
         get() = commentsState.value
         set(v) { commentsState.value = v; sp.edit().putBoolean(KEY_COMMENTS, v).apply() }
 
-    fun siteEnabled(site: SiteType): Boolean = site !in sitesOffState.value
+    /** Translation is only offered for these sites. */
+    val SUPPORTED_SITES: List<SiteType> = listOf(SiteType.HANIME, SiteType.JAVCHU, SiteType.ROUVIDEO)
+
+    fun siteEnabled(site: SiteType): Boolean =
+        site in SUPPORTED_SITES && site !in sitesOffState.value
 
     fun setSiteEnabled(site: SiteType, on: Boolean) {
         val next = if (on) sitesOffState.value - site else sitesOffState.value + site
@@ -372,7 +376,7 @@ object RouVideoTranslation {
 
     /** The per-site check is done by callers; here a queued item only needs its kind to be on. */
     private fun anySite(): SiteType =
-        SiteType.entries.firstOrNull { siteEnabled(it) } ?: SiteType.ROUVIDEO
+        SUPPORTED_SITES.firstOrNull { siteEnabled(it) } ?: SiteType.ROUVIDEO
 
     private fun onNetworkError(e: Exception, group: List<Pair<Kind, String>>) {
         synchronized(lock) {

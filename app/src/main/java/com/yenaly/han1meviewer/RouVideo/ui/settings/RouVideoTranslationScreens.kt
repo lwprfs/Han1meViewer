@@ -128,7 +128,7 @@ fun RouVideoTranslationSettingsScreen(
                     modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp),
                 )
             }
-            items(SiteType.entries.toList(), key = { "site_" + it.name }) { site ->
+            items(RouVideoTranslation.SUPPORTED_SITES, key = { "site_" + it.name }) { site ->
                 TrSwitchRow(
                     title = CrossSiteNavigator.siteLabel(site),
                     subtitle = stringResource(R.string.rouvideo_tr_sites_desc),
