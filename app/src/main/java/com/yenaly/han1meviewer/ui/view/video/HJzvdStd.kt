@@ -680,7 +680,6 @@ class HJzvdStd @JvmOverloads constructor(
         this.clarityPopWindow.showAtLocation(this.textureViewContainer, 8388613, 0, 0)
     }
 
-    /** Rotate button: go fullscreen if needed, then flip portrait <-> landscape. */
     private fun clickRotate() {
         val activity = JZUtils.scanForActivity(jzvdContext) ?: return
         val target = PlayerOrientation.rotateTarget(activity)
@@ -1191,7 +1190,6 @@ class HJzvdStd @JvmOverloads constructor(
         PlayerMediaControl.update()
     }
 
-    // ---- Bluetooth / headset / media keys ----
     private var mediaController: PlayerMediaControl.Controller? = null
 
     override fun onAttachedToWindow() {

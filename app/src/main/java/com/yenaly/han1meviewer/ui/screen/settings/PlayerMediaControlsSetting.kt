@@ -28,7 +28,6 @@ import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import com.yenaly.han1meviewer.ui.component.player.PlayerMediaControl.Settings
 import com.yenaly.han1meviewer.ui.component.ChoiceDialog
 
-/** Row shown in Player settings; opens [MediaControlsSettingsScreen]. */
 @Composable
 fun PlayerMediaControlsSetting(onClick: () -> Unit) {
     SettingNavigationItem(
@@ -52,7 +51,6 @@ private fun SectionTitle(title: String) {
     }
 }
 
-/** Bluetooth / headset / volume-key controls for the video players, one switch per behaviour. */
 @Composable
 fun MediaControlsSettingsScreen(onBack: () -> Unit) {
     var enabled by remember { mutableStateOf(Settings.enabled) }

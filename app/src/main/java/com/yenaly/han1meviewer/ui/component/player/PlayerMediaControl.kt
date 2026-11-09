@@ -17,17 +17,8 @@ import androidx.core.content.ContextCompat
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.yenaly_libs.utils.applicationContext
 
-/**
- * Lets Bluetooth / wired headset buttons, media keys and volume keys control whichever video
- * player is on screen (Hanime1 / Javchu and every Compose-based site player).
- *
- * Players call [register] while they are on screen. A platform [MediaSession] is kept active
- * meanwhile so Bluetooth media buttons are routed to the app (and not to some other music app).
- * Every behaviour can be switched off in Settings -> Player -> Media controls ([Settings]).
- */
 object PlayerMediaControl {
 
-    /** User-tunable behaviour, stored in the app preferences. */
     object Settings {
         private const val K_ENABLED = "player_media_enabled"
         private const val K_PLAY_PAUSE = "player_media_play_pause"
@@ -71,7 +62,6 @@ object PlayerMediaControl {
         val SEEK_STEPS = listOf(5, 10, 15, 30)
     }
 
-    /** What a player exposes. All callbacks run on the main thread. */
     class Controller(
         val title: () -> String,
         val isPlaying: () -> Boolean,
@@ -80,7 +70,7 @@ object PlayerMediaControl {
         val play: () -> Unit,
         val pause: () -> Unit,
         val seekBy: (Long) -> Unit,
-        /** Previous / next video; null when the player has no such notion (seek is used). */
+
         val previous: (() -> Unit)? = null,
         val next: (() -> Unit)? = null,
     )
@@ -108,7 +98,6 @@ object PlayerMediaControl {
         update()
     }
 
-    /** Push play state / title to the media session. Cheap; call on play-state or title change. */
     fun update() {
         val s = session ?: return
         val c = active
@@ -149,23 +138,17 @@ object PlayerMediaControl {
         if (!s.isActive) s.isActive = true
     }
 
-    /**
-     * Handles a key from the activity (wired headset buttons, keyboards, volume keys).
-     * Returns true when the key was consumed.
-     */
     fun handleKey(event: KeyEvent): Boolean {
         val code = event.keyCode
         if (!isHandledKey(code)) return false
         if (active == null || !Settings.enabled) return false
-        // consume the matching ACTION_UP too, so the system doesn't act on half an event
+
         if (event.action != KeyEvent.ACTION_DOWN) return wouldHandle(code)
         if (event.repeatCount > 0 && code != KeyEvent.KEYCODE_VOLUME_UP && code != KeyEvent.KEYCODE_VOLUME_DOWN) {
             return wouldHandle(code)
         }
         return handleCommand(code)
     }
-
-    // ---- commands ---------------------------------------------------------------------------
 
     private fun isHandledKey(code: Int) = when (code) {
         KeyEvent.KEYCODE_MEDIA_PLAY, KeyEvent.KEYCODE_MEDIA_PAUSE, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
@@ -188,7 +171,6 @@ object PlayerMediaControl {
         val c = active ?: return false
         if (!Settings.enabled || !wouldHandle(code)) return false
 
-        // a button can arrive via both the session and the activity: act once
         val now = SystemClock.uptimeMillis()
         val isVolume = code == KeyEvent.KEYCODE_VOLUME_UP || code == KeyEvent.KEYCODE_VOLUME_DOWN
         if (!isVolume && code == lastKey && now - lastKeyAt < 250) return true
@@ -212,13 +194,10 @@ object PlayerMediaControl {
         return true
     }
 
-    /** Always the media stream, even while paused (otherwise Android adjusts the ringer). */
     private fun adjustVolume(direction: Int) {
         val am = applicationContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         am.adjustStreamVolume(AudioManager.STREAM_MUSIC, direction, AudioManager.FLAG_SHOW_UI)
     }
-
-    // ---- media session (Bluetooth buttons) -----------------------------------------------------
 
     private fun ensureSession() {
         if (session != null) return
@@ -257,8 +236,6 @@ object PlayerMediaControl {
         }, main)
         session = s
     }
-
-    // ---- headphones unplugged / Bluetooth disconnected ----------------------------------------
 
     private val noisyReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {

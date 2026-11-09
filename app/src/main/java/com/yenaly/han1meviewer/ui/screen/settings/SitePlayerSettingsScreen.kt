@@ -42,7 +42,6 @@ import com.yenaly.han1meviewer.ui.component.SettingSliderItem
 import com.yenaly.han1meviewer.ui.component.SettingSwitchItem
 import com.yenaly.han1meviewer.ui.component.player.SitePlayerSettings
 
-/** XML vector icon for each player setting id (every row gets an icon). */
 private fun specIcon(id: String): Int = when (id) {
     SitePlayerSettings.ID_DEFAULT_SPEED, SitePlayerSettings.ID_SHOW_SPEED_BUTTON -> R.drawable.baseline_speed_24
     SitePlayerSettings.ID_LONG_PRESS_SPEED -> R.drawable.baseline_speed2_24

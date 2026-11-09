@@ -140,7 +140,7 @@ fun SitePlayerOverlay(
     val mediaPrevious by rememberUpdatedState(onMediaPrevious)
     val mediaNext by rememberUpdatedState(onMediaNext)
     DisposableEffect(Unit) {
-        // Bluetooth / headset / media keys control this player while it is on screen
+
         val controller = PlayerMediaControl.Controller(
             title = { mediaTitle },
             isPlaying = { mediaPlaying },
@@ -162,7 +162,7 @@ fun SitePlayerOverlay(
     }
     val rotateAction: () -> Unit = onRotate ?: {
         activity?.let { act ->
-            // From inline, rotating means "go fullscreen in the other orientation".
+
             if (!isFullscreen) onToggleFullscreen()
             PlayerOrientation.rotate(act)
         }

@@ -19,13 +19,6 @@ import java.io.OutputStream
 import java.security.MessageDigest
 import java.util.zip.ZipFile
 
-/**
- * 增量更新：用已安装的 APK + 小补丁还原出新 APK，失败时由调用方回退到完整 APK 下载。
- *
- * 增量包是一个 zip，里面有：
- * - `update.json`：[DeltaInfo]
- * - `update.patch`：bsdiff 补丁（旧 APK -> 新 APK）
- */
 internal object HDeltaUpdater {
 
     private const val TAG = "HDeltaUpdater"
@@ -44,12 +37,6 @@ internal object HDeltaUpdater {
         val patchSize: Long = -1,
     )
 
-    /**
-     * 尝试用增量包生成 [target]。
-     *
-     * @return `true` 表示 [target] 已经是校验通过的新 APK；`false` 表示增量不可用
-     * （版本不匹配、下载失败、补丁损坏、校验失败……），[target] 已被清理，应改为下载完整 APK。
-     */
     suspend fun tryApply(
         target: File,
         delta: Latest.Delta,
@@ -66,7 +53,6 @@ internal object HDeltaUpdater {
             }
             val installedSha = installed.sha256()
 
-            // 文件名里带了补丁基线的哈希前缀时，先快速判断，避免白白下载
             val prefix = delta.baseSha256Prefix
             if (!prefix.isNullOrEmpty() && !installedSha.startsWith(prefix, ignoreCase = true)) {
                 Log.i(TAG, "补丁基线与当前安装的 APK 不一致，跳过增量更新")
@@ -162,7 +148,6 @@ internal object HDeltaUpdater {
         }
     }
 
-    /** 已安装应用的 base APK；split 安装（App Bundle）暂不支持，返回 `null`。 */
     private fun installedApk(): File? {
         val appInfo = applicationContext.applicationInfo
         if (!appInfo.splitSourceDirs.isNullOrEmpty()) return null
@@ -182,9 +167,6 @@ internal object HDeltaUpdater {
         return md.digest().joinToString("") { "%02x".format(it) }
     }
 
-    /**
-     * 新 APK 的签名必须和当前安装的一致。无法判断时放行（系统安装器本身也会拒绝签名不一致的更新）。
-     */
     private fun hasSameSigner(apk: File): Boolean {
         return try {
             val pm = applicationContext.packageManager
