@@ -1,5 +1,9 @@
 package com.yenaly.han1meviewer.ui.component.player
 
+import androidx.compose.ui.res.painterResource
+import com.yenaly.han1meviewer.ui.navigation.NavigationManager
+import com.yenaly.han1meviewer.util.PlayerOrientation
+import androidx.compose.material.icons.outlined.ScreenRotation
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -119,11 +123,23 @@ fun SitePlayerOverlay(
     onQualitySelect: (String) -> Unit = {},
     stretched: Boolean = false,
     onToggleStretch: (() -> Unit)? = null,
+    onRotate: (() -> Unit)? = null,
     onTemporarySpeed: (Float?) -> Unit = {},
     extraActions: @Composable RowScope.() -> Unit = {},
 ) {
     val context = LocalContext.current
     val activity = remember(context) { context.findPlayerActivity() }
+    DisposableEffect(Unit) {
+        PlayerOrientation.overlayEntered()
+        onDispose { PlayerOrientation.overlayLeft(activity) }
+    }
+    val rotateAction: () -> Unit = onRotate ?: {
+        activity?.let { act ->
+
+            if (!isFullscreen) onToggleFullscreen()
+            PlayerOrientation.rotate(act)
+        }
+    }
 
     var controlsVisible by remember { mutableStateOf(true) }
     var locked by remember { mutableStateOf(false) }
@@ -384,6 +400,20 @@ fun SitePlayerOverlay(
                             tint = Color.White,
                             modifier = Modifier.size(20.dp),
                         )
+                    }
+                    if (isFullscreen) {
+                        Spacer(Modifier.width(4.dp))
+                        IconButton(
+                            onClick = { NavigationManager.navigateToHome() },
+                            modifier = Modifier.size(32.dp),
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.outline_home_24),
+                                contentDescription = stringResource(R.string.site_home),
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
                     }
                     Spacer(Modifier.width(8.dp))
                     if (config.showTitle) {
@@ -646,6 +676,14 @@ fun SitePlayerOverlay(
                                     modifier = Modifier.size(18.dp),
                                 )
                             }
+                        }
+                        IconButton(onClick = rotateAction, modifier = Modifier.size(28.dp)) {
+                            Icon(
+                                imageVector = Icons.Outlined.ScreenRotation,
+                                contentDescription = stringResource(R.string.site_rotate),
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp),
+                            )
                         }
                         if (config.showFullscreenButton || isFullscreen) IconButton(onClick = onToggleFullscreen, modifier = Modifier.size(28.dp)) {
                             Icon(

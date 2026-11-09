@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.ui.screen.video
 
+import com.yenaly.han1meviewer.util.PlayerOrientation
 import android.app.PendingIntent
 import android.app.PictureInPictureParams
 import android.app.RemoteAction
@@ -416,10 +417,13 @@ fun VideoRouteHostScreen(
                 player.screen != Jzvd.SCREEN_TINY &&
                 Jzvd.FULLSCREEN_ORIENTATION != ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
             ) {
-                if (orientation.isLandscape && player.screen == Jzvd.SCREEN_NORMAL) {
+                if (orientation.isLandscape && player.screen == Jzvd.SCREEN_NORMAL &&
+                    PlayerOrientation.mode != PlayerOrientation.PORTRAIT
+                ) {
                     changeScreenFullLandscape(orientation)
                 } else if (orientation == OrientationManager.ScreenOrientation.PORTRAIT &&
-                    player.screen == Jzvd.SCREEN_FULLSCREEN
+                    player.screen == Jzvd.SCREEN_FULLSCREEN &&
+                    !PlayerOrientation.userRotated && PlayerOrientation.mode != PlayerOrientation.PORTRAIT
                 ) {
                     changeScreenNormal()
                 }

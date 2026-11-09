@@ -1,4 +1,6 @@
 package com.yenaly.han1meviewer.MissAV.ui.video
+import com.yenaly.han1meviewer.ui.component.SiteBackWithHomeButton
+import com.yenaly.han1meviewer.util.PlayerOrientation
 import com.yenaly.han1meviewer.R
 import androidx.compose.ui.res.stringResource
 import com.yenaly.han1meviewer.SiteType
@@ -306,7 +308,7 @@ fun MissAvVideoScreen(
 
     fun enterFullscreen() {
         if (isFullscreen) return
-        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        activity?.requestedOrientation = PlayerOrientation.fullscreenRequest()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             activity?.window?.insetsController?.hide(
                 android.view.WindowInsets.Type.statusBars() or
@@ -574,7 +576,7 @@ fun MissAvVideoScreen(
         topBar = {
             SiteTopAppBar(
                 title = { Text(stringResource(R.string.video), maxLines = 1) },
-                navigationIcon = { SiteBackButton(onClick = onBack) },
+                navigationIcon = { SiteBackWithHomeButton(onBack = onBack) },
                 actions = {
                     IconButton(onClick = {
                         if (hasSubtitle) clearSubtitle() else openSubtitlePicker()

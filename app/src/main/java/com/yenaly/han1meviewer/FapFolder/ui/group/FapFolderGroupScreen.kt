@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.FapFolder.ui.group
 
+import com.yenaly.han1meviewer.FapFolder.ui.video.FapFolderVideoPlaylist
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import androidx.compose.foundation.background
@@ -188,7 +189,15 @@ fun FapFolderGroupScreen(
                                     photoLightboxIndex = idx
                                 }
                             },
-                            onOpenVideoBySlug = onOpenVideoPost,
+                            onOpenVideoBySlug = { id ->
+                                FapFolderVideoPlaylist.set(
+                                    uiState.videoTiles.map {
+                                        it.postId?.toString()
+                                            ?: it.postUrl.trimEnd('/').substringAfterLast('/')
+                                    }
+                                )
+                                onOpenVideoPost(id)
+                            },
                             onLoadMore = { viewModel.loadMoreItems() },
                             onRetry = { viewModel.retryLoadMoreItems() },
                         )
@@ -197,11 +206,14 @@ fun FapFolderGroupScreen(
                             uiState = uiState,
                             onSwitchTab = { viewModel.switchTab(it) },
                             onToggleMembership = { viewModel.joinGroup() },
-                            onOpenPost = onOpenPost,
+                            onOpenPost = { id ->
+                                FapFolderVideoPlaylist.set(groupVideoIds(uiState))
+                                onOpenPost(id)
+                            },
                             onOpenHashtag = onOpenHashtag,
                             onOpenProfile = onOpenProfile,
                             onOpenVideo = { post, _ ->
-
+                                FapFolderVideoPlaylist.set(groupVideoIds(uiState))
                                 onOpenVideoPost(post.slug ?: post.postId.toString())
                             },
                             onOpenImage = { images, idx -> lightboxPayload = images to idx },
@@ -536,6 +548,9 @@ private fun LazyGridScope.groupHeaderItems(
         }
     }
 }
+
+private fun groupVideoIds(uiState: FapFolderGroupUiState): List<String> =
+    uiState.posts.filter { it.primaryVideo != null }.map { it.slug ?: it.postId.toString() }
 
 @Composable
 private fun GroupPostsTab(

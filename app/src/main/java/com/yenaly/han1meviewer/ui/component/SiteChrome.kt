@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.ui.component
 
+import com.yenaly.han1meviewer.ui.navigation.NavigationManager
 import com.yenaly.han1meviewer.util.translatedTitle
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -486,6 +487,24 @@ fun SiteVideoCard(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun SiteHomeButton() {
+    FilledTonalIconButton(onClick = { NavigationManager.navigateToHome() }) {
+        Icon(
+            painter = painterResource(R.drawable.outline_home_24),
+            contentDescription = stringResource(R.string.site_home),
+        )
+    }
+}
+
+@Composable
+fun SiteBackWithHomeButton(onBack: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        SiteBackButton(onClick = onBack)
+        SiteHomeButton()
     }
 }
 

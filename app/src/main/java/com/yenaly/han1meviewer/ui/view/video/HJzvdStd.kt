@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.ui.view.video
 
+import com.yenaly.han1meviewer.util.PlayerOrientation
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.res.ColorStateList
@@ -377,6 +378,7 @@ class HJzvdStd @JvmOverloads constructor(
         btnGoHome.setOnClickListener(this)
         superResolution.setOnClickListener(this)
         btnLoop.setOnClickListener(this)
+        findViewById<View>(R.id.rotate)?.setOnClickListener(this)
         btnResumeProgress.setOnClickListener {
             hasRestoredProgress = true
             mediaInterface.seekTo(0L)
@@ -677,10 +679,19 @@ class HJzvdStd @JvmOverloads constructor(
         this.clarityPopWindow.showAtLocation(this.textureViewContainer, 8388613, 0, 0)
     }
 
+    private fun clickRotate() {
+        val activity = JZUtils.scanForActivity(jzvdContext) ?: return
+        val target = PlayerOrientation.rotateTarget(activity)
+        if (screen != SCREEN_FULLSCREEN) gotoFullscreen()
+        PlayerOrientation.userRotated = true
+        JZUtils.setRequestedOrientation(jzvdContext, target)
+    }
+
     override fun onClick(v: View) {
         super.onClick(v)
         when (v.id) {
             R.id.tv_speed -> clickSpeed()
+            R.id.rotate -> clickRotate()
             R.id.tv_keyframe -> onKeyframeClickListener?.invoke(v)
             R.id.super_resolution -> clickSuperResolution()
             R.id.btn_loop -> {
@@ -920,6 +931,7 @@ class HJzvdStd @JvmOverloads constructor(
         if (activity != null) {
             orientationManager.unlockOrientation(activity)
         }
+        PlayerOrientation.userRotated = false
         JZUtils.showSystemUI(jzvdContext)
     }
 
@@ -987,13 +999,16 @@ class HJzvdStd @JvmOverloads constructor(
         }
         setScreenFullscreen()
         JZUtils.hideStatusBar(jzvdContext)
-        if (isPortraitVideo) {
+        val forcedMode = PlayerOrientation.mode
+        if (forcedMode == PlayerOrientation.PORTRAIT || (forcedMode == PlayerOrientation.AUTO && isPortraitVideo)) {
             activity?.let {
                 orientationManager.lockOrientation(
                     it,
                     OrientationManager.ScreenOrientation.PORTRAIT
                 )
             }
+        } else if (forcedMode == PlayerOrientation.LANDSCAPE) {
+            JZUtils.setRequestedOrientation(jzvdContext, android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE)
         } else {
             JZUtils.setRequestedOrientation(jzvdContext, FULLSCREEN_ORIENTATION)
         }

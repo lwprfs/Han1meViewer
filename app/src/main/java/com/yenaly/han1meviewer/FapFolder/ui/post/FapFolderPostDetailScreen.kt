@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.FapFolder.ui.post
 
+import com.yenaly.han1meviewer.ui.component.SiteBackWithHomeButton
+import com.yenaly.han1meviewer.FapFolder.ui.video.FapFolderVideoPlaylist
 import com.yenaly.han1meviewer.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
@@ -66,6 +68,7 @@ fun FapFolderPostDetailScreen(
     onOpenProfile: (String) -> Unit,
     onOpenAlbum: (String) -> Unit,
     onOpenVideo: (String) -> Unit,
+    onReplaceVideo: (String) -> Unit = onOpenVideo,
     onOpenGroupPhotos: (String) -> Unit = onOpenGroup,
     onOpenProfilePhotos: (String) -> Unit = onOpenProfile,
     viewModel: FapFolderPostDetailViewModel = viewModel(),
@@ -126,7 +129,7 @@ fun FapFolderPostDetailScreen(
                         overflow = TextOverflow.Ellipsis,
                     )
                 },
-                navigationIcon = { SiteBackButton(onClick = onBack) },
+                navigationIcon = { SiteBackWithHomeButton(onBack = onBack) },
                 actions = {
                     IconButton(onClick = { viewModel.refresh() }) {
                         Icon(
@@ -166,6 +169,10 @@ fun FapFolderPostDetailScreen(
                                     video = video,
                                     playing = playing,
                                     onPlayingChange = { playing = it },
+                                    onPrevious = FapFolderVideoPlaylist.previous(slugOrId)
+                                        ?.let { id -> { onReplaceVideo(id) } },
+                                    onNext = FapFolderVideoPlaylist.next(slugOrId)
+                                        ?.let { id -> { onReplaceVideo(id) } },
                                     onExpired = {
                                         val pid = video.videoId ?: video.onPlayId
                                         playing = false

@@ -162,6 +162,8 @@ internal fun InlineVideoSlot(
     playing: Boolean,
     onPlayingChange: (Boolean) -> Unit,
     onExpired: () -> Unit,
+    onPrevious: (() -> Unit)? = null,
+    onNext: (() -> Unit)? = null,
 ) {
     if (playing) {
         FapFolderVideoPlayerScreen(
@@ -175,6 +177,8 @@ internal fun InlineVideoSlot(
             inline = true,
             autoStart = true,
             minInlineAspect = INLINE_MIN_ASPECT,
+            onPrevious = onPrevious,
+            onNext = onNext,
         )
         return
     }

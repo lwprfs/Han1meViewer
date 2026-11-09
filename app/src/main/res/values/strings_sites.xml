@@ -89,6 +89,9 @@
     <string name="site_my_account">我的帳號</string>
     <string name="site_privacy">隱私</string>
     <string name="site_search">搜尋</string>
+    <string name="site_home">首頁</string>
+    <string name="site_previous_video">上一部</string>
+    <string name="site_next_video">下一部</string>
     <string name="site_rotate">旋轉</string>
     <string name="site_resume_playback">繼續播放？</string>
     <string name="site_resume_or_start">從 %1$s 繼續，或從頭開始？</string>
@@ -989,6 +992,11 @@
 
     <!-- 肉視頻 -->
     <string name="site_rouvideo_name">肉視頻</string>
+    <string name="player_fullscreen_orientation">全螢幕方向</string>
+    <string name="player_fullscreen_orientation_summary">進入全螢幕時以直向或橫向開啟（所有網站）。播放器上的旋轉按鈕可隨時切換。</string>
+    <string name="player_orientation_auto">自動（預設）</string>
+    <string name="player_orientation_landscape">橫向全螢幕</string>
+    <string name="player_orientation_portrait">直向全螢幕</string>
     <string name="rouvideo_tr_title">翻譯</string>
     <string name="rouvideo_tr_privacy">將各網站的中文與日文標籤、標題、簡介與留言翻譯成英文。內建詞庫以外的文字會傳送到 Google 翻譯。</string>
     <string name="rouvideo_tr_enable">啟用翻譯</string>

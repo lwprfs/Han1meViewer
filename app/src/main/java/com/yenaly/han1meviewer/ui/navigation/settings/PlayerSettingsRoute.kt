@@ -1,5 +1,8 @@
 package com.yenaly.han1meviewer.ui.navigation.settings
 
+import com.yenaly.han1meviewer.ui.component.SettingNavigationItem
+import com.yenaly.han1meviewer.ui.component.ChoiceDialog
+import com.yenaly.han1meviewer.util.PlayerOrientation
 import android.content.Context
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,6 +44,7 @@ fun PlayerSettingsRouteScreen(
 
     var selectedSite by rememberSaveable { mutableStateOf(SiteType.HANIME) }
     Column(modifier = Modifier.fillMaxSize()) {
+        FullscreenOrientationSetting()
         PlayerSiteChips(selected = selectedSite, onSelect = { selectedSite = it })
         if (selectedSite != SiteType.HANIME && selectedSite != SiteType.JAVCHU) {
             SitePlayerSettingsScreen(site = selectedSite, modifier = Modifier.weight(1f))
@@ -92,6 +96,35 @@ fun PlayerSettingsRouteScreen(
     )
         }
     }
+}
+
+@Composable
+private fun FullscreenOrientationSetting() {
+    var mode by remember { mutableStateOf(PlayerOrientation.mode) }
+    var showDialog by rememberSaveable { mutableStateOf(false) }
+    val options = listOf(
+        stringResource(R.string.player_orientation_auto) to PlayerOrientation.AUTO,
+        stringResource(R.string.player_orientation_landscape) to PlayerOrientation.LANDSCAPE,
+        stringResource(R.string.player_orientation_portrait) to PlayerOrientation.PORTRAIT,
+    )
+    ChoiceDialog(
+        visible = showDialog,
+        title = stringResource(R.string.player_fullscreen_orientation),
+        options = options,
+        selectedValue = mode,
+        onDismiss = { showDialog = false },
+        onSelect = {
+            showDialog = false
+            PlayerOrientation.mode = it
+            mode = it
+        },
+    )
+    SettingNavigationItem(
+        title = stringResource(R.string.player_fullscreen_orientation),
+        summary = stringResource(R.string.player_fullscreen_orientation_summary),
+        valueText = options.firstOrNull { it.second == mode }?.first,
+        onClick = { showDialog = true },
+    )
 }
 
 private fun buildPlayerSettingsUiState(context: Context): PlayerSettingsUiState {

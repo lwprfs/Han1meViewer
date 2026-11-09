@@ -247,6 +247,13 @@ fun FapFolderNavHost(
                 onOpenVideo = { slugOrId ->
                     navController.navigateSafely(FapFolderPostRoute(slugOrId, autoPlay = true))
                 },
+                onReplaceVideo = { slugOrId ->
+
+                    val currentId = navController.currentDestination?.id
+                    navController.navigate(FapFolderPostRoute(slugOrId, autoPlay = true)) {
+                        if (currentId != null) popUpTo(currentId) { inclusive = true }
+                    }
+                },
                 onOpenGroupPhotos = { slug ->
                     navController.navigateSafely(FapFolderGroupRoute(slug, tab = "photos"))
                 },

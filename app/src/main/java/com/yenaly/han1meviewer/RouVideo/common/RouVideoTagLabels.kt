@@ -2,19 +2,10 @@ package com.yenaly.han1meviewer.RouVideo.common
 
 import com.yenaly.han1meviewer.RouVideo.common.RouVideoTranslation.Kind
 
-/**
- * Display-only labels for rou.video tags / genres / studios.
- *
- * The site serves every tag in Chinese and the Chinese string is also the id used in URLs,
- * so only what is *shown* is translated; the raw tag is always what gets searched / opened.
- *
- * Built-in dictionary first, then [RouVideoTranslation] (Google Translate + persistent cache)
- * for anything unknown. Respects the translation settings (English UI only).
- */
 object RouVideoTagLabels {
 
     private val STATIC: Map<String, String> = mapOf(
-        // main categories
+
         "國產AV" to "Chinese AV",
         "探花" to "Tanhua",
         "自拍流出" to "Leaked Selfies",
@@ -24,7 +15,7 @@ object RouVideoTagLabels {
         "AI短劇" to "AI Short Drama",
         "中文字幕" to "Chinese Subtitles",
         "中文字幕版" to "Chinese Subtitles",
-        // common genres
+
         "無碼" to "Uncensored",
         "有碼" to "Censored",
         "巨乳" to "Big Breasts",
@@ -93,14 +84,12 @@ object RouVideoTagLabels {
         "推薦" to "Recommended",
     )
 
-    /** Label to show for [tag]. Safe to call from composables and from plain code. */
     fun label(tag: String): String {
         if (tag.isBlank() || !RouVideoTranslation.isActive(Kind.TAG)) return tag
         STATIC[tag]?.let { return it }
         return RouVideoTranslation.translate(Kind.TAG, tag)
     }
 
-    /** True when [needle] matches the raw tag or the label that is currently displayed. */
     fun matches(tag: String, needle: String): Boolean =
         tag.contains(needle, ignoreCase = true) ||
             label(tag).contains(needle, ignoreCase = true)

@@ -1,5 +1,8 @@
 package com.yenaly.han1meviewer.FapFolder.ui.video
 
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
+import com.yenaly.han1meviewer.util.PlayerOrientation
 import com.yenaly.yenaly_libs.utils.applicationContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -167,6 +170,8 @@ fun FapFolderVideoPlayerScreen(
 
     autoStart: Boolean = false,
     minInlineAspect: Float = 0f,
+    onPrevious: (() -> Unit)? = null,
+    onNext: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
@@ -584,7 +589,14 @@ fun FapFolderVideoPlayerScreen(
 
     fun enterFullscreen() {
         if (isFullscreen) return
-        applyFullscreenOrientation(videoIsLandscape, force = false)
+        applyFullscreenOrientation(
+            when (PlayerOrientation.mode) {
+                PlayerOrientation.LANDSCAPE -> true
+                PlayerOrientation.PORTRAIT -> false
+                else -> videoIsLandscape
+            },
+            force = false,
+        )
         hideSystemBars()
         isFullscreen = true
         revealControls()
@@ -771,6 +783,24 @@ fun FapFolderVideoPlayerScreen(
                     onToggleStretch = { stretched = !stretched },
                     onTemporarySpeed = { exoPlayer?.setPlaybackSpeed(it ?: playbackSpeed) },
                     extraActions = {
+                        if (onPrevious != null) {
+                            IconButton(onClick = onPrevious, modifier = Modifier.size(32.dp)) {
+                                Icon(
+                                    imageVector = Icons.Filled.SkipPrevious,
+                                    contentDescription = stringResource(R.string.site_previous_video),
+                                    tint = Color.White,
+                                )
+                            }
+                        }
+                        if (onNext != null) {
+                            IconButton(onClick = onNext, modifier = Modifier.size(32.dp)) {
+                                Icon(
+                                    imageVector = Icons.Filled.SkipNext,
+                                    contentDescription = stringResource(R.string.site_next_video),
+                                    tint = Color.White,
+                                )
+                            }
+                        }
                         IconButton(onClick = { toggleMute() }, modifier = Modifier.size(32.dp)) {
                             Icon(
                                 imageVector = if (muted) Icons.AutoMirrored.Filled.VolumeOff
@@ -779,19 +809,11 @@ fun FapFolderVideoPlayerScreen(
                                 tint = Color.White,
                             )
                         }
-                        if (isFullscreen) {
-                            IconButton(
-                                onClick = { toggleFullscreenOrientation(!fullscreenLandscape) },
-                                modifier = Modifier.size(32.dp),
-                            ) {
-                                Icon(
-                                    imageVector = if (fullscreenLandscape) Icons.Filled.ScreenLockPortrait
-                                    else Icons.Filled.ScreenLockLandscape,
-                                    contentDescription = stringResource(R.string.site_rotate),
-                                    tint = Color.White,
-                                )
-                            }
-                        }
+                    },
+                    onRotate = {
+                        val nowLandscape = activity?.resources?.configuration?.orientation ==
+                            android.content.res.Configuration.ORIENTATION_LANDSCAPE
+                        toggleFullscreenOrientation(!nowLandscape)
                     },
                 )
             }

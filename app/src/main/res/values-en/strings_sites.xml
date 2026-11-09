@@ -89,6 +89,9 @@
     <string name="site_my_account">My account</string>
     <string name="site_privacy">Privacy</string>
     <string name="site_search">Search</string>
+    <string name="site_home">Home</string>
+    <string name="site_previous_video">Previous video</string>
+    <string name="site_next_video">Next video</string>
     <string name="site_rotate">Rotate</string>
     <string name="site_resume_playback">Resume playback?</string>
     <string name="site_resume_or_start">Resume from %1$s or start from the beginning?</string>
@@ -989,6 +992,11 @@
 
     <!-- Rou Video -->
     <string name="site_rouvideo_name">Rou Video</string>
+    <string name="player_fullscreen_orientation">Fullscreen orientation</string>
+    <string name="player_fullscreen_orientation_summary">Open fullscreen in portrait or landscape on every site. The rotate button in the player can switch at any time.</string>
+    <string name="player_orientation_auto">Auto (default)</string>
+    <string name="player_orientation_landscape">Landscape fullscreen</string>
+    <string name="player_orientation_portrait">Portrait fullscreen</string>
     <string name="rouvideo_tr_title">Translation</string>
     <string name="rouvideo_tr_privacy">Translates Chinese and Japanese tags, titles, descriptions and comments on every site to English. Text that isn\'t in the built-in dictionary is sent to Google Translate.</string>
     <string name="rouvideo_tr_enable">Enable translation</string>

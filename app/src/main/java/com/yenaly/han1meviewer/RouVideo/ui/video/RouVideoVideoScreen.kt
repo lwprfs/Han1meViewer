@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.RouVideo.ui.video
 
+import com.yenaly.han1meviewer.ui.component.SiteBackWithHomeButton
+import com.yenaly.han1meviewer.util.PlayerOrientation
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -264,7 +266,7 @@ fun RouVideoVideoScreen(
     }
 
     fun enterFullscreen() {
-        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        activity?.requestedOrientation = PlayerOrientation.fullscreenRequest()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             activity?.window?.insetsController?.hide(
                 android.view.WindowInsets.Type.statusBars() or
@@ -351,7 +353,7 @@ fun RouVideoVideoScreen(
                         overflow = TextOverflow.Ellipsis,
                     )
                 },
-                navigationIcon = { SiteBackButton(onClick = onBack) },
+                navigationIcon = { SiteBackWithHomeButton(onBack = onBack) },
             )
         },
     ) { paddingValues ->

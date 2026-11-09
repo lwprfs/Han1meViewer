@@ -46,8 +46,7 @@ fun RetryableImage(
     val request = remember(model, retryCount, contentScale) {
         ImageRequest.Builder(context)
             .data(model)
-            // Coil's crossfade painter stretches the bitmap to the box on fresh loads
-            // when contentScale is Crop/FillWidth; cached loads skip it (looked fine).
+
             .crossfade(contentScale == ContentScale.Fit || contentScale == ContentScale.Inside)
             .memoryCacheKey("$model#r$retryCount")
             .diskCacheKey("$model#r$retryCount")

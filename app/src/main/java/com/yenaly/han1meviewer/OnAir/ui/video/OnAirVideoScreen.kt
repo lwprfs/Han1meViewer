@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.OnAir.ui.video
 
+import com.yenaly.han1meviewer.ui.component.SiteHomeButton
+import com.yenaly.han1meviewer.util.PlayerOrientation
 import androidx.compose.ui.res.stringResource
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.CollapsingPlayerLayout
@@ -106,7 +108,7 @@ fun OnAirVideoScreen(
     DisposableEffect(playerState.isFullscreen) {
         val activity = context.findActivity()
         if (playerState.isFullscreen) {
-            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            activity?.requestedOrientation = PlayerOrientation.fullscreenRequest()
         }
         onDispose {
             if (playerState.isFullscreen) {
@@ -264,14 +266,17 @@ fun OnAirVideoScreen(
                     Text(text = title, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 },
                 navigationIcon = {
-                    IconButton(onClick = {
-                        viewModel.cancelPendingExtraction()
-                        onBack()
-                    }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back),
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = {
+                            viewModel.cancelPendingExtraction()
+                            onBack()
+                        }) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.back),
+                            )
+                        }
+                        SiteHomeButton()
                     }
                 },
             )

@@ -96,6 +96,16 @@
             android:text="@string/clarity"
             android:textColor="#FFFFFF" />
 
+        <!-- rotate portrait / landscape -->
+        <ImageView
+            android:id="@+id/rotate"
+            android:layout_width="40dp"
+            android:layout_height="match_parent"
+            android:padding="9dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_screen_rotation_24"
+            android:contentDescription="@string/site_rotate" />
+
         <!-- 全屏按钮 -->
         <ImageView
             android:id="@+id/fullscreen"
