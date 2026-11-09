@@ -990,7 +990,7 @@
     <!-- 肉視頻 -->
     <string name="site_rouvideo_name">肉視頻</string>
     <string name="rouvideo_tr_title">翻譯</string>
-    <string name="rouvideo_tr_privacy">將中文標籤、標題與簡介翻譯成英文。內建詞庫以外的文字會傳送到 Google 翻譯。</string>
+    <string name="rouvideo_tr_privacy">將各網站的中文與日文標籤、標題、簡介與留言翻譯成英文。內建詞庫以外的文字會傳送到 Google 翻譯。</string>
     <string name="rouvideo_tr_enable">啟用翻譯</string>
     <string name="rouvideo_tr_enable_desc">總開關，關閉後全部顯示原文</string>
     <string name="rouvideo_tr_tags">標籤與分類</string>
@@ -1000,9 +1000,13 @@
     <string name="rouvideo_tr_descriptions">系列簡介</string>
     <string name="rouvideo_tr_descriptions_desc">翻譯影集簡介文字</string>
     <string name="rouvideo_tr_paused">Google 暫時限制翻譯，約 %1$d 分鐘後重試</string>
+    <string name="rouvideo_tr_comments">留言</string>
+    <string name="rouvideo_tr_comments_desc">翻譯影片留言；會傳送到 Google 翻譯</string>
+    <string name="rouvideo_tr_sites">網站</string>
+    <string name="rouvideo_tr_sites_desc">在此網站上翻譯</string>
     <string name="rouvideo_tr_cache">翻譯快取</string>
     <string name="rouvideo_tr_cache_usage">%1$s · %2$d 項</string>
-    <string name="rouvideo_tr_cache_breakdown">標籤 %1$d · 標題 %2$d · 簡介 %3$d</string>
+    <string name="rouvideo_tr_cache_breakdown">標籤 %1$d · 標題 %2$d · 簡介 %3$d · 留言 %4$d</string>
     <string name="rouvideo_tr_view">查看已翻譯內容</string>
     <string name="rouvideo_tr_clear">清除翻譯快取</string>
     <string name="rouvideo_tr_clear_confirm">刪除全部 %1$d 項翻譯快取？</string>

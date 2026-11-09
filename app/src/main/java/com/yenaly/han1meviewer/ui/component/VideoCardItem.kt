@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.ui.component
 
+import com.yenaly.han1meviewer.util.translatedTitle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -183,7 +184,7 @@ fun VideoCardItem(
             }
 
             Text(
-                text = videoItem.title,
+                text = translatedTitle(videoItem.title),
                 maxLines = 2,
                 minLines = 2,
                 style = MaterialTheme.typography.titleSmall,

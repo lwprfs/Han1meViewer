@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.ui.navigation.settings
 
+import com.yenaly.han1meviewer.RouVideo.ui.settings.RouVideoTranslationCacheScreen
+import com.yenaly.han1meviewer.RouVideo.ui.settings.RouVideoTranslationSettingsScreen
 import com.yenaly.han1meviewer.ui.navigation.popBackStackSafely
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,6 +49,7 @@ fun NavGraphBuilder.registerGlobalSettingsRoutes(
                 onNavigateToDownloadSettings = { navController.navigateSafely(DownloadSettingsRoute) },
                 onNavigateToNetworkSettings = { navController.navigateSafely(NetworkSettingsRoute) },
                 onNavigateToUnifiedHistory = { navController.navigateSafely(UnifiedHistoryRoute) },
+                onNavigateToTranslationSettings = { navController.navigateSafely(TranslationSettingsRoute) },
             )
         }
     }
@@ -64,6 +67,15 @@ fun NavGraphBuilder.registerGlobalSettingsRoutes(
         val route = entry.toRoute<SitePlayerSettingsRoute>()
         val site = runCatching { SiteType.valueOf(route.site) }.getOrDefault(SiteType.SUPJAV)
         SitePlayerSettingsPage(site = site, onBack = { navController.popBackStackSafely() })
+    }
+    composable<TranslationSettingsRoute> {
+        RouVideoTranslationSettingsScreen(
+            onBack = { navController.popBackStackSafely() },
+            onOpenCache = { navController.navigateSafely(TranslationCacheRoute) },
+        )
+    }
+    composable<TranslationCacheRoute> {
+        RouVideoTranslationCacheScreen(onBack = { navController.popBackStackSafely() })
     }
     composable<NetworkSettingsRoute> {
         SettingsScaffold(

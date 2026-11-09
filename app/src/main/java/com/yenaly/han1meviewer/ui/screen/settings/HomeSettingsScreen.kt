@@ -76,6 +76,7 @@ fun HomeSettingsScreen(
     onOpenDownloadSettings: () -> Unit,
     onOpenNetworkSettings: () -> Unit,
     onOpenUnifiedHistory: () -> Unit = {},
+    onOpenTranslationSettings: () -> Unit = {},
     onOpenAppLanguageSettings: (String) -> Unit,
     onCheckUpdate: () -> Unit,
     onUpdatePopupIntervalDaysChange: (Int) -> Unit,
@@ -330,6 +331,16 @@ fun HomeSettingsScreen(
                 iconRes = R.drawable.ic_baseline_language_24,
                 onClick = onOpenNetworkSettings,
             )
+        }
+        if (com.yenaly.han1meviewer.RouVideo.common.RouVideoTranslation.available) {
+            item {
+                SettingNavigationItem(
+                    title = stringResource(R.string.rouvideo_tr_title),
+                    summary = stringResource(R.string.rouvideo_tr_privacy),
+                    iconRes = R.drawable.ic_translate_24,
+                    onClick = onOpenTranslationSettings,
+                )
+            }
         }
         item { SettingsGroupTitle(applicationContext.getString(R.string.site_history)) }
         item {

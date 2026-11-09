@@ -33,6 +33,12 @@ object SharedHKeyframesRoute
 @Serializable
 object HKeyframeSettingsRoute
 
+@Serializable
+object TranslationSettingsRoute
+
+@Serializable
+object TranslationCacheRoute
+
 enum class SettingsDestinationSpec(
     val routeKey: String,
     val titleRes: Int,

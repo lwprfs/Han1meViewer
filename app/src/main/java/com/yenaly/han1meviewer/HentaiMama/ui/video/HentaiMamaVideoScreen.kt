@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.HentaiMama.ui.video
 
+import com.yenaly.han1meviewer.util.translatedTitle
 import androidx.compose.ui.res.stringResource
 import com.yenaly.han1meviewer.SiteType
 import kotlinx.coroutines.flow.first
@@ -408,7 +409,7 @@ fun HentaiMamaVideoScreen(
                 title = {
                     val videoInfo = (pageState as? VideoLoadingState.Success)?.info
                     val title = videoInfo?.page?.info?.title ?: videoInfo?.title ?: stringResource(R.string.video)
-                    Text(text = title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(text = translatedTitle(title), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 },
                 navigationIcon = { SiteBackButton(onClick = onBack) },
             )
@@ -766,7 +767,7 @@ private fun EpisodeSidebarRow(
                     }
                 }
                 Text(
-                    text = episode.title,
+                    text = translatedTitle(episode.title),
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,

@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.ui.screen.video
 
+import com.yenaly.han1meviewer.util.translatedDescription
+import com.yenaly.han1meviewer.util.translatedTitle
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -1245,7 +1247,7 @@ private fun TitleSection(video: HanimeVideo, onCopyText: (String) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         SelectionContainer {
             Text(
-                text = primaryTitle,
+                text = translatedTitle(primaryTitle),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -1259,7 +1261,7 @@ private fun TitleSection(video: HanimeVideo, onCopyText: (String) -> Unit) {
         secondaryTitle?.let {
             SelectionContainer {
                 Text(
-                    text = it,
+                    text = translatedTitle(it),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.combinedClickable(
@@ -1439,7 +1441,7 @@ private fun ExpandableIntroductionSection(
 ) {
     if (introduction.isBlank()) return
     ExpandableRichText(
-        text = introduction,
+        text = translatedDescription(introduction),
         onLinkClick = onIntroductionLinkClick,
         modifier = Modifier.fillMaxWidth(),
     )

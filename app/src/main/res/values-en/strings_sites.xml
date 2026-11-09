@@ -990,7 +990,7 @@
     <!-- Rou Video -->
     <string name="site_rouvideo_name">Rou Video</string>
     <string name="rouvideo_tr_title">Translation</string>
-    <string name="rouvideo_tr_privacy">Translates Chinese tags, titles and descriptions to English. Text that isn\'t in the built-in dictionary is sent to Google Translate.</string>
+    <string name="rouvideo_tr_privacy">Translates Chinese and Japanese tags, titles, descriptions and comments on every site to English. Text that isn\'t in the built-in dictionary is sent to Google Translate.</string>
     <string name="rouvideo_tr_enable">Enable translation</string>
     <string name="rouvideo_tr_enable_desc">Master switch. Turn off to show everything in the original language.</string>
     <string name="rouvideo_tr_tags">Tags &amp; genres</string>
@@ -1000,9 +1000,13 @@
     <string name="rouvideo_tr_descriptions">Series descriptions</string>
     <string name="rouvideo_tr_descriptions_desc">Translate the description text of series</string>
     <string name="rouvideo_tr_paused">Google is limiting translation. Retrying in about %1$d min.</string>
+    <string name="rouvideo_tr_comments">Comments</string>
+    <string name="rouvideo_tr_comments_desc">Translate video comments. Sent to Google Translate.</string>
+    <string name="rouvideo_tr_sites">Sites</string>
+    <string name="rouvideo_tr_sites_desc">Translate content on this site</string>
     <string name="rouvideo_tr_cache">Translation cache</string>
     <string name="rouvideo_tr_cache_usage">%1$s · %2$d items</string>
-    <string name="rouvideo_tr_cache_breakdown">Tags %1$d · Titles %2$d · Descriptions %3$d</string>
+    <string name="rouvideo_tr_cache_breakdown">Tags %1$d · Titles %2$d · Descriptions %3$d · Comments %4$d</string>
     <string name="rouvideo_tr_view">View translated items</string>
     <string name="rouvideo_tr_clear">Clear translation cache</string>
     <string name="rouvideo_tr_clear_confirm">Delete all %1$d cached translations?</string>

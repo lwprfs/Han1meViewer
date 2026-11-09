@@ -125,6 +125,7 @@ fun HomeSettingsRouteScreen(
     onNavigateToDownloadSettings: () -> Unit,
     onNavigateToNetworkSettings: () -> Unit,
     onNavigateToUnifiedHistory: () -> Unit = {},
+    onNavigateToTranslationSettings: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -375,6 +376,7 @@ fun HomeSettingsRouteScreen(
         onOpenDownloadSettings = onNavigateToDownloadSettings,
         onOpenNetworkSettings = onNavigateToNetworkSettings,
         onOpenUnifiedHistory = onNavigateToUnifiedHistory,
+        onOpenTranslationSettings = onNavigateToTranslationSettings,
         onOpenAppLanguageSettings = { value ->
             val old = Preferences.preferenceSp.getString(HOME_APP_LANGUAGE, "system") ?: "system"
             if (old != value) {

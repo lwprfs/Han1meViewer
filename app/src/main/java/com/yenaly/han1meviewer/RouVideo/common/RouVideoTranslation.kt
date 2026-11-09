@@ -3,6 +3,7 @@ package com.yenaly.han1meviewer.RouVideo.common
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import com.yenaly.han1meviewer.Preferences
+import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.logic.network.HDns
 import com.yenaly.han1meviewer.logic.network.HProxySelector
 import com.yenaly.yenaly_libs.utils.LanguageHelper
@@ -22,33 +23,47 @@ import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
 
 /**
- * On-demand Chinese -> English translation for rou.video (tags, titles, descriptions).
+ * On-demand foreign (Chinese / Japanese) -> English translation for every site in the app.
+ * (Historically rou.video only, hence the package; the settings are now global.)
  *
  * - Only available when the app language is English ([available]).
- * - Everything is opt-in per kind and can be switched off; switching off shows the original text.
+ * - Opt-in per kind (tags / titles / descriptions / comments) and per site; master switch too.
+ *   Switching off shows the original text.
  * - Text is translated lazily: only strings that were actually drawn are queued, newest first.
+ * - Near-duplicate titles ("... 第7集" vs "... 第9集") are not translated again: when at least 50% of
+ *   the text (start and/or end) matches a cached title, only the differing part is translated
+ *   (numbers are copied as-is, no request) and spliced into the cached translation.
  * - Requests go to Google's free endpoint in small batches, one at a time. On HTTP 429 the queue
  *   pauses for [RATE_LIMIT_PAUSE_MS]; on other network errors for [ERROR_PAUSE_MS].
  * - Results are cached on disk (bounded per kind) so nothing is requested twice.
  */
 object RouVideoTranslation {
 
-    enum class Kind(val key: String, val maxEntries: Int) {
+    enum class Kind(val key: String, val maxEntries: Int, val long: Boolean = false) {
         TAG("tag", 2000),
         TITLE("title", 3000),
-        DESC("desc", 300),
+        DESC("desc", 300, long = true),
+        COMMENT("comment", 1000, long = true),
     }
 
     data class Entry(val kind: Kind, val source: String, val text: String, val time: Long)
 
-    data class Stats(val tags: Int, val titles: Int, val descriptions: Int, val bytes: Long) {
-        val total: Int get() = tags + titles + descriptions
+    data class Stats(
+        val tags: Int,
+        val titles: Int,
+        val descriptions: Int,
+        val comments: Int,
+        val bytes: Long,
+    ) {
+        val total: Int get() = tags + titles + descriptions + comments
     }
 
     private const val KEY_ENABLED = "rouvideo_tr_enabled"
     private const val KEY_TAGS = "rouvideo_tr_tags"
     private const val KEY_TITLES = "rouvideo_tr_titles"
     private const val KEY_DESC = "rouvideo_tr_desc"
+    private const val KEY_COMMENTS = "rouvideo_tr_comments"
+    private const val KEY_SITES_OFF = "rouvideo_tr_sites_off"
 
     private const val BATCH_ITEMS = 15
     private const val BATCH_CHARS = 500
@@ -57,7 +72,8 @@ object RouVideoTranslation {
     private const val ERROR_PAUSE_MS = 30_000L
     private const val GAP_MS = 400L
 
-    private val HAN = Regex("\\p{IsHan}")
+    /** Han (Chinese / kanji), Hiragana or Katakana: text that is worth translating. */
+    private val FOREIGN = Regex("[\\p{IsHan}\\p{IsHiragana}\\p{IsKatakana}]")
 
     private val sp get() = Preferences.preferenceSp
 
@@ -65,6 +81,11 @@ object RouVideoTranslation {
     private val tagsState = mutableStateOf(sp.getBoolean(KEY_TAGS, true))
     private val titlesState = mutableStateOf(sp.getBoolean(KEY_TITLES, false))
     private val descState = mutableStateOf(sp.getBoolean(KEY_DESC, false))
+    private val commentsState = mutableStateOf(sp.getBoolean(KEY_COMMENTS, false))
+    private val sitesOffState = mutableStateOf(
+        sp.getString(KEY_SITES_OFF, null).orEmpty().split(',')
+            .mapNotNull { n -> SiteType.entries.firstOrNull { it.name == n } }.toSet()
+    )
 
     var enabled: Boolean
         get() = enabledState.value
@@ -82,15 +103,29 @@ object RouVideoTranslation {
         get() = descState.value
         set(v) { descState.value = v; sp.edit().putBoolean(KEY_DESC, v).apply() }
 
+    var commentsEnabled: Boolean
+        get() = commentsState.value
+        set(v) { commentsState.value = v; sp.edit().putBoolean(KEY_COMMENTS, v).apply() }
+
+    fun siteEnabled(site: SiteType): Boolean = site !in sitesOffState.value
+
+    fun setSiteEnabled(site: SiteType, on: Boolean) {
+        val next = if (on) sitesOffState.value - site else sitesOffState.value + site
+        sitesOffState.value = next
+        sp.edit().putString(KEY_SITES_OFF, next.joinToString(",") { it.name }).apply()
+    }
+
     /** Translation settings are only offered (and applied) when the app language is English. */
     val available: Boolean
         get() = LanguageHelper.preferredLanguage.language.equals("en", ignoreCase = true)
 
-    fun isActive(kind: Kind): Boolean = available && enabled && when (kind) {
-        Kind.TAG -> tagsEnabled
-        Kind.TITLE -> titlesEnabled
-        Kind.DESC -> descriptionsEnabled
-    }
+    fun isActive(kind: Kind, site: SiteType = SiteType.ROUVIDEO): Boolean =
+        available && enabled && siteEnabled(site) && when (kind) {
+            Kind.TAG -> tagsEnabled
+            Kind.TITLE -> titlesEnabled
+            Kind.DESC -> descriptionsEnabled
+            Kind.COMMENT -> commentsEnabled
+        }
 
     // ---- state -----------------------------------------------------------------------------
 
@@ -98,6 +133,14 @@ object RouVideoTranslation {
     private val entries = LinkedHashMap<String, Entry>()
     private val pending = LinkedHashMap<String, Pair<Kind, String>>()
     private val failed = HashSet<String>()
+    private val deriveQueue = ArrayDeque<Pair<Kind, String>>()
+    private val deriveTried = HashSet<String>()
+    private var deriveDirty = true
+
+    /** Translations of short differing fragments; memory only. */
+    private val pieces = object : LinkedHashMap<String, String>() {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>?) = size > 500
+    }
 
     /** Bumped on every cache / queue change so composables that read it recompose. */
     private val version = mutableIntStateOf(0)
@@ -107,6 +150,9 @@ object RouVideoTranslation {
 
     @Volatile
     private var pausedUntil = 0L
+
+    @Volatile
+    private var usedNetwork = false
 
     private var worker: Job? = null
     private var saveJob: Job? = null
@@ -129,11 +175,20 @@ object RouVideoTranslation {
 
     // ---- public API ------------------------------------------------------------------------
 
-    fun title(text: String): String =
-        if (text.isBlank() || !isActive(Kind.TITLE)) text else translate(Kind.TITLE, text)
+    fun title(text: String, site: SiteType = SiteType.ROUVIDEO): String = shown(Kind.TITLE, text, site)
 
-    fun description(text: String): String =
-        if (text.isBlank() || !isActive(Kind.DESC)) text else translate(Kind.DESC, text)
+    fun description(text: String, site: SiteType = SiteType.ROUVIDEO): String =
+        shown(Kind.DESC, text, site)
+
+    fun comment(text: String, site: SiteType = SiteType.ROUVIDEO): String =
+        shown(Kind.COMMENT, text, site)
+
+    fun tag(text: String, site: SiteType = SiteType.ROUVIDEO): String = shown(Kind.TAG, text, site)
+
+    private fun shown(kind: Kind, text: String, site: SiteType): String {
+        if (text.isBlank() || !FOREIGN.containsMatchIn(text) || !isActive(kind, site)) return text
+        return translate(kind, text)
+    }
 
     /** Cached translation of [source], or [source] itself while it is being fetched. */
     fun translate(kind: Kind, source: String): String {
@@ -142,7 +197,8 @@ object RouVideoTranslation {
         val k = key(kind, source)
         synchronized(lock) {
             entries[k]?.let { return it.text }
-            if (HAN.containsMatchIn(source) && k !in failed) {
+            if (FOREIGN.containsMatchIn(source) && k !in failed) {
+                if (k !in pending) deriveDirty = true
                 pending.remove(k)
                 pending[k] = kind to source
                 while (pending.size > MAX_PENDING) pending.remove(pending.keys.first())
@@ -163,13 +219,18 @@ object RouVideoTranslation {
     fun stats(): Stats {
         version.intValue
         ensureLoaded()
-        var t = 0; var ti = 0; var d = 0
+        var t = 0; var ti = 0; var d = 0; var c = 0
         synchronized(lock) {
             entries.values.forEach {
-                when (it.kind) { Kind.TAG -> t++; Kind.TITLE -> ti++; Kind.DESC -> d++ }
+                when (it.kind) {
+                    Kind.TAG -> t++
+                    Kind.TITLE -> ti++
+                    Kind.DESC -> d++
+                    Kind.COMMENT -> c++
+                }
             }
         }
-        return Stats(t, ti, d, runCatching { file.length() }.getOrDefault(0L))
+        return Stats(t, ti, d, c, runCatching { file.length() }.getOrDefault(0L))
     }
 
     /** Cached translations, newest first, optionally limited to one kind. */
@@ -186,6 +247,7 @@ object RouVideoTranslation {
             val k = key(entry.kind, entry.source)
             entries.remove(k)
             failed.remove(k)
+            deriveTried.remove(k)
         }
         changed()
     }
@@ -195,10 +257,16 @@ object RouVideoTranslation {
             if (kind == null) {
                 entries.clear()
                 failed.clear()
+                pending.clear()
+                deriveQueue.clear()
+                deriveTried.clear()
+                pieces.clear()
             } else {
                 entries.entries.removeAll { it.value.kind == kind }
                 failed.removeAll { it.startsWith(kind.key + "\u0001") }
+                deriveTried.removeAll { it.startsWith(kind.key + "\u0001") }
             }
+            deriveDirty = true
         }
         pausedUntil = 0L
         changed()
@@ -215,77 +283,119 @@ object RouVideoTranslation {
                     val wait = pausedUntil - System.currentTimeMillis()
                     if (wait > 0) delay(wait)
                     if (!processNext()) break
-                    delay(GAP_MS)
+                    if (usedNetwork) {
+                        usedNetwork = false
+                        delay(GAP_MS)
+                    }
                 }
             }
         }
     }
 
-    /** Translates the next group from the queue. Returns false when the queue is empty. */
+    /** One unit of work. Returns false when there is nothing left to do. */
     private fun processNext(): Boolean {
+        // 1) titles that nearly match something already translated: patch, don't re-translate
+        val derive = synchronized(lock) {
+            if (deriveQueue.isEmpty() && deriveDirty) {
+                deriveDirty = false
+                val hits = pending.entries.toList().asReversed().filter { (k, v) ->
+                    v.first == Kind.TITLE && k !in deriveTried && isActive(v.first, anySite()) &&
+                        findNeighbor(v.second) != null
+                }
+                hits.forEach { pending.remove(it.key); deriveQueue.addLast(it.value) }
+            }
+            deriveQueue.removeFirstOrNull()
+        }
+        if (derive != null) {
+            val (kind, source) = derive
+            try {
+                val text = deriveFromNeighbor(source)
+                synchronized(lock) {
+                    if (text != null) {
+                        putEntry(kind, source, text)
+                    } else {
+                        val k = key(kind, source)
+                        deriveTried.add(k)
+                        pending[k] = derive
+                    }
+                }
+                if (text != null) changed()
+            } catch (e: Exception) {
+                onNetworkError(e, listOf(derive))
+            }
+            return true
+        }
+
+        // 2) regular translation, newest first
         val group = synchronized(lock) {
-            // newest first: whatever was drawn last is most likely still on screen
             val candidates = pending.entries.toList().asReversed()
-                .filter { isActive(it.value.first) }
+                .filter { isActive(it.value.first, anySite()) }
             pending.keys.retainAll(candidates.map { it.key }.toSet())
             val first = candidates.firstOrNull() ?: return false
             val picked = mutableListOf(first)
-            if (first.value.first != Kind.DESC) {
+            if (!first.value.first.long) {
                 var chars = first.value.second.length
                 for (c in candidates.drop(1)) {
                     if (picked.size >= BATCH_ITEMS) break
-                    if (c.value.first == Kind.DESC) continue
-                    val len = c.value.second.length
-                    if (chars + len > BATCH_CHARS) continue
-                    picked += c; chars += len
+                    val (ck, cs) = c.value
+                    if (ck.long) continue
+                    if (chars + cs.length > BATCH_CHARS) continue
+                    // near-duplicate of something in this batch: wait for it, then patch
+                    if (ck == Kind.TITLE && c.key !in deriveTried &&
+                        picked.any { it.value.first == Kind.TITLE && split(cs, it.value.second) != null }
+                    ) continue
+                    picked += c; chars += cs.length
                 }
             }
             picked.forEach { pending.remove(it.key) }
             picked.map { it.value }
         }
         try {
-            val (kind0, source0) = group.first()
-            val out = if (kind0 == Kind.DESC) {
-                listOf(translateLong(source0))
+            val out = if (group.first().first.long) {
+                listOf(translateLong(group.first().second))
             } else {
                 translateGroup(group.map { it.second.replace('\n', ' ') })
             }
             synchronized(lock) {
                 group.forEachIndexed { i, (kind, source) ->
                     val text = out.getOrNull(i).orEmpty().trim()
-                    val k = key(kind, source)
-                    if (text.isEmpty() || text == source) {
-                        failed.add(k)
-                    } else {
-                        entries.remove(k)
-                        entries[k] = Entry(
-                            kind, source,
-                            if (kind == Kind.TAG) titleCase(text) else text,
-                            System.currentTimeMillis(),
-                        )
-                    }
+                    if (text.isEmpty() || text == source) failed.add(key(kind, source))
+                    else putEntry(kind, source, text)
                 }
-                Kind.entries.forEach { trim(it) }
             }
             changed()
-        } catch (e: RateLimited) {
-            requeue(group)
-            pausedUntil = System.currentTimeMillis() + RATE_LIMIT_PAUSE_MS
-            version.intValue++
         } catch (e: Exception) {
-            requeue(group)
-            pausedUntil = System.currentTimeMillis() + ERROR_PAUSE_MS
-            version.intValue++
+            onNetworkError(e, group)
         }
         return true
     }
 
-    private fun requeue(group: List<Pair<Kind, String>>) {
+    /** The per-site check is done by callers; here a queued item only needs its kind to be on. */
+    private fun anySite(): SiteType =
+        SiteType.entries.firstOrNull { siteEnabled(it) } ?: SiteType.ROUVIDEO
+
+    private fun onNetworkError(e: Exception, group: List<Pair<Kind, String>>) {
         synchronized(lock) {
             group.forEach { (kind, source) ->
                 if (pending.size < MAX_PENDING) pending.putIfAbsent(key(kind, source), kind to source)
             }
         }
+        pausedUntil = System.currentTimeMillis() +
+            if (e is RateLimited) RATE_LIMIT_PAUSE_MS else ERROR_PAUSE_MS
+        version.intValue++
+    }
+
+    /** Must be called with [lock] held. */
+    private fun putEntry(kind: Kind, source: String, text: String) {
+        val k = key(kind, source)
+        entries.remove(k)
+        entries[k] = Entry(
+            kind, source,
+            if (kind == Kind.TAG) titleCase(text) else text,
+            System.currentTimeMillis(),
+        )
+        deriveDirty = true
+        Kind.entries.forEach { trim(it) }
     }
 
     private fun trim(kind: Kind) {
@@ -302,11 +412,84 @@ object RouVideoTranslation {
             if (w.isEmpty() || w.any { it.isUpperCase() }) w else w.replaceFirstChar { it.uppercase() }
         }
 
+    // ---- near-duplicate titles -------------------------------------------------------------
+
+    private class Split(val dX: String, val dS: String, val prefix: Int, val suffix: Int)
+
+    /**
+     * Compares [x] with an already translated [s]. Returns the differing middle parts when the
+     * shared start + shared end cover at least 50% of both strings, otherwise null.
+     */
+    private fun split(x: String, s: String): Split? {
+        if (x == s) return null
+        val maxShared = minOf(x.length, s.length)
+        var p = 0
+        while (p < maxShared && x[p] == s[p]) p++
+        var q = 0
+        while (q < maxShared - p && x[x.length - 1 - q] == s[s.length - 1 - q]) q++
+
+        // never cut a number in half ("第7集" vs "第17集")
+        fun digit(str: String, i: Int) = i in str.indices && str[i].isDigit()
+        while (p > 0 && digit(x, p - 1) && (digit(x, p) || digit(s, p))) p--
+        while (q > 0 && digit(x, x.length - q) &&
+            (digit(x, x.length - q - 1) || digit(s, s.length - q - 1))
+        ) q--
+
+        val shared = p + q
+        if (shared < 4 || shared * 2 < x.length || shared * 2 < s.length) return null
+        val dS = s.substring(p, s.length - q)
+        if (dS.isEmpty()) return null
+        return Split(x.substring(p, x.length - q), dS, p, q)
+    }
+
+    /** Best cached title for [x] (largest shared part). Call with [lock] held. */
+    private fun findNeighbor(x: String): Pair<Entry, Split>? {
+        var best: Pair<Entry, Split>? = null
+        var bestShared = -1
+        for (e in entries.values) {
+            if (e.kind != Kind.TITLE) continue
+            val sp = split(x, e.source) ?: continue
+            val shared = sp.prefix + sp.suffix
+            if (shared > bestShared) { best = e to sp; bestShared = shared }
+        }
+        return best
+    }
+
+    /** Builds the translation of [x] from a cached neighbour, or null if that isn't reliable. */
+    private fun deriveFromNeighbor(x: String): String? {
+        val (neighbor, sp) = synchronized(lock) { findNeighbor(x) } ?: return null
+        val trS = fragment(sp.dS)
+        val trX = fragment(sp.dX)
+        val text = neighbor.text
+        val digits = trS.isNotEmpty() && trS.all { it.isDigit() }
+        val result = if (digits) {
+            val re = Regex("(?<!\\d)" + Regex.escape(trS) + "(?!\\d)")
+            if (re.findAll(text).count() != 1) return null
+            text.replace(re, Regex.escapeReplacement(trX))
+        } else {
+            if (trS.isEmpty()) return null
+            val first = text.indexOf(trS)
+            if (first < 0 || text.indexOf(trS, first + 1) >= 0) return null
+            text.substring(0, first) + trX + text.substring(first + trS.length)
+        }
+        return result.replace(Regex("\\s{2,}"), " ").trim().takeIf { it.isNotEmpty() }
+    }
+
+    /** Translation of a short differing fragment; numbers / latin text are copied, no request. */
+    private fun fragment(piece: String): String {
+        if (piece.isEmpty() || !FOREIGN.containsMatchIn(piece)) return piece
+        synchronized(lock) { pieces[piece]?.let { return it } }
+        val out = request(piece.replace('\n', ' ')).joinToString(" ").trim()
+        synchronized(lock) { pieces[piece] = out }
+        return out
+    }
+
     // ---- Google Translate ------------------------------------------------------------------
 
     private class RateLimited : java.io.IOException("HTTP 429")
 
     private fun request(text: String): List<String> {
+        usedNetwork = true
         val url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t" +
             "&q=" + URLEncoder.encode(text, "UTF-8")
         val body = client.newCall(Request.Builder().url(url).build()).execute().use { r ->
@@ -332,7 +515,7 @@ object RouVideoTranslation {
         return translateGroup(texts.subList(0, mid)) + translateGroup(texts.subList(mid, texts.size))
     }
 
-    /** Long text (descriptions): split into <= ~450 char chunks on line boundaries. */
+    /** Long text (descriptions, comments): split into <= ~450 char chunks on line boundaries. */
     private fun translateLong(text: String): String {
         val chunks = mutableListOf<String>()
         val cur = StringBuilder()

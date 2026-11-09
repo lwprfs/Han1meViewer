@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.ui.component
 
+import com.yenaly.han1meviewer.util.translatedComment
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -96,7 +97,7 @@ fun VideoCommentCard(
             }
             SelectionContainer {
                 Text(
-                    text = comment.content,
+                    text = translatedComment(comment.content),
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }

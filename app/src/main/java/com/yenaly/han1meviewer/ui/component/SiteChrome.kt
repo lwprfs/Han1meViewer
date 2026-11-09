@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.ui.component
 
+import com.yenaly.han1meviewer.util.translatedTitle
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -424,7 +425,7 @@ fun SiteVideoCard(
             }
 
             Text(
-                text = title,
+                text = translatedTitle(title),
                 maxLines = 2,
                 minLines = 2,
                 style = MaterialTheme.typography.titleSmall,
@@ -723,7 +724,7 @@ fun SiteVideoRow(
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Text(
-                    text = title,
+                    text = translatedTitle(title),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 2,

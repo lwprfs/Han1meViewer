@@ -35,6 +35,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.RouVideo.common.RouVideoTranslation
+import com.yenaly.han1meviewer.SiteType
+import com.yenaly.han1meviewer.ui.navigation.CrossSiteNavigator
 import com.yenaly.han1meviewer.RouVideo.common.RouVideoTranslation.Kind
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteChipRow
@@ -108,6 +110,33 @@ fun RouVideoTranslationSettingsScreen(
                     onChange = { RouVideoTranslation.descriptionsEnabled = it },
                 )
             }
+            item {
+                TrSwitchRow(
+                    title = stringResource(R.string.rouvideo_tr_comments),
+                    subtitle = stringResource(R.string.rouvideo_tr_comments_desc),
+                    checked = RouVideoTranslation.commentsEnabled,
+                    enabled = enabled,
+                    onChange = { RouVideoTranslation.commentsEnabled = it },
+                )
+            }
+            item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
+            item {
+                Text(
+                    text = stringResource(R.string.rouvideo_tr_sites),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp),
+                )
+            }
+            items(SiteType.entries.toList(), key = { "site_" + it.name }) { site ->
+                TrSwitchRow(
+                    title = CrossSiteNavigator.siteLabel(site),
+                    subtitle = stringResource(R.string.rouvideo_tr_sites_desc),
+                    checked = RouVideoTranslation.siteEnabled(site),
+                    enabled = enabled,
+                    onChange = { RouVideoTranslation.setSiteEnabled(site, it) },
+                )
+            }
             if (paused > 0) {
                 item {
                     Text(
@@ -147,7 +176,7 @@ fun RouVideoTranslationSettingsScreen(
                     Text(
                         text = stringResource(
                             R.string.rouvideo_tr_cache_breakdown,
-                            stats.tags, stats.titles, stats.descriptions,
+                            stats.tags, stats.titles, stats.descriptions, stats.comments,
                         ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -206,6 +235,7 @@ fun RouVideoTranslationCacheScreen(onBack: () -> Unit) {
         Kind.TAG to stringResource(R.string.rouvideo_tr_tags),
         Kind.TITLE to stringResource(R.string.rouvideo_tr_titles),
         Kind.DESC to stringResource(R.string.rouvideo_tr_descriptions),
+        Kind.COMMENT to stringResource(R.string.rouvideo_tr_comments),
     )
 
     Scaffold(
