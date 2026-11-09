@@ -25,19 +25,27 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
-          cache: gradle
+
+      # Gradle 依赖/构建缓存：首次运行写入，之后的运行直接复用（仅 main 分支写入缓存）
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
 
       - name: Load Google Services File
         env:
           DATA: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
-        run: echo $DATA | base64 -di > app/google-services.json
+        run: |
+          printf '%s' "$DATA" | base64 -di > app/google-services.json
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
       - name: Decode keystore
+        env:
+          KEYSTORE: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > keystore.jks
+          printf '%s' "$KEYSTORE" | base64 -d > keystore.jks
 
       - name: Set up keystore for signing
         run: |
@@ -45,7 +53,7 @@ jobs:
           mv keystore.jks $HOME/.android/keystore.jks
 
       - name: Build and sign APK with Gradle
-        run: ./gradlew assembleRelease
+        run: ./gradlew assembleRelease --build-cache --parallel
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -91,8 +99,8 @@ jobs:
         continue-on-error: true
         run: |
           command -v bsdiff >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq bsdiff; }
-          OLD_APK=$(find previous -name 'Han1meViewer-v*.apk' | head -n 1)
-          NEW_APK=$(ls app/build/outputs/apk/release/Han1meViewer-v*.apk | head -n 1)
+          OLD_APK=$(find previous -name '*.apk' | head -n 1)
+          NEW_APK=$(ls app/build/outputs/apk/release/HANiEX-v*.apk | head -n 1)
           bash .github/scripts/make-delta.sh "$OLD_APK" "$NEW_APK" delta-ci
           if [ -f delta-ci/update.json ]; then
             echo "base=$(jq -r '.baseSha256[0:16]' delta-ci/update.json)" >> "$GITHUB_OUTPUT"
@@ -102,7 +110,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: app-release-${{ github.sha }}
-          path: app/build/outputs/apk/release/Han1meViewer-v*.apk
+          path: app/build/outputs/apk/release/HANiEX-v*.apk
+          if-no-files-found: error
 
       - name: Upload CI delta package
         if: steps.ci_delta.outputs.base != ''
@@ -117,8 +126,8 @@ jobs:
         id: version
         if: contains(github.event.head_commit.message, '[release]')
         run: |
-          APK_FILE=$(ls app/build/outputs/apk/release/Han1meViewer-v*.apk | head -n 1)
-          VERSION=$(basename "$APK_FILE" | sed -E 's/Han1meViewer-(v[0-9.]+)\.apk/\1/')
+          APK_FILE=$(ls app/build/outputs/apk/release/HANiEX-v*.apk | head -n 1)
+          VERSION=$(basename "$APK_FILE" | sed -E 's/HANiEX-(v[0-9.]+)\.apk/\1/')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Get previous release tag
@@ -159,13 +168,13 @@ jobs:
           command -v bsdiff >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq bsdiff; }
           mkdir -p previous-release
           gh release download "$PREV_TAG" --repo "${{ github.repository }}" \
-            --pattern 'Han1meViewer-v*.apk' --dir previous-release
-          OLD_APK=$(find previous-release -name 'Han1meViewer-v*.apk' | head -n 1)
-          NEW_APK=$(ls app/build/outputs/apk/release/Han1meViewer-v*.apk | head -n 1)
+            --pattern '*.apk' --dir previous-release
+          OLD_APK=$(find previous-release -name '*.apk' | head -n 1)
+          NEW_APK=$(ls app/build/outputs/apk/release/HANiEX-v*.apk | head -n 1)
           bash .github/scripts/make-delta.sh "$OLD_APK" "$NEW_APK" delta-release
           if [ -f delta-release/update.json ]; then
             BASE=$(jq -r '.baseSha256[0:16]' delta-release/update.json)
-            ZIP="Han1meViewer-delta-base-${BASE}.zip"
+            ZIP="HANiEX-delta-base-${BASE}.zip"
             (cd delta-release && zip -q "$ZIP" update.json update.patch)
             echo "zip=delta-release/$ZIP" >> "$GITHUB_OUTPUT"
           fi
@@ -178,6 +187,6 @@ jobs:
           name: ${{ steps.version.outputs.version }}
           body: ${{ steps.notes.outputs.notes }}
           files: |
-            app/build/outputs/apk/release/Han1meViewer-v*.apk
+            app/build/outputs/apk/release/HANiEX-v*.apk
             ${{ steps.release_delta.outputs.zip }}
           token: ${{ secrets.APP_TOKEN }}

@@ -31,6 +31,7 @@ import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.UPDATE_NOTIFICATION_CHANNEL
 import com.yenaly.han1meviewer.logic.model.github.Latest
 import com.yenaly.han1meviewer.logic.network.HUpdater
+import com.yenaly.han1meviewer.util.apkInstallPendingIntent
 import com.yenaly.han1meviewer.util.installApkPackage
 import com.yenaly.han1meviewer.util.runSuspendCatching
 import com.yenaly.han1meviewer.util.updateFile
@@ -195,21 +196,7 @@ class HUpdateWorker(
 
     @SuppressLint("MissingPermission")
     private fun showInstallNotification(file: File) {
-        val installIntent = Intent(Intent.ACTION_VIEW).apply {
-            val uri = FileProvider.getUriForFile(
-                context,
-                FILE_PROVIDER_AUTHORITY,
-                file
-            )
-            setDataAndType(uri, "application/vnd.android.package-archive")
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-
-        val pendingIntent = PendingIntent.getActivity(
-            context, 0, installIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        val pendingIntent = context.apkInstallPendingIntent(file)
 
         val notification = NotificationCompat.Builder(context, UPDATE_NOTIFICATION_CHANNEL)
             .setContentTitle(context.getString(R.string.download_complete))

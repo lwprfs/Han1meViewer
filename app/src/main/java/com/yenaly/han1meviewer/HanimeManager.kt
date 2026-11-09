@@ -27,13 +27,13 @@ fun getHanimeSearchLink(artist: String) = HANIME_BASE_URL + "search?query=" + ar
 fun getHanimeShareText(title: String, videoCode: String): String = buildString {
     appendLine(title)
     appendLine(getHanimeVideoLink(videoCode))
-    append("- From Han1meViewer -")
+    append("- From HANiEX -")
 }
 
 fun getHanimeSearchShareText(artist: String): String = buildString {
     appendLine(artist)
     appendLine(getHanimeSearchLink(artist))
-    append("- From Han1meViewer -")
+    append("- From HANiEX -")
 }
 
 fun getHanimeVideoDownloadLink(videoCode: String) =

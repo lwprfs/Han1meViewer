@@ -74,6 +74,8 @@ import com.yenaly.han1meviewer.ui.screen.home.homepage.saveHomeCategoryPreferenc
 import com.yenaly.han1meviewer.ui.theme.ThemeColorPreset
 import com.yenaly.han1meviewer.ui.viewmodel.AppViewModel
 import com.yenaly.han1meviewer.util.ThemeUtils
+import com.yenaly.han1meviewer.util.install.ApkInstallMethod
+import com.yenaly.han1meviewer.util.install.isShizukuInstalled
 import com.yenaly.yenaly_libs.ActivityManager
 import com.yenaly.yenaly_libs.utils.applicationContext
 import com.yenaly.yenaly_libs.utils.browse
@@ -90,6 +92,8 @@ private const val HOME_SEARCH_PAGINATION = "search_pagination"
 private const val HOME_ALLOW_PIP_MODE = "allow_pip_mode"
 private const val HOME_UPDATE_POPUP_INTERVAL_DAYS = "update_popup_interval_days"
 private const val HOME_USE_CI_UPDATE_CHANNEL = "use_ci_update_channel"
+private const val HOME_APK_INSTALL_METHOD = "apk_install_method"
+private const val SHIZUKU_DOWNLOAD_URL = "https://shizuku.rikka.app/download"
 private const val HOME_USE_ANALYTICS = "use_analytics"
 private const val HOME_FAKE_LAUNCHER_ICON = "pref_fake_launcher_icon"
 private const val HOME_USE_DARK_MODE = "use_dark_mode"
@@ -136,6 +140,7 @@ fun HomeSettingsRouteScreen(
     var showLicenseScreen by remember { mutableStateOf(false) }
     var showRestartConfirmDialog by remember { mutableStateOf(false) }
     var showAnalyticsDialog by remember { mutableStateOf(false) }
+    var showShizukuMissingDialog by remember { mutableStateOf(false) }
     var showLauncherPicker by remember { mutableStateOf(false) }
     var showApplyDeepLinksDialog by remember { mutableStateOf(false) }
     var pendingImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
@@ -351,6 +356,19 @@ fun HomeSettingsRouteScreen(
             refreshKey++
             AppViewModel.getLatestVersion()
         },
+        onApkInstallMethodChange = { key ->
+            val method = ApkInstallMethod.fromKey(key)
+            when {
+                method == null -> Unit
+                method == ApkInstallMethod.SHIZUKU && !context.isShizukuInstalled ->
+                    showShizukuMissingDialog = true
+
+                else -> {
+                    Preferences.apkInstallMethod = method
+                    refreshKey++
+                }
+            }
+        },
         onUseAnalyticsChange = { value ->
             if (!value) {
                 showAnalyticsDialog = true
@@ -418,6 +436,19 @@ fun HomeSettingsRouteScreen(
         },
         onSubmitBug = { context.browse(HA1_GITHUB_ISSUE_URL) },
         onOpenForum = { context.browse(HA1_GITHUB_FORUM_URL) },
+    )
+
+    ConfirmDialog(
+        visible = showShizukuMissingDialog,
+        title = stringResource(R.string.apk_install_shizuku),
+        message = stringResource(R.string.apk_install_shizuku_unavailable),
+        confirmText = stringResource(R.string.confirm),
+        dismissText = stringResource(R.string.cancel),
+        onConfirm = {
+            showShizukuMissingDialog = false
+            context.browse(SHIZUKU_DOWNLOAD_URL)
+        },
+        onDismiss = { showShizukuMissingDialog = false },
     )
 
     ConfirmDialog(
@@ -708,6 +739,10 @@ private fun buildHomeSettingsUiState(
         collapseDownloadedGroup = Preferences.collapseDownloadedGroup,
         useDynamicColor = Preferences.useDynamicColor,
         useCIUpdateChannel = Preferences.useCIUpdateChannel,
+        apkInstallMethod = Preferences.apkInstallMethod.key,
+        apkInstallMethodLabel = context.getString(Preferences.apkInstallMethod.titleRes),
+        apkInstallMethodOptions = ApkInstallMethod.available(context)
+            .map { context.getString(it.titleRes) to it.key },
         useAnalytics = Preferences.isAnalyticsEnabled,
         useLockScreen = Preferences.preferenceSp.getBoolean(HOME_USE_LOCK_SCREEN, false),
         fakeLauncherIconName = currentItem.name,

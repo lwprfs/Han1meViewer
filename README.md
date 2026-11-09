@@ -25,17 +25,25 @@
 
 本软件不接受任何形式的公开宣传。若出现公开宣传、搬运或引流，仓库维护者可能随时归档或隐藏仓库，并删除已编译的发行版。
 
-# 🌸 Han1meViewer
+# 🌸 HANiEX
 
 🔞 R18 警告：未满 18 岁禁止下载和使用。
 
-Han1meViewer 是一个使用 Kotlin 开发的 Android 客户端，用于浏览、搜索、播放和管理 hanime 相关公开视频页面内容。当前项目以 Jetpack Compose、Navigation Compose、ViewModel、StateFlow、Retrofit、Jsoup、Room、WorkManager、Media3/JZVD/MPV 为主要技术栈，围绕视频浏览、详情播放、搜索、用户列表、下载管理、评论、订阅、设置和隐私保护等功能组织。
+HANiEX（Han1meViewer Extended）是基于 Han1meViewer 的扩展分支，应用名称为 **HANiEX**，应用包名（applicationId）为 `com.yenaly.hani.extended`。它是一个使用 Kotlin 开发的 Android 客户端，用于浏览、搜索、播放和管理 hanime 相关公开视频页面内容。当前项目以 Jetpack Compose、Navigation Compose、ViewModel、StateFlow、Retrofit、Jsoup、Room、WorkManager、Media3/JZVD/MPV 为主要技术栈，围绕视频浏览、详情播放、搜索、用户列表、下载管理、评论、订阅、设置和隐私保护等功能组织。
 
-本应用没有任何官方网站。GitHub Release 与 CI 构建产物是唯一下载及更新渠道。
+本应用没有任何官方网站。本分支仓库 [lwprfs/Han1meViewer](https://github.com/lwprfs/Han1meViewer) 的 GitHub Release 与 CI 构建产物是唯一下载及更新渠道。
 
 ## 📜 项目来源与许可
 
-此项目最初 Fork 自 [YenalyLiew/Han1meViewer](https://github.com/YenalyLiew/Han1meViewer)，感谢原作者的贡献。原项目采用 [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)。
+此项目最初 Fork 自 [YenalyLiew/Han1meViewer](https://github.com/YenalyLiew/Han1meViewer)，当前直接上游为 [misaka10032w/Han1meViewer](https://github.com/misaka10032w/Han1meViewer)，本分支为 [lwprfs/Han1meViewer](https://github.com/lwprfs/Han1meViewer)。感谢各位作者的贡献。原项目采用 [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)。
+
+本分支相对上游的主要修改：
+
+- 应用改名为 HANiEX，包名改为 `com.yenaly.hani.extended`（Kotlin 源码的 `namespace` 仍为 `com.yenaly.han1meviewer`）。
+- 应用内更新改为从本分支的 Release / CI 获取，并新增增量（差分）更新。
+- 新增更新包安装方式：系统安装器、PackageInstaller、Shizuku，可在设置中切换。
+- CI 增加 Gradle 缓存与构建优化，并在构建时生成增量更新包。
+- 安装方式中的 Shizuku 实现参考了 [Mihon](https://github.com/mihonapp/mihon) 的扩展安装器（Apache 2.0 / MIT）。
 
 根据 Apache 2.0 许可证要求：
 
@@ -97,6 +105,8 @@ Telegram 群组：[https://t.me/Han1meViewer](https://t.me/Han1meViewer)
 - 🎨 主题与设置：支持 Material 3 主题、动态颜色、首页布局、播放设置、MPV 设置、下载设置和网络设置。
 - 🕵️ 隐私保护：支持应用锁、启动器图标伪装和手动 Cookie 管理。
 - 🌐 网络辅助：支持 Cloudflare 处理、备用域名、代理相关设置、CDN/网络检测和更新检查。
+- 🔄 应用内更新：支持 Release / CI 两个更新渠道，支持增量更新（只下载差分补丁），失败自动回退到完整 APK。详见「应用更新」。
+- 📲 安装方式：更新包可选择系统安装器、PackageInstaller 或 Shizuku 安装，类似 Mihon 的扩展安装方式设置。详见「安装方式」。
 - 📅 健康打卡：内置冲了么打卡页面和桌面小组件。
 - 🎯 共享关键 H 帧：支持内置关键帧数据读取、设置和共享数据展示。
 - 🗞️ 公告系统：支持首页公告展示、公告详情弹窗，并配套 `HanimeAnnouncementManagerWebUI` 维护 Firebase Realtime Database 中的 `announcements` 节点。
@@ -155,6 +165,46 @@ Telegram 群组：[https://t.me/Han1meViewer](https://t.me/Han1meViewer)
 - 过期或不再需要显示的公告应直接下线，而不是删除，以便回溯。
 - 重要公告优先级数值应更高或更低需与 WebUI 约定保持一致，避免排序混乱。
 
+## 🔄 应用更新
+
+应用通过 GitHub 检查并下载更新，无需打开 GitHub 页面。更新来源为本分支 `lwprfs/Han1meViewer`（见 `Constants.kt` 中的 `HA1_GITHUB_URL` / `HA1_GITHUB_API_URL`）。
+
+📡 更新渠道（设置 → 更新）：
+
+- **Release 渠道（默认）**：读取 GitHub `releases/latest`，用 tag 中 `+` 后面的版本号与当前 `VERSION_CODE` 比较，APK 取自 Release 中以 `.apk` 结尾的资源。
+- **CI 渠道（可选）**：比较当前 `COMMIT_SHA` 与 `ci.yml` 最近一次成功的构建，下载其 `app-release-<sha>` 构建产物。需要 `HA_GITHUB_TOKEN` 才能下载构建产物。
+
+📦 增量更新：
+
+- CI 构建完成后会和上一次构建的 APK 做 bsdiff 差分，生成只包含差异的补丁包；补丁大于完整 APK 的 80% 时不发布。
+- CI 渠道：补丁包以单独的构建产物 `delta-<sha>-base-<旧 APK 的 SHA-256 前 16 位>` 上传。
+- Release 渠道：发布时与上一个 Release 的 APK 做差分，补丁包作为 Release 资源 `HANiEX-delta-base-<前 16 位>.zip` 上传。
+- 补丁包是一个 zip，内含 `update.json`（格式、基线与新 APK 的 SHA-256、大小）和 `update.patch`（bsdiff 补丁）。
+- 应用先计算当前已安装 APK 的 SHA-256，只有与补丁基线一致才会下载补丁，在本地还原出新 APK，并校验大小、SHA-256 和签名。
+- 任何一步失败（基线不匹配、补丁过期、校验失败、split 安装等）都会自动回退到下载完整 APK。
+
+⚠️ 注意：
+
+- 增量更新要求手机上安装的就是补丁基线对应的那个 APK；否则会下载完整 APK。
+- 第一个包含增量更新功能的版本需要手动安装。
+- 包名改变后（`com.yenaly.han1meviewer` → `com.yenaly.hani.extended`）系统会视为另一个应用，旧版本不会更新到 HANiEX，需要重新安装。
+
+## 📲 安装方式
+
+更新包下载完成后，按设置里的「安装方式」安装（设置 → 更新 → 安装方式）：
+
+| 方式 | 说明 |
+| --- | --- |
+| 系统安装器（旧版） | 调起系统安装界面，兼容性最好。 |
+| PackageInstaller | 使用 PackageInstaller 会话安装，Android 12+ 在系统允许时可免确认更新。MIUI 设备上不提供此选项。 |
+| Shizuku | 通过 Shizuku 以 shell 权限静默安装。需要先安装并启动 Shizuku，首次使用会请求授权。 |
+
+- 默认值与 Mihon 相同：PackageInstaller；检测到 MIUI 安装器时默认为系统安装器。
+- 选择 Shizuku 但未检测到 Shizuku 时，会提示并提供下载链接，不会切换。
+- PackageInstaller 与 Shizuku 通过前台服务 `ApkInstallService` 运行；服务无法启动时会回退到系统安装器。
+- 点击「下载完成」通知里的安装按钮同样遵循所选安装方式。
+- Mihon 的「Private」方式只适用于扩展，不适用于应用自更新，因此未包含。
+
 ## 📷 截图预览
 
 <table>
@@ -193,7 +243,10 @@ Telegram 群组：[https://t.me/Han1meViewer](https://t.me/Han1meViewer)
 - `logic.model`：页面和网络解析后的领域模型，如 `HanimeVideo`、`HanimeInfo`、`HomePage`、`Playlists` 等。
 - `logic.dao` / `logic.entity`：Room 数据库、DAO 和实体，用于历史、下载、搜索历史、关键帧、打卡等本地数据。
 - `announcement` 链路：公告数据从 Firebase Realtime Database 的 `announcements` 节点读取，首页通过 `MainViewModel.loadAnnouncements()` 拉取并展示，管理端使用 `HanimeAnnouncementManagerWebUI` 维护公告内容。
-- `worker`：WorkManager 下载任务和更新任务。
+- `worker`：WorkManager 下载任务和更新任务（`HUpdateWorker`）。
+- `logic.network.HUpdater` / `HDeltaUpdater`：更新检查、完整 APK 下载与增量补丁应用；`util.Bspatch` 为纯 Kotlin 的 bspatch 实现。
+- `util.install`：安装方式（`ApkInstallMethod`）、前台安装服务 `ApkInstallService`，以及 PackageInstaller / Shizuku 两种安装器。
+- `shizuku`（含 `src/main/aidl`）：运行在 Shizuku 进程中的 `ShellInterface`，负责以 shell 权限提交安装会话。
 - `util`：主题、网络、文件、权限、Cookie、Toast、视频和通用工具方法。
 
 🔁 整体数据流：
@@ -208,6 +261,12 @@ Compose Screen -> ViewModel -> NetworkRepo / DatabaseRepo -> Retrofit + Jsoup / 
 VideoRoute -> VideoViewModel -> NetworkRepo.getHanimeVideo -> Parser -> HanimeVideo -> VideoScreen / Player / CommentScreen
 ```
 
+🔄 更新数据流：
+
+```text
+HUpdater 检查更新 -> HUpdateWorker -> (HDeltaUpdater 增量还原 | 完整 APK 下载) -> installApkPackage -> 系统安装器 / ApkInstallService(PackageInstaller | Shizuku)
+```
+
 📥 下载数据流：
 
 ```text
@@ -216,9 +275,9 @@ DownloadScreen -> DownloadViewModel -> HanimeDownloadManagerV2 -> WorkManager Wo
 
 ## 🛠️ 技术栈
 
-- Kotlin 2.3.x
+- Kotlin 2.4.x
 - Java 21 toolchain
-- Android Gradle Plugin 9.2.x
+- Android Gradle Plugin 9.3.x
 - Jetpack Compose + Material 3
 - Navigation Compose + Kotlin Serialization typed routes
 - ViewModel + StateFlow + SharedFlow
@@ -230,6 +289,8 @@ DownloadScreen -> DownloadViewModel -> HanimeDownloadManagerV2 -> WorkManager Wo
 - Media3 ExoPlayer、JZVD、MPV Android
 - Firebase Analytics、Crashlytics、Performance、Remote Config、Realtime Database
 - AndroidX Window、Biometric、SplashScreen、Preference
+- Apache Commons Compress（bzip2，用于增量补丁解压）
+- Shizuku API / Provider（静默安装）
 - AboutLibraries 开源许可展示
 
 ## 🧰 构建环境
@@ -243,6 +304,11 @@ DownloadScreen -> DownloadViewModel -> HanimeDownloadManagerV2 -> WorkManager Wo
 - 最低支持：Android 8.1，API `27`。
 - 目标 SDK：`37`。
 
+⚡ 构建优化（`gradle.properties`）：
+
+- 已启用 `org.gradle.caching`、`org.gradle.parallel`、`org.gradle.daemon` 和 `kotlin.incremental`，`org.gradle.jvmargs` 为 `-Xmx3g -XX:MaxMetaspaceSize=1g`。
+- `org.gradle.configuration-cache` 默认未启用（构建脚本在配置阶段读取环境变量并执行 git 命令），确认兼容后再开启。
+
 📌 关键版本以仓库文件为准：
 
 - `gradle.properties`
@@ -255,7 +321,7 @@ DownloadScreen -> DownloadViewModel -> HanimeDownloadManagerV2 -> WorkManager Wo
 1. 克隆项目：
 
    ```bash
-   git clone https://github.com/misaka10032w/Han1meViewer.git
+   git clone https://github.com/lwprfs/Han1meViewer.git
    ```
 
 2. 使用 Android Studio 打开项目根目录。
@@ -278,15 +344,39 @@ DownloadScreen -> DownloadViewModel -> HanimeDownloadManagerV2 -> WorkManager Wo
 .\gradlew.bat :app:assembleDebug
 ```
 
-🔏 Release 构建需要本地或 CI 提供签名相关环境变量：
+🔥 Firebase：将 `google-services.json` 放到 `app/` 目录（该文件已被 `.gitignore` 忽略，CI 从 Secret 生成）。其中必须包含与 `applicationId` 对应的应用：release 为 `com.yenaly.hani.extended`；debug 构建带有 `.debug` 后缀（`com.yenaly.hani.extended.debug`），需要在 Firebase 中额外添加该应用，否则 debug 构建会因找不到匹配的 client 而失败。
 
-- `KEYSTORE_PASSWORD`
-- `KEY_ALIAS`
+🔏 Release 构建需要本地或 CI 提供签名相关配置：
+
+- 密钥库文件：`$HOME/.android/keystore.jks`
+- 环境变量：`KEYSTORE_PASSWORD`（同时作为 key 密码）、`KEY_ALIAS`
+- Release 只打包 `arm64-v8a`，输出文件名为 `HANiEX-v<versionName>.apk`
 
 🔑 GitHub API Token 可通过环境变量或本地文件提供：
 
 - 环境变量：`HA_GITHUB_TOKEN`
 - 本地文件：`app/ha1_github_token.txt`
+
+## 🤖 CI 与发布
+
+工作流位于 `.github/workflows/ci.yml`，推送到 `main`（忽略 `*.md` 修改）时运行：
+
+1. 检出代码、安装 JDK 21，并通过 `gradle/actions/setup-gradle` 配置 Gradle 缓存（`cache-provider: basic`）。
+2. 从 Secret 生成 `google-services.json` 和签名密钥库，执行 `./gradlew assembleRelease --build-cache --parallel`。
+3. 查找上一次成功的构建，下载其 APK 并生成增量补丁（失败或补丁不划算时自动跳过，不影响主流程）。
+4. 上传构建产物：`app-release-<sha>`（完整 APK）和 `delta-<sha>-base-<hash>`（增量补丁，如有）。
+5. 提交信息包含 `[release]` 时，再生成 Release 说明、与上一个 Release 做增量补丁，并创建 GitHub Release（含 APK 与补丁 zip）。
+
+⚡ 缓存行为：第一次运行会下载依赖并写入缓存，之后的运行直接复用缓存和可复用的构建输出，从而缩短构建时间；缓存只在 `main` 分支写入，长时间未使用或超出仓库容量上限时会被 GitHub 清理，清理后的第一次运行会重新生成缓存。
+
+🔐 需要配置的 Secrets：
+
+- `GOOGLE_SERVICES_JSON_BASE64`：`google-services.json` 的 Base64。
+- `KEYSTORE_BASE64`、`KEYSTORE_PASSWORD`、`KEY_ALIAS`：签名密钥库及其密码、别名。
+- `HA_GITHUB_TOKEN`：应用内更新读取 GitHub 构建产物所用的 Token（会写入 `BuildConfig`）。
+- `APP_TOKEN`：创建 GitHub Release 所用的 Token。
+
+增量补丁由 `.github/scripts/make-delta.sh` 生成（依赖 `bsdiff` 与 `jq`）。
 
 ## ✅ 代码约定
 
@@ -298,11 +388,16 @@ DownloadScreen -> DownloadViewModel -> HanimeDownloadManagerV2 -> WorkManager Wo
 ## 🗺️ 目录速查
 
 ```text
-Han1meViewer/
+Han1meViewer/                    仓库目录名（应用名为 HANiEX）
+├── .github/
+│   ├── workflows/ci.yml          CI：构建、缓存、增量补丁、发布
+│   └── scripts/make-delta.sh     生成 bsdiff 增量补丁包
 ├── app/                         主 Android 应用
 │   ├── src/main/java/.../logic   网络、解析、模型、数据库、状态
 │   ├── src/main/java/.../ui      Activity、Compose 页面、导航、组件、ViewModel
-│   ├── src/main/java/.../util    通用工具
+│   ├── src/main/java/.../util    通用工具（含 install/ 安装方式、Bspatch）
+│   ├── src/main/java/.../shizuku Shizuku 安装用的 ShellInterface
+│   ├── src/main/aidl             IShellInterface（Shizuku）
 │   ├── src/main/java/.../worker  WorkManager 任务
 │   └── src/main/res              资源文件、主题、布局、图标、小组件
 ├── yenaly_libs/                  项目内公共库
@@ -317,6 +412,7 @@ Han1meViewer/
 - 提交代码前请先确认可以通过 `:app:compileDebugKotlin`。
 - 修改网络列表、分页或 Compose `Lazy*` 列表时，请检查重复 key 风险。
 - 修改播放、下载、账号、Cookie、Cloudflare、更新逻辑时，请尽量说明验证方式。
+- 修改更新或安装逻辑时，请同时检查 Release 渠道、CI 渠道、增量更新回退以及三种安装方式。
 - 提交共享关键 H 帧可参考 `.github/PULL_REQUEST_TEMPLATE/submit_h_keyframe.md`。
 
 ## 🧩 TODO

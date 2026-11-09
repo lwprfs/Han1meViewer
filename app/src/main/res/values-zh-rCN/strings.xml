@@ -973,4 +973,16 @@
     <string name="network_settings_site_summary">以下所有设置仅对所选站点生效</string>
     <string name="network_inherited_suffix">（沿用 Hanime1 设置）</string>
     <string name="custom_hosts_format_ext">用逗号分隔的 IP 将应用于该站点所有域名（1.2.3.4,5.6.7.8），或每行一个域名（example.com=1.2.3.4）</string>
+
+    <!-- 安装方式 / Install method -->
+    <string name="apk_install_method">安装方式</string>
+    <string name="apk_install_method_sum">选择安装更新 APK 的方式</string>
+    <string name="apk_install_legacy">系统安装器（旧版）</string>
+    <string name="apk_install_package_installer">PackageInstaller</string>
+    <string name="apk_install_shizuku">Shizuku</string>
+    <string name="apk_install_shizuku_unavailable">未检测到 Shizuku。请先安装并启动 Shizuku，才能使用此安装方式。\n\n是否前往下载页面？</string>
+    <string name="apk_install_shizuku_stopped">Shizuku 未运行，请先启动 Shizuku</string>
+    <string name="apk_install_shizuku_permission_denied">未授予 Shizuku 权限</string>
+    <string name="apk_installing">正在安装更新…</string>
+    <string name="apk_install_failed">安装失败，请尝试更换安装方式</string>
 </resources>

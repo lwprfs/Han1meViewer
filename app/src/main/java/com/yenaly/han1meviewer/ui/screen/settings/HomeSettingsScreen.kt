@@ -43,6 +43,7 @@ private enum class HomeSettingsChoiceDialog {
     DarkMode,
     AppLanguage,
     ThemeColor,
+    ApkInstallMethod,
 }
 
 @Composable
@@ -66,6 +67,7 @@ fun HomeSettingsScreen(
     onSearchGridColumnsConfigChange: (SearchGridColumnsConfig) -> Unit,
     onHorizontalCardCountConfigChange: (HorizontalCardCountConfig) -> Unit,
     onUseCIUpdateChannelChange: (Boolean) -> Unit,
+    onApkInstallMethodChange: (String) -> Unit,
     onUseAnalyticsChange: (Boolean) -> Unit,
     onUseLockScreenChange: (Boolean) -> Unit,
     onThemeColorChange: (String) -> Unit,
@@ -153,6 +155,18 @@ fun HomeSettingsScreen(
         onSelect = {
             activeDialog = null
             onOpenAppLanguageSettings(it)
+        },
+    )
+
+    ChoiceDialog(
+        visible = activeDialog == HomeSettingsChoiceDialog.ApkInstallMethod,
+        title = stringResource(R.string.apk_install_method),
+        options = state.apkInstallMethodOptions,
+        selectedValue = state.apkInstallMethod,
+        onDismiss = { activeDialog = null },
+        onSelect = {
+            activeDialog = null
+            onApkInstallMethodChange(it)
         },
     )
 
@@ -482,6 +496,15 @@ fun HomeSettingsScreen(
             )
         }
         item {
+            SettingNavigationItem(
+                title = stringResource(R.string.apk_install_method),
+                summary = stringResource(R.string.apk_install_method_sum),
+                valueText = state.apkInstallMethodLabel,
+                iconRes = R.drawable.ic_baseline_update_24,
+                onClick = { activeDialog = HomeSettingsChoiceDialog.ApkInstallMethod },
+            )
+        }
+        item {
             SettingSliderItem(
                 title = stringResource(R.string.update_popup_interval_days),
                 summary = state.updatePopupIntervalSummary,
@@ -619,6 +642,13 @@ private fun HomeSettingsScreenPreview() {
                 collapseDownloadedGroup = false,
                 useDynamicColor = true,
                 useCIUpdateChannel = false,
+                apkInstallMethod = "package_installer",
+                apkInstallMethodLabel = "PackageInstaller",
+                apkInstallMethodOptions = listOf(
+                    "系統安裝器" to "legacy",
+                    "PackageInstaller" to "package_installer",
+                    "Shizuku" to "shizuku",
+                ),
                 useAnalytics = true,
                 useLockScreen = false,
                 fakeLauncherIconName = "Han1meViewer",
@@ -658,6 +688,7 @@ private fun HomeSettingsScreenPreview() {
             onSearchGridColumnsConfigChange = {},
             onHorizontalCardCountConfigChange = {},
             onUseCIUpdateChannelChange = {},
+            onApkInstallMethodChange = {},
             onUseAnalyticsChange = {},
             onUseLockScreenChange = {},
             onThemeColorChange = {},
