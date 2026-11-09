@@ -78,7 +78,7 @@ object SupJavStreamResolver {
         if (origin != null) builder.header("Origin", origin)
         return SupJavNetwork.sharedOkHttpClient.newCall(builder.build()).execute().use { resp ->
             if (!resp.isSuccessful) error("HTTP ${resp.code} for $url")
-            resp.body?.string().orEmpty()
+            resp.body.string()
         }
     }
 
@@ -103,7 +103,7 @@ object SupJavStreamResolver {
             .build()
         val json = SupJavNetwork.sharedOkHttpClient.newCall(request).execute().use { resp ->
             if (!resp.isSuccessful) error("HTTP ${resp.code}")
-            JSONObject(resp.body?.string().orEmpty())
+            JSONObject(resp.body.string())
         }
         val url = json.optString("streaming_url")
         if (url.isBlank()) null else SupJavStream(url, label, "$origin/")

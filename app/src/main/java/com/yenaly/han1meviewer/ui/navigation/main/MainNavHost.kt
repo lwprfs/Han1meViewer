@@ -1,5 +1,9 @@
 package com.yenaly.han1meviewer.ui.navigation.main
 
+import com.yenaly.han1meviewer.RouVideo.ui.settings.RouVideoTranslationCacheScreen
+import com.yenaly.han1meviewer.RouVideo.ui.settings.RouVideoTranslationSettingsScreen
+import com.yenaly.han1meviewer.ui.navigation.settings.TranslationCacheRoute
+import com.yenaly.han1meviewer.ui.navigation.settings.TranslationSettingsRoute
 import com.yenaly.han1meviewer.ui.navigation.popBackStackSafely
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
@@ -212,8 +216,18 @@ fun MainNavHost(
                     onNavigateToDownloadSettings = { navController.navigateSafely(DownloadSettingsRoute) },
                     onNavigateToNetworkSettings = { navController.navigateSafely(NetworkSettingsRoute) },
                     onNavigateToUnifiedHistory = { navController.navigateSafely(UnifiedHistoryRoute) },
+                    onNavigateToTranslationSettings = { navController.navigateSafely(TranslationSettingsRoute) },
                 )
             }
+        }
+        composable<TranslationSettingsRoute> {
+            RouVideoTranslationSettingsScreen(
+                onBack = { navController.popBackStackSafely() },
+                onOpenCache = { navController.navigateSafely(TranslationCacheRoute) },
+            )
+        }
+        composable<TranslationCacheRoute> {
+            RouVideoTranslationCacheScreen(onBack = { navController.popBackStackSafely() })
         }
         composable<PlayerSettingsRoute> {
             SettingsScaffold(
