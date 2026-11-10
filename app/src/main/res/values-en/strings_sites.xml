@@ -437,11 +437,11 @@
     <string name="hm_clear_cloudflare_cookie">Clear Cloudflare cookie</string>
     <string name="hm_force_the_app_to_re_solve">Force the app to re-solve the Cloudflare challenge on the next request. Use this if HentaiMama starts rejecting a cookie that has not yet expired.</string>
     <string name="hm_home_card_size">Home card size</string>
-    <string name="hm_adjust_how_large_the_video_cards">Adjust how large the video cards appear on the home and search screens.\n\n• Cards per row — how many cards fit across the screen.\n  Change this FIRST to set your target layout.\n  Doing so resets Height and Width to the Han1meViewer default (1.00× / 1.00×).\n• Height — how tall the thumbnail is. Change AFTER Cards to fine-tune the shape.\n• Width (advanced) — a final width tweak. Only change this if Height\n  and Cards do not give you the look you want. Recommended value: 1.00×.\n\nRecommended workflow:\n  1) Set Cards per row.\n  2) Set Height.\n  3) Leave Width at 1.00× unless absolutely necessary.</string>
+    <string name="hm_adjust_how_large_the_video_cards">Adjust how large the video cards appear on the home and search screens.\n\n• Cards per row — how many cards fit across the screen.\n  Change this FIRST to set your target layout.\n  Doing so resets Height and Width to the HANiEX default (1.00× / 1.00×).\n• Height — how tall the thumbnail is. Change AFTER Cards to fine-tune the shape.\n• Width (advanced) — a final width tweak. Only change this if Height\n  and Cards do not give you the look you want. Recommended value: 1.00×.\n\nRecommended workflow:\n  1) Set Cards per row.\n  2) Set Height.\n  3) Leave Width at 1.00× unless absolutely necessary.</string>
     <string name="site_cards_per_row">Cards per row</string>
     <string name="hm_changing_this_resets_height_and_width">Changing this resets Height and Width to their defaults (1.00×).</string>
     <string name="hm_height">Height</string>
-    <string name="hm_1_00_matches_the_standard_han1meviewer">1.00× matches the standard Han1meViewer card height.</string>
+    <string name="hm_1_00_matches_the_standard_han1meviewer">1.00× matches the standard HANiEX card height.</string>
     <string name="hm_width_advanced">Width (advanced)</string>
     <string name="hm_not_recommended_leave_at_1_00">⚠ Not recommended. Leave at 1.00× unless you know what you\'re doing. It stacks on top of Cards and Height and is easy to make look wrong.</string>
     <string name="hm_reset_home_card_size_to_defaults">Reset home card size to defaults</string>
@@ -724,7 +724,7 @@
     <string name="onair_clear_all_watch_history_stored_on">Clear all watch history stored on this device.</string>
     <string name="site_clear_history">Clear history</string>
     <string name="onair_about_onair">About OnAir</string>
-    <string name="onair_self_hosted_video_site_run_by">Self-hosted video site run by the community. This client is a mirror integration inside Han1meViewer. All video content is uploaded by members.</string>
+    <string name="onair_self_hosted_video_site_run_by">Self-hosted video site run by the community. This client is a mirror integration inside HANiEX. All video content is uploaded by members.</string>
     <string name="onair_choose_onair_host">Choose OnAir host</string>
     <string name="onair_this_will_remove_all_onair_watch">This will remove all OnAir watch history on this device.</string>
     <string name="onair_tag_load_failed">Tag load failed</string>

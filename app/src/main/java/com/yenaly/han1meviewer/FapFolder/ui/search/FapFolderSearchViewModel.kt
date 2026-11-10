@@ -49,7 +49,7 @@ data class FapFolderSearchUiState(
     val feedGet: String? = null,
     val feedQuery: String? = null,
 ) {
-    /** Items after applying the client-side All / Photos / Videos filter (posts tab only). */
+
     val visibleItems: List<FapFolderFeedItem>
         get() {
             if (activeTab != FapFolderSearchTab.POSTS || activeFilter == FapFolderConstants.FILTER_ALL) {
@@ -148,7 +148,7 @@ class FapFolderSearchViewModel(application: Application) : AndroidViewModel(appl
 
     fun changeFilter(filter: String) {
         if (_uiState.value.activeFilter == filter) return
-        // The site has no photo/video filter for search, so filter the loaded results locally.
+
         _uiState.update { it.copy(activeFilter = filter) }
     }
 

@@ -37,7 +37,7 @@ android {
         applicationId = "com.yenaly.hani.extended"
         minSdk = property("min.sdk")?.toString()?.toIntOrNull()
         targetSdk = property("target.sdk")?.toString()?.toIntOrNull()
-        val (code, name) = createVersion(major = 1, minor = 3, patch = 0)
+        val (code, name) = createVersion(major = 2, minor = 3, patch = 1)
         versionCode = code
         versionName = name
 

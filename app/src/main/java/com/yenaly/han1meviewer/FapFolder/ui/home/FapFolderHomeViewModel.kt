@@ -49,7 +49,6 @@ enum class FapFolderHomeTab(
     }
 }
 
-/** Hot tab range selector. [time] is the index the site sends as `time` to load.php. */
 enum class FapFolderHotRange(val time: Int) {
     ALL_TIME(0),
     MONTH(1),
@@ -369,7 +368,6 @@ class FapFolderHomeViewModel(application: Application) : AndroidViewModel(applic
         }
     }
 
-    /** Month / Week: the site fetches these with load.php (offset 0, time = 1 or 2). */
     private suspend fun loadHotRangeFirstPage(range: FapFolderHotRange) {
         val request = FapFolderLoadMoreRequest(
             get = FapFolderConstants.FEED_GET_POPULAR,

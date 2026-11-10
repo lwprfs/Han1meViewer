@@ -101,7 +101,6 @@ object FapFolderFeedPaging {
         )
     }
 
-    /** Search feeds used by the site: get=search_posts|search_users|search_groups, filter=<query>. */
     fun searchFeed(
         get: String,
         query: String,

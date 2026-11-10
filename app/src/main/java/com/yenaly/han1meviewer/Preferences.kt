@@ -86,7 +86,6 @@ object Preferences {
     val updatePopupIntervalDays
         get() = preferenceSp.getInt(SettingsPreferenceKeys.UPDATE_POPUP_INTERVAL_DAYS, 0)
 
-    /** "system" or "shizuku", see [com.yenaly.han1meviewer.shizuku.UpdateInstaller]. */
     val updateInstaller: String
         get() = preferenceSp.getString(SettingsPreferenceKeys.UPDATE_INSTALLER, "system") ?: "system"
 

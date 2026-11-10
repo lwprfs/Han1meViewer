@@ -1,12 +1,12 @@
 name: ⭐ Feature Request
-description: Suggest an idea to improve Han1meViewer
+description: Suggest an idea to improve HANiEX
 labels: ["enhancement", "good idea"]
 body:
   - type: textarea
     id: feature-description
     attributes:
       label: Describe your suggestion
-      description: How can we improve Han1meViewer?
+      description: How can we improve HANiEX?
       placeholder: "Example: I would like to see..."
     validations:
       required: true

@@ -1,5 +1,5 @@
 name: 🐞 問題回報
-description: 回報在 Han1meViewer 中出現的問題
+description: 回報在 HANiEX 中出現的問題
 labels: [bug]
 body:
 
@@ -10,7 +10,7 @@ body:
       description: 請簡短解釋實際發生的事
       placeholder: |
         Example:
-          "我打開 Han1meViewer 發生了..."
+          "我打開 HANiEX 發生了..."
     validations:
       required: true
 
@@ -28,8 +28,8 @@ body:
   - type: input
     id: version
     attributes:
-      label: Han1meViewer version
-      description: 你的**Han1meViewer**版本
+      label: HANiEX version
+      description: 你的**HANiEX**版本
       placeholder: |
         Example: "v0.14.0"
     validations:

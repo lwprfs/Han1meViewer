@@ -53,8 +53,6 @@ internal object HDeltaUpdater {
             }
             val installedSha = installed.sha256()
 
-            // 多个候选基线（上一个 Release / 上一次 CI 等）：优先挑基线前缀匹配已安装 APK 的，
-            // 没有前缀信息的作为兜底（下载后仍会用完整 sha256 校验）
             val delta = deltas.firstOrNull {
                 !it.baseSha256Prefix.isNullOrEmpty() &&
                         installedSha.startsWith(it.baseSha256Prefix, ignoreCase = true)

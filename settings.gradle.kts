@@ -13,5 +13,5 @@ dependencyResolutionManagement {
         maven { url = uri("https://jitpack.io/") }
     }
 }
-rootProject.name = "Han1meViewer"
+rootProject.name = "HANiEX"
 include(":app", ":yenaly_libs")

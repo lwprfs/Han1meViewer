@@ -200,7 +200,7 @@ class HUpdateWorker(
     @SuppressLint("MissingPermission")
     private fun showInstallNotification(file: File) {
         val installIntent = if (Preferences.updateInstaller == UpdateInstaller.SHIZUKU) {
-            // Shizuku installs happen inside the app, so reopen it and let MainActivity install.
+
             Intent(context, MainActivity::class.java).apply {
                 action = ACTION_INSTALL_UPDATE
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)

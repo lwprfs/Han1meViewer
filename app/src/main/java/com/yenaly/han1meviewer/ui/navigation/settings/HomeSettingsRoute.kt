@@ -357,7 +357,7 @@ fun HomeSettingsRouteScreen(
         onUpdateInstallerChange = { value ->
             if (value == UpdateInstaller.SHIZUKU) {
                 coroutineScope.launch {
-                    // Shows Shizuku's grant dialog, which also lists Haniex in Shizuku's authorized apps.
+
                     val msgRes = when (ShizukuUpdateInstaller.requestPermission(context)) {
                         ShizukuInstallResult.Success -> null
                         ShizukuInstallResult.NotInstalled -> R.string.shizuku_not_installed_short

@@ -1,9 +1,3 @@
-/*
- * Runs inside the Shizuku server process (shell/root uid) and performs a silent
- * PackageInstaller session on behalf of the app.
- *
- * Adapted from Mihon's ShellInterface (Apache-2.0 / MIT, see Mihon repository).
- */
 package com.yenaly.han1meviewer.shizuku
 
 import android.annotation.SuppressLint
@@ -111,5 +105,4 @@ class ShellInterface : IShellInterface.Stub() {
     }
 }
 
-// Constant hidden from the SDK (PackageManager.INSTALL_REPLACE_EXISTING)
 private const val REPLACE_EXISTING_INSTALL_FLAG = 0x00000002

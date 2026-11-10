@@ -1,5 +1,5 @@
 name: 🐞 Bug Report
-description: Report issues encountered in Han1meViewer
+description: Report issues encountered in HANiEX
 labels: [bug]
 body:
   - type: textarea
@@ -9,7 +9,7 @@ body:
       description: Briefly explain what actually happened
       placeholder: |
         Example:
-          When I opened Han1meViewer...
+          When I opened HANiEX...
     validations:
       required: true
 
@@ -27,8 +27,8 @@ body:
   - type: input
     id: version
     attributes:
-      label: Han1meViewer Version
-      description: Your **Han1meViewer** version
+      label: HANiEX Version
+      description: Your **HANiEX** version
       placeholder: |
         Example: v0.14.0
     validations:

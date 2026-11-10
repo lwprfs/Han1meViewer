@@ -437,11 +437,11 @@
     <string name="hm_clear_cloudflare_cookie">清除 Cloudflare Cookie</string>
     <string name="hm_force_the_app_to_re_solve">強制 App 在下次請求時重新通過 Cloudflare 驗證。若 HentaiMama 開始拒絕尚未過期的 Cookie，請使用此功能。</string>
     <string name="hm_home_card_size">首頁卡片大小</string>
-    <string name="hm_adjust_how_large_the_video_cards">調整首頁與搜尋頁面影片卡片的大小。\n\n• 每列卡片數 — 一列可容納幾張卡片。\n  請先調整此項來設定目標版面。\n  調整後會將高度與寬度重設為 Han1meViewer 預設值（1.00× / 1.00×）。\n• 高度 — 縮圖的高度。在調整每列卡片數之後再微調外觀。\n• 寬度（進階）— 最後的寬度微調。只有在高度與每列卡片數仍無法達到你要的外觀時才調整。建議值：1.00×。\n\n建議流程：\n  1) 設定每列卡片數。\n  2) 設定高度。\n  3) 除非必要，否則保持寬度為 1.00×。</string>
+    <string name="hm_adjust_how_large_the_video_cards">調整首頁與搜尋頁面影片卡片的大小。\n\n• 每列卡片數 — 一列可容納幾張卡片。\n  請先調整此項來設定目標版面。\n  調整後會將高度與寬度重設為 HANiEX 預設值（1.00× / 1.00×）。\n• 高度 — 縮圖的高度。在調整每列卡片數之後再微調外觀。\n• 寬度（進階）— 最後的寬度微調。只有在高度與每列卡片數仍無法達到你要的外觀時才調整。建議值：1.00×。\n\n建議流程：\n  1) 設定每列卡片數。\n  2) 設定高度。\n  3) 除非必要，否則保持寬度為 1.00×。</string>
     <string name="site_cards_per_row">每列卡片數</string>
     <string name="hm_changing_this_resets_height_and_width">變更此項會將高度與寬度重設為預設值（1.00×）。</string>
     <string name="hm_height">高度</string>
-    <string name="hm_1_00_matches_the_standard_han1meviewer">1.00× 等同 Han1meViewer 標準卡片高度。</string>
+    <string name="hm_1_00_matches_the_standard_han1meviewer">1.00× 等同 HANiEX 標準卡片高度。</string>
     <string name="hm_width_advanced">寬度（進階）</string>
     <string name="hm_not_recommended_leave_at_1_00">⚠ 不建議。除非你清楚自己在做什麼，否則請保持 1.00×。它會疊加在每列卡片數與高度之上，容易讓版面變形。</string>
     <string name="hm_reset_home_card_size_to_defaults">將首頁卡片大小重設為預設值</string>
@@ -724,7 +724,7 @@
     <string name="onair_clear_all_watch_history_stored_on">清除此裝置上儲存的所有觀看歷史。</string>
     <string name="site_clear_history">清除歷史</string>
     <string name="onair_about_onair">關於 OnAir</string>
-    <string name="onair_self_hosted_video_site_run_by">由社群自行架設的影片網站。此客戶端是 Han1meViewer 內的鏡像整合，所有影片內容皆由會員上傳。</string>
+    <string name="onair_self_hosted_video_site_run_by">由社群自行架設的影片網站。此客戶端是 HANiEX 內的鏡像整合，所有影片內容皆由會員上傳。</string>
     <string name="onair_choose_onair_host">選擇 OnAir 網域</string>
     <string name="onair_this_will_remove_all_onair_watch">這會移除此裝置上所有 OnAir 觀看歷史。</string>
     <string name="onair_tag_load_failed">標籤載入失敗</string>

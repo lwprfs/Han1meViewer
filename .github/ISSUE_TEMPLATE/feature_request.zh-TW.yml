@@ -1,5 +1,5 @@
 name: ⭐ 功能請求
-description: 建議一個功能來改善 Han1meViewer
+description: 建議一個功能來改善 HANiEX
 labels: [ good idea | 好主意 ]
 body:
 
@@ -7,7 +7,7 @@ body:
     id: feature-description
     attributes:
       label: 描述您建議的功能
-      description: 如何改進 Han1meViewer？
+      description: 如何改進 HANiEX？
       placeholder: |
         Example:
           "我想要bla bla bla..."

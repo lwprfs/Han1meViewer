@@ -27,13 +27,10 @@ object HUpdater {
 
     private val linefeedRegex = Regex("\\n{2,}")
 
-    /** CI 里完整 APK artifact 的名字前缀（`app-release-<sha>`）。 */
     private const val APK_ARTIFACT_PREFIX = "app-release-"
 
-    /** CI 里增量包 artifact 的名字前缀（`delta-<sha>-base-<旧 APK 的 sha256 前 16 位>`）。 */
     private const val DELTA_ARTIFACT_PREFIX = "delta-"
 
-    /** Release 里增量包 asset 的名字（`HANiEX-delta-base-<前 16 位>.zip`）。 */
     private const val DELTA_ASSET_MARKER = "-delta-"
 
     private val baseHashRegex = Regex("base-([0-9a-f]{16})", RegexOption.IGNORE_CASE)
@@ -95,14 +92,14 @@ object HUpdater {
         }
 
         val shortSha = workflowRun.headSha.take(7)
-        // `git rev-parse --short=7` 在哈希冲突时可能返回超过 7 位，所以按前缀比较
+
         if (curSha.isNotBlank() && workflowRun.headSha.startsWith(curSha, ignoreCase = true)) {
             Log.d(TAG, "已是最新的 CI 构建：$shortSha")
             return null
         }
 
         val artifacts = requestArtifacts(workflowRun.artifactsUrl)
-        // 同一次 run 里可能还有增量包 artifact，这里必须按名字挑出完整 APK
+
         val artifact = artifacts.artifacts.firstOrNull { it.name.startsWith(APK_ARTIFACT_PREFIX) }
             ?: artifacts.artifacts.firstOrNull { !it.name.startsWith(DELTA_ARTIFACT_PREFIX) }
         val deltaArtifacts = artifacts.artifacts.filter {
@@ -130,7 +127,7 @@ object HUpdater {
     private suspend fun checkReleaseChannel(): Latest? {
         val ver = requestLatestRelease()
         if (!checkNeedUpdate(ver.tagName)) return null
-        // Release 里除了 APK 还可能有增量包，不能再盲取第一个 asset
+
         val asset = ver.assets.firstOrNull { it.name.endsWith(".apk", ignoreCase = true) }
             ?: ver.assets.firstOrNull { !it.name.contains(DELTA_ASSET_MARKER) }
         val deltaAssets = ver.assets.filter {

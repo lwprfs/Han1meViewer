@@ -26,13 +26,11 @@ import rikka.shizuku.ShizukuProvider
 import java.io.File
 import kotlin.coroutines.resume
 
-/** Values stored in the "update_installer" preference. */
 object UpdateInstaller {
     const val SYSTEM = "system"
     const val SHIZUKU = "shizuku"
 }
 
-/** Outcome of a Shizuku install attempt. */
 sealed interface ShizukuInstallResult {
     data object Success : ShizukuInstallResult
     data object NotInstalled : ShizukuInstallResult
@@ -50,7 +48,6 @@ object ShizukuUpdateInstaller {
     private const val INSTALL_TIMEOUT_MS = 120_000L
     private const val ACTION_INSTALL_RESULT = "${BuildConfig.APPLICATION_ID}.ACTION_SHIZUKU_INSTALL_RESULT"
 
-    /** Whether the Shizuku manager app (or Sui) is present on the device. */
     fun isShizukuInstalled(context: Context): Boolean {
         if (isRunning()) return true
         return try {
@@ -75,7 +72,6 @@ object ShizukuUpdateInstaller {
         false
     }
 
-    /** Waits briefly for the Shizuku binder, which is delivered asynchronously after process start. */
     private suspend fun awaitBinder(): Boolean {
         if (isRunning()) return true
         return withTimeoutOrNull(BINDER_TIMEOUT_MS) {
@@ -92,18 +88,12 @@ object ShizukuUpdateInstaller {
         } ?: false
     }
 
-    /**
-     * Asks Shizuku for permission (showing Shizuku's own grant dialog) if not yet granted.
-     * Once requested, this app shows up in Shizuku's "authorized apps" list.
-     *
-     * @return the state of the request: [ShizukuInstallResult.Success] when granted.
-     */
     suspend fun requestPermission(context: Context): ShizukuInstallResult {
         if (!isShizukuInstalled(context)) return ShizukuInstallResult.NotInstalled
         if (!awaitBinder()) return ShizukuInstallResult.NotRunning
         if (Shizuku.isPreV11()) return ShizukuInstallResult.Failed("Shizuku version is too old")
         if (hasPermission()) return ShizukuInstallResult.Success
-        // User picked "Deny and don't ask again" earlier: the dialog won't show again.
+
         if (Shizuku.shouldShowRequestPermissionRationale()) return ShizukuInstallResult.PermissionDenied
 
         val granted = suspendCancellableCoroutine { cont ->
@@ -136,9 +126,6 @@ object ShizukuUpdateInstaller {
         .daemon(false)
         .version(1)
 
-    /**
-     * Installs [apk] through Shizuku. Requests Shizuku permission first if needed.
-     */
     suspend fun install(context: Context, apk: File): ShizukuInstallResult {
         val appContext = context.applicationContext
 
@@ -195,7 +182,7 @@ object ShizukuUpdateInstaller {
                 when (status) {
                     PackageInstaller.STATUS_SUCCESS -> result.complete(ShizukuInstallResult.Success)
                     PackageInstaller.STATUS_PENDING_USER_ACTION -> {
-                        // Rare with Shizuku, but let the user confirm if the system asks.
+
                         val confirm = IntentCompat.getParcelableExtra(intent, Intent.EXTRA_INTENT, Intent::class.java)
                         if (confirm != null) {
                             confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

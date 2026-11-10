@@ -5,7 +5,6 @@ enum class FapFolderSearchTab(val param: String, val siteParam: String) {
     USERS("users", "users"),
     COMMUNITIES("communities", "groups");
 
-    /** Value of the `get` field the site uses for load.php on this tab. */
     val feedGet: String
         get() = when (this) {
             POSTS -> "search_posts"

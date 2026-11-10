@@ -16,9 +16,19 @@ import java.io.File
 
 val Context.updateFile: File get() = File(applicationContext.cacheDir, "update.apk")
 
+private val versionCodeRegex = Regex("""\+(\d+)""")
+private val semverRegex = Regex("""(\d+)\.(\d+)\.(\d+)""")
+
 fun checkNeedUpdate(versionName: String): Boolean {
-    val latestVersionCode = versionName.substringAfter("+", "").toIntOrNull() ?: Int.MAX_VALUE
-    return BuildConfig.VERSION_CODE < latestVersionCode
+    versionCodeRegex.find(versionName)?.groupValues?.get(1)?.toIntOrNull()?.let {
+        return BuildConfig.VERSION_CODE < it
+    }
+    val latest = semverRegex.find(versionName)?.destructured?.toList()?.map { it.toInt() }
+        ?: return false
+    val current = semverRegex.find(BuildConfig.VERSION_NAME)?.destructured?.toList()?.map { it.toInt() }
+        ?: return false
+    for (i in 0..2) if (latest[i] != current[i]) return latest[i] > current[i]
+    return false
 }
 
 internal fun Context.getUpdateIfExists(latest: Latest): File? {
@@ -45,7 +55,7 @@ suspend fun Context.installApkPackage(file: File) {
                     (result as? ShizukuInstallResult.Failed)?.message.orEmpty(),
                 )
                 GlobalToasts.show(msg, level = GlobalToasts.ToastLevel.WARNING)
-                // fall through to the system installer
+
             }
         }
     }
