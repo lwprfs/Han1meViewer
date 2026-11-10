@@ -985,4 +985,11 @@ hanime1.me以外のドメインは、特定の時間帯にhanime1.meにリダイ
     <string name="shizuku_not_running_short">Shizuku が起動していません。先に起動してください</string>
     <string name="shizuku_permission_denied_short">Shizuku の権限が拒否されました。Shizuku の許可アプリで有効にしてください</string>
     <string name="shizuku_permission_granted">Shizuku の権限を取得しました</string>
+    <string name="apk_install_legacy">従来の方法（システムのインストール画面）</string>
+    <string name="apk_install_package_installer">PackageInstaller（アプリ内）</string>
+    <string name="apk_install_shizuku">Shizuku</string>
+    <string name="apk_installing">アップデートをインストール中…</string>
+    <string name="apk_install_failed">インストールに失敗しました</string>
+    <string name="apk_install_shizuku_permission_denied">Shizuku の権限が拒否されました</string>
+    <string name="apk_install_shizuku_stopped">Shizuku が起動していません。先に起動してください</string>
 </resources>

@@ -1038,4 +1038,11 @@
     <string name="shizuku_not_running_short">Shizuku 未運行，請先啟動 Shizuku</string>
     <string name="shizuku_permission_denied_short">Shizuku 授權被拒絕，請在 Shizuku 的已授權應用中開啟</string>
     <string name="shizuku_permission_granted">已獲得 Shizuku 授權</string>
+    <string name="apk_install_legacy">傳統安裝（系統安裝介面）</string>
+    <string name="apk_install_package_installer">PackageInstaller（應用內安裝）</string>
+    <string name="apk_install_shizuku">Shizuku</string>
+    <string name="apk_installing">正在安裝更新…</string>
+    <string name="apk_install_failed">安裝失敗</string>
+    <string name="apk_install_shizuku_permission_denied">Shizuku 授權被拒絕</string>
+    <string name="apk_install_shizuku_stopped">Shizuku 未運行，請先啟動 Shizuku</string>
 </resources>
