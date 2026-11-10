@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -131,6 +132,8 @@ fun SiteSwitchDialog(
         modifier = modifier,
         onDismissRequest = onDismiss,
         sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
         Column(
             modifier = Modifier
@@ -142,12 +145,21 @@ fun SiteSwitchDialog(
             verticalArrangement = Arrangement.spacedBy(SpacingNormal),
         ) {
             Column(modifier = Modifier.padding(bottom = SpacingNormal)) {
-                Text(
-                    text = stringResource(R.string.site_switch_site),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(width = 4.dp, height = 20.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(MaterialTheme.colorScheme.primary),
+                    )
+                    Spacer(Modifier.width(SpacingNormal))
+                    Text(
+                        text = stringResource(R.string.site_switch_site),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
                 Text(
                     text = stringResource(R.string.site_tap_a_source_to_jump_straight),
                     style = MaterialTheme.typography.bodySmall,
@@ -192,17 +204,23 @@ private fun SiteSwitchTile(
     modifier: Modifier = Modifier,
 ) {
 
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(20.dp)
 
     Surface(
         modifier = modifier
             .clip(shape)
             .clickable(onClick = onClick),
         shape = shape,
-        tonalElevation = 2.dp,
-        shadowElevation = 1.dp,
-        color = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onSurface,
+        color = if (isCurrent) {
+            MaterialTheme.colorScheme.secondaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceContainer
+        },
+        contentColor = if (isCurrent) {
+            MaterialTheme.colorScheme.onSecondaryContainer
+        } else {
+            MaterialTheme.colorScheme.onSurface
+        },
     ) {
         Column(
             modifier = Modifier
@@ -221,7 +239,7 @@ private fun SiteSwitchTile(
                         .clip(RoundedCornerShape(12.dp))
                         .background(
                             if (option.logoRes != null) {
-                                MaterialTheme.colorScheme.surfaceVariant
+                                MaterialTheme.colorScheme.surfaceContainerHighest
                             } else {
                                 MaterialTheme.colorScheme.primaryContainer
                             }
