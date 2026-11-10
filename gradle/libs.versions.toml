@@ -1,7 +1,7 @@
 [versions]
 # Plugins
 aboutlibraries = "15.0.4"
-androidGradle = "9.3.1"
+androidGradle = "9.1.0"
 biometric = "1.1.0"
 coilCompose = "3.5.0"
 composeAvatarCropper = "1.0.0"
@@ -183,6 +183,7 @@ android-jetpack = [
 [plugins]
 com-android-application = { id = "com.android.application", version.ref = "androidGradle" }
 com-android-library = { id = "com.android.library", version.ref = "androidGradle" }
+com-mikepenz-aboutlibraries = { id = "com.mikepenz.aboutlibraries.plugin", version.ref = "aboutlibraries" }
 com-google-devtools-ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 org-jetbrains-kotlin-plugin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "serializationPlugin" }
 org-jetbrains-kotlin-plugin-parcelize = { id = "org.jetbrains.kotlin.plugin.parcelize", version.ref = "kotlin" }
