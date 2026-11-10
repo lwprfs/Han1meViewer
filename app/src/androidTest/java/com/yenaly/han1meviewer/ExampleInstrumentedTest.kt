@@ -14,6 +14,6 @@ class ExampleInstrumentedTest {
     fun useAppContext() {
 
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("com.yenaly.han1meviewer", appContext.packageName)
+        assertEquals("com.yenaly.hani.extended", appContext.packageName)
     }
 }
