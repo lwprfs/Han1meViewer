@@ -113,8 +113,14 @@ object FapFolderUrlUtils {
             val tag = hashtagMatch.groupValues[1]
             "/search/hashtag/${URLEncoder.encode(tag, "UTF-8")}"
         } else {
-            "/search/${URLEncoder.encode(trimmed, "UTF-8")}"
+            "/search?query=${URLEncoder.encode(trimmed, "UTF-8")}"
         }
+    }
+
+    fun toSearchUrlPath(rawQuery: String, tab: com.yenaly.han1meviewer.FapFolder.data.model.FapFolderSearchTab): String {
+        val base = toSearchUrlPath(rawQuery)
+        if (base.startsWith("/search/hashtag/") || !base.contains("?query=")) return base
+        return "$base&tab=${tab.siteParam}"
     }
 
     fun toHashtagUrlPath(tag: String): String {

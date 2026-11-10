@@ -115,6 +115,23 @@ fun FapFolderSearchScreen(
             }
     }
 
+    LaunchedEffect(
+        uiState.visibleItems.size,
+        uiState.hasMore,
+        uiState.isLoadingMore,
+        uiState.isLoading,
+        uiState.activeFilter,
+    ) {
+        if (uiState.activeFilter != FapFolderConstants.FILTER_ALL &&
+            uiState.activeTab == FapFolderSearchTab.POSTS &&
+            uiState.items.isNotEmpty() &&
+            uiState.visibleItems.size < 4 &&
+            uiState.hasMore && !uiState.isLoadingMore && !uiState.isLoading
+        ) {
+            viewModel.loadMore()
+        }
+    }
+
     fun submit() {
         viewModel.setQuery(queryText)
         viewModel.submit()
@@ -321,6 +338,12 @@ fun FapFolderSearchScreen(
                         )
                     }
 
+                    uiState.visibleItems.isEmpty() && !uiState.hasMore && !uiState.isLoadingMore -> {
+                        SearchHint(
+                            message = stringResource(R.string.fap_no_results_for, queryText.ifBlank { "this query" }),
+                        )
+                    }
+
                     else -> {
                         LazyColumn(
                             state = listState,
@@ -333,7 +356,7 @@ fun FapFolderSearchScreen(
                             ),
                             verticalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
-                            items(uiState.items, key = { it.stableKey }) { item ->
+                            items(uiState.visibleItems, key = { it.stableKey }) { item ->
                                 when (item) {
                                     is FapFolderFeedItem.Post -> {
                                         val post = item.post

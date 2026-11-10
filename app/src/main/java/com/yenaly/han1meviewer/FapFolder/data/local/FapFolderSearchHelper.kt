@@ -56,10 +56,9 @@ object FapFolderSearchHelper {
         val path = if (isHashtag) {
             FapFolderUrlUtils.toHashtagUrlPath(rawQuery)
         } else {
-            FapFolderUrlUtils.toSearchUrlPath(rawQuery)
+            FapFolderUrlUtils.toSearchUrlPath(rawQuery, tab)
         }
-        val url = base + path
-        return if (tab == FapFolderSearchTab.POSTS) url else "$url?tab=${tab.param}"
+        return base + path
     }
 
     fun buildHashtagUrl(tag: String): String {

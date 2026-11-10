@@ -1,13 +1,24 @@
 package com.yenaly.han1meviewer.FapFolder.data.model
 
-enum class FapFolderSearchTab(val param: String) {
-    POSTS("posts"),
-    USERS("users"),
-    COMMUNITIES("communities");
+enum class FapFolderSearchTab(val param: String, val siteParam: String) {
+    POSTS("posts", "posts"),
+    USERS("users", "users"),
+    COMMUNITIES("communities", "groups");
+
+    /** Value of the `get` field the site uses for load.php on this tab. */
+    val feedGet: String
+        get() = when (this) {
+            POSTS -> "search_posts"
+            USERS -> "search_users"
+            COMMUNITIES -> "search_groups"
+        }
 
     companion object {
         fun fromParam(value: String?): FapFolderSearchTab =
-            entries.firstOrNull { it.param.equals(value, ignoreCase = true) } ?: POSTS
+            entries.firstOrNull {
+                it.param.equals(value, ignoreCase = true) ||
+                    it.siteParam.equals(value, ignoreCase = true)
+            } ?: POSTS
     }
 }
 

@@ -45,13 +45,16 @@ object FapFolderSearchParser {
 
         val streamEl = doc.selectFirst("div.js_posts_stream")
 
-        val feedGet = streamEl?.attr("data-get")?.takeIf { it.isNotBlank() }
-        val feedFilter = streamEl?.attr("data-filter")?.takeIf { it.isNotBlank() }
+        val seeMore = doc.selectFirst(".js_see-more-infinite") ?: doc.selectFirst(".js_see-more")
+
+        val feedGet = seeMore?.attr("data-get")?.takeIf { it.isNotBlank() }
+            ?: streamEl?.attr("data-get")?.takeIf { it.isNotBlank() }
+        val feedFilter = seeMore?.attr("data-filter")?.takeIf { it.isNotBlank() }
+            ?: streamEl?.attr("data-filter")?.takeIf { it.isNotBlank() }
         val feedId = streamEl?.attr("data-id")?.takeIf { it.isNotBlank() }
         val feedHashtag = streamEl?.attr("data-hashtag")?.takeIf { it.isNotBlank() }
         val feedSearch = streamEl?.attr("data-search")?.takeIf { it.isNotBlank() }
 
-        val seeMore = doc.selectFirst(".js_see-more-infinite")
         val hasMore = when {
             seeMore == null -> false
             seeMore.hasClass("done") -> false
@@ -93,14 +96,12 @@ object FapFolderSearchParser {
     }
 
     fun parseUserRows(doc: Document, baseUrl: String): List<FapFolderUserRow> {
-        return doc.select(".data-container[data-uid], .data-container[href]").mapNotNull { el ->
+        return doc.select(".data-container").mapNotNull { el ->
             if (el.containsOnlyAdContent()) return@mapNotNull null
             val uid = el.attr("data-uid").toLongOrNull()
                 ?: el.selectFirst("[data-uid]")?.attr("data-uid")?.toLongOrNull()
-            val href = el.absUrl("href").takeIf { it.isNotBlank() }
-                ?: el.attr("href").takeIf { it.isNotBlank() }
-                    ?.let(FapFolderUrlUtils::absoluteUrl)
-                ?: return@mapNotNull null
+            val href = resolveRowHref(el) ?: return@mapNotNull null
+            if (href.contains("/groups/")) return@mapNotNull null
             val username = FapFolderUrlUtils.extractUsername(href) ?: return@mapNotNull null
             val name = FapFolderHtmlUtils.cleanText(
                 el.selectFirst(".data-content .name")?.text()
@@ -131,12 +132,10 @@ object FapFolderSearchParser {
     }
 
     fun parseCommunityRows(doc: Document, baseUrl: String): List<FapFolderGroupRow> {
-        return doc.select(".data-container[href*='/groups/']").mapNotNull { el ->
+        return doc.select(".data-container, .data-container-sugg").mapNotNull { el ->
             if (el.containsOnlyAdContent()) return@mapNotNull null
-            val href = el.absUrl("href").takeIf { it.isNotBlank() }
-                ?: el.attr("href").takeIf { it.isNotBlank() }
-                    ?.let(FapFolderUrlUtils::absoluteUrl)
-                ?: return@mapNotNull null
+            val href = resolveRowHref(el, "/groups/") ?: return@mapNotNull null
+            if (!href.contains("/groups/")) return@mapNotNull null
             val slug = FapFolderUrlUtils.extractGroupSlug(href) ?: return@mapNotNull null
             val name = FapFolderHtmlUtils.cleanText(
                 el.selectFirst(".data-content .name")?.text()
@@ -154,7 +153,10 @@ object FapFolderSearchParser {
                 else -> GroupVisibility.UNKNOWN
             }
             val followerCount = FapFolderHtmlUtils.parseLeadingInt(
-                el.selectFirst(".data-content > div:not(.name):not(.text)")?.text()
+                el.select(".data-content div:not(.float-right):not(.name):not(.text)")
+                    .map { FapFolderHtmlUtils.cleanText(it.ownText()) }
+                    .firstOrNull { t -> t.any { it.isDigit() } }
+                    ?: el.selectFirst(".data-content > div:not(.name):not(.text)")?.text()
             )
             FapFolderGroupRow(
                 groupId = groupId,
@@ -166,6 +168,23 @@ object FapFolderSearchParser {
                 visibility = visibility,
             )
         }
+    }
+
+    private fun resolveRowHref(el: Element, mustContain: String? = null): String? {
+        val candidates = listOfNotNull(
+            el.takeIf { it.hasAttr("href") },
+            el.selectFirst("a.data-avatar[href]"),
+            el.selectFirst(".name a[href]"),
+            el.selectFirst("a[href]"),
+        )
+        for (a in candidates) {
+            val href = a.absUrl("href").takeIf { it.isNotBlank() }
+                ?: a.attr("href").takeIf { it.isNotBlank() }
+                    ?.let(FapFolderUrlUtils::absoluteUrl)
+                ?: continue
+            if (mustContain == null || href.contains(mustContain)) return href
+        }
+        return null
     }
 
     fun isNoDataState(doc: Document): Boolean {

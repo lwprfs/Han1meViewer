@@ -11,6 +11,7 @@ import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderFeedItem
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderLoadMoreRequest
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderSearchResult
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderSearchTab
+import com.yenaly.han1meviewer.FapFolder.data.model.PostVariant
 import com.yenaly.han1meviewer.FapFolder.data.parser.FapFolderAutocompleteParser
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderFeedPaging
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderNetworkRepo
@@ -45,7 +46,29 @@ data class FapFolderSearchUiState(
     val autocompleteLoading: Boolean = false,
     val autocompleteVisible: Boolean = false,
     val autocompleteError: String? = null,
+    val feedGet: String? = null,
+    val feedQuery: String? = null,
 ) {
+    /** Items after applying the client-side All / Photos / Videos filter (posts tab only). */
+    val visibleItems: List<FapFolderFeedItem>
+        get() {
+            if (activeTab != FapFolderSearchTab.POSTS || activeFilter == FapFolderConstants.FILTER_ALL) {
+                return items
+            }
+            return items.filter { item ->
+                if (item !is FapFolderFeedItem.Post) return@filter true
+                val post = item.post
+                val hasVideo = post.primaryVideo != null ||
+                    PostVariant.VIDEO in post.variants
+                val hasImage = post.primaryImage != null || post.firstGallery != null
+                when (activeFilter) {
+                    FapFolderConstants.FILTER_VIDEOS -> hasVideo
+                    FapFolderConstants.FILTER_PHOTOS -> hasImage && !hasVideo
+                    else -> true
+                }
+            }
+        }
+
     val posts: List<FapFolderFeedItem.Post>
         get() = items.filterIsInstance<FapFolderFeedItem.Post>()
 
@@ -125,8 +148,8 @@ class FapFolderSearchViewModel(application: Application) : AndroidViewModel(appl
 
     fun changeFilter(filter: String) {
         if (_uiState.value.activeFilter == filter) return
+        // The site has no photo/video filter for search, so filter the loaded results locally.
         _uiState.update { it.copy(activeFilter = filter) }
-        if (_uiState.value.rawQuery.isNotBlank()) submit()
     }
 
     fun submit() {
@@ -149,6 +172,8 @@ class FapFolderSearchViewModel(application: Application) : AndroidViewModel(appl
                 items = emptyList(),
                 currentOffset = 1,
                 totalPagesLoaded = 0,
+                feedGet = null,
+                feedQuery = null,
                 autocompleteVisible = false,
                 autocompleteRows = emptyList(),
             )
@@ -191,26 +216,42 @@ class FapFolderSearchViewModel(application: Application) : AndroidViewModel(appl
         loadMoreJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoadingMore = true, errorMessage = null) }
 
-            val req = FapFolderFeedPaging.search(
-                query = state.rawQuery,
-                offset = state.currentOffset,
-                filter = state.activeFilter,
-                premfeed = FapFolderConstants.PREMFEED_OFF,
-                time = FapFolderConstants.TIME_NO_FILTER,
-                hashtag = state.isHashtag,
-            )
+            val cleanQuery = state.rawQuery.trim().removePrefix("#")
+            val pageGet = state.feedGet
+            val req = when {
+                !pageGet.isNullOrBlank() && pageGet.startsWith("search_") ->
+                    FapFolderFeedPaging.searchFeed(
+                        get = pageGet,
+                        query = state.feedQuery?.takeIf { it.isNotBlank() } ?: cleanQuery,
+                        offset = state.currentOffset,
+                    )
+                state.isHashtag -> FapFolderFeedPaging.search(
+                    query = cleanQuery,
+                    offset = state.currentOffset,
+                    filter = FapFolderConstants.FILTER_ALL,
+                    premfeed = FapFolderConstants.PREMFEED_OFF,
+                    time = FapFolderConstants.TIME_NO_FILTER,
+                    hashtag = true,
+                )
+                else -> FapFolderFeedPaging.searchFeed(
+                    get = state.activeTab.feedGet,
+                    query = cleanQuery,
+                    offset = state.currentOffset,
+                )
+            }
 
             FapFolderNetworkRepo.loadMore(req).collect { page ->
                 when (page) {
                     is PageLoadingState.Loading -> Unit
                     is PageLoadingState.Success -> {
                         val newItems = page.info
+                        val before = _uiState.value.items.size
                         val merged = mergeItems(_uiState.value.items, newItems)
                         _uiState.update {
                             it.copy(
                                 items = merged,
                                 isLoadingMore = false,
-                                hasMore = newItems.isNotEmpty(),
+                                hasMore = newItems.isNotEmpty() && merged.size > before,
                                 errorMessage = null,
                                 currentOffset = it.currentOffset + 1,
                                 totalPagesLoaded = it.totalPagesLoaded + 1,
@@ -383,6 +424,8 @@ class FapFolderSearchViewModel(application: Application) : AndroidViewModel(appl
                 items = merged,
                 currentOffset = 1,
                 totalPagesLoaded = 1,
+                feedGet = result.feedGet,
+                feedQuery = result.feedFilter,
             )
         }
     }

@@ -1113,4 +1113,7 @@
     <string name="rouvideo_trending">本週熱門</string>
     <string name="rouvideo_troubleshooting">疑難排解</string>
     <string name="rouvideo_views_count">%1$s 次觀看</string>
+    <string name="fap_range_all_time">全部時間</string>
+    <string name="fap_range_month">本月</string>
+    <string name="fap_range_week">本週</string>
 </resources>

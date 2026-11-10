@@ -184,6 +184,16 @@ fun FapFolderHomeScreen(
                 },
             )
 
+            if (uiState.activeTab == FapFolderHomeTab.HOT) {
+                HotRangeRow(
+                    selected = uiState.hotRange,
+                    onSelect = { range ->
+                        scope.launch { listState.scrollToItem(0) }
+                        viewModel.changeHotRange(range)
+                    },
+                )
+            }
+
             PullToRefreshBox(
                 isRefreshing = isRefreshing,
                 onRefresh = {
@@ -312,6 +322,36 @@ private fun HomeTabRow(
 }
 
 @Composable
+private fun HotRangeRow(
+    selected: FapFolderHotRange,
+    onSelect: (FapFolderHotRange) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        SelectableTag(
+            text = stringResource(R.string.fap_range_all_time),
+            selected = selected == FapFolderHotRange.ALL_TIME,
+            onClick = { onSelect(FapFolderHotRange.ALL_TIME) },
+        )
+        SelectableTag(
+            text = stringResource(R.string.fap_range_month),
+            selected = selected == FapFolderHotRange.MONTH,
+            onClick = { onSelect(FapFolderHotRange.MONTH) },
+        )
+        SelectableTag(
+            text = stringResource(R.string.fap_range_week),
+            selected = selected == FapFolderHotRange.WEEK,
+            onClick = { onSelect(FapFolderHotRange.WEEK) },
+        )
+    }
+}
+
+@Composable
 private fun FeedList(
     activeTab: FapFolderHomeTab,
     items: List<FapFolderFeedItem>,
@@ -338,7 +378,7 @@ private fun FeedList(
         ),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        if (activeTab == FapFolderHomeTab.DISCOVER) {
+        if (activeTab == FapFolderHomeTab.DISCOVER || activeTab == FapFolderHomeTab.HOT) {
             if (trending.isNotEmpty()) {
                 item(key = "__trending__") {
                     FapFolderTrendingCard(tags = trending, onTagClick = onOpenHashtag)

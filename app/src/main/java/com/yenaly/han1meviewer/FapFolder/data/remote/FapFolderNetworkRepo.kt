@@ -521,6 +521,15 @@ object FapFolderNetworkRepo {
         val base = basePath()
         val uploads = uploadsBase()
         return when {
+            get.startsWith("search_") -> FapFolderSearchParser.parseLoadMoreHtml(
+                htmlFragment = dataHtml, baseUrl = base,
+                tab = when {
+                    get.contains("user") -> FapFolderSearchTab.USERS
+                    get.contains("group") || get.contains("communit") ->
+                        FapFolderSearchTab.COMMUNITIES
+                    else -> FapFolderSearchTab.POSTS
+                },
+            )
             request.search != null || request.hashtag != null ->
                 FapFolderSearchParser.parseLoadMoreHtml(
                     htmlFragment = dataHtml, baseUrl = base,
@@ -657,7 +666,7 @@ object FapFolderNetworkRepo {
     ): Flow<WebsiteState<FapFolderSearchResult>> = flow {
         emit(WebsiteState.Loading)
         val path = if (isHashtag) FapFolderUrlUtils.toHashtagUrlPath(query)
-        else FapFolderUrlUtils.toSearchUrlPath(query)
+        else FapFolderUrlUtils.toSearchUrlPath(query, tab)
         val url = basePath() + path
         try {
             PageGetThrottle.await()

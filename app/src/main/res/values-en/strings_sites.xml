@@ -1113,4 +1113,7 @@
     <string name="rouvideo_trending">Trending this week</string>
     <string name="rouvideo_troubleshooting">Troubleshooting</string>
     <string name="rouvideo_views_count">%1$s views</string>
+    <string name="fap_range_all_time">All time</string>
+    <string name="fap_range_month">Month</string>
+    <string name="fap_range_week">Week</string>
 </resources>

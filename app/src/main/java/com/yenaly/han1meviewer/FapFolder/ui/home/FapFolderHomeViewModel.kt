@@ -49,8 +49,16 @@ enum class FapFolderHomeTab(
     }
 }
 
+/** Hot tab range selector. [time] is the index the site sends as `time` to load.php. */
+enum class FapFolderHotRange(val time: Int) {
+    ALL_TIME(0),
+    MONTH(1),
+    WEEK(2),
+}
+
 data class FapFolderHomeUiState(
     val activeTab: FapFolderHomeTab = FapFolderHomeTab.MY_FEED,
+    val hotRange: FapFolderHotRange = FapFolderHotRange.ALL_TIME,
 
     val items: List<FapFolderFeedItem> = emptyList(),
     val firstLoad: Boolean = true,
@@ -172,10 +180,28 @@ class FapFolderHomeViewModel(application: Application) : AndroidViewModel(applic
         refresh()
     }
 
-    fun changeHotRange() {
-        if (_uiState.value.activeTab != FapFolderHomeTab.HOT) return
+    fun changeHotRange(range: FapFolderHotRange) {
+        val state = _uiState.value
+        if (state.activeTab != FapFolderHomeTab.HOT || state.hotRange == range) return
+        _uiState.update {
+            it.copy(
+                hotRange = range,
+                items = emptyList(),
+                firstLoad = true,
+                hasMore = true,
+                filterSwitching = true,
+                feedLoadedAt = 0L,
+            )
+        }
         refresh()
     }
+
+    private fun currentTime(state: FapFolderHomeUiState): Int =
+        if (state.activeTab == FapFolderHomeTab.HOT && state.hotRange != FapFolderHotRange.ALL_TIME) {
+            state.hotRange.time
+        } else {
+            FapFolderConstants.TIME_NO_FILTER
+        }
 
     fun loadMore() = loadMoreInternal(forceAfterError = false)
 
@@ -202,7 +228,7 @@ class FapFolderHomeViewModel(application: Application) : AndroidViewModel(applic
                 type = state.feedType,
                 uid = state.feedUid,
                 premfeed = FapFolderConstants.PREMFEED_OFF,
-                time = FapFolderConstants.TIME_NO_FILTER,
+                time = currentTime(state),
             )
 
             FapFolderNetworkRepo.loadMore(request).collect { pageState ->
@@ -277,6 +303,11 @@ class FapFolderHomeViewModel(application: Application) : AndroidViewModel(applic
     }
 
     private suspend fun loadFirstPage(tab: FapFolderHomeTab) {
+        val range = _uiState.value.hotRange
+        if (tab == FapFolderHomeTab.HOT && range != FapFolderHotRange.ALL_TIME) {
+            loadHotRangeFirstPage(range)
+            return
+        }
         val flow = when (tab) {
             FapFolderHomeTab.MY_FEED -> FapFolderNetworkRepo.getHomePageWithExtras()
             FapFolderHomeTab.HOT -> FapFolderNetworkRepo.getHotPageWithExtras()
@@ -321,6 +352,70 @@ class FapFolderHomeViewModel(application: Application) : AndroidViewModel(applic
                 }
                 is WebsiteState.Error -> {
                     val msg = state.throwable.message
+                    val isSession = msg?.contains("session", ignoreCase = true) == true
+                    _uiState.update {
+                        it.copy(
+                            firstLoad = false,
+                            isRefreshing = false,
+                            isLoadingMore = false,
+                            errorMessage = if (isSession) null
+                            else (msg ?: applicationContext.getString(R.string.fap_failed_to_load_fapfolder)),
+                            sessionExpired = isSession,
+                            filterSwitching = false,
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    /** Month / Week: the site fetches these with load.php (offset 0, time = 1 or 2). */
+    private suspend fun loadHotRangeFirstPage(range: FapFolderHotRange) {
+        val request = FapFolderLoadMoreRequest(
+            get = FapFolderConstants.FEED_GET_POPULAR,
+            offset = 0,
+            filter = FapFolderConstants.FILTER_ALL,
+            premfeed = FapFolderConstants.PREMFEED_OFF,
+            time = range.time,
+        )
+        FapFolderNetworkRepo.loadMore(request).collect { pageState ->
+            when (pageState) {
+                is PageLoadingState.Loading -> Unit
+                is PageLoadingState.Success -> {
+                    val merged = mergeItems(emptyList(), pageState.info)
+                    _uiState.update {
+                        it.copy(
+                            items = merged,
+                            firstLoad = false,
+                            isRefreshing = false,
+                            isLoadingMore = false,
+                            hasMore = merged.isNotEmpty(),
+                            errorMessage = null,
+                            sessionExpired = false,
+                            feedGet = FapFolderConstants.FEED_GET_POPULAR,
+                            feedFilter = FapFolderConstants.FILTER_ALL,
+                            feedId = null,
+                            feedType = null,
+                            feedUid = null,
+                            nextTime = 1,
+                            offset = 0,
+                            totalPagesLoaded = 1,
+                            feedLoadedAt = System.currentTimeMillis(),
+                            filterSwitching = false,
+                        )
+                    }
+                }
+                is PageLoadingState.NoMoreData -> _uiState.update {
+                    it.copy(
+                        items = emptyList(),
+                        firstLoad = false,
+                        isRefreshing = false,
+                        hasMore = false,
+                        filterSwitching = false,
+                    )
+                }
+                is PageLoadingState.Error -> {
+                    val msg = pageState.throwable.message
                     val isSession = msg?.contains("session", ignoreCase = true) == true
                     _uiState.update {
                         it.copy(

@@ -101,6 +101,26 @@ object FapFolderFeedPaging {
         )
     }
 
+    /** Search feeds used by the site: get=search_posts|search_users|search_groups, filter=<query>. */
+    fun searchFeed(
+        get: String,
+        query: String,
+        offset: Int,
+        premfeed: Int = FapFolderConstants.PREMFEED_OFF,
+        time: Int = FapFolderConstants.TIME_NO_FILTER,
+    ): FapFolderLoadMoreRequest = FapFolderLoadMoreRequest(
+        get = get,
+        offset = offset,
+        filter = query.trim().removePrefix("#"),
+        id = null,
+        type = null,
+        uid = null,
+        premfeed = premfeed,
+        time = time,
+        search = null,
+        hashtag = null,
+    )
+
     fun fromStream(
         get: String?,
         filter: String?,
