@@ -50,8 +50,8 @@ class HUpdateWorker(
 
         const val DOWNLOAD_LINK = "download_link"
         const val NODE_ID = "node_id"
-        const val DELTA_LINK = "delta_link"
-        const val DELTA_BASE = "delta_base"
+        const val DELTA_LINKS = "delta_links"
+        const val DELTA_BASES = "delta_bases"
         const val UPDATE_APK = "update_apk"
         const val ACTION_INSTALL_UPDATE = "com.yenaly.han1meviewer.ACTION_INSTALL_UPDATE"
 
@@ -62,8 +62,8 @@ class HUpdateWorker(
             val data = workDataOf(
                 DOWNLOAD_LINK to latest.downloadLink,
                 NODE_ID to latest.nodeId,
-                DELTA_LINK to latest.delta?.downloadLink.orEmpty(),
-                DELTA_BASE to latest.delta?.baseSha256Prefix.orEmpty(),
+                DELTA_LINKS to latest.deltas.map { it.downloadLink }.toTypedArray(),
+                DELTA_BASES to latest.deltas.map { it.baseSha256Prefix.orEmpty() }.toTypedArray(),
             )
             val req = OneTimeWorkRequestBuilder<HUpdateWorker>()
                 .addTag(TAG)
@@ -102,8 +102,8 @@ class HUpdateWorker(
 
     private val downloadLink by inputData(DOWNLOAD_LINK, EMPTY_STRING)
     private val nodeId by inputData(NODE_ID, EMPTY_STRING)
-    private val deltaLink by inputData(DELTA_LINK, EMPTY_STRING)
-    private val deltaBase by inputData(DELTA_BASE, EMPTY_STRING)
+    private val deltaLinks: Array<String> by lazy { inputData.getStringArray(DELTA_LINKS) ?: emptyArray() }
+    private val deltaBases: Array<String> by lazy { inputData.getStringArray(DELTA_BASES) ?: emptyArray() }
     private val downloadId = Random.nextInt()
 
     override suspend fun doWork(): Result {
@@ -113,10 +113,11 @@ class HUpdateWorker(
         with(HUpdater) {
             val file = context.updateFile.apply { delete() }
             val inject = runSuspendCatching {
-                val delta = deltaLink.takeIf { it.isNotEmpty() }?.let {
-                    Latest.Delta(it, deltaBase.takeIf { base -> base.isNotEmpty() })
+                val deltas = deltaLinks.mapIndexedNotNull { i, link ->
+                    if (link.isEmpty()) null
+                    else Latest.Delta(link, deltaBases.getOrNull(i)?.takeIf { it.isNotEmpty() })
                 }
-                file.injectUpdate(downloadLink, delta) { progress, fileSize, downloadedSize ->
+                file.injectUpdate(downloadLink, deltas) { progress, fileSize, downloadedSize ->
                     updateNotification(progress, fileSize, downloadedSize)
                 }
             }

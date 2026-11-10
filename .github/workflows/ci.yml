@@ -61,26 +61,29 @@ jobs:
           HA_GITHUB_TOKEN: ${{ secrets.HA_GITHUB_TOKEN }}
           HA1_VERSION_SOURCE: 'ci'
 
-      # ---- Delta update (CI channel): diff against the previous successful CI build ----
-      - name: Find previous successful CI build
+      # ---- Delta update (CI channel): diff against the last few CI builds + the latest release ----
+      # A user who skipped a few CI builds can still update via delta as long as they are on
+      # one of these bases. Anyone older falls back to the full APK.
+      - name: Find previous successful CI builds
         id: previous
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CI_DELTA_BUILDS: 3
         run: |
           JSON=$(gh run list --repo "${{ github.repository }}" --workflow ci.yml --branch main \
-            --event push --status success --limit 5 --json databaseId,headSha || echo '[]')
-          RUN=$(echo "$JSON" | jq -r --arg sha "$GITHUB_SHA" \
-            '[.[] | select(.headSha != $sha)][0] // empty | "\(.databaseId) \(.headSha)"')
-          if [ -z "$RUN" ]; then
+            --event push --status success --limit 15 --json databaseId,headSha || echo '[]')
+          echo "$JSON" | jq -r --arg sha "$GITHUB_SHA" --argjson n "$CI_DELTA_BUILDS" \
+            '[.[] | select(.headSha != $sha)] | unique_by(.headSha) | .[0:$n][] | "\(.databaseId) \(.headSha)"' \
+            > previous-runs.txt || true
+          cat previous-runs.txt
+          if [ -s previous-runs.txt ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
             echo "No previous successful CI build found."
             echo "available=false" >> "$GITHUB_OUTPUT"
-            exit 0
           fi
-          echo "run_id=${RUN%% *}" >> "$GITHUB_OUTPUT"
-          echo "sha=${RUN##* }" >> "$GITHUB_OUTPUT"
-          echo "available=true" >> "$GITHUB_OUTPUT"
 
-      - name: Download previous CI APK
+      - name: Download previous CI APKs
         id: previous_apk
         if: steps.previous.outputs.available == 'true'
         continue-on-error: true
@@ -88,22 +91,67 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p previous
-          gh run download "${{ steps.previous.outputs.run_id }}" \
-            --repo "${{ github.repository }}" \
-            --name "app-release-${{ steps.previous.outputs.sha }}" \
-            --dir previous
+          OK=0
+          while read -r RUN_ID SHA; do
+            [ -n "$RUN_ID" ] || continue
+            if gh run download "$RUN_ID" --repo "${{ github.repository }}" \
+                 --name "app-release-$SHA" --dir "previous/$SHA"; then
+              OK=$((OK + 1))
+            else
+              echo "Could not download artifact of $SHA (expired?), skipping."
+            fi
+          done < previous-runs.txt
+          [ "$OK" -gt 0 ]
 
-      - name: Generate CI delta patch
+      - name: Download latest release APK
+        id: last_release
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG=$(gh release view --repo "${{ github.repository }}" --json tagName -q .tagName)
+          [ -n "$TAG" ] || { echo "No release found."; exit 1; }
+          mkdir -p last-release
+          gh release download "$TAG" --repo "${{ github.repository }}" \
+            --pattern '*.apk' --dir last-release
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      # Slots 1-3: previous CI builds (newest first). Slot "release": latest published release.
+      - name: Generate CI delta patches
         id: ci_delta
-        if: steps.previous_apk.outcome == 'success'
+        if: steps.previous_apk.outcome == 'success' || steps.last_release.outcome == 'success'
         continue-on-error: true
         run: |
           command -v bsdiff >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq bsdiff; }
-          OLD_APK=$(find previous -name '*.apk' | head -n 1)
           NEW_APK=$(ls app/build/outputs/apk/release/HANiEX-v*.apk | head -n 1)
-          bash .github/scripts/make-delta.sh "$OLD_APK" "$NEW_APK" delta-ci
-          if [ -f delta-ci/update.json ]; then
-            echo "base=$(jq -r '.baseSha256[0:16]' delta-ci/update.json)" >> "$GITHUB_OUTPUT"
+          SEEN=" "
+
+          # make_one <old apk> <out dir> <output key>
+          make_one() {
+            local old="$1" out="$2" key="$3" base
+            bash .github/scripts/make-delta.sh "$old" "$NEW_APK" "$out" || return 0
+            [ -f "$out/update.json" ] || return 0
+            base=$(jq -r '.baseSha256[0:16]' "$out/update.json")
+            # artifact names must be unique: skip a base that already has a patch
+            case "$SEEN" in *" $base "*) echo "base $base already covered"; return 0;; esac
+            SEEN="$SEEN$base "
+            echo "$key=$base" >> "$GITHUB_OUTPUT"
+          }
+
+          if [ "${{ steps.previous_apk.outcome }}" = "success" ]; then
+            i=0
+            while read -r RUN_ID SHA; do
+              [ -n "$SHA" ] || continue
+              OLD_APK=$(find "previous/$SHA" -name '*.apk' 2>/dev/null | head -n 1)
+              [ -n "$OLD_APK" ] || continue
+              i=$((i + 1))
+              make_one "$OLD_APK" "delta-ci-$i" "base_$i"
+            done < previous-runs.txt
+          fi
+
+          if [ "${{ steps.last_release.outcome }}" = "success" ]; then
+            OLD_APK=$(find last-release -name '*.apk' | head -n 1)
+            [ -z "$OLD_APK" ] || make_one "$OLD_APK" delta-ci-release base_release
           fi
 
       - name: Upload APK Zip
@@ -113,14 +161,41 @@ jobs:
           path: app/build/outputs/apk/release/HANiEX-v*.apk
           if-no-files-found: error
 
-      - name: Upload CI delta package
-        if: steps.ci_delta.outputs.base != ''
+      - name: Upload CI delta package (CI build #1 back)
+        if: steps.ci_delta.outputs.base_1 != ''
         uses: actions/upload-artifact@v4
         with:
-          name: delta-${{ github.sha }}-base-${{ steps.ci_delta.outputs.base }}
+          name: delta-${{ github.sha }}-base-${{ steps.ci_delta.outputs.base_1 }}
           path: |
-            delta-ci/update.json
-            delta-ci/update.patch
+            delta-ci-1/update.json
+            delta-ci-1/update.patch
+
+      - name: Upload CI delta package (CI build #2 back)
+        if: steps.ci_delta.outputs.base_2 != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: delta-${{ github.sha }}-base-${{ steps.ci_delta.outputs.base_2 }}
+          path: |
+            delta-ci-2/update.json
+            delta-ci-2/update.patch
+
+      - name: Upload CI delta package (CI build #3 back)
+        if: steps.ci_delta.outputs.base_3 != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: delta-${{ github.sha }}-base-${{ steps.ci_delta.outputs.base_3 }}
+          path: |
+            delta-ci-3/update.json
+            delta-ci-3/update.patch
+
+      - name: Upload CI delta package (latest release)
+        if: steps.ci_delta.outputs.base_release != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: delta-${{ github.sha }}-base-${{ steps.ci_delta.outputs.base_release }}
+          path: |
+            delta-ci-release/update.json
+            delta-ci-release/update.patch
 
       - name: Extract version from APK
         id: version
