@@ -10,8 +10,9 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
-    <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Shizuku: makes the app appear in Shizuku's authorized-apps list -->
+    <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" /> <!-- 兼容旧版系统 -->
@@ -20,9 +21,7 @@
         android:maxSdkVersion="32" />
 
     <queries>
-        <!-- 安装方式：检测 Shizuku / MIUI 安装器 -->
         <package android:name="moe.shizuku.privileged.api" />
-        <package android:name="com.miui.packageinstaller" />
         <intent>
             <action android:name="android.intent.action.INSERT" />
             <data android:mimeType="vnd.android.cursor.dir/event" />
@@ -93,11 +92,6 @@
                 android:name="com.yenaly.han1meviewer.HInitializer"
                 android:value="androidx.startup" />
         </provider>
-
-        <service
-            android:name=".util.install.ApkInstallService"
-            android:exported="false"
-            android:foregroundServiceType="dataSync" />
 
         <provider
             android:name="rikka.shizuku.ShizukuProvider"

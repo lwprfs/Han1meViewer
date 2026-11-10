@@ -970,16 +970,16 @@ Recommendations are as follows:\n
     <string name="network_settings_site_summary">Every setting below applies to the selected site</string>
     <string name="network_inherited_suffix">(inherited from Hanime1)</string>
     <string name="custom_hosts_format_ext">IPs separated by commas for all hosts of the site (1.2.3.4,5.6.7.8), or one host per line (example.com=1.2.3.4)</string>
-
-    <!-- 安装方式 / Install method -->
-    <string name="apk_install_method">Install method</string>
-    <string name="apk_install_method_sum">Choose how the update APK is installed</string>
-    <string name="apk_install_legacy">Legacy (system installer)</string>
-    <string name="apk_install_package_installer">PackageInstaller</string>
-    <string name="apk_install_shizuku">Shizuku</string>
-    <string name="apk_install_shizuku_unavailable">Shizuku was not detected. Install and start Shizuku to use this install method.\n\nOpen the download page?</string>
-    <string name="apk_install_shizuku_stopped">Shizuku is not running. Please start Shizuku first</string>
-    <string name="apk_install_shizuku_permission_denied">Shizuku permission was not granted</string>
-    <string name="apk_installing">Installing update…</string>
-    <string name="apk_install_failed">Installation failed. Try a different install method</string>
+    <string name="update_installer">Update installer</string>
+    <string name="update_installer_summary">Choose Shizuku to install updates silently</string>
+    <string name="update_installer_system">System installer</string>
+    <string name="update_installer_shizuku">Shizuku</string>
+    <string name="shizuku_not_installed">Shizuku is not installed. Using the system installer</string>
+    <string name="shizuku_not_running">Shizuku is not running. Using the system installer</string>
+    <string name="shizuku_permission_denied">Shizuku permission denied. Using the system installer</string>
+    <string name="shizuku_install_failed">Shizuku install failed: %1$s. Using the system installer</string>
+    <string name="shizuku_not_installed_short">Shizuku is not installed</string>
+    <string name="shizuku_not_running_short">Shizuku is not running. Start Shizuku first</string>
+    <string name="shizuku_permission_denied_short">Shizuku permission denied. Enable Haniex in Shizuku\'s authorized apps</string>
+    <string name="shizuku_permission_granted">Shizuku permission granted</string>
 </resources>

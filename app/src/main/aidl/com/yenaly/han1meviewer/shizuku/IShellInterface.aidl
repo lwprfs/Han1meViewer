@@ -1,5 +1,8 @@
 package com.yenaly.han1meviewer.shizuku;
 
+import android.content.IntentSender;
+import android.content.res.AssetFileDescriptor;
+
 interface IShellInterface {
     void install(in AssetFileDescriptor apk, in IntentSender intentSender) = 1;
 

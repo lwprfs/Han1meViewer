@@ -31,7 +31,8 @@ import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.UPDATE_NOTIFICATION_CHANNEL
 import com.yenaly.han1meviewer.logic.model.github.Latest
 import com.yenaly.han1meviewer.logic.network.HUpdater
-import com.yenaly.han1meviewer.util.apkInstallPendingIntent
+import com.yenaly.han1meviewer.shizuku.UpdateInstaller
+import com.yenaly.han1meviewer.ui.activity.MainActivity
 import com.yenaly.han1meviewer.util.installApkPackage
 import com.yenaly.han1meviewer.util.runSuspendCatching
 import com.yenaly.han1meviewer.util.updateFile
@@ -52,6 +53,7 @@ class HUpdateWorker(
         const val DELTA_LINK = "delta_link"
         const val DELTA_BASE = "delta_base"
         const val UPDATE_APK = "update_apk"
+        const val ACTION_INSTALL_UPDATE = "com.yenaly.han1meviewer.ACTION_INSTALL_UPDATE"
 
         fun enqueue(context: Context, latest: Latest) {
             val constraints = Constraints.Builder()
@@ -196,7 +198,27 @@ class HUpdateWorker(
 
     @SuppressLint("MissingPermission")
     private fun showInstallNotification(file: File) {
-        val pendingIntent = context.apkInstallPendingIntent(file)
+        val installIntent = if (Preferences.updateInstaller == UpdateInstaller.SHIZUKU) {
+            // Shizuku installs happen inside the app, so reopen it and let MainActivity install.
+            Intent(context, MainActivity::class.java).apply {
+                action = ACTION_INSTALL_UPDATE
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            }
+        } else Intent(Intent.ACTION_VIEW).apply {
+            val uri = FileProvider.getUriForFile(
+                context,
+                FILE_PROVIDER_AUTHORITY,
+                file
+            )
+            setDataAndType(uri, "application/vnd.android.package-archive")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+
+        val pendingIntent = PendingIntent.getActivity(
+            context, 0, installIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
 
         val notification = NotificationCompat.Builder(context, UPDATE_NOTIFICATION_CHANNEL)
             .setContentTitle(context.getString(R.string.download_complete))

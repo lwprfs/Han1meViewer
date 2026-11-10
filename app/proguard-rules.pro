@@ -41,7 +41,7 @@
 -dontwarn org.brotli.dec.**
 -dontwarn javax.naming.**
 
-# Shizuku 安装方式：该类由 Shizuku 在独立进程里反射创建，只会调用这两个方法
+# Shizuku：仅由 Shizuku 进程反射调用
 -keepclassmembers class com.yenaly.han1meviewer.shizuku.ShellInterface {
     public <init>();
     public void destroy();

@@ -34,10 +34,10 @@ android {
 
 
     defaultConfig {
-        applicationId = "com.yenaly.hani.extended"
+        applicationId = "com.yenaly.han1meviewer"
         minSdk = property("min.sdk")?.toString()?.toIntOrNull()
         targetSdk = property("target.sdk")?.toString()?.toIntOrNull()
-        val (code, name) = createVersion(major = 1, minor = 2, patch = 9)
+        val (code, name) = createVersion(major = 1, minor = 2, patch = 0)
         versionCode = code
         versionName = name
 
@@ -97,7 +97,7 @@ android {
         buildConfig = true
         viewBinding = true
         compose  =  true
-        aidl = true // Shizuku 安装方式的 IShellInterface
+        aidl = true
     }
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
@@ -126,7 +126,7 @@ androidComponents {
         variant.outputs.forEach { output ->
 
             //  val apkName = "你的应用名_V${output.versionName.get()}_Build${output.versionCode.get()}_${variant.buildType}.apk"
-            val apkName = "HANiEX-v${output.versionName.get()}.apk"
+            val apkName = "Han1meViewer-v${output.versionName.get()}.apk"
             (output as VariantOutputImpl).outputFileName = apkName
         }
     }
@@ -226,7 +226,7 @@ dependencies {
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
     // 增量更新：bspatch 需要解压 bzip2
     implementation("org.apache.commons:commons-compress:1.27.1")
-    // 安装方式：Shizuku
+    // Shizuku：用于静默安装更新
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
 }

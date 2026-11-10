@@ -9,7 +9,7 @@ object SettingsPreferenceKeys {
     const val SEARCH_PAGINATION = "search_pagination"
     const val UPDATE_POPUP_INTERVAL_DAYS = "update_popup_interval_days"
     const val USE_CI_UPDATE_CHANNEL = "use_ci_update_channel"
-    const val APK_INSTALL_METHOD = "apk_install_method"
+    const val UPDATE_INSTALLER = "update_installer"
     const val USE_ANALYTICS = "use_analytics"
     const val FAKE_LAUNCHER_ICON = "pref_fake_launcher_icon"
     const val USE_DARK_MODE = "use_dark_mode"

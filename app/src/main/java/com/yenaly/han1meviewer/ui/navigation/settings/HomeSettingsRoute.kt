@@ -58,6 +58,9 @@ import com.yenaly.han1meviewer.HA1_GITHUB_ISSUE_URL
 import com.yenaly.han1meviewer.HanimeApplication
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.shizuku.ShizukuInstallResult
+import com.yenaly.han1meviewer.shizuku.ShizukuUpdateInstaller
+import com.yenaly.han1meviewer.shizuku.UpdateInstaller
 import com.yenaly.han1meviewer.logic.BackupManager
 import com.yenaly.han1meviewer.ui.component.BackupSectionDialog
 import com.yenaly.han1meviewer.logic.state.WebsiteState
@@ -74,8 +77,6 @@ import com.yenaly.han1meviewer.ui.screen.home.homepage.saveHomeCategoryPreferenc
 import com.yenaly.han1meviewer.ui.theme.ThemeColorPreset
 import com.yenaly.han1meviewer.ui.viewmodel.AppViewModel
 import com.yenaly.han1meviewer.util.ThemeUtils
-import com.yenaly.han1meviewer.util.install.ApkInstallMethod
-import com.yenaly.han1meviewer.util.install.isShizukuInstalled
 import com.yenaly.yenaly_libs.ActivityManager
 import com.yenaly.yenaly_libs.utils.applicationContext
 import com.yenaly.yenaly_libs.utils.browse
@@ -92,8 +93,6 @@ private const val HOME_SEARCH_PAGINATION = "search_pagination"
 private const val HOME_ALLOW_PIP_MODE = "allow_pip_mode"
 private const val HOME_UPDATE_POPUP_INTERVAL_DAYS = "update_popup_interval_days"
 private const val HOME_USE_CI_UPDATE_CHANNEL = "use_ci_update_channel"
-private const val HOME_APK_INSTALL_METHOD = "apk_install_method"
-private const val SHIZUKU_DOWNLOAD_URL = "https://shizuku.rikka.app/download"
 private const val HOME_USE_ANALYTICS = "use_analytics"
 private const val HOME_FAKE_LAUNCHER_ICON = "pref_fake_launcher_icon"
 private const val HOME_USE_DARK_MODE = "use_dark_mode"
@@ -140,7 +139,6 @@ fun HomeSettingsRouteScreen(
     var showLicenseScreen by remember { mutableStateOf(false) }
     var showRestartConfirmDialog by remember { mutableStateOf(false) }
     var showAnalyticsDialog by remember { mutableStateOf(false) }
-    var showShizukuMissingDialog by remember { mutableStateOf(false) }
     var showLauncherPicker by remember { mutableStateOf(false) }
     var showApplyDeepLinksDialog by remember { mutableStateOf(false) }
     var pendingImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
@@ -356,17 +354,30 @@ fun HomeSettingsRouteScreen(
             refreshKey++
             AppViewModel.getLatestVersion()
         },
-        onApkInstallMethodChange = { key ->
-            val method = ApkInstallMethod.fromKey(key)
-            when {
-                method == null -> Unit
-                method == ApkInstallMethod.SHIZUKU && !context.isShizukuInstalled ->
-                    showShizukuMissingDialog = true
-
-                else -> {
-                    Preferences.apkInstallMethod = method
-                    refreshKey++
+        onUpdateInstallerChange = { value ->
+            if (value == UpdateInstaller.SHIZUKU) {
+                coroutineScope.launch {
+                    // Shows Shizuku's grant dialog, which also lists Haniex in Shizuku's authorized apps.
+                    val msgRes = when (ShizukuUpdateInstaller.requestPermission(context)) {
+                        ShizukuInstallResult.Success -> null
+                        ShizukuInstallResult.NotInstalled -> R.string.shizuku_not_installed_short
+                        ShizukuInstallResult.NotRunning -> R.string.shizuku_not_running_short
+                        else -> R.string.shizuku_permission_denied_short
+                    }
+                    if (msgRes == null) {
+                        saveString(SettingsPreferenceKeys.UPDATE_INSTALLER, value)
+                        refreshKey++
+                        GlobalToasts.show(
+                            context.getString(R.string.shizuku_permission_granted),
+                            level = GlobalToasts.ToastLevel.SUCCESS,
+                        )
+                    } else {
+                        GlobalToasts.show(context.getString(msgRes), level = GlobalToasts.ToastLevel.WARNING)
+                    }
                 }
+            } else {
+                saveString(SettingsPreferenceKeys.UPDATE_INSTALLER, value)
+                refreshKey++
             }
         },
         onUseAnalyticsChange = { value ->
@@ -436,19 +447,6 @@ fun HomeSettingsRouteScreen(
         },
         onSubmitBug = { context.browse(HA1_GITHUB_ISSUE_URL) },
         onOpenForum = { context.browse(HA1_GITHUB_FORUM_URL) },
-    )
-
-    ConfirmDialog(
-        visible = showShizukuMissingDialog,
-        title = stringResource(R.string.apk_install_shizuku),
-        message = stringResource(R.string.apk_install_shizuku_unavailable),
-        confirmText = stringResource(R.string.confirm),
-        dismissText = stringResource(R.string.cancel),
-        onConfirm = {
-            showShizukuMissingDialog = false
-            context.browse(SHIZUKU_DOWNLOAD_URL)
-        },
-        onDismiss = { showShizukuMissingDialog = false },
     )
 
     ConfirmDialog(
@@ -705,6 +703,10 @@ private fun buildHomeSettingsUiState(
         "always_on" -> context.getString(R.string.always_on)
         else -> Preferences.useDarkMode
     }
+    val updateInstallerLabel = when (Preferences.updateInstaller) {
+        UpdateInstaller.SHIZUKU -> context.getString(R.string.update_installer_shizuku)
+        else -> context.getString(R.string.update_installer_system)
+    }
     val appLanguageValue =
         Preferences.preferenceSp.getString(HOME_APP_LANGUAGE, "system") ?: "system"
     val appLanguageLabel = when (appLanguageValue) {
@@ -739,10 +741,8 @@ private fun buildHomeSettingsUiState(
         collapseDownloadedGroup = Preferences.collapseDownloadedGroup,
         useDynamicColor = Preferences.useDynamicColor,
         useCIUpdateChannel = Preferences.useCIUpdateChannel,
-        apkInstallMethod = Preferences.apkInstallMethod.key,
-        apkInstallMethodLabel = context.getString(Preferences.apkInstallMethod.titleRes),
-        apkInstallMethodOptions = ApkInstallMethod.available(context)
-            .map { context.getString(it.titleRes) to it.key },
+        updateInstaller = Preferences.updateInstaller,
+        updateInstallerLabel = updateInstallerLabel,
         useAnalytics = Preferences.isAnalyticsEnabled,
         useLockScreen = Preferences.preferenceSp.getBoolean(HOME_USE_LOCK_SCREEN, false),
         fakeLauncherIconName = currentItem.name,

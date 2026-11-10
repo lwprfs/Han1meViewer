@@ -12,7 +12,6 @@ import com.yenaly.han1meviewer.ui.view.video.HJzvdStd
 import com.yenaly.han1meviewer.ui.view.video.HMediaKernel
 import com.yenaly.han1meviewer.util.CookieString
 import com.yenaly.han1meviewer.util.SafFileManager
-import com.yenaly.han1meviewer.util.install.ApkInstallMethod
 import com.yenaly.han1meviewer.worker.HanimeDownloadManagerV2
 import com.yenaly.yenaly_libs.utils.applicationContext
 import com.yenaly.yenaly_libs.utils.getSpValue
@@ -87,17 +86,12 @@ object Preferences {
     val updatePopupIntervalDays
         get() = preferenceSp.getInt(SettingsPreferenceKeys.UPDATE_POPUP_INTERVAL_DAYS, 0)
 
+    /** "system" or "shizuku", see [com.yenaly.han1meviewer.shizuku.UpdateInstaller]. */
+    val updateInstaller: String
+        get() = preferenceSp.getString(SettingsPreferenceKeys.UPDATE_INSTALLER, "system") ?: "system"
+
     val useCIUpdateChannel
         get() = preferenceSp.getBoolean(SettingsPreferenceKeys.USE_CI_UPDATE_CHANNEL, false)
-
-    var apkInstallMethod: ApkInstallMethod
-        get() = ApkInstallMethod.resolve(
-            applicationContext,
-            preferenceSp.getString(SettingsPreferenceKeys.APK_INSTALL_METHOD, null),
-        )
-        set(value) = preferenceSp.edit {
-            putString(SettingsPreferenceKeys.APK_INSTALL_METHOD, value.key)
-        }
 
     @OptIn(ExperimentalTime::class)
     val isUpdateDialogVisible: Boolean

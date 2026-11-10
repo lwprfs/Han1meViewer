@@ -21,6 +21,10 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+import com.yenaly.han1meviewer.util.installApkPackage
+import com.yenaly.han1meviewer.util.updateFile
 import androidx.annotation.DrawableRes
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
@@ -265,7 +269,17 @@ class MainActivity : FrameActivity(), PermissionRequester {
             initData()
         }
         if (savedInstanceState == null) {
+            handleInstallUpdateIntent(intent)
             pendingNavigationRequests.trySend(intent)
+        }
+    }
+
+    private fun handleInstallUpdateIntent(intent: Intent?) {
+        if (intent?.action != com.yenaly.han1meviewer.worker.HUpdateWorker.ACTION_INSTALL_UPDATE) return
+        intent.action = null
+        val file = updateFile
+        if (file.exists()) {
+            lifecycleScope.launch { installApkPackage(file) }
         }
     }
 
@@ -276,6 +290,7 @@ class MainActivity : FrameActivity(), PermissionRequester {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        handleInstallUpdateIntent(intent)
         pendingNavigationRequests.trySend(intent)
     }
 
