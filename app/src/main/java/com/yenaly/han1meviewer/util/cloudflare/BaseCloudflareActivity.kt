@@ -26,12 +26,6 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 
-/**
- * Shared WebView screen used to solve a Cloudflare challenge.
- *
- * Each site registers a tiny subclass in the manifest (so every site keeps its own task /
- * callback) and only provides its log [tag] and [cookieStore].
- */
 abstract class BaseCloudflareActivity : AppCompatActivity() {
 
     companion object {
@@ -40,7 +34,6 @@ abstract class BaseCloudflareActivity : AppCompatActivity() {
 
         private val finishCallbacks = ConcurrentHashMap<Class<*>, () -> Unit>()
 
-        /** Registers (or clears, with `null`) the callback fired when [activityClass] is destroyed. */
         fun setOnFinished(activityClass: Class<out BaseCloudflareActivity>, callback: (() -> Unit)?) {
             if (callback == null) finishCallbacks.remove(activityClass)
             else finishCallbacks[activityClass] = callback

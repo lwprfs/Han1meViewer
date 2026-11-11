@@ -57,16 +57,6 @@ import coil3.compose.AsyncImage
 import com.yenaly.han1meviewer.SiteType
 import kotlinx.coroutines.delay
 
-/**
- * Inline ExoPlayer UI shared by all the simple sites.
- *
- * @param siteType    which site's player settings to use.
- * @param playerTag   log tag.
- * @param imageLoader loader for the cover image; `null` uses the app-wide default loader.
- * @param mpvReferer  when non-null the player can fall back to libmpv (and offers an
- *                    "open in external player" button) if the decoder fails; the value is the
- *                    Referer header sent by mpv. `null` disables that fallback.
- */
 @SuppressLint("UnsafeOptInUsageError")
 @Composable
 fun SiteVideoPlayer(
@@ -443,12 +433,4 @@ fun SiteVideoPlayer(
             }
         }
     }
-}
-
-private fun formatPlayerTime(ms: Long): String {
-    val total: Long = (ms / 1000).coerceAtLeast(0L)
-    val h: Long = total / 3600
-    val m: Long = (total % 3600) / 60
-    val s: Long = total % 60
-    return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
 }

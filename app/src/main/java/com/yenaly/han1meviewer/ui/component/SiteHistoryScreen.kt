@@ -29,23 +29,14 @@ import com.yenaly.han1meviewer.R
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
-/** One row of a site's watch history, already reduced to what the UI needs. */
 data class SiteHistoryEntry(
     val videoCode: String,
     val title: String,
     val coverUrl: String,
-    /** 0..1 watched fraction, or `null` when the total duration is unknown. */
+
     val progress: Float?,
 )
 
-/**
- * Watch-history list shared by the simple sites (XHamster, RouVideo, SupJav).
- *
- * @param entries     live history, newest first.
- * @param emptyHint   string shown when there is no history.
- * @param imageLoader per-site coil loader for the cover images.
- * @param titleOf     optional display transform for a title (e.g. translation).
- */
 @Composable
 fun SiteHistoryScreen(
     entries: Flow<List<SiteHistoryEntry>>,

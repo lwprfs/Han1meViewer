@@ -11,14 +11,6 @@ import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import java.util.concurrent.atomic.AtomicBoolean
 
-/**
- * Shared "open the WebView, wait for cf_clearance" coordinator.
- *
- * Several requests can hit a challenge at the same time; only the first one launches
- * [activityClass], the rest just wait for the cookie to show up in [cookieStore].
- *
- * @param baseUrl lazily resolved because some sites (mirrors) can change it at runtime.
- */
 open class CloudflareVerificationManager(
     private val tag: String,
     private val cookieStore: CloudflareCookieStore,

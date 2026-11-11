@@ -8,13 +8,6 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 
-/**
- * Per-site store for the `cf_clearance` cookie.
- *
- * Every site that sits behind Cloudflare shares this implementation; a site only supplies its
- * own log [tag] and the SharedPreferences key prefixes ([cookiePrefix], [expiryPrefix]) so
- * cookies of different sites (and cookies already saved by older versions) never collide.
- */
 open class CloudflareCookieStore(
     private val tag: String,
     private val cookiePrefix: String,

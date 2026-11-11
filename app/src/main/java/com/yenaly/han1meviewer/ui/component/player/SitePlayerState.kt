@@ -1,6 +1,5 @@
 package com.yenaly.han1meviewer.ui.component.player
 
-/** UI state of the inline player shared by the simple sites (XHamster, RouVideo, SupJav, HentaiMama). */
 data class SitePlayerState(
     val url: String = "",
     val quality: String = "",

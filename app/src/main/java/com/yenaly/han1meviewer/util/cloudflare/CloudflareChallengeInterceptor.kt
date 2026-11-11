@@ -9,13 +9,6 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
 
-/**
- * Shared OkHttp interceptor that detects a Cloudflare challenge, asks [manager] to solve it
- * and retries the request.
- *
- * @param hostnames hosts (and their sub-domains) this interceptor is responsible for.
- * @param baseUrls  extra base URLs whose host also counts as "ours" (mirrors).
- */
 open class CloudflareChallengeInterceptor(
     private val context: Context,
     private val tag: String,
