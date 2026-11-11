@@ -73,7 +73,7 @@ jobs:
           JSON=$(gh run list --repo "${{ github.repository }}" --workflow ci.yml --branch main \
             --event push --status success --limit 15 --json databaseId,headSha || echo '[]')
           echo "$JSON" | jq -r --arg sha "$GITHUB_SHA" --argjson n "$CI_DELTA_BUILDS" \
-            '[.[] | select(.headSha != $sha)] | unique_by(.headSha) | .[0:$n][] | "\(.databaseId) \(.headSha)"' \
+            '[.[] | select(.headSha != $sha)] | reduce .[] as $r ([]; if any(.[]; .headSha == $r.headSha) then . else . + [$r] end) | .[0:$n][] | "\(.databaseId) \(.headSha)"' \
             > previous-runs.txt || true
           cat previous-runs.txt
           if [ -s previous-runs.txt ]; then
@@ -116,7 +116,7 @@ jobs:
             --pattern '*.apk' --dir last-release
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
-      # Slots 1-3: previous CI builds (newest first). Slot "release": latest published release.
+      # Slots 1-3: previous CI builds (newest first; order must be preserved, so no unique_by here). Slot "release": latest published release.
       - name: Generate CI delta patches
         id: ci_delta
         if: steps.previous_apk.outcome == 'success' || steps.last_release.outcome == 'success'
