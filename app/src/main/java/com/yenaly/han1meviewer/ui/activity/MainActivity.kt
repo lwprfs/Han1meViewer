@@ -280,7 +280,9 @@ class MainActivity : FrameActivity(), PermissionRequester {
         intent.action = null
         val file = updateFile
         if (file.exists()) {
-            lifecycleScope.launch { installApkPackage(file) }
+            lifecycleScope.launch {
+                com.yenaly.han1meviewer.logic.update.UpdateManager.install(this@MainActivity)
+            }
         }
     }
 

@@ -44,6 +44,11 @@ fun NavHostController.navigateDrawerDestination(
 }
 
 fun NavHostController.handleMainIntent(intent: Intent) {
+    if (intent.action == com.yenaly.han1meviewer.worker.HUpdateWorker.ACTION_OPEN_UPDATE_STATUS) {
+        intent.action = null
+        navigateSafely(com.yenaly.han1meviewer.ui.navigation.settings.UpdateSettingsRoute)
+        return
+    }
     if (intent.action == Intent.ACTION_VIEW) {
         val uri = intent.data ?: return
         when (uri.scheme) {

@@ -8,10 +8,20 @@ data class Latest(
     val nodeId: String,
 
     val deltas: List<Delta> = emptyList(),
+
+    val apkName: String = "",
+
+    val apkSize: Long = 0L,
+
+    val isCi: Boolean = false,
 ) {
 
     data class Delta(
         val downloadLink: String,
         val baseSha256Prefix: String? = null,
+
+        val name: String = "",
+
+        val sizeBytes: Long = 0L,
     )
 }

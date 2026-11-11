@@ -209,6 +209,10 @@
         </activity>
 
         <receiver
+            android:name=".worker.UpdateActionReceiver"
+            android:exported="false" />
+
+        <receiver
             android:name=".ui.widget.CheckInWidgetProvider"
             android:exported="true">
             <intent-filter>

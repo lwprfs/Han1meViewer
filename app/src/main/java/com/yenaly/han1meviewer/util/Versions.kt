@@ -39,9 +39,13 @@ internal fun Context.getUpdateIfExists(latest: Latest): File? {
 }
 
 suspend fun Context.installApkPackage(file: File) {
+    installApkPackageForResult(file)
+}
+
+suspend fun Context.installApkPackageForResult(file: File): String? {
     if (Preferences.updateInstaller == UpdateInstaller.SHIZUKU) {
         when (val result = ShizukuUpdateInstaller.install(this, file)) {
-            ShizukuInstallResult.Success -> return
+            ShizukuInstallResult.Success -> return null
             else -> {
                 val msgRes = when (result) {
                     ShizukuInstallResult.NotInstalled -> R.string.shizuku_not_installed
@@ -59,12 +63,13 @@ suspend fun Context.installApkPackage(file: File) {
             }
         }
     }
-    installApkWithSystem(file)
+    return installApkWithSystem(file)
 }
 
-private suspend fun Context.installApkWithSystem(file: File) {
+private suspend fun Context.installApkWithSystem(file: File): String? {
     val canInstall = requestInstallPermission()
-    if (canInstall) {
+    if (!canInstall) return getString(R.string.upd_install_permission_denied)
+    return try {
         val uri = FileProvider.getUriForFile(this.applicationContext, FILE_PROVIDER_AUTHORITY, file)
         val intent = Intent(Intent.ACTION_VIEW).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -72,5 +77,8 @@ private suspend fun Context.installApkWithSystem(file: File) {
             setDataAndType(uri, "application/vnd.android.package-archive")
         }
         startActivity(intent)
+        null
+    } catch (e: Exception) {
+        e.message ?: e::class.java.simpleName
     }
 }

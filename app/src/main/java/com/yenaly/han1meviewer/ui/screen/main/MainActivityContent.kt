@@ -59,7 +59,9 @@ import com.yenaly.han1meviewer.ui.screen.home.homepage.HomePageViewModel
 import com.yenaly.han1meviewer.util.getUpdateIfExists
 import com.yenaly.han1meviewer.util.installApkPackage
 import com.yenaly.han1meviewer.util.requestPostNotificationPermission
-import com.yenaly.han1meviewer.worker.HUpdateWorker
+import com.yenaly.han1meviewer.logic.update.UpdateManager
+import com.yenaly.han1meviewer.ui.navigation.navigateSafely
+import com.yenaly.han1meviewer.ui.navigation.settings.UpdateSettingsRoute
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import kotlin.time.ExperimentalTime
@@ -261,15 +263,17 @@ fun MainActivityContent(
                         onConfirm = {
                             pendingUpdate = null
                             scope.launch {
+
                                 val file = activity.getUpdateIfExists(latest)
-                                if (file != null) {
-                                    activity.installApkPackage(file)
+                                if (UpdateManager.state.value.phase == com.yenaly.han1meviewer.logic.update.UpdatePhase.DOWNLOADING) {
+
+                                } else if (file != null) {
+                                    UpdateManager.syncWithDisk(activity, latest)
                                 } else {
-                                    if (activity.requestPostNotificationPermission()) {
-                                        HUpdateWorker.enqueue(activity.applicationContext, latest)
-                                        GlobalToasts.show(updateDownloadBackground, level = GlobalToasts.ToastLevel.INFO)
-                                    }
+                                    activity.requestPostNotificationPermission()
+                                    UpdateManager.start(activity.applicationContext, latest)
                                 }
+                                composeNavController.navigateSafely(UpdateSettingsRoute)
                             }
                         },
                     )

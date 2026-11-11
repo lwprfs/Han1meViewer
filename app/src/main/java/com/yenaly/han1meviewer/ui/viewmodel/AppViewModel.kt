@@ -78,17 +78,26 @@ object AppViewModel : YenalyViewModel(application), IHCsrfToken {
         }
     }
 
-    fun getLatestVersion(forceCheck: Boolean = true, delayMillis: Long = 0, forceShow: Boolean = false) {
+    fun getLatestVersion(
+        forceCheck: Boolean = true,
+        delayMillis: Long = 0,
+        forceShow: Boolean = false,
+        silent: Boolean = false,
+    ) {
         viewModelScope.launch {
             delay(delayMillis)
-            getLatestVersionSuspend(forceCheck, forceShow)
+            getLatestVersionSuspend(forceCheck, forceShow, silent)
         }
     }
 
-    private suspend fun getLatestVersionSuspend(forceCheck: Boolean = true, forceShow: Boolean = false) {
+    private suspend fun getLatestVersionSuspend(
+        forceCheck: Boolean = true,
+        forceShow: Boolean = false,
+        silent: Boolean = false,
+    ) {
         NetworkRepo.getLatestVersion(forceCheck).collect {
             _versionFlow.value = it
-            if (it is WebsiteState.Success && (forceShow || Preferences.isUpdateDialogVisible)) {
+            if (!silent && it is WebsiteState.Success && (forceShow || Preferences.isUpdateDialogVisible)) {
                 it.info?.let { info -> _pendingUpdateDialog.emit(info) }
             }
         }

@@ -9,6 +9,8 @@ import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.logic.exception.HUpdaterException
 import com.yenaly.han1meviewer.logic.model.github.CommitComparison
 import com.yenaly.han1meviewer.logic.model.github.Latest
+import com.yenaly.han1meviewer.logic.update.DeltaUnavailableReason
+import com.yenaly.han1meviewer.logic.update.UpdateManager
 import com.yenaly.han1meviewer.util.checkNeedUpdate
 import com.yenaly.han1meviewer.util.copyTo
 import com.yenaly.han1meviewer.util.runSuspendCatching
@@ -35,9 +37,11 @@ object HUpdater {
 
     private val baseHashRegex = Regex("base-([0-9a-f]{16})", RegexOption.IGNORE_CASE)
 
-    private fun deltaOf(name: String, link: String) = Latest.Delta(
+    private fun deltaOf(name: String, link: String, size: Long = 0L) = Latest.Delta(
         downloadLink = link,
         baseSha256Prefix = baseHashRegex.find(name)?.groupValues?.get(1),
+        name = name,
+        sizeBytes = size,
     )
 
     enum class Channel(val logName: String) {
@@ -120,8 +124,17 @@ object HUpdater {
         val changelog = runSuspendCatching {
             requestCommitComparison(curSha, shortSha).commits.toChangelogPrettyString()
         }.getOrNull() ?: workflowRun.title
-        val deltas = deltaArtifacts.map { deltaOf(it.name, it.downloadLink) }
-        return Latest("$shortSha (CI)", changelog, archiveUrl, nodeId, deltas)
+        val deltas = deltaArtifacts.map { deltaOf(it.name, it.downloadLink, it.sizeInBytes) }
+        return Latest(
+            version = "$shortSha (CI)",
+            changelog = changelog,
+            downloadLink = archiveUrl,
+            nodeId = nodeId,
+            deltas = deltas,
+            apkName = artifact?.name.orEmpty(),
+            apkSize = artifact?.sizeInBytes ?: 0L,
+            isCi = true,
+        )
     }
 
     private suspend fun checkReleaseChannel(): Latest? {
@@ -142,8 +155,17 @@ object HUpdater {
                 reason = HUpdaterException.VersionCheck.Reason.NO_RELEASE,
             )
         }
-        val deltas = deltaAssets.map { deltaOf(it.name, it.browserDownloadURL) }
-        return Latest(ver.tagName, ver.body, asset.browserDownloadURL, asset.nodeID, deltas)
+        val deltas = deltaAssets.map { deltaOf(it.name, it.browserDownloadURL, it.size) }
+        return Latest(
+            version = ver.tagName,
+            changelog = ver.body,
+            downloadLink = asset.browserDownloadURL,
+            nodeId = asset.nodeID,
+            deltas = deltas,
+            apkName = asset.name,
+            apkSize = asset.size,
+            isCi = false,
+        )
     }
 
     private suspend fun requestLatestRelease() = try {
@@ -189,16 +211,22 @@ object HUpdater {
     suspend fun File.injectUpdate(
         url: String,
         deltas: List<Latest.Delta> = emptyList(),
+        fullName: String = "",
+        fullSize: Long = 0L,
         progress: (suspend (Int, Long, Long) -> Unit)? = null,
     ) {
+        UpdateManager.onFullApkInfo(fullName, fullSize)
         if (deltas.isNotEmpty()) {
             Log.d(TAG, "尝试增量更新，候选 ${deltas.size} 个")
             if (HDeltaUpdater.tryApply(this, deltas, progress)) return
             Log.d(TAG, "增量更新不可用，回退到完整 APK")
             delete()
+        } else {
+            UpdateManager.onDeltaUnavailable(DeltaUnavailableReason.NO_DELTA_PUBLISHED)
         }
         val isZip = url.endsWith("zip")
         Log.d(TAG, "开始下载更新包（${if (isZip) "CI zip" else "release"}）：$url")
+        UpdateManager.onFullDownloadStarted()
         downloadTo(url, isZip, progress)
     }
 

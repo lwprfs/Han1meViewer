@@ -27,5 +27,6 @@ data class Artifacts(
         val name: String,
         @SerialName("archive_download_url") val downloadLink: String,
         @SerialName("node_id") val nodeId: String,
+        @SerialName("size_in_bytes") val sizeInBytes: Long = 0L,
     )
 }

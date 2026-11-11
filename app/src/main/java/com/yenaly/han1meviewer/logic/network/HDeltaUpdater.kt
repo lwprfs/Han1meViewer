@@ -5,6 +5,9 @@ import android.os.Build
 import android.util.Log
 import com.yenaly.han1meviewer.HJson
 import com.yenaly.han1meviewer.logic.model.github.Latest
+import com.yenaly.han1meviewer.logic.update.DeltaUnavailableReason
+import com.yenaly.han1meviewer.logic.update.UpdateManager
+import com.yenaly.han1meviewer.logic.update.UpdateStage
 import com.yenaly.han1meviewer.util.Bspatch
 import com.yenaly.han1meviewer.util.copyTo
 import com.yenaly.yenaly_libs.utils.applicationContext
@@ -37,6 +40,49 @@ internal object HDeltaUpdater {
         val patchSize: Long = -1,
     )
 
+    data class Inspection(
+        val delta: Latest.Delta?,
+        val reason: DeltaUnavailableReason?,
+        val detail: String?,
+        val installedPrefix: String,
+    )
+
+    @Volatile
+    private var cachedInstalledSha: Pair<String, String>? = null
+
+    private fun installedSha(installed: File): String {
+        val key = "${installed.path}:${installed.length()}:${installed.lastModified()}"
+        cachedInstalledSha?.let { if (it.first == key) return it.second }
+        return installed.sha256().also { cachedInstalledSha = key to it }
+    }
+
+    fun inspect(deltas: List<Latest.Delta>): Inspection {
+        if (deltas.isEmpty()) {
+            return Inspection(null, DeltaUnavailableReason.NO_DELTA_PUBLISHED, null, "")
+        }
+        val appInfo = applicationContext.applicationInfo
+        if (!appInfo.splitSourceDirs.isNullOrEmpty()) {
+            return Inspection(null, DeltaUnavailableReason.SPLIT_INSTALL, null, "")
+        }
+        val installed = File(appInfo.sourceDir).takeIf { it.isFile && it.canRead() }
+            ?: return Inspection(null, DeltaUnavailableReason.INSTALLED_APK_UNREADABLE, null, "")
+        val sha = installedSha(installed)
+        val prefix = sha.take(16)
+        val delta = deltas.firstOrNull {
+            !it.baseSha256Prefix.isNullOrEmpty() && sha.startsWith(it.baseSha256Prefix, ignoreCase = true)
+        } ?: deltas.firstOrNull { it.baseSha256Prefix.isNullOrEmpty() }
+        if (delta == null) {
+            val published = deltas.mapNotNull { it.baseSha256Prefix }.joinToString(", ")
+            return Inspection(
+                null,
+                DeltaUnavailableReason.BASE_MISMATCH,
+                "installed=$prefix, patches built for: $published",
+                prefix,
+            )
+        }
+        return Inspection(delta, null, null, prefix)
+    }
+
     suspend fun tryApply(
         target: File,
         deltas: List<Latest.Delta>,
@@ -46,22 +92,20 @@ internal object HDeltaUpdater {
         val zipFile = File(context.cacheDir, "update.delta.zip")
         val patchFile = File(context.cacheDir, "update.patch")
         try {
-            val installed = installedApk()
-            if (installed == null) {
-                Log.i(TAG, "无法定位已安装的 APK（或为 split 安装），跳过增量更新")
-                return@withContext false
-            }
-            val installedSha = installed.sha256()
-
-            val delta = deltas.firstOrNull {
-                !it.baseSha256Prefix.isNullOrEmpty() &&
-                        installedSha.startsWith(it.baseSha256Prefix, ignoreCase = true)
-            } ?: deltas.firstOrNull { it.baseSha256Prefix.isNullOrEmpty() }
+            UpdateManager.onStage(UpdateStage.CHECKING_DELTA)
+            val inspection = inspect(deltas)
+            UpdateManager.onInstalledBuild(inspection.installedPrefix)
+            val delta = inspection.delta
             if (delta == null) {
-                Log.i(TAG, "没有与当前安装的 APK 基线一致的补丁，跳过增量更新")
+                Log.i(TAG, "增量更新不可用：${inspection.reason} ${inspection.detail.orEmpty()}")
+                UpdateManager.onDeltaUnavailable(inspection.reason!!, inspection.detail)
                 return@withContext false
             }
+            val installed = installedApk()!!
+            val installedSha = installedSha(installed)
+            UpdateManager.onDeltaSelected(delta)
 
+            UpdateManager.onStage(UpdateStage.DOWNLOADING_DELTA)
             downloadTo(zipFile, delta.downloadLink, progress)
             ensureActive()
 
@@ -71,28 +115,40 @@ internal object HDeltaUpdater {
                 info.newSize <= 0 || info.newSize > MAX_APK_SIZE
             ) {
                 Log.w(TAG, "增量包元数据无效：$info")
+                UpdateManager.onDeltaUnavailable(DeltaUnavailableReason.BAD_METADATA, info.toString())
                 return@withContext false
             }
             if (!info.baseSha256.equals(installedSha, ignoreCase = true)) {
                 Log.i(TAG, "补丁基线与当前安装的 APK 不一致，跳过增量更新")
+                UpdateManager.onDeltaUnavailable(
+                    DeltaUnavailableReason.BASE_MISMATCH,
+                    "installed=${installedSha.take(16)}, patch=${info.baseSha256.take(16)}",
+                )
                 return@withContext false
             }
             ensureActive()
 
+            UpdateManager.onStage(UpdateStage.APPLYING_PATCH)
             target.delete()
             Bspatch.apply(installed, patchFile, target)
             ensureActive()
 
+            UpdateManager.onStage(UpdateStage.VERIFYING)
             if (target.length() != info.newSize ||
                 !target.sha256().equals(info.newSha256, ignoreCase = true)
             ) {
                 Log.w(TAG, "还原出的 APK 校验失败")
                 target.delete()
+                UpdateManager.onDeltaUnavailable(
+                    DeltaUnavailableReason.VERIFY_FAILED,
+                    "expected ${info.newSize} B / ${info.newSha256.take(16)}",
+                )
                 return@withContext false
             }
             if (!hasSameSigner(target)) {
                 Log.w(TAG, "还原出的 APK 签名与当前安装的不一致")
                 target.delete()
+                UpdateManager.onDeltaUnavailable(DeltaUnavailableReason.SIGNER_MISMATCH)
                 return@withContext false
             }
 
@@ -104,6 +160,14 @@ internal object HDeltaUpdater {
         } catch (e: Exception) {
             Log.w(TAG, "增量更新失败，将回退到完整 APK：${e.message}", e)
             target.delete()
+            val reason = when (e) {
+                is java.io.IOException, is com.yenaly.han1meviewer.logic.exception.HUpdaterException ->
+                    if (UpdateManager.state.value.stage == UpdateStage.DOWNLOADING_DELTA)
+                        DeltaUnavailableReason.DOWNLOAD_FAILED
+                    else DeltaUnavailableReason.PATCH_FAILED
+                else -> DeltaUnavailableReason.PATCH_FAILED
+            }
+            UpdateManager.onDeltaUnavailable(reason, e.message?.take(160))
             false
         } finally {
             zipFile.delete()

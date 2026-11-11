@@ -34,6 +34,9 @@ object SharedHKeyframesRoute
 object HKeyframeSettingsRoute
 
 @Serializable
+object UpdateSettingsRoute
+
+@Serializable
 object TranslationSettingsRoute
 
 @Serializable
@@ -91,6 +94,12 @@ enum class SettingsDestinationSpec(
         screenClassName = "SharedHKeyframesScreen",
         routeClass = SharedHKeyframesRoute::class,
     ),
+    Update(
+        routeKey = "update",
+        titleRes = R.string.upd_screen_title,
+        screenClassName = "UpdateStatusScreen",
+        routeClass = UpdateSettingsRoute::class,
+    ),
     HKeyframeSettings(
         routeKey = "h_keyframe_settings",
         titleRes = R.string.h_keyframe_settings,
@@ -108,6 +117,7 @@ enum class SettingsDestinationSpec(
             HKeyframes -> HKeyframesRoute
             SharedHKeyframes -> SharedHKeyframesRoute
             HKeyframeSettings -> HKeyframeSettingsRoute
+            Update -> UpdateSettingsRoute
         }
 
     companion object {

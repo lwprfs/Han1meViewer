@@ -79,6 +79,7 @@ fun HomeSettingsScreen(
     onOpenNetworkSettings: () -> Unit,
     onOpenUnifiedHistory: () -> Unit = {},
     onOpenTranslationSettings: () -> Unit = {},
+    onOpenUpdateStatus: () -> Unit = {},
     onOpenAppLanguageSettings: (String) -> Unit,
     onCheckUpdate: () -> Unit,
     onUpdatePopupIntervalDaysChange: (Int) -> Unit,
@@ -359,14 +360,10 @@ fun HomeSettingsScreen(
                 )
             }
         }
-        item { SettingsGroupTitle(applicationContext.getString(R.string.site_history)) }
-        item {
-            SettingNavigationItem(
-                title = applicationContext.getString(R.string.site_watch_history_all_sites),
-                summary = applicationContext.getString(R.string.site_hanime_missav_hentaimama_and_onair_tou),
-                onClick = onOpenUnifiedHistory,
-            )
-        }
+        item { SettingsGroupTitle(stringResource(R.string.settings_group_site_history)) }
+        item { SettingsHistoryAllSitesCard(onClick = onOpenUnifiedHistory) }
+
+        item { SettingsGroupTitle(stringResource(R.string.settings_group_links)) }
         item {
             SettingNavigationItem(
                 title = stringResource(R.string.apply_deep_links),
@@ -483,11 +480,9 @@ fun HomeSettingsScreen(
 
         item { SettingsGroupTitle(stringResource(R.string.update)) }
         item {
-            SettingNavigationItem(
-                title = stringResource(R.string.check_update),
-                summary = state.updateSummary,
-                iconRes = R.drawable.ic_baseline_update_24,
-                onClick = onCheckUpdate,
+            SettingsUpdateStatusEntry(
+                idleSummary = state.updateSummary,
+                onClick = onOpenUpdateStatus,
             )
         }
         item {
@@ -503,7 +498,7 @@ fun HomeSettingsScreen(
                 title = stringResource(R.string.update_installer),
                 summary = stringResource(R.string.update_installer_summary),
                 valueText = state.updateInstallerLabel,
-                iconRes = R.drawable.ic_baseline_update_24,
+                iconRes = R.drawable.ic_update_installer,
                 onClick = { activeDialog = HomeSettingsChoiceDialog.UpdateInstaller },
             )
         }
@@ -513,7 +508,7 @@ fun HomeSettingsScreen(
                 summary = state.updatePopupIntervalSummary,
                 value = state.updatePopupIntervalDays,
                 valueRange = 0..30,
-                iconRes = R.drawable.ic_clock,
+                iconRes = R.drawable.ic_update_interval,
                 onValueChange = onUpdatePopupIntervalDaysChange,
             )
         }

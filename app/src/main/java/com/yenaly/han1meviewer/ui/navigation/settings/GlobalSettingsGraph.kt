@@ -24,6 +24,7 @@ import androidx.navigation.toRoute
 import com.yenaly.han1meviewer.ui.navigation.navigateSafely
 import com.yenaly.han1meviewer.ui.screen.history.UnifiedHistoryScreen
 import com.yenaly.han1meviewer.ui.screen.settings.SitePlayerSettingsPage
+import com.yenaly.han1meviewer.ui.screen.settings.UpdateStatusScreen
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -51,7 +52,16 @@ fun NavGraphBuilder.registerGlobalSettingsRoutes(
                 onNavigateToNetworkSettings = { navController.navigateSafely(NetworkSettingsRoute) },
                 onNavigateToUnifiedHistory = { navController.navigateSafely(UnifiedHistoryRoute) },
                 onNavigateToTranslationSettings = { navController.navigateSafely(TranslationSettingsRoute) },
+                onNavigateToUpdateStatus = { navController.navigateSafely(UpdateSettingsRoute) },
             )
+        }
+    }
+    composable<UpdateSettingsRoute> {
+        SettingsScaffold(
+            navController = navController,
+            fallbackDestination = HomeSettingsRoute,
+        ) {
+            UpdateStatusScreen(activity = activity)
         }
     }
     composable<PlayerSettingsRoute> {
