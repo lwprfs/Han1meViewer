@@ -156,7 +156,7 @@ fun SitePlayerSettingsScreen(site: SiteType, modifier: Modifier = Modifier) {
                 } else {
                     stringResource(R.string.site_keeps_its_own_player_settings, SitePlayerSettings.label(site))
                 },
-                iconRes = R.drawable.ic_baseline_settings_24,
+                iconRes = R.drawable.ic_settings_sync_24,
                 checked = synced,
                 onCheckedChange = { on ->
                     if (on) SitePlayerSettings.resetToApp(site) else SitePlayerSettings.separate(site)

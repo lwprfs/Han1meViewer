@@ -4,6 +4,7 @@ import com.yenaly.han1meviewer.XHamster.common.XHamsterConstants
 import com.yenaly.han1meviewer.XHamster.common.XHamsterFormat
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterDetail
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterComment
+import com.yenaly.han1meviewer.XHamster.data.model.XHamsterCommentsPage
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterLink
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterUploader
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterListPage
@@ -290,6 +291,7 @@ object XHamsterParser {
             uploaderInfo = uploaderInfo,
             commentsTotal = commentsTotal,
             comments = comments,
+            entityId = entity?.lng("id") ?: model?.lng("id"),
         )
     }
 
@@ -297,11 +299,15 @@ object XHamsterParser {
         fun JsonObject.toUploader(isChannelHint: Boolean): XHamsterUploader? {
             val name = str("name") ?: return null
             val url = str("url") ?: str("pageURL") ?: str("pageUrl") ?: return null
+            val sub = obj("subscriptionModel")
             return XHamsterUploader(
                 name = name,
                 path = XHamsterConstants.relativePath(url),
                 avatarUrl = str("thumbUrl") ?: str("thumbURL"),
-                subscribers = obj("subscriptionModel")?.lng("subscribers"),
+                subscribers = sub?.lng("subscribers"),
+                subscriptionId = sub?.lng("id"),
+                subscriptionModel = sub?.str("modelName"),
+                subscribed = (sub?.get("subscribed") as? JsonPrimitive)?.contentOrNull == "true",
                 verified = (this["isVerified"] as? JsonPrimitive)?.contentOrNull == "true" ||
                         (this["verified"] as? JsonPrimitive)?.contentOrNull == "true",
                 isChannel = isChannelHint || (this["isChannel"] as? JsonPrimitive)?.contentOrNull == "true",
@@ -319,25 +325,83 @@ object XHamsterParser {
         return model?.obj("author")?.toUploader(false)
     }
 
+    private fun formatCommentDate(o: JsonObject): String? {
+        o.str("dateAgo")?.let { return it }
+        val created = o.lng("created") ?: return o.str("date")
+        if (created <= 0L) return null
+        val diff = (System.currentTimeMillis() / 1000L - created).coerceAtLeast(0L)
+        return when {
+            diff < 60L -> "just now"
+            diff < 3_600L -> "${diff / 60L}m ago"
+            diff < 86_400L -> "${diff / 3_600L}h ago"
+            diff < 86_400L * 30 -> "${diff / 86_400L}d ago"
+            diff < 86_400L * 365 -> "${diff / (86_400L * 30)}mo ago"
+            else -> "${diff / (86_400L * 365)}y ago"
+        }
+    }
+
     private fun parseComment(el: JsonElement?, depth: Int = 0): XHamsterComment? {
         val o = el as? JsonObject ?: return null
-        val text = o.str("text") ?: o.str("body") ?: o.str("message") ?: o.str("content")
+        val raw = o.str("text") ?: o.str("body") ?: o.str("message") ?: o.str("content")
         ?: return null
         val author = o.obj("author") ?: o.obj("user") ?: o.obj("publisher")
         val name = author?.str("name") ?: o.str("authorName") ?: o.str("name") ?: return null
         val replies = if (depth < 2) {
             (o.arr("replies") ?: o.arr("children")).orEmpty().mapNotNull { parseComment(it, depth + 1) }
         } else emptyList()
+        val text = android.text.Html.fromHtml(raw, android.text.Html.FROM_HTML_MODE_COMPACT)
+            .toString().replace('\u00A0', ' ').trim()
+        if (text.isEmpty()) return null
         return XHamsterComment(
-            id = o.str("id") ?: o.lng("id")?.toString() ?: "$name:${text.hashCode()}",
+            id = o.str("id") ?: o.lng("id")?.toString() ?: "$name:${raw.hashCode()}",
             author = name,
             authorPath = (author?.str("pageUrl") ?: author?.str("pageURL") ?: author?.str("url"))
                 ?.let { XHamsterConstants.relativePath(it) },
             avatarUrl = author?.str("thumbUrl") ?: author?.str("thumbURL"),
-            text = android.text.Html.fromHtml(text, android.text.Html.FROM_HTML_MODE_COMPACT).toString().trim(),
-            date = o.str("dateAgo") ?: o.str("created") ?: o.str("date"),
+            text = text,
+            date = formatCommentDate(o),
             likes = o.lng("likes") ?: o.obj("rating")?.lng("likes"),
             replies = replies,
+            replyToId = o.str("replyToId"),
+            replyToName = o.str("replyToUserName"),
+            isOwner = (o["isOwnerComment"] as? JsonPrimitive)?.contentOrNull == "true",
         )
+    }
+
+    fun parseCommentsPage(body: String, requestedPage: Int): XHamsterCommentsPage? {
+        val root = runCatching { json.parseToJsonElement(body) as? JsonObject }.getOrNull()
+            ?: return null
+        val flat = root.arr("items").orEmpty().mapNotNull { parseComment(it) }
+        val paging = root.obj("paging")
+        val maxPages = (paging?.lng("maxPages") ?: 1L).toInt().coerceAtLeast(1)
+        val active = (paging?.lng("active") ?: requestedPage.toLong()).toInt()
+        return XHamsterCommentsPage(
+            items = nestReplies(flat),
+            total = root.lng("total") ?: flat.size.toLong(),
+            page = active,
+            maxPages = maxPages,
+            writeDenied = root["denyWriteComment"]?.let { it !is kotlinx.serialization.json.JsonNull } == true,
+        )
+    }
+
+    fun nestReplies(flat: List<XHamsterComment>): List<XHamsterComment> {
+        if (flat.isEmpty()) return flat
+        val byId = flat.associateBy { it.id }
+        val children = LinkedHashMap<String, MutableList<XHamsterComment>>()
+        val roots = ArrayList<XHamsterComment>()
+        for (c in flat) {
+            val parent = c.replyToId
+            if (parent != null && byId.containsKey(parent)) {
+                children.getOrPut(parent) { ArrayList() }.add(c)
+            } else {
+                roots += c
+            }
+        }
+        fun collect(id: String): List<XHamsterComment> =
+            children[id].orEmpty().flatMap { listOf(it) + collect(it.id) }
+        return roots.map { r ->
+            val rep = collect(r.id).sortedBy { it.id }
+            if (rep.isEmpty()) r else r.copy(replies = r.replies + rep)
+        }
     }
 }

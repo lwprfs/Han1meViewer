@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.XHamster.common.XHamsterSettings
+import com.yenaly.han1meviewer.XHamster.data.model.XHamsterComment
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterDetail
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterStream
 import com.yenaly.han1meviewer.XHamster.data.remote.XHamsterRepo
@@ -25,6 +26,26 @@ sealed interface XHamsterDetailState {
     data class Error(val message: String) : XHamsterDetailState
 }
 
+data class XHamsterCommentsState(
+    val items: List<XHamsterComment> = emptyList(),
+    val total: Long? = null,
+    val page: Int = 0,
+    val hasMore: Boolean = false,
+    val loading: Boolean = false,
+    val error: String? = null,
+    val writeDenied: Boolean = false,
+)
+
+data class XHamsterSubscribeState(
+    val subscribed: Boolean = false,
+    val subscribers: Long? = null,
+    val busy: Boolean = false,
+
+    val message: SubscribeMessage? = null,
+)
+
+enum class SubscribeMessage { LoginRequired, Failed }
+
 class XHamsterVideoViewModel : ViewModel() {
 
     private companion object {
@@ -40,13 +61,25 @@ class XHamsterVideoViewModel : ViewModel() {
     private val _streamError = MutableStateFlow<String?>(null)
     val streamError: StateFlow<String?> = _streamError.asStateFlow()
 
+    private val _comments = MutableStateFlow(XHamsterCommentsState())
+    val comments: StateFlow<XHamsterCommentsState> = _comments.asStateFlow()
+
+    private val _subscribe = MutableStateFlow(XHamsterSubscribeState())
+    val subscribe: StateFlow<XHamsterSubscribeState> = _subscribe.asStateFlow()
+
     private var currentId = ""
     private var loadJob: Job? = null
+    private var commentsJob: Job? = null
+    private var subscribeJob: Job? = null
 
     fun load(id: String, force: Boolean = false) {
         if (!force && currentId == id && _detailState.value is XHamsterDetailState.Success) return
         currentId = id
         loadJob?.cancel()
+        commentsJob?.cancel()
+        subscribeJob?.cancel()
+        _comments.value = XHamsterCommentsState()
+        _subscribe.value = XHamsterSubscribeState()
         _detailState.value = XHamsterDetailState.Loading
         _streamError.value = null
         _playerState.update {
@@ -56,6 +89,12 @@ class XHamsterVideoViewModel : ViewModel() {
             XHamsterRepo.detail(id)
                 .onSuccess { detail ->
                     _detailState.value = XHamsterDetailState.Success(detail)
+                    _subscribe.value = XHamsterSubscribeState(
+                        subscribed = detail.uploaderInfo?.subscribed == true,
+                        subscribers = detail.uploaderInfo?.subscribers,
+                    )
+                    seedComments(detail)
+                    loadMoreComments()
                     val streams = XHamsterRepo.resolveStreams(detail)
                     if (streams.isEmpty()) {
                         _streamError.value =
@@ -71,6 +110,91 @@ class XHamsterVideoViewModel : ViewModel() {
                 }
         }
     }
+
+    private fun seedComments(detail: XHamsterDetail) {
+        _comments.value = XHamsterCommentsState(
+            items = detail.comments,
+            total = detail.commentsTotal ?: detail.comments.size.toLong(),
+            page = 0,
+            hasMore = detail.entityId != null,
+        )
+    }
+
+    fun loadMoreComments() {
+        val detail = (_detailState.value as? XHamsterDetailState.Success)?.detail ?: return
+        val entityId = detail.entityId ?: return
+        val state = _comments.value
+        if (state.loading || (state.page > 0 && !state.hasMore)) return
+        val nextPage = state.page + 1
+        commentsJob?.cancel()
+        _comments.update { it.copy(loading = true, error = null) }
+        commentsJob = viewModelScope.launch {
+            XHamsterRepo.comments(entityId, detail.code, nextPage)
+                .onSuccess { page ->
+                    _comments.update { cur ->
+                        val merged = if (nextPage == 1) {
+                            page.items
+                        } else {
+                            val seen = cur.items.mapTo(HashSet()) { it.id }
+                            cur.items + page.items.filter { it.id !in seen }
+                        }
+                        cur.copy(
+                            items = merged,
+                            total = page.total,
+                            page = page.page,
+                            hasMore = page.hasMore,
+                            loading = false,
+                            error = null,
+                            writeDenied = page.writeDenied,
+                        )
+                    }
+                }
+                .onFailure { e ->
+                    Log.e(TAG, "comments failed", e)
+                    _comments.update {
+                        it.copy(loading = false, error = e.message ?: e.javaClass.simpleName)
+                    }
+                }
+        }
+    }
+
+    fun retryComments() = loadMoreComments()
+
+    fun toggleSubscribe() {
+        val detail = (_detailState.value as? XHamsterDetailState.Success)?.detail ?: return
+        val uploader = detail.uploaderInfo ?: return
+        val current = _subscribe.value
+        if (current.busy) return
+        val target = !current.subscribed
+        _subscribe.value = current.copy(busy = true, message = null)
+        subscribeJob?.cancel()
+        subscribeJob = viewModelScope.launch {
+            XHamsterRepo.setSubscribed(uploader, detail.code, target)
+                .onSuccess {
+                    _subscribe.update {
+                        it.copy(
+                            subscribed = target,
+                            subscribers = it.subscribers?.plus(if (target) 1 else -1)
+                                ?.coerceAtLeast(0),
+                            busy = false,
+                        )
+                    }
+                }
+                .onFailure { e ->
+                    Log.e(TAG, "subscribe failed", e)
+                    _subscribe.update {
+                        it.copy(
+                            busy = false,
+                            message = if (e.message == "LOGIN_REQUIRED") {
+                                SubscribeMessage.LoginRequired
+                            } else SubscribeMessage.Failed,
+                        )
+                    }
+                }
+        }
+    }
+
+    fun consumeSubscribeMessage() = _subscribe.update { it.copy(message = null) }
 
     private fun applyStreams(streams: List<XHamsterStream>) {
         val chosen = pick(streams)
@@ -117,5 +241,7 @@ class XHamsterVideoViewModel : ViewModel() {
     override fun onCleared() {
         super.onCleared()
         loadJob?.cancel()
+        commentsJob?.cancel()
+        subscribeJob?.cancel()
     }
 }

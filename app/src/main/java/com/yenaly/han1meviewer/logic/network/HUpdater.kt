@@ -131,8 +131,8 @@ object HUpdater {
             downloadLink = archiveUrl,
             nodeId = nodeId,
             deltas = deltas,
-            apkName = artifact?.name.orEmpty(),
-            apkSize = artifact?.sizeInBytes ?: 0L,
+            apkName = artifact.name,
+            apkSize = artifact.sizeInBytes,
             isCi = true,
         )
     }

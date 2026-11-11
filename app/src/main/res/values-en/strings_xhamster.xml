@@ -70,4 +70,18 @@
     <string name="xhamster_view_profile">View</string>
     <string name="xhamster_comments_not_loaded">%1$s comments. xHamster loads them on its own site, so open the page to read them.</string>
     <string name="xhamster_no_comments">No comments yet.</string>
+    <string name="xhamster_subscribe">Subscribe</string>
+    <string name="xhamster_subscribed">Subscribed</string>
+    <string name="xhamster_subscribe_login_required">Log in to xHamster to subscribe</string>
+    <string name="xhamster_subscribe_failed">Action failed, please try again later</string>
+    <string name="xhamster_comments_title">Comments (%1$s)</string>
+    <string name="xhamster_comments_load_more">Load more comments</string>
+    <string name="xhamster_comments_retry">Retry</string>
+    <string name="xhamster_comments_failed">Couldn\'t load comments: %1$s</string>
+    <string name="xhamster_comment_reply_to">Replying to %1$s</string>
+    <string name="xhamster_comment_replies_show">Show %1$d replies</string>
+    <string name="xhamster_comment_replies_hide">Hide replies</string>
+    <string name="xhamster_comment_owner">Author</string>
+    <string name="xhamster_comments_closed">Comments are turned off for this video</string>
+    <string name="xhamster_dislikes_count">%1$s dislikes</string>
 </resources>

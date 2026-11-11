@@ -15,7 +15,20 @@ import com.yenaly.han1meviewer.XHamster.data.model.XHamsterListPage
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterStream
 import com.yenaly.han1meviewer.XHamster.data.parser.XHamsterEntityParser
 import com.yenaly.han1meviewer.XHamster.data.parser.XHamsterParser
+import com.yenaly.han1meviewer.XHamster.data.model.XHamsterCommentsPage
+import com.yenaly.han1meviewer.XHamster.data.model.XHamsterUploader
 import kotlinx.coroutines.Dispatchers
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
+import java.util.UUID
 import kotlinx.coroutines.withContext
 import java.io.IOException
 
@@ -92,4 +105,83 @@ object XHamsterRepo {
 
     suspend fun resolveStreams(detail: XHamsterDetail): List<XHamsterStream> =
         XHamsterStreamResolver.resolve(detail)
+
+    private fun ajaxHeaders(referer: String): Map<String, String> = mapOf(
+        "Accept" to "*/*",
+        "X-Requested-With" to "XMLHttpRequest",
+        "x-csrf-token" to "1",
+        "Referer" to referer,
+        "Origin" to XHamsterConstants.ORIGIN,
+    )
+
+    suspend fun comments(
+        videoEntityId: Long,
+        videoCode: String,
+        page: Int,
+    ): Result<XHamsterCommentsPage> = runCatching {
+        withContext(Dispatchers.IO) {
+            val url = "${XHamsterConstants.BASE_URL}/api/front/comment/list" +
+                    "?entityModel=videoModel&entityId=$videoEntityId&page=$page" +
+                    "&spamFolder=0&checkPrivileges=1"
+            val response = XHamsterNetwork.service.getJson(
+                url, ajaxHeaders(XHamsterConstants.videoUrl(videoCode)),
+            )
+            if (!response.isSuccessful) throw IOException("HTTP ${response.code()}")
+            val body = response.body()?.string() ?: throw IOException("Empty response")
+            XHamsterParser.parseCommentsPage(body, page)
+                ?: throw IOException("Unable to read comments")
+        }
+    }
+
+    private val sync = Json { ignoreUnknownKeys = true; isLenient = true }
+
+    private fun syncSucceeded(body: String): Boolean {
+        val root = runCatching { sync.parseToJsonElement(body) }.getOrNull() as? JsonArray
+            ?: return false
+        val first = root.firstOrNull() as? JsonObject ?: return false
+        val extras = first["extras"] as? JsonObject
+        val result = (extras?.get("result") as? JsonPrimitive)?.booleanOrNull
+        if (result != null) return result
+        val error = extras?.get("error")
+        return error == null || error is kotlinx.serialization.json.JsonNull
+    }
+
+    suspend fun setSubscribed(
+        uploader: XHamsterUploader,
+        videoCode: String,
+        subscribe: Boolean,
+    ): Result<Boolean> = runCatching {
+        withContext(Dispatchers.IO) {
+            if (!XHamsterNetwork.hasAuthCookies()) throw IOException("LOGIN_REQUIRED")
+            val id = uploader.subscriptionId ?: throw IOException("Missing subscription id")
+            val entityModel = uploader.subscriptionModel
+                ?: if (uploader.isChannel) "channelModel" else "userModel"
+            val payload = buildJsonArray {
+                add(buildJsonObject {
+                    put("name", "entitySubscriptionModelSync")
+                    put("requestData", buildJsonObject {
+                        put("model", buildJsonObject {
+                            put("id", id)
+                            put("${'$'}id", UUID.randomUUID().toString())
+                            put("modelName", "entitySubscriptionModel")
+                            put("entityModelName", entityModel)
+                            put("entityId", id)
+                            put("subscribed", subscribe)
+                            put("itemState", if (subscribe) "created" else "removed")
+                        })
+                        put("trusted", true)
+                    })
+                })
+            }.toString()
+            val response = XHamsterNetwork.service.post(
+                "${XHamsterConstants.BASE_URL}/x-api",
+                payload.toRequestBody("text/plain;charset=UTF-8".toMediaType()),
+                ajaxHeaders(XHamsterConstants.videoUrl(videoCode)),
+            )
+            if (!response.isSuccessful) throw IOException("HTTP ${response.code()}")
+            val body = response.body()?.string().orEmpty()
+            if (!syncSucceeded(body)) throw IOException("Subscription was rejected")
+            subscribe
+        }
+    }
 }

@@ -1,7 +1,11 @@
 package com.yenaly.han1meviewer.XHamster.ui.settings
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -44,10 +48,21 @@ fun XHamsterSettingsScreen(onBack: () -> Unit) {
                 .padding(padding)
                 .padding(16.dp),
         ) {
-            Text(
-                text = stringResource(R.string.xhamster_pref_quality),
-                style = MaterialTheme.typography.titleMedium,
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_settings_high_quality_24),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp),
+                )
+                Text(
+                    text = stringResource(R.string.xhamster_pref_quality),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+            }
             Text(
                 text = stringResource(R.string.xhamster_pref_quality_summary),
                 style = MaterialTheme.typography.bodySmall,

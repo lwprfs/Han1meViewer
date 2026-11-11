@@ -70,4 +70,18 @@
     <string name="xhamster_view_profile">查看</string>
     <string name="xhamster_comments_not_loaded">共 %1$s 則留言。xHamster 的留言需在其網站載入，請開啟網頁查看。</string>
     <string name="xhamster_no_comments">尚無留言。</string>
+    <string name="xhamster_subscribe">訂閱</string>
+    <string name="xhamster_subscribed">已訂閱</string>
+    <string name="xhamster_subscribe_login_required">請先登入 xHamster 才能訂閱</string>
+    <string name="xhamster_subscribe_failed">操作失敗，請稍後再試</string>
+    <string name="xhamster_comments_title">留言 (%1$s)</string>
+    <string name="xhamster_comments_load_more">載入更多留言</string>
+    <string name="xhamster_comments_retry">重試</string>
+    <string name="xhamster_comments_failed">留言載入失敗：%1$s</string>
+    <string name="xhamster_comment_reply_to">回覆 %1$s</string>
+    <string name="xhamster_comment_replies_show">顯示 %1$d 則回覆</string>
+    <string name="xhamster_comment_replies_hide">隱藏回覆</string>
+    <string name="xhamster_comment_owner">作者</string>
+    <string name="xhamster_comments_closed">此影片已關閉留言功能</string>
+    <string name="xhamster_dislikes_count">%1$s 倒讚</string>
 </resources>

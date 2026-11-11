@@ -13,6 +13,13 @@ import com.yenaly.han1meviewer.ui.screen.RetryableImage
 import com.yenaly.han1meviewer.ui.screen.video.VideoTabItem
 import com.yenaly.han1meviewer.ui.screen.video.VideoTabsContent
 import androidx.compose.foundation.lazy.items
+import android.widget.Toast
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -435,7 +442,8 @@ private fun XHamsterVideoContent(
     onNavigateToUploader: (String, String) -> Unit,
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
-    val total = info.commentsTotal ?: info.comments.size.toLong()
+    val commentsState by viewModel.comments.collectAsStateWithLifecycle()
+    val total = commentsState.total ?: info.commentsTotal ?: info.comments.size.toLong()
     val tabs = remember(total) {
         listOf(
             VideoTabItem(R.string.introduction),
@@ -460,7 +468,13 @@ private fun XHamsterVideoContent(
                 onNavigateToUploader = onNavigateToUploader,
             )
         } else {
-            XHamsterCommentsPage(info = info, onOpenAuthor = onNavigateToUploader)
+            XHamsterCommentsPage(
+                info = info,
+                state = commentsState,
+                onLoadMore = viewModel::loadMoreComments,
+                onRetry = viewModel::retryComments,
+                onOpenAuthor = onNavigateToUploader,
+            )
         }
     }
 }
@@ -542,9 +556,13 @@ private fun XHamsterVideoDetailsPage(
                 )
                 val views = XHamsterFormat.count(info.views)
                 val likes = XHamsterFormat.count(info.likes)
+                val dislikes = XHamsterFormat.count(info.dislikes)
                 val meta = buildList {
                     if (views != null) add(stringResource(R.string.xhamster_views_count, views))
                     if (likes != null) add(stringResource(R.string.xhamster_likes_count, likes))
+                    if (dislikes != null && (info.dislikes ?: 0L) > 0L) {
+                        add(stringResource(R.string.xhamster_dislikes_count, dislikes))
+                    }
                     XHamsterFormat.duration(info.durationSec)?.let { add(it) }
                     info.dateAgo?.let { add(it) }
                     info.uploader?.let { add(it) }
@@ -561,8 +579,27 @@ private fun XHamsterVideoDetailsPage(
 
         info.uploaderInfo?.let { uploader ->
             item(key = "uploader") {
+                val subState by viewModel.subscribe.collectAsStateWithLifecycle()
+                LaunchedEffect(subState.message) {
+                    val msg = subState.message ?: return@LaunchedEffect
+                    Toast.makeText(
+                        context,
+                        context.getString(
+                            if (msg == SubscribeMessage.LoginRequired) {
+                                R.string.xhamster_subscribe_login_required
+                            } else R.string.xhamster_subscribe_failed
+                        ),
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                    viewModel.consumeSubscribeMessage()
+                }
                 XHamsterUploaderCard(
                     uploader = uploader,
+                    subscribed = subState.subscribed,
+                    subscribers = subState.subscribers ?: uploader.subscribers,
+                    subscribeBusy = subState.busy,
+                    canSubscribe = uploader.subscriptionId != null,
+                    onSubscribe = viewModel::toggleSubscribe,
                     onClick = { onNavigateToUploader(uploader.path, uploader.name) },
                 )
             }
@@ -637,7 +674,15 @@ private fun XHamsterVideoDetailsPage(
 }
 
 @Composable
-private fun XHamsterUploaderCard(uploader: XHamsterUploader, onClick: () -> Unit) {
+private fun XHamsterUploaderCard(
+    uploader: XHamsterUploader,
+    subscribed: Boolean,
+    subscribers: Long?,
+    subscribeBusy: Boolean,
+    canSubscribe: Boolean,
+    onSubscribe: () -> Unit,
+    onClick: () -> Unit,
+) {
     val imageLoader = XHamsterImageLoader.get(LocalContext.current)
     Surface(
         modifier = Modifier
@@ -678,13 +723,27 @@ private fun XHamsterUploaderCard(uploader: XHamsterUploader, onClick: () -> Unit
                 }
             }
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = if (uploader.verified) "${uploader.name} ✓" else uploader.name,
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                val subs = XHamsterFormat.count(uploader.subscribers)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        text = uploader.name,
+                        style = MaterialTheme.typography.titleSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    if (uploader.verified) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_video_verified_24),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
+                }
+                val subs = XHamsterFormat.count(subscribers)
                 val kind = stringResource(
                     if (uploader.isChannel) R.string.xhamster_channel_label else R.string.xhamster_uploader_label
                 )
@@ -696,11 +755,41 @@ private fun XHamsterUploaderCard(uploader: XHamsterUploader, onClick: () -> Unit
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Text(
-                text = stringResource(R.string.xhamster_view_profile),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            if (canSubscribe) {
+                val label = stringResource(
+                    if (subscribed) R.string.xhamster_subscribed else R.string.xhamster_subscribe
+                )
+                val iconRes = if (subscribed) {
+                    R.drawable.ic_video_subscribed_24
+                } else R.drawable.ic_video_subscribe_24
+                if (subscribed) {
+                    FilledTonalButton(
+                        onClick = onSubscribe,
+                        enabled = !subscribeBusy,
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                    ) {
+                        Icon(painterResource(iconRes), null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(label, style = MaterialTheme.typography.labelLarge)
+                    }
+                } else {
+                    Button(
+                        onClick = onSubscribe,
+                        enabled = !subscribeBusy,
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                    ) {
+                        Icon(painterResource(iconRes), null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(label, style = MaterialTheme.typography.labelLarge)
+                    }
+                }
+            } else {
+                Text(
+                    text = stringResource(R.string.xhamster_view_profile),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
         }
     }
 }
@@ -708,11 +797,28 @@ private fun XHamsterUploaderCard(uploader: XHamsterUploader, onClick: () -> Unit
 @Composable
 private fun XHamsterCommentsPage(
     info: XHamsterDetail,
+    state: XHamsterCommentsState,
+    onLoadMore: () -> Unit,
+    onRetry: () -> Unit,
     onOpenAuthor: (String, String) -> Unit,
 ) {
     val context = LocalContext.current
     val imageLoader = XHamsterImageLoader.get(context)
+    val listState = rememberLazyListState()
+    val expanded = remember { mutableStateOf(setOf<String>()) }
+
+    LaunchedEffect(listState, state.hasMore, state.loading, state.items.size) {
+        snapshotFlow {
+            val layout = listState.layoutInfo
+            val last = layout.visibleItemsInfo.lastOrNull()?.index ?: -1
+            last >= layout.totalItemsCount - 3
+        }.collect { nearEnd ->
+            if (nearEnd && state.hasMore && !state.loading && state.error == null) onLoadMore()
+        }
+    }
+
     LazyColumn(
+        state = listState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(
             start = 12.dp,
@@ -722,39 +828,112 @@ private fun XHamsterCommentsPage(
         ),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        if (info.comments.isEmpty()) {
+        if (state.writeDenied) {
+            item(key = "comments_closed") {
+                Text(
+                    text = stringResource(R.string.xhamster_comments_closed),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        if (state.items.isEmpty() && !state.loading && state.error == null) {
             item(key = "comments_empty") {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    val total = info.commentsTotal ?: 0L
-                    Text(
-                        text = if (total > 0) {
-                            stringResource(R.string.xhamster_comments_not_loaded, total.toString())
-                        } else stringResource(R.string.xhamster_no_comments),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    if (total > 0) {
-                        OutlinedButton(onClick = {
-                            runCatching {
-                                context.startActivity(
-                                    android.content.Intent(
-                                        android.content.Intent.ACTION_VIEW,
-                                        android.net.Uri.parse(info.pageUrl),
+                Text(
+                    text = stringResource(R.string.xhamster_no_comments),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        items(state.items, key = { it.id }) { comment ->
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                XHamsterCommentRow(comment, imageLoader, onOpenAuthor)
+                if (comment.replies.isNotEmpty()) {
+                    val open = comment.id in expanded.value
+                    Box(modifier = Modifier.padding(start = 42.dp)) {
+                        TextButton(
+                            onClick = {
+                                expanded.value = if (open) expanded.value - comment.id
+                                else expanded.value + comment.id
+                            },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                        ) {
+                            Icon(
+                                painter = painterResource(
+                                    if (open) R.drawable.ic_video_expand_less_24
+                                    else R.drawable.ic_video_expand_more_24
+                                ),
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                text = if (open) {
+                                    stringResource(R.string.xhamster_comment_replies_hide)
+                                } else {
+                                    stringResource(
+                                        R.string.xhamster_comment_replies_show,
+                                        comment.replies.size,
                                     )
-                                )
+                                },
+                                style = MaterialTheme.typography.labelMedium,
+                            )
+                        }
+                    }
+                    if (open) {
+                        comment.replies.forEach { reply ->
+                            Box(modifier = Modifier.padding(start = 42.dp)) {
+                                XHamsterCommentRow(reply, imageLoader, onOpenAuthor, isReply = true)
                             }
-                        }) { Text(stringResource(R.string.xhamster_open_in_browser)) }
+                        }
                     }
                 }
             }
-        } else {
-            items(info.comments, key = { it.id }) { comment ->
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    XHamsterCommentRow(comment, imageLoader, onOpenAuthor)
-                    comment.replies.forEach { reply ->
-                        Box(modifier = Modifier.padding(start = 40.dp)) {
-                            XHamsterCommentRow(reply, imageLoader, onOpenAuthor)
+        }
+
+        item(key = "comments_footer") {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                when {
+                    state.loading -> CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    state.error != null -> {
+                        Text(
+                            text = stringResource(R.string.xhamster_comments_failed, state.error),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(onClick = onRetry) {
+                                Text(stringResource(R.string.xhamster_comments_retry))
+                            }
+                            OutlinedButton(onClick = {
+                                runCatching {
+                                    context.startActivity(
+                                        android.content.Intent(
+                                            android.content.Intent.ACTION_VIEW,
+                                            android.net.Uri.parse(info.pageUrl),
+                                        )
+                                    )
+                                }
+                            }) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_video_open_in_new_24),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text(stringResource(R.string.xhamster_open_in_browser))
+                            }
                         }
+                    }
+                    state.hasMore -> OutlinedButton(onClick = onLoadMore) {
+                        Text(stringResource(R.string.xhamster_comments_load_more))
                     }
                 }
             }
@@ -767,13 +946,15 @@ private fun XHamsterCommentRow(
     comment: XHamsterComment,
     imageLoader: coil3.ImageLoader,
     onOpenAuthor: (String, String) -> Unit,
+    isReply: Boolean = false,
 ) {
+    val avatarSize = if (isReply) 28.dp else 32.dp
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         if (!comment.avatarUrl.isNullOrBlank()) {
             RetryableImage(
                 model = comment.avatarUrl,
                 modifier = Modifier
-                    .size(32.dp)
+                    .size(avatarSize)
                     .clip(CircleShape),
                 placeholder = painterResource(R.drawable.h_chan_loading),
                 error = painterResource(R.drawable.h_chan_load_failed),
@@ -782,7 +963,7 @@ private fun XHamsterCommentRow(
             )
         } else {
             Surface(
-                modifier = Modifier.size(32.dp),
+                modifier = Modifier.size(avatarSize),
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.secondaryContainer,
             ) {
@@ -791,15 +972,56 @@ private fun XHamsterCommentRow(
                 }
             }
         }
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                text = comment.author,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = if (comment.authorPath != null) {
-                    Modifier.clickable { onOpenAuthor(comment.authorPath, comment.author) }
-                } else Modifier,
-            )
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text(
+                    text = comment.author,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = if (comment.authorPath != null) {
+                        Modifier.clickable { onOpenAuthor(comment.authorPath, comment.author) }
+                    } else Modifier,
+                )
+                if (comment.isOwner) {
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = MaterialTheme.colorScheme.tertiaryContainer,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.xhamster_comment_owner),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
+                        )
+                    }
+                }
+            }
+            if (!comment.replyToName.isNullOrBlank()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_video_reply_24),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(12.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.xhamster_comment_reply_to, comment.replyToName),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
             Text(text = comment.text, style = MaterialTheme.typography.bodyMedium)
             val meta = listOfNotNull(
                 comment.date,

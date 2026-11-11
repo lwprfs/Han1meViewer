@@ -70,7 +70,7 @@ object XHamsterStreamResolver {
     private fun get(url: String): String? = runCatching {
         val request = Request.Builder().url(url).build()
         XHamsterNetwork.streamClient.newCall(request).execute().use { response ->
-            if (response.isSuccessful) response.body?.string() else null
+            if (response.isSuccessful) response.body.string() else null
         }
     }.getOrNull()
 

@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.os.Build
 import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.MediaMetadata
@@ -214,8 +215,12 @@ object PlayerMediaControl {
         )
         s.setCallback(object : MediaSession.Callback() {
             override fun onMediaButtonEvent(mediaButtonIntent: Intent): Boolean {
-                val event = mediaButtonIntent.getParcelableExtra<KeyEvent>(Intent.EXTRA_KEY_EVENT)
-                    ?: return false
+                val event = (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    mediaButtonIntent.getParcelableExtra(Intent.EXTRA_KEY_EVENT, KeyEvent::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    mediaButtonIntent.getParcelableExtra<KeyEvent>(Intent.EXTRA_KEY_EVENT)
+                }) ?: return false
                 if (!isHandledKey(event.keyCode)) return false
                 if (event.action != KeyEvent.ACTION_DOWN) return wouldHandle(event.keyCode)
                 return handleCommand(event.keyCode)

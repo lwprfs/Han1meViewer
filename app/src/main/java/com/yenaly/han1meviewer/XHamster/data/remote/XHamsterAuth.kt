@@ -79,7 +79,7 @@ object XHamsterAuth {
 
                 val body = client.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
-                    response.body?.string().orEmpty()
+                    response.body.string()
                 }
 
                 val extras = (Json.parseToJsonElement(body) as? JsonObject)?.get("extras") as? JsonObject
@@ -107,7 +107,7 @@ object XHamsterAuth {
             val html = client.newCall(Request.Builder().url("${XHamsterConstants.BASE_URL}/").build())
                 .execute().use { response ->
                     if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
-                    response.body?.string().orEmpty()
+                    response.body.string()
                 }
             XHamsterParser.parseUser(html)
         }

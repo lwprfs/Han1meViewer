@@ -16,7 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -221,6 +221,7 @@ fun SiteSettingsHubScreen(
             item {
                 SettingNavigationItem(
                     title = stringResource(R.string.dark_theme),
+                    iconRes = R.drawable.ic_settings_dark_mode_24,
                     valueText = darkModeLabel,
                     onClick = { dialog = HubDialog.DarkMode },
                 )
@@ -228,6 +229,7 @@ fun SiteSettingsHubScreen(
             item {
                 SettingNavigationItem(
                     title = stringResource(R.string.theme_color),
+                    iconRes = R.drawable.ic_settings_palette_24,
                     valueText = themeColorName,
                     onClick = { dialog = HubDialog.ThemeColor },
                 )
@@ -235,6 +237,7 @@ fun SiteSettingsHubScreen(
             item {
                 SettingSwitchItem(
                     title = stringResource(R.string.site_pure_black_dark_mode),
+                    iconRes = R.drawable.ic_baseline_contrast_24,
                     summary = stringResource(R.string.site_use_a_pure_black_background_on),
                     checked = Preferences.pureBlackDarkMode,
                     onCheckedChange = { enabled ->
@@ -249,6 +252,7 @@ fun SiteSettingsHubScreen(
             item {
                 SettingNavigationItem(
                     title = stringResource(R.string.app_lang),
+                    iconRes = R.drawable.ic_baseline_language_24,
                     valueText = appLanguageLabel,
                     onClick = { dialog = HubDialog.AppLanguage },
                 )
@@ -258,6 +262,7 @@ fun SiteSettingsHubScreen(
             item {
                 SettingNavigationItem(
                     title = stringResource(R.string.site_video_grid_columns),
+                    iconRes = R.drawable.ic_settings_grid_view_24,
                     summary = stringResource(R.string.site_columns_of_search_list_grids_by),
                     valueText = listOf(
                         gridConfig.compactColumns,
@@ -271,6 +276,7 @@ fun SiteSettingsHubScreen(
             item {
                 SettingNavigationItem(
                     title = stringResource(R.string.site_cards_per_row),
+                    iconRes = R.drawable.ic_settings_view_carousel_24,
                     summary = stringResource(R.string.site_number_of_cards_visible_in_horizontal),
                     valueText = listOf(
                         cardConfig.narrowCount,
@@ -289,7 +295,7 @@ fun SiteSettingsHubScreen(
                         key = "app_settings",
                         title = stringResource(R.string.settings),
                         subtitle = stringResource(R.string.site_playback_language_backup_cache_update),
-                        icon = Icons.Default.Settings,
+                        icon = Icons.Default.Apps,
                         onClick = onOpenAppSettings,
                     )
                 )
@@ -297,12 +303,14 @@ fun SiteSettingsHubScreen(
             item {
                 SettingNavigationItem(
                     title = stringResource(R.string.player_settings),
+                    iconRes = R.drawable.ic_settings_player_24,
                     onClick = onOpenPlayerSettings,
                 )
             }
             item {
                 SettingNavigationItem(
                     title = stringResource(R.string.network_settings),
+                    iconRes = R.drawable.ic_settings_network_24,
                     onClick = onOpenNetworkSettings,
                 )
             }

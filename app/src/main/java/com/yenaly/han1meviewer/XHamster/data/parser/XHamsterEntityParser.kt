@@ -24,15 +24,7 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 
-/**
- * Parsers for channel / creator / gallery / category / profile style pages.
- *
- * The key names below come from real xHamster pages (`window.initials`). Each parser reads the
- * known location first, then falls back to a looser scan of the JSON, then to the rendered HTML.
- */
 object XHamsterEntityParser {
-
-    // ---------- JSON helpers ----------
 
     private fun JsonObject.str(key: String): String? =
         (this[key] as? JsonPrimitive)?.takeIf { it.isString }?.content?.takeIf { it.isNotBlank() }
@@ -92,8 +84,6 @@ object XHamsterEntityParser {
     private fun pathOf(url: String): String =
         XHamsterConstants.relativePath(url).substringBefore('#')
 
-    // ---------- HTML helpers ----------
-
     private fun doc(html: String): Document = Jsoup.parse(html, XHamsterConstants.BASE_URL)
 
     private fun imgUrl(el: Element): String {
@@ -129,8 +119,6 @@ object XHamsterEntityParser {
         val items = extract(root, document)
         return XHamsterPage(items, nextUrl(root, document, items.isNotEmpty()))
     }
-
-    // ---------- video list scraped from HTML ----------
 
     fun parseHtmlVideoList(html: String): XHamsterListPage {
         val document = doc(html)
@@ -172,8 +160,6 @@ object XHamsterEntityParser {
         return XHamsterListPage(items, nextUrl(null, document, items.isNotEmpty()))
     }
 
-    // ---------- channels ----------
-
     private fun channelFrom(o: JsonObject): XHamsterChannel? {
         val url = o.str("channelURL") ?: return null
         val name = o.str("channelName") ?: return null
@@ -207,8 +193,6 @@ object XHamsterEntityParser {
         }
         out.values.toList()
     }
-
-    // ---------- creators ----------
 
     private fun creatorFrom(o: JsonObject): XHamsterCreator? {
         val url = o.str("pageURL") ?: return null
@@ -250,8 +234,6 @@ object XHamsterEntityParser {
         out.values.toList()
     }
 
-    // ---------- galleries ----------
-
     private fun galleryFrom(o: JsonObject): XHamsterGallery? {
         val url = o.str("link") ?: return null
         if (!url.contains("/photos/gallery/")) return null
@@ -290,8 +272,6 @@ object XHamsterEntityParser {
         }
         out.values.toList()
     }
-
-    // ---------- option lists ----------
 
     fun parseCategories(html: String): List<XHamsterOption> {
         val out = LinkedHashMap<String, XHamsterOption>()
@@ -359,8 +339,6 @@ object XHamsterEntityParser {
         }.distinctBy { it.path }
     }
 
-    // ---------- profile ----------
-
     fun parseProfile(html: String): XHamsterProfile? {
         val root = XHamsterParser.extractInitials(html)
         val document = doc(html)
@@ -400,8 +378,6 @@ object XHamsterEntityParser {
         )
     }
 
-    // ---------- creator dashboard ----------
-
     fun parseDashboard(html: String): XHamsterDashboard? {
         val root = XHamsterParser.extractInitials(html) ?: return null
         val layout = root.obj("layoutPage")
@@ -427,8 +403,6 @@ object XHamsterEntityParser {
             menu = menu.values.toList(),
         )
     }
-
-    // ---------- account settings ----------
 
     private val PRIVACY_TITLES = mapOf(
         "pm" to "Private messages",

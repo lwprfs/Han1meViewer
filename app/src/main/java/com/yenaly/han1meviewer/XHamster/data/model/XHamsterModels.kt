@@ -47,6 +47,7 @@ data class XHamsterDetail(
     val uploaderInfo: XHamsterUploader? = null,
     val commentsTotal: Long? = null,
     val comments: List<XHamsterComment> = emptyList(),
+    val entityId: Long? = null,
 )
 
 data class XHamsterUploader(
@@ -56,6 +57,9 @@ data class XHamsterUploader(
     val subscribers: Long?,
     val verified: Boolean,
     val isChannel: Boolean,
+    val subscriptionId: Long? = null,
+    val subscriptionModel: String? = null,
+    val subscribed: Boolean = false,
 )
 
 data class XHamsterComment(
@@ -67,7 +71,20 @@ data class XHamsterComment(
     val date: String?,
     val likes: Long?,
     val replies: List<XHamsterComment> = emptyList(),
+    val replyToId: String? = null,
+    val replyToName: String? = null,
+    val isOwner: Boolean = false,
 )
+
+data class XHamsterCommentsPage(
+    val items: List<XHamsterComment>,
+    val total: Long,
+    val page: Int,
+    val maxPages: Int,
+    val writeDenied: Boolean,
+) {
+    val hasMore: Boolean get() = page < maxPages
+}
 
 data class XHamsterPage<T>(
     val items: List<T>,
