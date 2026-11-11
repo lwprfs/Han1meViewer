@@ -32,6 +32,13 @@ import com.yenaly.han1meviewer.RouVideo.ui.navigation.RouVideoSearchRoute
 import com.yenaly.han1meviewer.RouVideo.ui.navigation.RouVideoSettingsRoute
 import com.yenaly.han1meviewer.RouVideo.ui.navigation.RouVideoTranslationSettingsRoute
 import com.yenaly.han1meviewer.RouVideo.common.RouVideoTranslation
+import com.yenaly.han1meviewer.XHamster.data.remote.XHamsterAuth
+import com.yenaly.han1meviewer.XHamster.ui.navigation.XHamsterAccountRoute
+import com.yenaly.han1meviewer.XHamster.ui.navigation.XHamsterCategoriesRoute
+import com.yenaly.han1meviewer.XHamster.ui.navigation.XHamsterCategoryRoute
+import com.yenaly.han1meviewer.XHamster.ui.navigation.XHamsterHistoryRoute
+import com.yenaly.han1meviewer.XHamster.ui.navigation.XHamsterSearchRoute
+import com.yenaly.han1meviewer.XHamster.ui.navigation.XHamsterSettingsRoute
 import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderCookiesRoute
 import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderLoginRoute
 import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderSearchHistoryRoute
@@ -191,6 +198,27 @@ fun siteLoginStatus(context: Context, site: SiteType): SiteLoginStatus = when (s
         loggedIn = false,
         onClick = null,
     )
+
+    SiteType.XHAMSTER -> {
+        val user = if (XHamsterAuth.isLoggedIn) XHamsterAuth.cachedUser() else null
+        if (user != null) {
+            SiteLoginStatus(
+                title = user.name,
+                subtitle = context.getString(R.string.login_status_tap_account),
+                avatarUrl = null,
+                loggedIn = true,
+                onClick = { it.navigateSafely(XHamsterAccountRoute) },
+            )
+        } else {
+            SiteLoginStatus(
+                title = context.getString(R.string.not_logged_in),
+                subtitle = context.getString(R.string.login_status_tap_sign_in, CrossSiteNavigator.siteLabel(SiteType.XHAMSTER)),
+                avatarUrl = null,
+                loggedIn = false,
+                onClick = { it.navigateSafely(XHamsterAccountRoute) },
+            )
+        }
+    }
 
     SiteType.HANIME, SiteType.JAVCHU -> SiteLoginStatus(
         title = context.getString(R.string.not_logged_in),
@@ -371,6 +399,41 @@ fun siteDrawerSections(context: Context, site: SiteType, loggedIn: Boolean): Lis
                     if (RouVideoTranslation.available) {
                         entry(str(R.string.rouvideo_tr_title), R.drawable.ic_translate_24, RouVideoTranslationSettingsRoute)
                     } else null,
+                    playerSettings,
+                ),
+            ),
+        )
+
+        SiteType.XHAMSTER -> listOf(
+            SiteDrawerSection(
+                browse,
+                listOf(
+                    home,
+                    checkIn,
+                    entry(str(R.string.search), R.drawable.ic_baseline_search_24, XHamsterSearchRoute()),
+                    entry(str(R.string.xhamster_categories), R.drawable.baseline_grid_24, XHamsterCategoriesRoute),
+                ),
+            ),
+            SiteDrawerSection(
+                library,
+                listOf(
+                    entry(str(R.string.watch_history), history, XHamsterHistoryRoute),
+                    entry(
+                        str(R.string.xhamster_my_favorites),
+                        R.drawable.ic_baseline_favorite_24,
+                        XHamsterAccountRoute,
+                    ),
+                    entry(
+                        str(R.string.xhamster_my_subscriptions),
+                        R.drawable.ic_subscribtion,
+                        XHamsterCategoryRoute("/my/subscriptions", str(R.string.xhamster_my_subscriptions)),
+                    ),
+                ),
+            ),
+            SiteDrawerSection(
+                customize,
+                listOf(
+                    entry(str(R.string.xhamster_settings_title), R.drawable.ic_video_quilty, XHamsterSettingsRoute),
                     playerSettings,
                 ),
             ),

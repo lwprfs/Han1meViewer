@@ -146,6 +146,15 @@ object SiteNetworks {
             trailingSlash = false,
             cloudflareFronted = true,
         ),
+        SiteNetworkProfile(
+            siteType = SiteType.XHAMSTER,
+            displayName = applicationContext.getString(R.string.site_xhamster_name),
+
+            catalogKey = null,
+            defaultUrls = { listOf("https://xhamster.com") },
+            trailingSlash = false,
+            cloudflareFronted = true,
+        ),
     )
 
     val hubSites: List<HubSite>

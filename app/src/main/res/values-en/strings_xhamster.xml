@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="site_xhamster_name">xHamster</string>
+    <string name="site_xhamster_description">Large video site with categories, search and multiple qualities</string>
+    <string name="xhamster_search_hint">Search xHamster</string>
+    <string name="xhamster_search_prompt">Enter a keyword or paste a video link</string>
+    <string name="xhamster_nothing_here">Nothing here yet</string>
+    <string name="xhamster_no_results">No results</string>
+    <string name="xhamster_no_history">No watch history</string>
+    <string name="xhamster_history_title">Watch history</string>
+    <string name="xhamster_history_summary">View and manage xHamster watch history</string>
+    <string name="xhamster_settings_title">xHamster playback</string>
+    <string name="xhamster_settings_summary">Default quality</string>
+    <string name="xhamster_pref_quality">Default quality</string>
+    <string name="xhamster_pref_quality_summary">If a video lacks this quality, the closest lower one is used</string>
+    <string name="xhamster_quality_auto">Best available</string>
+    <string name="xhamster_categories">Categories</string>
+    <string name="xhamster_related">Related videos</string>
+    <string name="xhamster_open_in_browser">Open in browser</string>
+    <string name="xhamster_err_no_stream">No playable stream was found; the page layout may have changed.</string>
+    <string name="xhamster_views_count">%1$s views</string>
+    <string name="xhamster_likes_count">%1$s likes</string>
+    <string name="xhamster_account_title">Account</string>
+    <string name="xhamster_login">Log in</string>
+    <string name="xhamster_logout">Log out</string>
+    <string name="xhamster_username">Username or email</string>
+    <string name="xhamster_password">Password</string>
+    <string name="xhamster_login_failed">Login failed</string>
+    <string name="xhamster_login_session_failed">Login was accepted but no session was created. Please try again.</string>
+    <string name="xhamster_login_required">Log in to view this page</string>
+    <string name="xhamster_my_favorites">My favorites</string>
+    <string name="xhamster_my_subscriptions">Subscription feed</string>
+    <string name="xhamster_logged_in_as">Signed in as %1$s</string>
+    <string name="xhamster_login_note">Your password is only sent to xHamster and is not stored; only the login session is kept on this device.</string>
+</resources>

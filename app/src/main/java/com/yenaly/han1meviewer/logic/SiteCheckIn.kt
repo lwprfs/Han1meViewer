@@ -28,6 +28,7 @@ object SiteCheckIn {
         SiteType.FAPFOLDER -> "fapfolder"
         SiteType.SUPJAV -> "supjav"
         SiteType.ROUVIDEO -> "rouvideo"
+        SiteType.XHAMSTER -> "xhamster"
     }
 
     fun dishCode(site: SiteType, code: String): String {
@@ -45,6 +46,7 @@ object SiteCheckIn {
             "fapfolder" -> SiteType.FAPFOLDER
             "supjav" -> SiteType.SUPJAV
             "rouvideo" -> SiteType.ROUVIDEO
+            "xhamster" -> SiteType.XHAMSTER
             else -> null
         }
     }
@@ -155,6 +157,18 @@ object SiteCheckIn {
                         releaseDate = 0L,
                         watchDate = it.watchDate,
                         videoCode = dishCode(SiteType.ROUVIDEO, it.videoCode),
+                    )
+                }
+        }
+        runCatching {
+            com.yenaly.han1meviewer.XHamster.data.local.XHamsterDatabase.getInstance(context)
+                .xHamsterHistoryDao().getPage(limit, 0).forEach {
+                    result += WatchHistoryEntity(
+                        coverUrl = it.coverUrl,
+                        title = it.title,
+                        releaseDate = 0L,
+                        watchDate = it.watchDate,
+                        videoCode = dishCode(SiteType.XHAMSTER, it.videoCode),
                     )
                 }
         }

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="site_xhamster_name">xHamster</string>
+    <string name="site_xhamster_description">大型影片站，支援分類、搜尋與多種畫質</string>
+    <string name="xhamster_search_hint">搜尋 xHamster</string>
+    <string name="xhamster_search_prompt">輸入關鍵字，或貼上影片連結</string>
+    <string name="xhamster_nothing_here">這裡還沒有內容</string>
+    <string name="xhamster_no_results">沒有搜尋結果</string>
+    <string name="xhamster_no_history">沒有觀看紀錄</string>
+    <string name="xhamster_history_title">觀看紀錄</string>
+    <string name="xhamster_history_summary">查看與管理 xHamster 的觀看紀錄</string>
+    <string name="xhamster_settings_title">xHamster 播放設定</string>
+    <string name="xhamster_settings_summary">預設畫質</string>
+    <string name="xhamster_pref_quality">預設畫質</string>
+    <string name="xhamster_pref_quality_summary">影片沒有該畫質時，會自動選用最接近且不高於它的畫質</string>
+    <string name="xhamster_quality_auto">最高可用</string>
+    <string name="xhamster_categories">分類</string>
+    <string name="xhamster_related">相關影片</string>
+    <string name="xhamster_open_in_browser">在瀏覽器中開啟</string>
+    <string name="xhamster_err_no_stream">找不到可播放的串流，頁面格式可能已變更。</string>
+    <string name="xhamster_views_count">%1$s 次觀看</string>
+    <string name="xhamster_likes_count">%1$s 個讚</string>
+    <string name="xhamster_account_title">帳號</string>
+    <string name="xhamster_login">登入</string>
+    <string name="xhamster_logout">登出</string>
+    <string name="xhamster_username">使用者名稱或電子郵件</string>
+    <string name="xhamster_password">密碼</string>
+    <string name="xhamster_login_failed">登入失敗</string>
+    <string name="xhamster_login_session_failed">登入請求成功，但無法建立工作階段，請重試</string>
+    <string name="xhamster_login_required">請先登入才能查看此頁面</string>
+    <string name="xhamster_my_favorites">我的收藏</string>
+    <string name="xhamster_my_subscriptions">訂閱的新影片</string>
+    <string name="xhamster_logged_in_as">已登入：%1$s</string>
+    <string name="xhamster_login_note">密碼只會傳送給 xHamster，不會儲存；本機只保留登入工作階段。</string>
+</resources>

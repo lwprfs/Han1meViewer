@@ -31,6 +31,7 @@ import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.SupJav.data.remote.SupJavNetwork
 import com.yenaly.han1meviewer.RouVideo.data.remote.RouVideoNetwork
+import com.yenaly.han1meviewer.XHamster.data.remote.XHamsterNetwork
 import com.yenaly.han1meviewer.logic.Parser
 import com.yenaly.han1meviewer.logic.network.DohConfig
 import com.yenaly.han1meviewer.logic.network.HDns
@@ -75,6 +76,7 @@ private fun rebuildAllNetworks() {
     runCatching { OnAirNetwork.rebuildNetwork() }
     runCatching { SupJavNetwork.rebuildNetwork() }
     runCatching { RouVideoNetwork.rebuildNetwork() }
+    runCatching { XHamsterNetwork.rebuildNetwork() }
     runCatching { FapFolderNetwork.rebuildNetwork() }
 }
 

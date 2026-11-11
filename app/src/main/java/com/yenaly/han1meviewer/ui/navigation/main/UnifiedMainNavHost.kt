@@ -8,6 +8,7 @@ import androidx.navigation.NavHostController
 import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderNavHost
 import com.yenaly.han1meviewer.SupJav.ui.navigation.SupJavNavHost
 import com.yenaly.han1meviewer.RouVideo.ui.navigation.RouVideoNavHost
+import com.yenaly.han1meviewer.XHamster.ui.navigation.XHamsterNavHost
 import com.yenaly.han1meviewer.HentaiMama.ui.navigation.HentaiMamaNavHost
 import com.yenaly.han1meviewer.MissAV.ui.navigation.MissAvNavHost
 import com.yenaly.han1meviewer.OnAir.ui.navigation.OnAirNavHost
@@ -95,6 +96,15 @@ fun UnifiedMainNavHost(
             }
             SiteType.ROUVIDEO -> {
                 RouVideoNavHost(
+                    activity = activity,
+                    navController = navController,
+                    isDrawerOpen = isDrawerOpen,
+                    onOpenDrawer = onOpenDrawer,
+                    onDestinationChanged = onDestinationChanged,
+                )
+            }
+            SiteType.XHAMSTER -> {
+                XHamsterNavHost(
                     activity = activity,
                     navController = navController,
                     isDrawerOpen = isDrawerOpen,

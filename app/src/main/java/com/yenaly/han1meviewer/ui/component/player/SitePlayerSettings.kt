@@ -18,6 +18,7 @@ object SitePlayerSettings {
         SiteType.FAPFOLDER,
         SiteType.SUPJAV,
         SiteType.ROUVIDEO,
+        SiteType.XHAMSTER,
     )
 
     fun label(site: SiteType): String = when (site) {
@@ -29,6 +30,7 @@ object SitePlayerSettings {
         SiteType.FAPFOLDER -> "FapFolder"
         SiteType.SUPJAV -> "SupJav"
         SiteType.ROUVIDEO -> applicationContext.getString(R.string.site_rouvideo_name)
+        SiteType.XHAMSTER -> applicationContext.getString(R.string.site_xhamster_name)
     }
 
     sealed class Spec(val id: String, val title: String, val summary: String?) {

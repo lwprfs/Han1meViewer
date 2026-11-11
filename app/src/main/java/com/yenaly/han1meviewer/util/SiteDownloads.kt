@@ -49,6 +49,7 @@ object DownloadLayout {
         SiteType.FAPFOLDER -> "FapFolder"
         SiteType.SUPJAV -> "SupJav"
         SiteType.ROUVIDEO -> "RouVideo"
+        SiteType.XHAMSTER -> "xHamster"
     }
 
     fun segmentsFor(videoCode: String): List<String> {
@@ -172,6 +173,9 @@ object SiteDownloadClients {
 
             SiteType.ROUVIDEO -> runCatching { com.yenaly.han1meviewer.RouVideo.data.remote.RouVideoNetwork.streamClient }
                 .getOrDefault(ServiceCreator.downloadClient)
+
+            SiteType.XHAMSTER -> runCatching { com.yenaly.han1meviewer.XHamster.data.remote.XHamsterNetwork.streamClient }
+                .getOrDefault(ServiceCreator.downloadClient)
             else -> ServiceCreator.downloadClient
         }
 
@@ -216,6 +220,10 @@ object SiteDownloadClients {
             SiteType.ROUVIDEO -> mapOf(
                 "Referer" to com.yenaly.han1meviewer.RouVideo.common.RouVideoConstants.REFERER,
                 "Origin" to com.yenaly.han1meviewer.RouVideo.common.RouVideoConstants.ORIGIN,
+            )
+            SiteType.XHAMSTER -> mapOf(
+                "Referer" to com.yenaly.han1meviewer.XHamster.common.XHamsterConstants.REFERER,
+                "Origin" to com.yenaly.han1meviewer.XHamster.common.XHamsterConstants.ORIGIN,
             )
             SiteType.FAPFOLDER -> mapOf(
                 "Referer" to FapFolderConstants.HEADER_REFERER,

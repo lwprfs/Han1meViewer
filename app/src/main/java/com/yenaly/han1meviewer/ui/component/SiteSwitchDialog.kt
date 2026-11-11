@@ -114,6 +114,13 @@ val DefaultSiteSwitchOptions: List<SiteSwitchOption> = listOf(
         logoRes = R.drawable.s_switch_rouvideo,
         accentColor = Color(0xFFE53935),
     ),
+    SiteSwitchOption(
+        name = applicationContext.getString(R.string.site_xhamster_name),
+        description = applicationContext.getString(R.string.site_xhamster_description),
+        siteType = SiteType.XHAMSTER,
+        logoRes = R.drawable.s_switch_xhamster,
+        accentColor = Color(0xFFEF6C00),
+    ),
 )
 
 @OptIn(ExperimentalMaterial3Api::class)

@@ -21,7 +21,7 @@ import kotlin.time.Duration.Companion.days
 import kotlin.time.ExperimentalTime
 
 enum class SiteType {
-    HANIME, MISSAV, HENTAIMAMA, JAVCHU, ONAIR, FAPFOLDER, SUPJAV, ROUVIDEO
+    HANIME, MISSAV, HENTAIMAMA, JAVCHU, ONAIR, FAPFOLDER, SUPJAV, ROUVIDEO, XHAMSTER
 }
 
 object MissAvConstants {
@@ -143,6 +143,9 @@ object Preferences {
 
     val rouVideoBaseUrl: String
         get() = SiteNetworkPrefs.baseUrl(SiteType.ROUVIDEO)
+
+    val xHamsterBaseUrl: String
+        get() = SiteNetworkPrefs.baseUrl(SiteType.XHAMSTER)
 
     val javchuBaseUrl: String
         get() = SiteNetworkPrefs.baseUrl(SiteType.JAVCHU)

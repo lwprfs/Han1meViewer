@@ -14,6 +14,9 @@ import com.yenaly.han1meviewer.SupJav.ui.navigation.SupJavVideoRoute
 import com.yenaly.han1meviewer.RouVideo.ui.navigation.RouVideoHomeRoute
 import com.yenaly.han1meviewer.RouVideo.ui.navigation.RouVideoSearchRoute
 import com.yenaly.han1meviewer.RouVideo.ui.navigation.RouVideoVideoRoute
+import com.yenaly.han1meviewer.XHamster.ui.navigation.XHamsterHomeRoute
+import com.yenaly.han1meviewer.XHamster.ui.navigation.XHamsterSearchRoute
+import com.yenaly.han1meviewer.XHamster.ui.navigation.XHamsterVideoRoute
 import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderPostRoute
 import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderSearchRoute
 import com.yenaly.han1meviewer.HentaiMama.ui.navigation.HentaiMamaHomeRoute
@@ -98,6 +101,11 @@ object NavigationManager {
                             RouVideoVideoRoute(videoCode = videoCode, resumePosition = resumePosition)
                         )
                     }
+                    SiteType.XHAMSTER -> {
+                        navController.navigate(
+                            XHamsterVideoRoute(videoCode = videoCode, resumePosition = resumePosition)
+                        )
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "navigateToVideo failed: ${e.message}")
@@ -129,6 +137,9 @@ object NavigationManager {
                     }
                     SiteType.ROUVIDEO -> {
                         navController.navigate(RouVideoSearchRoute(query = query))
+                    }
+                    SiteType.XHAMSTER -> {
+                        navController.navigate(XHamsterSearchRoute(query = query))
                     }
                 }
             } catch (e: Exception) {
@@ -172,6 +183,10 @@ object NavigationManager {
                     SiteType.ROUVIDEO -> {
                         navController.popToRootSafely()
                         if (!isAtHome(site)) navController.navigate(RouVideoHomeRoute) { launchSingleTop = true }
+                    }
+                    SiteType.XHAMSTER -> {
+                        navController.popToRootSafely()
+                        if (!isAtHome(site)) navController.navigate(XHamsterHomeRoute) { launchSingleTop = true }
                     }
                 }
             } catch (e: Exception) {
@@ -247,6 +262,7 @@ object NavigationManager {
                 SiteType.FAPFOLDER -> destination.hasRoute(FapFolderHomeRoute::class)
                 SiteType.SUPJAV -> destination.hasRoute(SupJavHomeRoute::class)
                 SiteType.ROUVIDEO -> destination.hasRoute(RouVideoHomeRoute::class)
+                SiteType.XHAMSTER -> destination.hasRoute(XHamsterHomeRoute::class)
             }
         } catch (e: Exception) {
             false

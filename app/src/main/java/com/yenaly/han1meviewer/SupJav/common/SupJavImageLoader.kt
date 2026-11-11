@@ -73,6 +73,14 @@ object SupJavImageLoader {
                             .header("Referer", com.yenaly.han1meviewer.RouVideo.common.RouVideoConstants.REFERER)
                             .build()
                     )
+                } else if (request.header("Referer") == null &&
+                    com.yenaly.han1meviewer.XHamster.common.XHamsterImageLoader.isCoverUrl(request.url)
+                ) {
+                    chain.proceed(
+                        request.newBuilder()
+                            .header("Referer", com.yenaly.han1meviewer.XHamster.common.XHamsterConstants.REFERER)
+                            .build()
+                    )
                 } else {
                     chain.proceed(request)
                 }
