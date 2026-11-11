@@ -1,99 +1,11 @@
 package com.yenaly.han1meviewer.SupJav.cloudflare
 
-import android.content.Context
-import android.content.Intent
-import android.os.Handler
-import android.os.Looper
-import android.util.Log
 import com.yenaly.han1meviewer.SupJav.common.SupJavConstants
-import com.yenaly.han1meviewer.ui.component.GlobalToasts
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withContext
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
-import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.coroutines.resume
+import com.yenaly.han1meviewer.util.cloudflare.CloudflareVerificationManager
 
-object SupJavCloudflareManager {
-
-    private const val TAG = "SJCloudflareManager"
-    private const val VERIFICATION_TIMEOUT_MS = 120_000L
-
-    private val isVerifying = AtomicBoolean(false)
-    private var pendingContinuation: ((Boolean) -> Unit)? = null
-    private var pendingLatchOwnerThread: Thread? = null
-
-    suspend fun handleChallenge(context: Context, url: String): Boolean {
-        val first = isVerifying.compareAndSet(false, true)
-        if (first) {
-            Log.d(TAG, "First challenge detected. This request will manage the verification.")
-            launchVerificationActivity(context, url)
-        } else {
-            Log.d(TAG, "Another verification is in progress. Waiting for it to complete...")
-        }
-
-        val result = awaitVerificationResult()
-        if (first) {
-            releaseState()
-        }
-        return result
-    }
-
-    private suspend fun awaitVerificationResult(): Boolean =
-        withContext(Dispatchers.IO) {
-            val checker = SupJavCloudflareCookieManager
-            val host = SupJavConstants.BASE_URL.toHttpUrlOrNull()?.host
-            val deadline = System.currentTimeMillis() + VERIFICATION_TIMEOUT_MS
-
-            while (System.currentTimeMillis() < deadline) {
-                if (host != null && checker.hasValidCookieForHost(host)) {
-                    Log.d(TAG, "Valid cf_clearance observed for $host")
-                    return@withContext true
-                }
-                if (pendingContinuation == null && !isVerifying.get()) {
-                    return@withContext host != null && checker.hasValidCookieForHost(host)
-                }
-                Thread.sleep(250L)
-            }
-
-            Log.w(TAG, "Verification timed out after $VERIFICATION_TIMEOUT_MS ms")
-            false
-        }
-
-    private fun launchVerificationActivity(context: Context, url: String) {
-        SupJavCloudflareActivity.onFinished = {
-            Log.d(TAG, "CloudflareActivity has finished. Releasing state.")
-            releaseState()
-        }
-
-        try {
-            val intent = Intent(context, SupJavCloudflareActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                putExtra(SupJavCloudflareActivity.EXTRA_URL, url)
-            }
-            context.startActivity(intent)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to start CloudflareActivity", e)
-            Handler(Looper.getMainLooper()).post {
-                GlobalToasts.show(
-                    "Failed to start verification activity: ${e.javaClass.simpleName}",
-                    level = GlobalToasts.ToastLevel.ERROR
-                )
-            }
-            releaseState()
-        }
-    }
-
-    @Synchronized
-    private fun releaseState() {
-        isVerifying.set(false)
-        pendingContinuation = null
-        pendingLatchOwnerThread = null
-        SupJavCloudflareActivity.onFinished = null
-    }
-
-    fun forceReset() {
-        Log.d(TAG, "Force resetting Cloudflare manager state.")
-        releaseState()
-    }
-}
+object SupJavCloudflareManager : CloudflareVerificationManager(
+    tag = "SJCloudflareManager",
+    cookieStore = SupJavCloudflareCookieManager,
+    activityClass = SupJavCloudflareActivity::class.java,
+    baseUrl = { SupJavConstants.BASE_URL },
+)

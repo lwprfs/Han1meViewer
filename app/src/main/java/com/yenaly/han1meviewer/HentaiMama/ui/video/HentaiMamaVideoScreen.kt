@@ -108,6 +108,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
+import com.yenaly.han1meviewer.ui.component.player.createSitePlayer
 
 private const val PLAYER_TAG = "HentaiMamaPlayer"
 private const val RESUME_THRESHOLD_MS = 5_000L
@@ -225,7 +226,7 @@ fun HentaiMamaVideoScreen(
 
         if (existing == null) {
             Log.d(PLAYER_TAG, "Creating ExoPlayer for url=$url")
-            val player = createHentaiMamaPlayer(context)
+            val player = createSitePlayer(context)
             player.setMediaSource(buildHentaiMamaMediaSource(context, url))
             player.prepare()
             player.setPlaybackSpeed(playerState.speed)

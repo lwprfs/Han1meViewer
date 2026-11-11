@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.RouVideo.ui.video
 
+import com.yenaly.han1meviewer.ui.component.player.SitePlayerState
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -14,19 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-data class RouVideoPlayerState(
-    val url: String = "",
-    val quality: String = "",
-    val qualityOptions: Map<String, String> = emptyMap(),
-    val availableSpeeds: List<Float> = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f),
-    val speed: Float = 1.0f,
-    val isPlaying: Boolean = false,
-    val isReady: Boolean = false,
-    val position: Long = 0L,
-    val duration: Long = 0L,
-    val hasSubtitle: Boolean = false,
-    val isFullscreen: Boolean = false,
-)
+typealias RouVideoPlayerState = SitePlayerState
 
 sealed interface RouVideoDetailState {
     data object Loading : RouVideoDetailState

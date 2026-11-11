@@ -119,6 +119,7 @@ import com.yenaly.han1meviewer.ui.component.VideoCardItem
 import com.yenaly.han1meviewer.ui.screen.rememberCardResponsiveWidth
 import com.yenaly.han1meviewer.logic.model.HanimeInfo
 import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.ui.component.player.createSitePlayer
 
 private const val PLAYER_TAG = "SupJavPlayer"
 private const val RESUME_THRESHOLD_MS = 5_000L
@@ -270,7 +271,7 @@ fun SupJavVideoScreen(
         if (existing != null && currentMediaUrl.value == url) return@LaunchedEffect
 
         if (existing == null) {
-            val player = createSupJavPlayer(context)
+            val player = createSitePlayer(context)
             player.setMediaSource(buildSupJavMediaSource(context, url, referer))
             player.prepare()
             player.setPlaybackSpeed(playerState.speed)

@@ -94,6 +94,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import com.yenaly.han1meviewer.ui.component.player.createSitePlayer
 
 private const val PLAYER_TAG = "XHamsterPlayer"
 private const val RESUME_THRESHOLD_MS = 5_000L
@@ -191,7 +192,7 @@ fun XHamsterVideoScreen(
         if (existing != null && currentMediaUrl.value == url) return@LaunchedEffect
 
         if (existing == null) {
-            val player = createXHamsterPlayer(context)
+            val player = createSitePlayer(context)
             player.setMediaSource(buildXHamsterMediaSource(context, url))
             player.prepare()
             player.setPlaybackSpeed(playerState.speed)
