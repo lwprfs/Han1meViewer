@@ -24,7 +24,15 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 
+/**
+ * Parsers for channel / creator / gallery / category / profile style pages.
+ *
+ * The key names below come from real xHamster pages (`window.initials`). Each parser reads the
+ * known location first, then falls back to a looser scan of the JSON, then to the rendered HTML.
+ */
 object XHamsterEntityParser {
+
+    // ---------- JSON helpers ----------
 
     private fun JsonObject.str(key: String): String? =
         (this[key] as? JsonPrimitive)?.takeIf { it.isString }?.content?.takeIf { it.isNotBlank() }
@@ -38,24 +46,17 @@ object XHamsterEntityParser {
     private fun JsonObject.firstLng(vararg keys: String): Long? =
         keys.firstNotNullOfOrNull { lng(it) }
 
+    private fun JsonObject.firstStr(vararg keys: String): String? =
+        keys.firstNotNullOfOrNull { str(it) }
+
     private fun JsonObject.obj(key: String): JsonObject? = this[key] as? JsonObject
 
     private fun JsonObject.arr(key: String): JsonArray? = this[key] as? JsonArray
 
-    private fun JsonObject.flag(vararg keys: String): Boolean = keys.any { k ->
-        (this[k] as? JsonPrimitive)?.let { it.booleanOrNull ?: (it.contentOrNull == "true") } == true
-    }
+    private fun JsonObject.boolOrNull(key: String): Boolean? =
+        (this[key] as? JsonPrimitive)?.let { it.booleanOrNull ?: it.contentOrNull?.toBooleanStrictOrNull() }
 
-    private fun JsonObject.link(): String? =
-        str("pageURL") ?: str("pageUrl") ?: str("url") ?: str("link") ?: str("href")
-
-    private fun JsonObject.label(): String? =
-        str("name") ?: str("title") ?: str("label") ?: str("text")
-
-    private fun JsonObject.image(): String? =
-        str("thumbURL") ?: str("thumbUrl") ?: str("avatarURL") ?: str("avatarUrl")
-            ?: str("logoURL") ?: str("logoUrl") ?: str("imageURL") ?: str("imageUrl")
-            ?: str("previewURL") ?: str("thumb")
+    private fun JsonObject.flag(vararg keys: String): Boolean = keys.any { boolOrNull(it) == true }
 
     private fun walk(el: JsonElement?, visit: (JsonObject) -> Unit) {
         when (el) {
@@ -69,6 +70,12 @@ object XHamsterEntityParser {
         }
     }
 
+    private fun findArray(el: JsonElement?, key: String): JsonArray? = when (el) {
+        is JsonObject -> el.arr(key) ?: el.values.firstNotNullOfOrNull { findArray(it, key) }
+        is JsonArray -> el.firstNotNullOfOrNull { findArray(it, key) }
+        else -> null
+    }
+
     private fun findObjectWithKey(el: JsonElement?, key: String): JsonObject? = when (el) {
         is JsonObject ->
             if (el.containsKey(key)) el
@@ -78,27 +85,14 @@ object XHamsterEntityParser {
         else -> null
     }
 
-    private fun findStr(root: JsonElement?, vararg keys: String): String? {
-        var result: String? = null
-        walk(root) { o ->
-            if (result == null) {
-                for (k in keys) {
-                    val v = o.anyStr(k)
-                    if (v != null) {
-                        result = v
-                        break
-                    }
-                }
-            }
-        }
-        return result
-    }
+    private fun humanize(key: String): String =
+        key.replace(Regex("([a-z])([A-Z])"), "\$1 \$2").replace('_', ' ')
+            .replaceFirstChar { it.uppercase() }
 
-    private fun findArray(el: JsonElement?, key: String): JsonArray? = when (el) {
-        is JsonObject -> el.arr(key) ?: el.values.firstNotNullOfOrNull { findArray(it, key) }
-        is JsonArray -> el.firstNotNullOfOrNull { findArray(it, key) }
-        else -> null
-    }
+    private fun pathOf(url: String): String =
+        XHamsterConstants.relativePath(url).substringBefore('#')
+
+    // ---------- HTML helpers ----------
 
     private fun doc(html: String): Document = Jsoup.parse(html, XHamsterConstants.BASE_URL)
 
@@ -108,10 +102,7 @@ object XHamsterEntityParser {
         return if (raw.startsWith("data:")) "" else raw
     }
 
-    private fun pathOf(url: String): String =
-        XHamsterConstants.relativePath(url).substringBefore('#')
-
-    private fun nextUrl(root: JsonObject?, doc: Document, hasItems: Boolean): String? {
+    private fun nextUrl(root: JsonObject?, document: Document, hasItems: Boolean): String? {
         if (!hasItems) return null
         val pagination = findObjectWithKey(root, "pageLinkTemplate")
         val template = pagination?.str("pageLinkTemplate")
@@ -124,8 +115,8 @@ object XHamsterEntityParser {
                 template.replace("{#}", next).replace("_URL_PAGE_REPLACER_", next)
             )
         }
-        val href = doc.selectFirst("link[rel=next]")?.attr("href")?.takeIf { it.isNotBlank() }
-            ?: doc.selectFirst("a[rel=next]")?.attr("href")?.takeIf { it.isNotBlank() }
+        val href = document.selectFirst("link[rel=next]")?.attr("href")?.takeIf { it.isNotBlank() }
+            ?: document.selectFirst("a[rel=next]")?.attr("href")?.takeIf { it.isNotBlank() }
         return href?.let { XHamsterConstants.absolute(it.replace("&amp;", "&")) }
     }
 
@@ -139,357 +130,343 @@ object XHamsterEntityParser {
         return XHamsterPage(items, nextUrl(root, document, items.isNotEmpty()))
     }
 
+    // ---------- video list scraped from HTML ----------
+
     fun parseHtmlVideoList(html: String): XHamsterListPage {
         val document = doc(html)
         val out = LinkedHashMap<String, HanimeInfo>()
-        document.select("a[href*=/videos/]").forEach { a ->
-            val code = XHamsterConstants.codeFromUrl(a.attr("href")) ?: return@forEach
-            if (out.containsKey(code)) return@forEach
-            val img = a.selectFirst("img")
-            val title = a.attr("title").ifBlank { img?.attr("alt").orEmpty() }
-                .ifBlank { a.text() }.trim()
-            if (title.isBlank()) return@forEach
-            val scope = a.parent() ?: a
-            val duration = (a.selectFirst("[class*=duration]") ?: scope.selectFirst("[class*=duration]"))
-                ?.text()?.trim()?.takeIf { it.isNotBlank() }
+
+        fun add(link: Element, scope: Element) {
+            val code = XHamsterConstants.codeFromUrl(link.attr("href")) ?: return
+            if (out.containsKey(code)) return
+            val img = scope.selectFirst("img")
+            val title = scope.selectFirst(".mobile-video-thumb__name")?.text()
+                ?: link.attr("aria-label").ifBlank { null }
+                ?: img?.attr("alt")?.ifBlank { null }
+                ?: link.attr("title").ifBlank { null }
+                ?: link.text()
+            if (title.isBlank()) return
             out[code] = HanimeInfo(
-                title = title,
+                title = title.trim(),
                 coverUrl = img?.let { imgUrl(it) }.orEmpty(),
                 videoCode = code,
-                duration = duration,
+                duration = scope.selectFirst(".time time, time")?.text()?.trim()
+                    ?.takeIf { it.isNotBlank() },
+                views = scope.selectFirst(".video-thumb-views")?.text()
+                    ?.removeSuffix("views")?.trim()?.takeIf { it.isNotBlank() },
                 itemType = HanimeInfo.NORMAL,
             )
+        }
+
+        val cards = document.select("[data-role=mobile-video-thumb], [data-video-type]")
+        if (cards.isNotEmpty()) {
+            cards.forEach { card ->
+                if (card.attr("data-video-type").let { it.isNotBlank() && it != "video" }) return@forEach
+                val link = card.selectFirst("a[href*=/videos/]") ?: return@forEach
+                add(link, card)
+            }
+        } else {
+            document.select("a[href*=/videos/]").forEach { a -> add(a, a.parent() ?: a) }
         }
         val items = out.values.toList()
         return XHamsterListPage(items, nextUrl(null, document, items.isNotEmpty()))
     }
 
-    fun parseChannels(html: String): XHamsterPage<XHamsterChannel> = buildPage(html) { root, document ->
-        val out = LinkedHashMap<String, XHamsterChannel>()
-        walk(root) { o ->
-            val url = o.link() ?: return@walk
-            val path = pathOf(url)
-            if (!path.startsWith("/channels/")) return@walk
-            val name = o.label() ?: return@walk
-            out.putIfAbsent(
-                path,
-                XHamsterChannel(
-                    name = name,
-                    path = path,
-                    logoUrl = o.image().orEmpty(),
-                    videoCount = o.firstLng("videos", "videosCount", "videoCount", "quantity"),
-                    subscribers = o.obj("subscriptionModel")?.lng("subscribers")
-                        ?: o.firstLng("subscribers", "subscribersCount"),
-                ),
-            )
-        }
-        if (out.isEmpty()) {
-            document.select("a[href*=/channels/]").forEach { a ->
-                val path = pathOf(a.attr("href"))
-                if (!path.startsWith("/channels/") || out.containsKey(path)) return@forEach
-                val name = a.attr("title").ifBlank { a.selectFirst("img")?.attr("alt").orEmpty() }
-                    .ifBlank { a.text() }.trim()
-                if (name.isBlank()) return@forEach
-                out[path] = XHamsterChannel(name, path, imgUrl(a), null, null)
-            }
-        }
-        out.values.toList()
-    }
+    // ---------- channels ----------
 
-    fun parseCreators(html: String): XHamsterPage<XHamsterCreator> = buildPage(html) { root, document ->
-        val out = LinkedHashMap<String, XHamsterCreator>()
-        fun isCreatorPath(p: String) = p.startsWith("/creators/") || p.startsWith("/users/")
-        walk(root) { o ->
-            val url = o.link() ?: return@walk
-            val path = pathOf(url)
-            if (!isCreatorPath(path) || path.startsWith("/creators/videos")) return@walk
-            val name = o.label() ?: return@walk
-            out.putIfAbsent(
-                path,
-                XHamsterCreator(
-                    name = name,
-                    path = path,
-                    avatarUrl = o.image().orEmpty(),
-                    videoCount = o.firstLng("videos", "videosCount", "videoCount", "quantity"),
-                    viewsCount = o.firstLng("views", "viewsCount"),
-                    verified = o.flag("isVerified", "verified"),
-                ),
-            )
-        }
-        if (out.isEmpty()) {
-            document.select("a[href*=/creators/], a[href*=/users/]").forEach { a ->
-                val path = pathOf(a.attr("href"))
-                if (!isCreatorPath(path) || path.startsWith("/creators/videos") || out.containsKey(path)) {
-                    return@forEach
-                }
-                val name = a.attr("title").ifBlank { a.selectFirst("img")?.attr("alt").orEmpty() }
-                    .ifBlank { a.text() }.trim()
-                if (name.isBlank()) return@forEach
-                out[path] = XHamsterCreator(name, path, imgUrl(a), null, null, false)
-            }
-        }
-        out.values.toList()
-    }
-
-    fun parseGalleries(html: String): XHamsterPage<XHamsterGallery> = buildPage(html) { root, document ->
-        val out = LinkedHashMap<String, XHamsterGallery>()
-        walk(root) { o ->
-            val url = o.link() ?: return@walk
-            if (!url.contains("/photos/gallery/")) return@walk
-            val title = o.label() ?: return@walk
-            val id = o.anyStr("id") ?: url.trimEnd('/').substringAfterLast('/')
-            val author = o.obj("author") ?: o.obj("user") ?: o.obj("publisher")
-            out.putIfAbsent(
-                id,
-                XHamsterGallery(
-                    id = id,
-                    title = title,
-                    url = XHamsterConstants.absolute(url),
-                    coverUrl = o.image().orEmpty(),
-                    photosCount = o.firstLng("quantity", "photosCount", "photos", "count"),
-                    viewsText = XHamsterFormat.count(o.firstLng("views", "viewsCount")),
-                    authorName = author?.label(),
-                    authorPath = author?.link()?.let { pathOf(it) },
-                ),
-            )
-        }
-        if (out.isEmpty()) {
-            document.select("a[href*=/photos/gallery/]").forEach { a ->
-                val url = XHamsterConstants.absolute(a.attr("href"))
-                val id = url.trimEnd('/').substringAfterLast('/')
-                if (out.containsKey(id)) return@forEach
-                val title = a.attr("title").ifBlank { a.selectFirst("img")?.attr("alt").orEmpty() }
-                    .ifBlank { a.text() }.trim()
-                if (title.isBlank()) return@forEach
-                out[id] = XHamsterGallery(id, title, url, imgUrl(a), null, null, null, null)
-            }
-        }
-        out.values.toList()
-    }
-
-    private fun optionFromJson(o: JsonObject): XHamsterOption? {
-        val name = o.label() ?: return null
-        val url = o.link() ?: o.str("path") ?: return null
-        return XHamsterOption(
+    private fun channelFrom(o: JsonObject): XHamsterChannel? {
+        val url = o.str("channelURL") ?: return null
+        val name = o.str("channelName") ?: return null
+        return XHamsterChannel(
             name = name,
             path = pathOf(url),
-            selected = o.flag("selected", "isSelected", "active", "isActive", "current"),
+            logoUrl = o.firstStr("siteLogoURL", "thumbURL").orEmpty(),
+            videoCount = o.lng("videoCount"),
+            subscribers = o.obj("subscriptionModel")?.lng("subscribers"),
         )
     }
 
-    private fun optionsFromLinks(
-        document: Document,
-        selector: String,
-        accept: (String) -> Boolean,
-    ): List<XHamsterOption> {
-        val out = LinkedHashMap<String, XHamsterOption>()
-        document.select(selector).forEach { a ->
-            val path = pathOf(a.attr("href"))
-            if (path.isBlank() || !accept(path) || out.containsKey(path)) return@forEach
-            val name = a.attr("title").ifBlank { a.text() }.trim()
-            if (name.isBlank()) return@forEach
-            val cls = a.className() + " " + (a.parent()?.className() ?: "")
-            val selected = a.attr("aria-current").isNotBlank() ||
-                    cls.contains("active") || cls.contains("selected")
-            out[path] = XHamsterOption(name, path, selected)
-        }
+    private fun channelsFrom(el: JsonElement?): List<XHamsterChannel> {
+        val out = LinkedHashMap<String, XHamsterChannel>()
+        walk(el) { o -> channelFrom(o)?.let { out.putIfAbsent(it.path, it) } }
         return out.values.toList()
     }
 
+    fun parseChannels(html: String): XHamsterPage<XHamsterChannel> = buildPage(html) { root, document ->
+        val items = channelsFrom(root?.obj("layoutPage")?.arr("channels")).ifEmpty { channelsFrom(root) }
+        if (items.isNotEmpty()) return@buildPage items
+        val out = LinkedHashMap<String, XHamsterChannel>()
+        document.select("a[href*=/channels/]").forEach { a ->
+            val path = pathOf(a.attr("href"))
+            if (!Regex("^/channels/[^/]+$").matches(path) || path == "/channels/all") return@forEach
+            if (out.containsKey(path)) return@forEach
+            val name = a.attr("title").ifBlank { a.selectFirst("img")?.attr("alt").orEmpty() }
+                .ifBlank { a.text() }.trim()
+            if (name.isBlank()) return@forEach
+            out[path] = XHamsterChannel(name, path, imgUrl(a), null, null)
+        }
+        out.values.toList()
+    }
+
+    // ---------- creators ----------
+
+    private fun creatorFrom(o: JsonObject): XHamsterCreator? {
+        val url = o.str("pageURL") ?: return null
+        val path = pathOf(url)
+        if (!path.startsWith("/creators/") && !path.startsWith("/pornstars/")) return null
+        if (!o.containsKey("videoCount")) return null
+        val name = o.str("name") ?: return null
+        return XHamsterCreator(
+            name = name,
+            path = path,
+            avatarUrl = o.firstStr("imageUserAvatarUrl", "logoThumbUrl", "imageThumbUrl").orEmpty(),
+            videoCount = o.lng("videoCount"),
+            viewsCount = o.lng("viewsCount"),
+            verified = o.flag("isVerified"),
+        )
+    }
+
+    fun parseCreators(html: String): XHamsterPage<XHamsterCreator> = buildPage(html) { root, document ->
+        fun scan(el: JsonElement?): List<XHamsterCreator> {
+            val out = LinkedHashMap<String, XHamsterCreator>()
+            walk(el) { o -> creatorFrom(o)?.let { out.putIfAbsent(it.path, it) } }
+            return out.values.toList()
+        }
+
+        val items = scan(root?.obj("layoutPage")?.obj("pornstarListProps")).ifEmpty { scan(root) }
+        if (items.isNotEmpty()) return@buildPage items
+        val out = LinkedHashMap<String, XHamsterCreator>()
+        document.select("a[href*=/creators/]").forEach { a ->
+            val path = pathOf(a.attr("href"))
+            if (!Regex("^/creators/[^/]+$").matches(path) ||
+                path in setOf("/creators/all", "/creators/videos", "/creators/contest")
+            ) return@forEach
+            if (out.containsKey(path)) return@forEach
+            val name = a.attr("title").ifBlank { a.selectFirst("img")?.attr("alt").orEmpty() }
+                .ifBlank { a.text() }.trim()
+            if (name.isBlank()) return@forEach
+            out[path] = XHamsterCreator(name, path, imgUrl(a), null, null, false)
+        }
+        out.values.toList()
+    }
+
+    // ---------- galleries ----------
+
+    private fun galleryFrom(o: JsonObject): XHamsterGallery? {
+        val url = o.str("link") ?: return null
+        if (!url.contains("/photos/gallery/")) return null
+        val title = o.str("title") ?: return null
+        val author = o.obj("author")
+        return XHamsterGallery(
+            id = o.anyStr("id") ?: url.trimEnd('/').substringAfterLast('/'),
+            title = title,
+            url = XHamsterConstants.absolute(url),
+            coverUrl = o.firstStr("imgSrc", "imgSrcset").orEmpty(),
+            photosCount = o.lng("photosCount"),
+            viewsText = o.str("viewsText"),
+            authorName = author?.str("name"),
+            authorPath = author?.str("link")?.let { pathOf(it) },
+        )
+    }
+
+    fun parseGalleries(html: String): XHamsterPage<XHamsterGallery> = buildPage(html) { root, document ->
+        fun scan(el: JsonElement?): List<XHamsterGallery> {
+            val out = LinkedHashMap<String, XHamsterGallery>()
+            walk(el) { o -> galleryFrom(o)?.let { out.putIfAbsent(it.id, it) } }
+            return out.values.toList()
+        }
+
+        val items = scan(root?.obj("photosPage")?.arr("galleriesItems")).ifEmpty { scan(root) }
+        if (items.isNotEmpty()) return@buildPage items
+        val out = LinkedHashMap<String, XHamsterGallery>()
+        document.select("a[href*=/photos/gallery/]").forEach { a ->
+            val url = XHamsterConstants.absolute(a.attr("href"))
+            val id = url.trimEnd('/').substringAfterLast('/')
+            if (out.containsKey(id)) return@forEach
+            val title = a.attr("title").ifBlank { a.selectFirst("img")?.attr("alt").orEmpty() }
+                .ifBlank { a.text() }.trim()
+            if (title.isBlank()) return@forEach
+            out[id] = XHamsterGallery(id, title, url, imgUrl(a), null, null, null, null)
+        }
+        out.values.toList()
+    }
+
+    // ---------- option lists ----------
+
     fun parseCategories(html: String): List<XHamsterOption> {
         val out = LinkedHashMap<String, XHamsterOption>()
+        val single = Regex("^/categories/[^/?#]+$")
         walk(XHamsterParser.extractInitials(html)) { o ->
-            val url = o.link() ?: return@walk
+            if (o.flag("isLanguageGroup")) return@walk
+            val url = o.str("url") ?: return@walk
             val path = pathOf(url)
-            if (!path.startsWith("/categories/")) return@walk
-            val name = o.label() ?: return@walk
+            if (!single.matches(path)) return@walk
+            val name = o.str("name") ?: return@walk
             out.putIfAbsent(path, XHamsterOption(name, path))
         }
         if (out.isNotEmpty()) return out.values.toList()
-        return optionsFromLinks(doc(html), "a[href*=/categories/]") {
-            it.startsWith("/categories/") && it.trimEnd('/').count { c -> c == '/' } == 2
+        val seen = LinkedHashMap<String, XHamsterOption>()
+        doc(html).select("a[href*=/categories/]").forEach { a ->
+            val path = pathOf(a.attr("href"))
+            if (!single.matches(path) || seen.containsKey(path)) return@forEach
+            val name = a.attr("title").ifBlank { a.text() }.trim()
+            if (name.isNotBlank()) seen[path] = XHamsterOption(name, path)
         }
+        return seen.values.toList()
     }
 
     fun parsePhotoFilters(html: String): List<XHamsterOption> {
-        fun accept(p: String) = p.startsWith("/photos") && !p.startsWith("/photos/gallery")
+        val root = XHamsterParser.extractInitials(html)
         val out = LinkedHashMap<String, XHamsterOption>()
-        walk(XHamsterParser.extractInitials(html)) { o ->
-            val opt = optionFromJson(o) ?: return@walk
-            if (accept(opt.path)) out.putIfAbsent(opt.path, opt)
+        fun accept(p: String) = p.startsWith("/photos") && !p.startsWith("/photos/gallery")
+
+        val tabs = findObjectWithKey(root, "tabSetProps")?.obj("tabSetProps")?.arr("items")
+        tabs?.forEach { el ->
+            val tab = el as? JsonObject ?: return@forEach
+            val link = tab.obj("link") ?: return@forEach
+            val name = link.str("text")?.trim() ?: return@forEach
+            val url = link.str("link") ?: return@forEach
+            val path = pathOf(url)
+            if (accept(path)) out.putIfAbsent(path, XHamsterOption(name, path, tab.flag("isSelected")))
+        }
+        val urls = findObjectWithKey(root, "filtersProps")?.obj("filtersProps")?.obj("urls")
+        urls?.forEach { (key, value) ->
+            val url = (value as? JsonPrimitive)?.contentOrNull ?: return@forEach
+            val path = pathOf(url)
+            if (accept(path)) {
+                out.putIfAbsent(path, XHamsterOption(humanize(key.removePrefix("photos")), path))
+            }
         }
         if (out.isNotEmpty()) return out.values.toList()
-        return optionsFromLinks(doc(html), "a[href*=/photos]") { accept(it) }
+
+        val seen = LinkedHashMap<String, XHamsterOption>()
+        doc(html).select("a[href*=/photos]").forEach { a ->
+            val path = pathOf(a.attr("href"))
+            if (!accept(path) || seen.containsKey(path)) return@forEach
+            val name = a.attr("title").ifBlank { a.text() }.trim()
+            if (name.isNotBlank()) seen[path] = XHamsterOption(name, path)
+        }
+        return seen.values.toList()
     }
 
     fun parseTopCreatorOptions(html: String, kind: String): List<XHamsterOption> {
-        val fromJson = findArray(XHamsterParser.extractInitials(html), kind)
-            ?.mapNotNull { (it as? JsonObject)?.let { o -> optionFromJson(o) } }
-            .orEmpty()
-        if (fromJson.isNotEmpty()) return fromJson.distinctBy { it.path }
-        return optionsFromLinks(doc(html), "a[href*=/creators/videos]") {
-            it.startsWith("/creators/videos")
-        }
+        val list = findArray(XHamsterParser.extractInitials(html), kind) ?: return emptyList()
+        return list.mapNotNull { el ->
+            val o = el as? JsonObject ?: return@mapNotNull null
+            val name = o.str("name") ?: return@mapNotNull null
+            val url = o.str("value") ?: o.str("url") ?: return@mapNotNull null
+            XHamsterOption(name, pathOf(url), o.flag("selected"))
+        }.distinctBy { it.path }
     }
+
+    // ---------- profile ----------
 
     fun parseProfile(html: String): XHamsterProfile? {
         val root = XHamsterParser.extractInitials(html)
         val document = doc(html)
+        val layout = root?.obj("layoutPage")
 
-        val entity = findObjectWithKey(root, "userEntity")?.obj("userEntity")
-            ?: findObjectWithKey(root, "profileUser")?.obj("profileUser")
+        val user = layout?.obj("userModel")
+            ?: root?.obj("displayUserModel")
             ?: findObjectWithKey(root, "userModel")?.obj("userModel")
-        val ownId = root?.lng("userId")?.takeIf { it > 0L }
-        val id = entity?.lng("id") ?: entity?.lng("userId") ?: ownId
 
-        val name = entity?.label() ?: entity?.str("username") ?: entity?.str("userName")
-        ?: findStr(entity ?: root, "displayName", "username", "userName")
-        ?: document.selectFirst("meta[property=og:title]")?.attr("content")?.takeIf { it.isNotBlank() }
-        ?: document.selectFirst("h1")?.text()?.takeIf { it.isNotBlank() }
-        ?: return null
+        val name = user?.firstStr("displayName", "name")
+            ?: document.selectFirst("meta[property=og:title]")?.attr("content")?.takeIf { it.isNotBlank() }
+            ?: document.selectFirst("h1")?.text()?.takeIf { it.isNotBlank() }
+            ?: return null
 
-        val avatar = entity?.image()
-            ?: document.selectFirst("meta[property=og:image]")?.attr("content")?.takeIf { it.isNotBlank() }
+        val id = user?.lng("id") ?: 0L
+        val ownId = root?.lng("userId")
+        val isMine = layout?.flag("isMyProfile") == true || root?.flag("isMyProfile") == true ||
+                (id != 0L && ownId != null && id == ownId)
 
-        val counters = entity?.obj("counters") ?: entity?.obj("counts")
-        fun total(vararg keys: String): Long? =
-            counters?.firstLng(*keys) ?: entity?.firstLng(*keys)
-
-        val channels = LinkedHashMap<String, XHamsterChannel>()
-        walk(root) { o ->
-            val url = o.link() ?: return@walk
-            val path = pathOf(url)
-            if (!path.startsWith("/channels/")) return@walk
-            val chName = o.label() ?: return@walk
-            channels.putIfAbsent(
-                path,
-                XHamsterChannel(
-                    name = chName,
-                    path = path,
-                    logoUrl = o.image().orEmpty(),
-                    videoCount = o.firstLng("videos", "videosCount", "videoCount"),
-                    subscribers = o.obj("subscriptionModel")?.lng("subscribers")
-                        ?: o.firstLng("subscribers", "subscribersCount"),
-                ),
-            )
-        }
-
-        val isMine = entity?.flag("isMine", "isOwner", "isMyProfile") == true ||
-                (id != null && ownId != null && id == ownId)
-        val isPublic = !(entity?.flag("isPrivate", "isClosed") ?: false) &&
-                (entity?.get("isPublic")?.let { (it as? JsonPrimitive)?.booleanOrNull } ?: true)
+        val videos = XHamsterParser.parseCards(
+            layout?.obj("videoListProps")?.arr("videoList")
+        ).ifEmpty { XHamsterParser.parseListPage(html).items }
 
         return XHamsterProfile(
-            id = id ?: 0L,
+            id = id,
             name = name,
-            avatarUrl = avatar,
+            avatarUrl = user?.str("thumbURL")
+                ?: document.selectFirst("meta[property=og:image]")?.attr("content")?.takeIf { it.isNotBlank() },
             isMine = isMine,
-            isPublic = isPublic,
-            videosTotal = total("videos", "videosCount", "videoCount"),
-            momentsTotal = total("moments", "momentsCount"),
-            friendsTotal = total("friends", "friendsCount"),
-            favoritesTotal = total("favorites", "favoritesCount"),
-            channels = channels.values.toList(),
-            videos = XHamsterParser.parseListPage(html).items,
+            isPublic = user?.boolOrNull("isPublicProfile") ?: true,
+            videosTotal = layout?.lng("videosTotal"),
+            momentsTotal = layout?.lng("momentsTotal"),
+            friendsTotal = layout?.lng("friendsTotal"),
+            favoritesTotal = layout?.lng("favoriteVideosTotal"),
+            channels = channelsFrom(layout?.arr("channels")),
+            videos = videos,
         )
     }
 
+    // ---------- creator dashboard ----------
+
     fun parseDashboard(html: String): XHamsterDashboard? {
         val root = XHamsterParser.extractInitials(html) ?: return null
+        val layout = root.obj("layoutPage")
+        val dash = root.obj("dashboard") ?: layout?.obj("dashboardEntity") ?: return null
+        val summary = dash.obj("summary")
+        val adShare = summary?.obj("adShare")
+        val premium = summary?.obj("premium")
+
         val menu = LinkedHashMap<String, XHamsterLink>()
-        (findArray(root, "menu") ?: findArray(root, "menuItems") ?: findArray(root, "navigation"))
-            ?.forEach { el ->
-                val o = el as? JsonObject ?: return@forEach
-                val title = o.label() ?: return@forEach
-                val url = o.link() ?: return@forEach
-                menu.putIfAbsent(url, XHamsterLink(title, pathOf(url)))
-            }
+        (root.arr("creatorMenuList") ?: layout?.arr("creatorMenuList"))?.forEach { el ->
+            val o = el as? JsonObject ?: return@forEach
+            val title = o.str("text") ?: return@forEach
+            val href = o.str("href") ?: return@forEach
+            menu.putIfAbsent(href, XHamsterLink(title, pathOf(href)))
+        }
+
         return XHamsterDashboard(
-            balance = findStr(root, "balance", "availableBalance"),
-            pending = findStr(root, "pending", "pendingBalance", "pendingAmount"),
-            premiumRevenue = findStr(root, "premiumRevenue", "premium"),
-            adShareEnabled = findObjectWithKey(root, "adShareEnabled")?.flag("adShareEnabled") == true ||
-                    findObjectWithKey(root, "isAdShareEnabled")?.flag("isAdShareEnabled") == true,
-            canUpload = findObjectWithKey(root, "canUpload")?.flag("canUpload") == true ||
-                    findObjectWithKey(root, "isUploadAllowed")?.flag("isUploadAllowed") == true,
+            balance = adShare?.anyStr("balance"),
+            pending = adShare?.anyStr("pending"),
+            premiumRevenue = premium?.anyStr("monthlyRevenue"),
+            adShareEnabled = adShare?.flag("enabled") == true,
+            canUpload = dash.flag("canUpload"),
             menu = menu.values.toList(),
         )
     }
 
-    private fun humanize(key: String): String =
-        key.replace(Regex("([a-z])([A-Z])"), "\$1 \$2").replace('_', ' ')
-            .replaceFirstChar { it.uppercase() }
+    // ---------- account settings ----------
 
-    private fun selectedOptions(document: Document): List<XHamsterLink> =
-        document.select("select").mapNotNull { sel ->
-            val value = (sel.selectFirst("option[selected]") ?: sel.selectFirst("option"))
-                ?.text()?.trim()?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
-            val label = sel.id().takeIf { it.isNotBlank() }
-                ?.let { id -> document.select("label").firstOrNull { it.attr("for") == id }?.text() }
-                ?.trim()?.takeIf { it.isNotBlank() }
-                ?: sel.attr("name").takeIf { it.isNotBlank() }?.let { humanize(it) }
-                ?: return@mapNotNull null
-            XHamsterLink(label, value)
-        }
-
-    private fun selectValue(document: Document?, vararg nameParts: String): String? {
-        if (document == null) return null
-        return document.select("select").firstOrNull { sel ->
-            nameParts.any { sel.attr("name").contains(it, ignoreCase = true) }
-        }?.let { sel ->
-            (sel.selectFirst("option[selected]") ?: sel.selectFirst("option"))
-                ?.text()?.trim()?.takeIf { it.isNotBlank() }
-        }
-    }
+    private val PRIVACY_TITLES = mapOf(
+        "pm" to "Private messages",
+        "promo" to "Promotional messages",
+        "performerCollaboration" to "Collaboration requests",
+        "acceptProfileComments" to "Profile comments",
+        "acceptContentComments" to "Content comments",
+    )
 
     fun parseAccountSettings(profileHtml: String?, privacyHtml: String?): XHamsterAccountSettings {
         val profileRoot = profileHtml?.let { XHamsterParser.extractInitials(it) }
         val privacyRoot = privacyHtml?.let { XHamsterParser.extractInitials(it) }
-        val profileDoc = profileHtml?.let { doc(it) }
-        val privacyDoc = privacyHtml?.let { doc(it) }
 
-        val displayName = findStr(profileRoot, "displayName", "display_name", "nickName")
-            ?: profileDoc?.select("input")?.firstOrNull {
-                it.attr("name").contains("display", true) || it.attr("name").contains("nick", true)
-            }?.attr("value")?.takeIf { it.isNotBlank() }
-        val email = findStr(profileRoot, "email")
-            ?: profileDoc?.selectFirst("input[type=email], input[name=email]")?.attr("value")
-                ?.takeIf { it.isNotBlank() }
-        val emailVerified = findObjectWithKey(profileRoot, "emailVerified")?.flag("emailVerified") == true ||
-                findObjectWithKey(profileRoot, "isEmailVerified")?.flag("isEmailVerified") == true
+        val user = profileRoot?.obj("displayUserModel")
+        val personal = user?.obj("personalInfo")
+        val emailBox = profileRoot?.obj("editEmailContainerComponent")
 
         val privacy = ArrayList<XHamsterLink>()
-        walk(privacyRoot) { o ->
-            val block = o["privacySettings"] ?: o["privacy"] ?: return@walk
-            when (block) {
-                is JsonObject -> block.forEach { (k, v) ->
-                    val value = (v as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() }
-                    if (value != null) privacy += XHamsterLink(humanize(k), value)
-                }
-
-                is JsonArray -> block.forEach { el ->
-                    val item = el as? JsonObject ?: return@forEach
-                    val title = item.label() ?: return@forEach
-                    val value = item.anyStr("value") ?: item.anyStr("selected") ?: return@forEach
-                    privacy += XHamsterLink(title, value)
-                }
-
-                else -> Unit
-            }
+        val settings = privacyRoot?.obj("userPrivacySettings")
+        settings?.forEach { (key, value) ->
+            val current = (value as? JsonPrimitive)?.takeIf { it.isString }?.content ?: return@forEach
+            val options = settings.arr(key + "List")
+            if (options == null && key !in PRIVACY_TITLES) return@forEach
+            val text = options?.firstNotNullOfOrNull { el ->
+                (el as? JsonObject)?.takeIf { it.str("value") == current }?.str("text")
+            } ?: humanize(current)
+            privacy += XHamsterLink(PRIVACY_TITLES[key] ?: humanize(key), text)
         }
-        if (privacy.isEmpty() && privacyDoc != null) privacy += selectedOptions(privacyDoc)
 
         return XHamsterAccountSettings(
-            displayName = displayName,
-            email = email,
-            emailVerified = emailVerified,
-            gender = findStr(profileRoot, "gender") ?: selectValue(profileDoc, "gender"),
-            country = findStr(profileRoot, "country", "countryName") ?: selectValue(profileDoc, "country"),
-            relation = findStr(profileRoot, "relation", "relationship")
-                ?: selectValue(profileDoc, "relation"),
-            profileVisibility = findStr(privacyRoot, "profileVisibility", "profileAccess")
-                ?: selectValue(privacyDoc, "visib", "profile"),
-            privacy = privacy.distinctBy { it.title },
+            displayName = user?.firstStr("displayName", "name"),
+            email = emailBox?.str("mainEmail") ?: user?.str("email"),
+            emailVerified = emailBox?.flag("isEmailVerified") == true || user?.flag("mailVerified") == true,
+            gender = personal?.obj("gender")?.str("label"),
+            country = personal?.obj("geo")?.str("countryName"),
+            relation = personal?.obj("relations")?.str("label"),
+            profileVisibility = user?.boolOrNull("isPublicProfile")?.let { if (it) "Public" else "Private" },
+            privacy = privacy,
         )
     }
 }

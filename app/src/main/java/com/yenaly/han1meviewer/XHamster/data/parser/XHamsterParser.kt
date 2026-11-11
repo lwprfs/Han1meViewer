@@ -113,6 +113,12 @@ object XHamsterParser {
         }
     }
 
+    fun parseCards(list: JsonArray?): List<HanimeInfo> {
+        val out = LinkedHashMap<String, HanimeInfo>()
+        addCards(list, out)
+        return out.values.toList()
+    }
+
     fun parseListPage(html: String): XHamsterListPage {
         val root = extractInitials(html) ?: return XHamsterListPage(emptyList(), null)
         val items = LinkedHashMap<String, HanimeInfo>()
