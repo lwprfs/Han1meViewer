@@ -3,7 +3,9 @@ package com.yenaly.han1meviewer.XHamster.data.parser
 import com.yenaly.han1meviewer.XHamster.common.XHamsterConstants
 import com.yenaly.han1meviewer.XHamster.common.XHamsterFormat
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterDetail
+import com.yenaly.han1meviewer.XHamster.data.model.XHamsterComment
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterLink
+import com.yenaly.han1meviewer.XHamster.data.model.XHamsterUploader
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterListPage
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterUser
 import com.yenaly.han1meviewer.logic.model.HanimeInfo
@@ -250,6 +252,12 @@ object XHamsterParser {
             ?.replace("&amp;", "&")
             ?.takeIf { it.startsWith("http") }
 
+        val uploaderInfo = parseUploader(root, model)
+        val commentsList = findObjectWithKey(root, "commentsList")?.obj("commentsList")
+        val commentsTotal = commentsList?.obj("counters")?.lng("total")
+            ?: entity?.lng("commentsCount")
+        val comments = commentsList?.arr("items").orEmpty().mapNotNull { parseComment(it) }
+
         val relatedMap = LinkedHashMap<String, HanimeInfo>()
         collectCards(root, relatedMap)
         relatedMap.remove(code)
@@ -273,6 +281,57 @@ object XHamsterParser {
             hlsDirect = direct,
             mp4Fallback = mp4,
             related = related,
+            uploaderInfo = uploaderInfo,
+            commentsTotal = commentsTotal,
+            comments = comments,
+        )
+    }
+
+    private fun parseUploader(root: JsonObject?, model: JsonObject?): XHamsterUploader? {
+        fun JsonObject.toUploader(isChannelHint: Boolean): XHamsterUploader? {
+            val name = str("name") ?: return null
+            val url = str("url") ?: str("pageURL") ?: str("pageUrl") ?: return null
+            return XHamsterUploader(
+                name = name,
+                path = XHamsterConstants.relativePath(url),
+                avatarUrl = str("thumbUrl") ?: str("thumbURL"),
+                subscribers = obj("subscriptionModel")?.lng("subscribers"),
+                verified = (this["isVerified"] as? JsonPrimitive)?.contentOrNull == "true" ||
+                        (this["verified"] as? JsonPrimitive)?.contentOrNull == "true",
+                isChannel = isChannelHint || (this["isChannel"] as? JsonPrimitive)?.contentOrNull == "true",
+            )
+        }
+
+        root?.obj("videoTagsComponent")?.arr("tags")?.forEach { el ->
+            val t = el as? JsonObject ?: return@forEach
+            fun flag(k: String) = (t[k] as? JsonPrimitive)?.contentOrNull == "true"
+            if (flag("isUser") || flag("isChannel") || flag("isCreator")) {
+                t.toUploader(flag("isChannel"))?.let { return it }
+            }
+        }
+        model?.obj("channelModel")?.toUploader(true)?.let { return it }
+        return model?.obj("author")?.toUploader(false)
+    }
+
+    private fun parseComment(el: JsonElement?, depth: Int = 0): XHamsterComment? {
+        val o = el as? JsonObject ?: return null
+        val text = o.str("text") ?: o.str("body") ?: o.str("message") ?: o.str("content")
+        ?: return null
+        val author = o.obj("author") ?: o.obj("user") ?: o.obj("publisher")
+        val name = author?.str("name") ?: o.str("authorName") ?: o.str("name") ?: return null
+        val replies = if (depth < 2) {
+            (o.arr("replies") ?: o.arr("children")).orEmpty().mapNotNull { parseComment(it, depth + 1) }
+        } else emptyList()
+        return XHamsterComment(
+            id = o.str("id") ?: o.lng("id")?.toString() ?: "$name:${text.hashCode()}",
+            author = name,
+            authorPath = (author?.str("pageUrl") ?: author?.str("pageURL") ?: author?.str("url"))
+                ?.let { XHamsterConstants.relativePath(it) },
+            avatarUrl = author?.str("thumbUrl") ?: author?.str("thumbURL"),
+            text = android.text.Html.fromHtml(text, android.text.Html.FROM_HTML_MODE_COMPACT).toString().trim(),
+            date = o.str("dateAgo") ?: o.str("created") ?: o.str("date"),
+            likes = o.lng("likes") ?: o.obj("rating")?.lng("likes"),
+            replies = replies,
         )
     }
 }

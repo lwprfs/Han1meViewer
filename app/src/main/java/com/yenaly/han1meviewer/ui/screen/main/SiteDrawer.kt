@@ -34,6 +34,9 @@ import com.yenaly.han1meviewer.RouVideo.ui.navigation.RouVideoTranslationSetting
 import com.yenaly.han1meviewer.RouVideo.common.RouVideoTranslation
 import com.yenaly.han1meviewer.XHamster.data.remote.XHamsterAuth
 import com.yenaly.han1meviewer.XHamster.ui.navigation.XHamsterAccountRoute
+import com.yenaly.han1meviewer.XHamster.ui.navigation.XHamsterChannelsRoute
+import com.yenaly.han1meviewer.XHamster.ui.navigation.XHamsterCreatorsRoute
+import com.yenaly.han1meviewer.XHamster.ui.navigation.XHamsterPhotosRoute
 import com.yenaly.han1meviewer.XHamster.ui.navigation.XHamsterCategoriesRoute
 import com.yenaly.han1meviewer.XHamster.ui.navigation.XHamsterCategoryRoute
 import com.yenaly.han1meviewer.XHamster.ui.navigation.XHamsterHistoryRoute
@@ -412,6 +415,9 @@ fun siteDrawerSections(context: Context, site: SiteType, loggedIn: Boolean): Lis
                     checkIn,
                     entry(str(R.string.search), R.drawable.ic_baseline_search_24, XHamsterSearchRoute()),
                     entry(str(R.string.xhamster_categories), R.drawable.baseline_grid_24, XHamsterCategoriesRoute),
+                    entry(str(R.string.xhamster_channels), R.drawable.baseline_grid_24, XHamsterChannelsRoute),
+                    entry(str(R.string.xhamster_creators), R.drawable.baseline_grid_24, XHamsterCreatorsRoute),
+                    entry(str(R.string.xhamster_photos), R.drawable.baseline_grid_24, XHamsterPhotosRoute),
                 ),
             ),
             SiteDrawerSection(

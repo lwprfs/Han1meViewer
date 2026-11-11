@@ -8,7 +8,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.runtime.Composable
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -21,6 +24,14 @@ import com.yenaly.han1meviewer.XHamster.ui.account.XHamsterAccountScreen
 import com.yenaly.han1meviewer.XHamster.ui.categories.XHamsterCategoriesScreen
 import com.yenaly.han1meviewer.XHamster.ui.categories.XHamsterCategoryScreen
 import com.yenaly.han1meviewer.XHamster.ui.history.XHamsterHistoryScreen
+import com.yenaly.han1meviewer.XHamster.common.XHamsterConstants
+import com.yenaly.han1meviewer.XHamster.ui.entities.XHamsterAccountSettingsScreen
+import com.yenaly.han1meviewer.XHamster.ui.entities.XHamsterChannelsScreen
+import com.yenaly.han1meviewer.XHamster.ui.entities.XHamsterCreatorDashboardScreen
+import com.yenaly.han1meviewer.XHamster.ui.entities.XHamsterCreatorsScreen
+import com.yenaly.han1meviewer.XHamster.ui.entities.XHamsterPhotosScreen
+import com.yenaly.han1meviewer.XHamster.ui.entities.XHamsterProfileScreen
+import com.yenaly.han1meviewer.XHamster.ui.entities.XHamsterTopCreatorVideosScreen
 import com.yenaly.han1meviewer.XHamster.ui.home.XHamsterHomeScreen
 import com.yenaly.han1meviewer.XHamster.ui.search.XHamsterSearchScreen
 import com.yenaly.han1meviewer.XHamster.ui.settings.XHamsterSettingsScreen
@@ -67,6 +78,27 @@ object XHamsterAccountRoute
 
 @Serializable
 data class XHamsterCategoryRoute(val path: String, val title: String)
+
+@Serializable
+object XHamsterChannelsRoute
+
+@Serializable
+object XHamsterCreatorsRoute
+
+@Serializable
+object XHamsterPhotosRoute
+
+@Serializable
+object XHamsterTopCreatorVideosRoute
+
+@Serializable
+object XHamsterDashboardRoute
+
+@Serializable
+object XHamsterAccountSettingsRoute
+
+@Serializable
+data class XHamsterProfileRoute(val path: String, val title: String)
 
 @Composable
 fun XHamsterNavHost(
@@ -120,6 +152,13 @@ fun XHamsterNavHost(
                         onClick = { navController.navigateSafely(XHamsterSettingsRoute) },
                     ),
                     SiteSettingsEntry(
+                        key = "account",
+                        title = stringResource(R.string.xhamster_account_settings),
+                        subtitle = stringResource(R.string.xhamster_account_settings_summary),
+                        icon = Icons.Default.Person,
+                        onClick = { navController.navigateSafely(XHamsterAccountSettingsRoute) },
+                    ),
+                    SiteSettingsEntry(
                         key = "history",
                         title = stringResource(R.string.xhamster_history_title),
                         subtitle = stringResource(R.string.xhamster_history_summary),
@@ -162,12 +201,21 @@ fun XHamsterNavHost(
                 onNavigateToPath = { path, title ->
                     navController.navigateSafely(XHamsterCategoryRoute(path, title))
                 },
+                onNavigateToUploader = { path, title ->
+                    if (path.startsWith("/users/")) {
+                        navController.navigateSafely(XHamsterProfileRoute(path, title))
+                    } else {
+                        navController.navigateSafely(XHamsterCategoryRoute(path, title))
+                    }
+                },
             )
         }
 
         composable<XHamsterAccountRoute> {
             XHamsterAccountScreen(
                 onBack = { navController.popBackStackSafely() },
+                onOpenDashboard = { navController.navigateSafely(XHamsterDashboardRoute) },
+                onOpenSettings = { navController.navigateSafely(XHamsterAccountSettingsRoute) },
                 onOpenPath = { path, title ->
                     navController.navigateSafely(XHamsterCategoryRoute(path, title))
                 },
@@ -204,10 +252,85 @@ fun XHamsterNavHost(
             )
         }
 
+        composable<XHamsterChannelsRoute> {
+            XHamsterChannelsScreen(
+                onBack = { navController.popBackStackSafely() },
+                onOpenChannel = { path, title ->
+                    navController.navigateSafely(XHamsterCategoryRoute(path, title))
+                },
+            )
+        }
+
+        composable<XHamsterCreatorsRoute> {
+            XHamsterCreatorsScreen(
+                onBack = { navController.popBackStackSafely() },
+                onOpenCreator = { path, title ->
+                    navController.navigateSafely(XHamsterCategoryRoute(path, title))
+                },
+                onOpenTopVideos = { navController.navigateSafely(XHamsterTopCreatorVideosRoute) },
+            )
+        }
+
+        composable<XHamsterTopCreatorVideosRoute> {
+            XHamsterTopCreatorVideosScreen(
+                onBack = { navController.popBackStackSafely() },
+                onNavigateToVideo = { code ->
+                    navController.navigateSafely(XHamsterVideoRoute(code))
+                },
+            )
+        }
+
+        composable<XHamsterPhotosRoute> {
+            XHamsterPhotosScreen(
+                onBack = { navController.popBackStackSafely() },
+                onOpenGallery = { url -> openInBrowser(activity, url) },
+                onOpenAuthor = { path, title ->
+                    navController.navigateSafely(XHamsterProfileRoute(path, title))
+                },
+            )
+        }
+
+        composable<XHamsterProfileRoute> {
+            val route = it.toRoute<XHamsterProfileRoute>()
+            XHamsterProfileScreen(
+                path = route.path,
+                title = route.title,
+                onBack = { navController.popBackStackSafely() },
+                onNavigateToVideo = { code ->
+                    navController.navigateSafely(XHamsterVideoRoute(code))
+                },
+                onOpenPath = { path, title ->
+                    navController.navigateSafely(XHamsterCategoryRoute(path, title))
+                },
+            )
+        }
+
+        composable<XHamsterDashboardRoute> {
+            XHamsterCreatorDashboardScreen(
+                onBack = { navController.popBackStackSafely() },
+                onOpenTopVideos = { navController.navigateSafely(XHamsterTopCreatorVideosRoute) },
+            )
+        }
+
+        composable<XHamsterAccountSettingsRoute> {
+            XHamsterAccountSettingsScreen(
+                onBack = { navController.popBackStackSafely() },
+                onOpenInBrowser = { path ->
+                    openInBrowser(activity, XHamsterConstants.listUrl(path))
+                },
+            )
+        }
+
         registerGlobalSettingsRoutes(
             activity = activity,
             navController = navController,
             homeFallback = XHamsterSettingsHubRoute,
         )
+    }
+}
+
+private fun openInBrowser(activity: MainActivity, url: String) {
+    runCatching {
+        activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
     }
 }

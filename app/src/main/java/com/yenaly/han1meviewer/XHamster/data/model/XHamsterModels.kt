@@ -44,4 +44,96 @@ data class XHamsterDetail(
 
     val mp4Fallback: String?,
     val related: List<com.yenaly.han1meviewer.logic.model.HanimeInfo>,
+    val uploaderInfo: XHamsterUploader? = null,
+    val commentsTotal: Long? = null,
+    val comments: List<XHamsterComment> = emptyList(),
+)
+
+data class XHamsterUploader(
+    val name: String,
+    val path: String,
+    val avatarUrl: String?,
+    val subscribers: Long?,
+    val verified: Boolean,
+    val isChannel: Boolean,
+)
+
+data class XHamsterComment(
+    val id: String,
+    val author: String,
+    val authorPath: String?,
+    val avatarUrl: String?,
+    val text: String,
+    val date: String?,
+    val likes: Long?,
+    val replies: List<XHamsterComment> = emptyList(),
+)
+
+data class XHamsterPage<T>(
+    val items: List<T>,
+    val nextUrl: String?,
+)
+
+data class XHamsterChannel(
+    val name: String,
+    val path: String,
+    val logoUrl: String,
+    val videoCount: Long?,
+    val subscribers: Long?,
+)
+
+data class XHamsterCreator(
+    val name: String,
+    val path: String,
+    val avatarUrl: String,
+    val videoCount: Long?,
+    val viewsCount: Long?,
+    val verified: Boolean,
+)
+
+data class XHamsterGallery(
+    val id: String,
+    val title: String,
+    val url: String,
+    val coverUrl: String,
+    val photosCount: Long?,
+    val viewsText: String?,
+    val authorName: String?,
+    val authorPath: String?,
+)
+
+data class XHamsterOption(val name: String, val path: String, val selected: Boolean = false)
+
+data class XHamsterProfile(
+    val id: Long,
+    val name: String,
+    val avatarUrl: String?,
+    val isMine: Boolean,
+    val isPublic: Boolean,
+    val videosTotal: Long?,
+    val momentsTotal: Long?,
+    val friendsTotal: Long?,
+    val favoritesTotal: Long?,
+    val channels: List<XHamsterChannel>,
+    val videos: List<com.yenaly.han1meviewer.logic.model.HanimeInfo>,
+)
+
+data class XHamsterDashboard(
+    val balance: String?,
+    val pending: String?,
+    val premiumRevenue: String?,
+    val adShareEnabled: Boolean,
+    val canUpload: Boolean,
+    val menu: List<XHamsterLink>,
+)
+
+data class XHamsterAccountSettings(
+    val displayName: String?,
+    val email: String?,
+    val emailVerified: Boolean,
+    val gender: String?,
+    val country: String?,
+    val relation: String?,
+    val profileVisibility: String?,
+    val privacy: List<XHamsterLink>,
 )

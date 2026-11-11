@@ -24,6 +24,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.yenaly.han1meviewer.XHamster.data.remote.XHamsterRepo
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.XHamster.common.XHamsterConstants
 import com.yenaly.han1meviewer.XHamster.ui.home.XHamsterListViewModel
@@ -37,6 +41,16 @@ fun XHamsterCategoriesScreen(
     onBack: () -> Unit,
     onOpenCategory: (path: String, title: String) -> Unit,
 ) {
+
+    var categories by remember {
+        mutableStateOf(XHamsterConstants.CATEGORIES.map { it.path to it.title })
+    }
+    LaunchedEffect(Unit) {
+        XHamsterRepo.categories().onSuccess { live ->
+            if (live.isNotEmpty()) categories = live.map { it.path to it.name }
+        }
+    }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
@@ -55,11 +69,11 @@ fun XHamsterCategoriesScreen(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            items(XHamsterConstants.CATEGORIES, key = { it.key }) { category ->
+            items(categories, key = { it.first }) { (path, title) ->
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onOpenCategory(category.path, category.title) },
+                        .clickable { onOpenCategory(path, title) },
                     shape = RoundedCornerShape(12.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant,
                 ) {
@@ -68,7 +82,7 @@ fun XHamsterCategoriesScreen(
                         contentAlignment = Alignment.CenterStart,
                     ) {
                         Text(
-                            text = category.title,
+                            text = title,
                             style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

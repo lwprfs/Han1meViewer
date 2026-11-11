@@ -43,6 +43,8 @@ import kotlinx.coroutines.launch
 fun XHamsterAccountScreen(
     onBack: () -> Unit,
     onOpenPath: (path: String, title: String) -> Unit,
+    onOpenDashboard: () -> Unit = {},
+    onOpenSettings: () -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
     var user by remember { mutableStateOf(XHamsterAuth.cachedUser()) }
@@ -119,6 +121,14 @@ fun XHamsterAccountScreen(
                     onClick = { onOpenPath("/my/subscriptions", subscriptionsTitle) },
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text(subscriptionsTitle) }
+                Button(
+                    onClick = onOpenSettings,
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text(stringResource(R.string.xhamster_account_settings)) }
+                Button(
+                    onClick = onOpenDashboard,
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text(stringResource(R.string.xhamster_creator_dashboard)) }
                 OutlinedButton(
                     onClick = {
                         scope.launch {

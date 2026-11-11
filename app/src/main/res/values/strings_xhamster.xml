@@ -32,4 +32,42 @@
     <string name="xhamster_my_subscriptions">訂閱的新影片</string>
     <string name="xhamster_logged_in_as">已登入：%1$s</string>
     <string name="xhamster_login_note">密碼只會傳送給 xHamster，不會儲存；本機只保留登入工作階段。</string>
+
+    <string name="xhamster_channels">頻道</string>
+    <string name="xhamster_creators">創作者</string>
+    <string name="xhamster_photos">圖片</string>
+    <string name="xhamster_top_creator_videos">熱門創作者影片</string>
+    <string name="xhamster_n_videos">%1$s 部影片</string>
+    <string name="xhamster_n_subscribers">%1$s 位訂閱者</string>
+    <string name="xhamster_n_views">%1$s 次觀看</string>
+    <string name="xhamster_n_photos">%1$s 張圖片</string>
+    <string name="xhamster_n_moments">%1$s 個短片</string>
+    <string name="xhamster_n_favorites">%1$s 個收藏</string>
+    <string name="xhamster_profile_private">此個人檔案為私人</string>
+    <string name="xhamster_view_all_videos">查看所有影片</string>
+    <string name="xhamster_creator_dashboard">創作者後台</string>
+    <string name="xhamster_dash_balance">廣告分成餘額</string>
+    <string name="xhamster_dash_pending">待結算</string>
+    <string name="xhamster_dash_premium">付費內容月收入</string>
+    <string name="xhamster_dash_adshare">廣告分成</string>
+    <string name="xhamster_dash_upload">上傳功能</string>
+    <string name="xhamster_on">開啟</string>
+    <string name="xhamster_off">關閉</string>
+    <string name="xhamster_account_settings">帳號設定</string>
+    <string name="xhamster_account_settings_summary">個人檔案與隱私概覽</string>
+    <string name="xhamster_settings_profile">個人檔案</string>
+    <string name="xhamster_settings_privacy">隱私</string>
+    <string name="xhamster_settings_edit_note">修改請至 xHamster 網站進行。</string>
+    <string name="xhamster_edit_profile_web">在 xHamster 編輯個人檔案</string>
+    <string name="xhamster_change_password_web">在 xHamster 變更密碼</string>
+    <string name="xhamster_email">電子郵件</string>
+    <string name="xhamster_gender">性別</string>
+    <string name="xhamster_country">國家／地區</string>
+    <string name="xhamster_relationship">感情狀態</string>
+
+    <string name="xhamster_channel_label">頻道</string>
+    <string name="xhamster_uploader_label">上傳者</string>
+    <string name="xhamster_view_profile">查看</string>
+    <string name="xhamster_comments_not_loaded">共 %1$s 則留言。xHamster 的留言需在其網站載入，請開啟網頁查看。</string>
+    <string name="xhamster_no_comments">尚無留言。</string>
 </resources>

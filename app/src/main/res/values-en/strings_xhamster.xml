@@ -32,4 +32,42 @@
     <string name="xhamster_my_subscriptions">Subscription feed</string>
     <string name="xhamster_logged_in_as">Signed in as %1$s</string>
     <string name="xhamster_login_note">Your password is only sent to xHamster and is not stored; only the login session is kept on this device.</string>
+
+    <string name="xhamster_channels">Channels</string>
+    <string name="xhamster_creators">Creators</string>
+    <string name="xhamster_photos">Photos</string>
+    <string name="xhamster_top_creator_videos">Top creator videos</string>
+    <string name="xhamster_n_videos">%1$s videos</string>
+    <string name="xhamster_n_subscribers">%1$s subscribers</string>
+    <string name="xhamster_n_views">%1$s views</string>
+    <string name="xhamster_n_photos">%1$s photos</string>
+    <string name="xhamster_n_moments">%1$s moments</string>
+    <string name="xhamster_n_favorites">%1$s favorites</string>
+    <string name="xhamster_profile_private">This profile is private</string>
+    <string name="xhamster_view_all_videos">View all videos</string>
+    <string name="xhamster_creator_dashboard">Creator dashboard</string>
+    <string name="xhamster_dash_balance">Ad-share balance</string>
+    <string name="xhamster_dash_pending">Pending</string>
+    <string name="xhamster_dash_premium">Premium monthly revenue</string>
+    <string name="xhamster_dash_adshare">Ad share</string>
+    <string name="xhamster_dash_upload">Uploads</string>
+    <string name="xhamster_on">On</string>
+    <string name="xhamster_off">Off</string>
+    <string name="xhamster_account_settings">Account settings</string>
+    <string name="xhamster_account_settings_summary">Profile and privacy overview</string>
+    <string name="xhamster_settings_profile">Profile</string>
+    <string name="xhamster_settings_privacy">Privacy</string>
+    <string name="xhamster_settings_edit_note">Changes are made on the xHamster website.</string>
+    <string name="xhamster_edit_profile_web">Edit profile on xHamster</string>
+    <string name="xhamster_change_password_web">Change password on xHamster</string>
+    <string name="xhamster_email">Email</string>
+    <string name="xhamster_gender">Gender</string>
+    <string name="xhamster_country">Country</string>
+    <string name="xhamster_relationship">Relationship</string>
+
+    <string name="xhamster_channel_label">Channel</string>
+    <string name="xhamster_uploader_label">Uploader</string>
+    <string name="xhamster_view_profile">View</string>
+    <string name="xhamster_comments_not_loaded">%1$s comments. xHamster loads them on its own site, so open the page to read them.</string>
+    <string name="xhamster_no_comments">No comments yet.</string>
 </resources>
