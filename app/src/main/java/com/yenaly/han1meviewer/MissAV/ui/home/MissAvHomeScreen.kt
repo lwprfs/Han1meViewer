@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.MissAV.ui.home
 import androidx.compose.material.icons.filled.Menu
+import com.yenaly.han1meviewer.ui.component.SitePullToRefresh
 import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
 import com.yenaly.han1meviewer.ui.component.SiteErrorContent
 import androidx.compose.foundation.background
@@ -131,13 +132,22 @@ fun MissAvHomeScreen(
                     },
                 )
 
-                else -> HomeContent(
-                    homeState = homeState,
-                    categoryRows = categoryRows,
-                    onRetryCategory = viewModel::retryCategory,
-                    onNavigateToVideo = onNavigateToVideo,
-                    onNavigateToSearch = onNavigateToSearch,
-                )
+                else -> SitePullToRefresh(
+                    loading = homeState is WebsiteState.Loading || categoryRows.any { it.isLoading },
+                    onRefresh = {
+                        viewModel.getHomePage(force = true)
+                        viewModel.refreshAllCategories()
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    HomeContent(
+                        homeState = homeState,
+                        categoryRows = categoryRows,
+                        onRetryCategory = viewModel::retryCategory,
+                        onNavigateToVideo = onNavigateToVideo,
+                        onNavigateToSearch = onNavigateToSearch,
+                    )
+                }
             }
         }
     }

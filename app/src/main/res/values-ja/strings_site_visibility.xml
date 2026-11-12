@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="site_visibility_title">サイト</string>
+    <string name="site_visibility_summary">サイト切り替えメニューに表示するサイトを選択します。いつでも再び有効にできます。</string>
+    <string name="site_visibility_hidden">サイト切り替えで非表示</string>
+    <string name="site_visibility_current_site">現在使用中のサイトは無効にできません。先に別のサイトへ切り替えてください。</string>
+</resources>

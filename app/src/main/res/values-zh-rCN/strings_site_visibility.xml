@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="site_visibility_title">网站</string>
+    <string name="site_visibility_summary">选择要在网站切换菜单中显示的网站。可随时重新启用。</string>
+    <string name="site_visibility_hidden">已在切换菜单中隐藏</string>
+    <string name="site_visibility_current_site">当前正在使用此网站，无法停用。请先切换到其他网站。</string>
+</resources>

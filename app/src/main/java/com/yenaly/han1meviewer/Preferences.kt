@@ -109,6 +109,22 @@ object Preferences {
         }
         set(value) = preferenceSp.edit { putString("site_type", value.name) }
 
+    private const val DISABLED_SITES = "disabled_sites"
+
+    var disabledSites: Set<SiteType>
+        get() = preferenceSp.getStringSet(DISABLED_SITES, emptySet()).orEmpty()
+            .mapNotNull { name -> SiteType.entries.firstOrNull { it.name == name } }
+            .toSet()
+        set(value) = preferenceSp.edit { putStringSet(DISABLED_SITES, value.map { it.name }.toSet()) }
+
+    fun isSiteEnabled(site: SiteType): Boolean = site !in disabledSites
+
+    fun setSiteEnabled(site: SiteType, enabled: Boolean): Boolean {
+        if (!enabled && site == siteType) return false
+        disabledSites = if (enabled) disabledSites - site else disabledSites + site
+        return true
+    }
+
     val missAvBaseUrl: String
         get() = SiteNetworkPrefs.baseUrl(SiteType.MISSAV)
 

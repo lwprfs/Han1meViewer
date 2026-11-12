@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="site_visibility_title">Sites</string>
+    <string name="site_visibility_summary">Choose which sites appear in the site switcher. You can turn them back on any time.</string>
+    <string name="site_visibility_hidden">Hidden from the site switcher</string>
+    <string name="site_visibility_current_site">You\'re using this site right now, so it can\'t be disabled. Switch to another site first.</string>
+</resources>

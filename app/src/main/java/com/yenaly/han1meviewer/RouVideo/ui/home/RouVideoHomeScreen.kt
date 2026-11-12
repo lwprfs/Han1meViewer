@@ -2,6 +2,7 @@ package com.yenaly.han1meviewer.RouVideo.ui.home
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Category
@@ -20,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.yenaly.han1meviewer.ui.component.SitePullToRefresh
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.RouVideo.common.RouVideoConstants
 import com.yenaly.han1meviewer.RouVideo.common.RouVideoConstants.SeriesFilter
@@ -144,13 +146,19 @@ fun RouVideoHomeScreen(
                     onSelect = { sortName = it.name },
                 )
             }
-            RouVideoVideoGrid(
-                state = state,
-                onRetry = { viewModel.refresh() },
-                onLoadMore = { viewModel.loadMore() },
-                onOpenVideo = onNavigateToVideo,
-                skipTag = (tab.source as? RouVideoConstants.TabSource.Tag)?.tag,
-            )
+            SitePullToRefresh(
+                loading = state.isLoading,
+                onRefresh = { viewModel.refresh() },
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+            ) {
+                RouVideoVideoGrid(
+                    state = state,
+                    onRetry = { viewModel.refresh() },
+                    onLoadMore = { viewModel.loadMore() },
+                    onOpenVideo = onNavigateToVideo,
+                    skipTag = (tab.source as? RouVideoConstants.TabSource.Tag)?.tag,
+                )
+            }
         }
     }
 }

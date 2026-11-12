@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.yenaly.han1meviewer.ui.component.SitePullToRefresh
 import com.yenaly.han1meviewer.HentaiMama.data.model.GenreSeries
 import com.yenaly.han1meviewer.HentaiMama.data.model.SeriesCard
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
@@ -125,71 +126,77 @@ fun HentaiMamaHomeScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            if (categoryRows.isEmpty()) {
-                HomeLoadingState(onRetry = { viewModel.refreshAllCategories() })
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(SpacingNormal),
-                ) {
-                    categoryRows.forEach { row ->
-                        val key = row.category.key
-                        val hasContent = row.videos.isNotEmpty() ||
-                                row.series.isNotEmpty() ||
-                                row.cards.isNotEmpty() ||
-                                row.error != null ||
-                                row.isLoading
-                        if (!hasContent) return@forEach
+            SitePullToRefresh(
+                loading = categoryRows.any { it.isLoading },
+                onRefresh = { viewModel.refreshAllCategories() },
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                if (categoryRows.isEmpty()) {
+                    HomeLoadingState(onRetry = { viewModel.refreshAllCategories() })
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(SpacingNormal),
+                    ) {
+                        categoryRows.forEach { row ->
+                            val key = row.category.key
+                            val hasContent = row.videos.isNotEmpty() ||
+                                    row.series.isNotEmpty() ||
+                                    row.cards.isNotEmpty() ||
+                                    row.error != null ||
+                                    row.isLoading
+                            if (!hasContent) return@forEach
 
-                        item(key = "header_$key") {
-                            SiteSectionHeader(
-                                title = row.category.title,
-                                onMoreClick = {
-                                    if (row.isGenre) {
-                                        val slug = HentaiMamaNetworkRepo.extractGenreSlug(
-                                            row.category.genrePath
-                                        )
-                                        if (slug.isNotBlank()) {
-                                            onNavigateToGenre(slug)
+                            item(key = "header_$key") {
+                                SiteSectionHeader(
+                                    title = row.category.title,
+                                    onMoreClick = {
+                                        if (row.isGenre) {
+                                            val slug = HentaiMamaNetworkRepo.extractGenreSlug(
+                                                row.category.genrePath
+                                            )
+                                            if (slug.isNotBlank()) {
+                                                onNavigateToGenre(slug)
+                                            } else {
+                                                onNavigateToCategorySearch(key)
+                                            }
                                         } else {
                                             onNavigateToCategorySearch(key)
                                         }
-                                    } else {
-                                        onNavigateToCategorySearch(key)
-                                    }
-                                },
-                            )
-                        }
-
-                        item(key = "body_$key") {
-                            when {
-                                row.cards.isNotEmpty() -> CategoryRowContent(
-                                    cards = row.cards,
-                                    horizontalCardCountConfig = horizontalCardCountConfig,
-                                    onNavigateToVideo = onNavigateToVideo,
+                                    },
                                 )
+                            }
 
-                                row.series.isNotEmpty() -> GenreRowContent(
-                                    series = row.series,
-                                    horizontalCardCountConfig = horizontalCardCountConfig,
-                                    onNavigateToVideo = onNavigateToVideo,
-                                )
+                            item(key = "body_$key") {
+                                when {
+                                    row.cards.isNotEmpty() -> CategoryRowContent(
+                                        cards = row.cards,
+                                        horizontalCardCountConfig = horizontalCardCountConfig,
+                                        onNavigateToVideo = onNavigateToVideo,
+                                    )
 
-                                row.videos.isNotEmpty() -> VideoRowContent(
-                                    videos = row.videos,
-                                    horizontalCardCountConfig = horizontalCardCountConfig,
-                                    onNavigateToVideo = onNavigateToVideo,
-                                )
+                                    row.series.isNotEmpty() -> GenreRowContent(
+                                        series = row.series,
+                                        horizontalCardCountConfig = horizontalCardCountConfig,
+                                        onNavigateToVideo = onNavigateToVideo,
+                                    )
 
-                                row.error != null -> CategoryErrorRow(
-                                    message = row.error,
-                                    onRetry = { viewModel.retryCategory(row.category) },
-                                )
+                                    row.videos.isNotEmpty() -> VideoRowContent(
+                                        videos = row.videos,
+                                        horizontalCardCountConfig = horizontalCardCountConfig,
+                                        onNavigateToVideo = onNavigateToVideo,
+                                    )
 
-                                else -> CategorySkeletonRowContent(
-                                    horizontalCardCountConfig = horizontalCardCountConfig,
-                                )
+                                    row.error != null -> CategoryErrorRow(
+                                        message = row.error,
+                                        onRetry = { viewModel.retryCategory(row.category) },
+                                    )
+
+                                    else -> CategorySkeletonRowContent(
+                                        horizontalCardCountConfig = horizontalCardCountConfig,
+                                    )
+                                }
                             }
                         }
                     }

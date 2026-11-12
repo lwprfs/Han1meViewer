@@ -42,6 +42,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.ui.theme.SpacingLarge
@@ -134,6 +135,9 @@ fun SiteSwitchDialog(
     options: List<SiteSwitchOption> = DefaultSiteSwitchOptions,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val visibleOptions = options.filter {
+        it.siteType == currentSite || Preferences.isSiteEnabled(it.siteType)
+    }
 
     ModalBottomSheet(
         modifier = modifier,
@@ -174,7 +178,7 @@ fun SiteSwitchDialog(
                 )
             }
 
-            options.chunked(2).forEach { rowOptions ->
+            visibleOptions.chunked(2).forEach { rowOptions ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()

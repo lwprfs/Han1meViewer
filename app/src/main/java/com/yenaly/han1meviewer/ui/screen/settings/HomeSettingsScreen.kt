@@ -360,6 +360,17 @@ fun HomeSettingsScreen(
                 )
             }
         }
+        item { SettingsGroupTitle(stringResource(R.string.site_visibility_title)) }
+        item {
+            Text(
+                text = stringResource(R.string.site_visibility_summary),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            )
+        }
+        item { SiteVisibilitySettings() }
+
         item { SettingsGroupTitle(stringResource(R.string.settings_group_site_history)) }
         item { SettingsHistoryAllSitesCard(onClick = onOpenUnifiedHistory) }
 

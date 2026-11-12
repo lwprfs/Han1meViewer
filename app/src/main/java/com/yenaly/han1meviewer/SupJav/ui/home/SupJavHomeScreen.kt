@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -25,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.yenaly.han1meviewer.ui.component.SitePullToRefresh
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.SupJav.common.SupJavConstants
 import com.yenaly.han1meviewer.ui.component.SiteBarIconButton
@@ -84,12 +86,18 @@ fun SupJavHomeScreen(
                 onSelect = { selectedKey = it.key },
                 key = { it.key },
             )
-            SupJavVideoGrid(
-                state = state,
-                onRetry = { viewModel.refresh() },
-                onLoadMore = { viewModel.loadMore() },
-                onOpenVideo = onNavigateToVideo,
-            )
+            SitePullToRefresh(
+                loading = state.isLoading,
+                onRefresh = { viewModel.refresh() },
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+            ) {
+                SupJavVideoGrid(
+                    state = state,
+                    onRetry = { viewModel.refresh() },
+                    onLoadMore = { viewModel.loadMore() },
+                    onOpenVideo = onNavigateToVideo,
+                )
+            }
         }
     }
 }
