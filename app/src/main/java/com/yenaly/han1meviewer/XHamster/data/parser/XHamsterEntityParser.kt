@@ -6,7 +6,16 @@ import com.yenaly.han1meviewer.XHamster.data.model.XHamsterAccountSettings
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterChannel
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterCreator
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterDashboard
+import com.yenaly.han1meviewer.XHamster.data.model.XHamsterCommentsPage
+import com.yenaly.han1meviewer.XHamster.data.model.XHamsterEntityProfile
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterGallery
+import com.yenaly.han1meviewer.XHamster.data.model.XHamsterGalleryInfo
+import com.yenaly.han1meviewer.XHamster.data.model.XHamsterGalleryPage
+import com.yenaly.han1meviewer.XHamster.data.model.XHamsterPhoto
+import com.yenaly.han1meviewer.XHamster.data.model.XHamsterPhotoDetail
+import com.yenaly.han1meviewer.XHamster.data.model.XHamsterProfileTab
+import com.yenaly.han1meviewer.XHamster.data.model.XHamsterShort
+import com.yenaly.han1meviewer.XHamster.data.model.XHamsterShortsPage
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterLink
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterListPage
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterOption
@@ -15,6 +24,7 @@ import com.yenaly.han1meviewer.XHamster.data.model.XHamsterProfile
 import com.yenaly.han1meviewer.logic.model.HanimeInfo
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
@@ -441,6 +451,216 @@ object XHamsterEntityParser {
             relation = personal?.obj("relations")?.str("label"),
             profileVisibility = user?.boolOrNull("isPublicProfile")?.let { if (it) "Public" else "Private" },
             privacy = privacy,
+        )
+    }
+
+    private fun photoFrom(o: JsonObject?): XHamsterPhoto? {
+        o ?: return null
+        val id = o.lng("id") ?: return null
+        val full = o.str("imgSrc") ?: o.str("imgSrcset")?.substringBefore(' ')?.substringBefore(',')
+        ?: return null
+        val thumb = o.str("imgSrcset")?.substringBefore(' ')?.substringBefore(',') ?: full
+        return XHamsterPhoto(
+            id = id,
+            thumbUrl = thumb,
+            fullUrl = full,
+            width = (o.lng("originWidth") ?: 0L).toInt(),
+            height = (o.lng("originHeight") ?: 0L).toInt(),
+            commentsCount = (o.lng("commentsCount") ?: 0L).toInt(),
+            pageUrl = o.str("link") ?: "",
+            alt = o.str("alt").orEmpty(),
+        )
+    }
+
+    fun parseGalleryPage(html: String): XHamsterGalleryPage? {
+        val root = XHamsterParser.extractInitials(html) ?: return null
+        val g = root.obj("galleryPage") ?: return null
+        val photos = g.arr("photoItems").orEmpty()
+            .mapNotNull { photoFrom(it as? JsonObject) }
+            .distinctBy { it.id }
+        val info = g.obj("infoProps")
+        val author = info?.obj("authorInfoProps")
+        val tags = info?.arr("categoriesTags").orEmpty().mapNotNull { el ->
+            val t = el as? JsonObject ?: return@mapNotNull null
+            val label = t.str("label") ?: return@mapNotNull null
+            val href = t.str("href") ?: return@mapNotNull null
+            com.yenaly.han1meviewer.XHamster.data.model.XHamsterLink(label, pathOf(href))
+        }
+        val document = doc(html)
+        val title = g.str("title")
+            ?: document.selectFirst("meta[property=og:title]")?.attr("content")?.takeIf { it.isNotBlank() }
+            ?: return null
+        val galleryInfo = XHamsterGalleryInfo(
+            id = g.lng("id") ?: 0L,
+            title = title,
+            description = info?.str("description"),
+            pageUrl = g.obj("paginationProps")?.str("pageLinkFirst")
+                ?: document.selectFirst("link[rel=canonical]")?.attr("href").orEmpty(),
+            photosTotal = g.lng("photosCount"),
+            views = info?.obj("viewsInfoProps")?.lng("views"),
+            authorName = author?.str("authorName"),
+            authorPath = author?.str("authorLink")?.let { pathOf(it) },
+            createdSec = author?.lng("createdDate"),
+            tags = tags,
+        )
+        return XHamsterGalleryPage(
+            info = galleryInfo,
+            photos = photos,
+            nextUrl = nextUrl(root, document, photos.isNotEmpty()),
+        )
+    }
+
+    fun parsePhotoPage(html: String): XHamsterPhotoDetail? {
+        val root = XHamsterParser.extractInitials(html) ?: return null
+        val layout = root.obj("layoutPage") ?: return null
+        val details = layout.obj("photoDetails")
+        val list = layout.obj("commentsProps")?.obj("commentsList")
+        val counters = list?.obj("counters")
+        val comments = XHamsterParser.parseCommentList(list?.arr("items"))
+        val total = counters?.lng("total") ?: details?.lng("commentsCount") ?: comments.size.toLong()
+        val pages = (counters?.lng("pages") ?: 1L).toInt().coerceAtLeast(1)
+        val rating = details?.obj("rating")
+        return XHamsterPhotoDetail(
+            photoId = details?.lng("id") ?: 0L,
+            likes = rating?.lng("likes"),
+            dislikes = rating?.lng("dislikes"),
+            views = details?.lng("views"),
+            commentsTotal = total,
+            comments = XHamsterCommentsPage(
+                items = comments,
+                total = total,
+                page = 1,
+                maxPages = pages,
+                writeDenied = list?.get("denyWriteComment")?.let { it !is JsonNull } == true,
+            ),
+        )
+    }
+
+    private fun shortFrom(o: JsonObject): XHamsterShort? {
+        val page = o.str("pageURL") ?: return null
+        if (!page.contains("/shorts/")) return null
+        val video = o.str("trailerURL") ?: return null
+        return XHamsterShort(
+            id = o.lng("id") ?: page.hashCode().toLong(),
+            title = o.str("title").orEmpty(),
+            pageUrl = page,
+            videoUrl = video,
+            coverUrl = o.firstStr("imageURL", "thumbURL").orEmpty(),
+            views = o.lng("views"),
+        )
+    }
+
+    private fun shortsFrom(list: JsonArray?): List<XHamsterShort> =
+        list.orEmpty().mapNotNull { (it as? JsonObject)?.let(::shortFrom) }
+
+    private fun collectShorts(root: JsonObject?): List<XHamsterShort> {
+        val primary = shortsFrom(
+            root?.obj("momentsComponent")?.obj("videoListProps")?.arr("videoThumbProps")
+        ).ifEmpty { shortsFrom(root?.obj("momentsListComponent")?.arr("videoThumbProps")) }
+        if (primary.isNotEmpty()) return primary.distinctBy { it.id }
+        val out = LinkedHashMap<Long, XHamsterShort>()
+        walk(root) { o -> shortFrom(o)?.let { out.putIfAbsent(it.id, it) } }
+        return out.values.toList()
+    }
+
+    fun parseShortsPage(html: String): XHamsterShortsPage {
+        val root = XHamsterParser.extractInitials(html)
+        val items = collectShorts(root)
+        return XHamsterShortsPage(items, nextUrl(root, doc(html), items.isNotEmpty()))
+    }
+
+    private fun parseTabs(root: JsonObject?, basePath: String): List<XHamsterProfileTab> {
+        val tabs = (root?.obj("uiTabSetComponent") ?: root?.obj("layoutPage")?.obj("uiTabSetComponent"))
+            ?.arr("items").orEmpty()
+        return tabs.mapNotNull { el ->
+            val tab = el as? JsonObject ?: return@mapNotNull null
+            val link = tab.obj("link") ?: return@mapNotNull null
+            val text = link.str("text")?.trim() ?: return@mapNotNull null
+            val url = link.str("link") ?: return@mapNotNull null
+            if (url.contains("/fh/out") || url.contains("faphouse", ignoreCase = true)) return@mapNotNull null
+            val path = pathOf(url).ifBlank { basePath }
+            XHamsterProfileTab(text, path, tab.lng("counter"), tab.flag("isSelected"))
+        }
+    }
+
+    private fun parseCreatorProfile(html: String, path: String): XHamsterEntityProfile? {
+        val root = XHamsterParser.extractInitials(html) ?: return null
+        val info = root.obj("infoComponent") ?: return null
+        val top = info.obj("pornstarTop") ?: return null
+        val name = top.str("name") ?: info.str("pageTitle") ?: return null
+        val sub = info.obj("subscribeButtonsProps")?.obj("subscribeButtonProps")
+        val tabs = parseTabs(root, path)
+        val shortsTab = tabs.firstOrNull { it.path.endsWith("/shorts") }
+        val videosTab = tabs.firstOrNull { !it.path.endsWith("/shorts") }
+        val videos = XHamsterParser.parseCards(
+            root.obj("newestVideoSectionComponent")?.obj("videoListProps")?.arr("videoThumbProps")
+        ).ifEmpty {
+            XHamsterParser.parseCards(
+                root.obj("trendingVideoSectionComponent")?.obj("videoListProps")?.arr("videoThumbProps")
+            )
+        }
+        val profileFlags = top.obj("profile")
+        return XHamsterEntityProfile(
+            path = path,
+            kind = XHamsterEntityProfile.Kind.CREATOR,
+            entityId = root.obj("channelInfo")?.lng("id") ?: sub?.lng("id") ?: 0L,
+            name = name,
+            avatarUrl = top.str("thumbUrl"),
+            country = top.str("translatedCountryName"),
+            verified = profileFlags?.flag("isVerified") == true,
+            isPublic = true,
+            isMine = false,
+            videoCount = top.lng("videoCount") ?: videosTab?.count,
+            shortsCount = shortsTab?.count,
+            photosCount = null,
+            viewsCount = top.lng("viewsCount"),
+            favoritesCount = null,
+            subscribers = sub?.lng("subscribers"),
+            subscribed = sub?.flag("subscribed") == true,
+            subscriptionModel = sub?.str("modelName"),
+            aliases = info.str("aliases"),
+            channels = emptyList(),
+            tabs = tabs,
+            videos = videos,
+            shorts = collectShorts(root),
+        )
+    }
+
+    fun parseEntityProfile(html: String, path: String): XHamsterEntityProfile? {
+        parseCreatorProfile(html, path)?.let { return it }
+        val user = parseProfile(html) ?: return null
+        val root = XHamsterParser.extractInitials(html)
+        val tabs = parseTabs(root, path).ifEmpty {
+            buildList {
+                add(XHamsterProfileTab("Videos", "$path/videos", user.videosTotal, true))
+                if ((user.momentsTotal ?: 0L) > 0L) {
+                    add(XHamsterProfileTab("Short videos", "$path/shorts", user.momentsTotal))
+                }
+            }
+        }
+        return XHamsterEntityProfile(
+            path = path,
+            kind = XHamsterEntityProfile.Kind.USER,
+            entityId = user.id,
+            name = user.name,
+            avatarUrl = user.avatarUrl,
+            country = null,
+            verified = false,
+            isPublic = user.isPublic,
+            isMine = user.isMine,
+            videoCount = user.videosTotal,
+            shortsCount = user.momentsTotal,
+            photosCount = null,
+            viewsCount = null,
+            favoritesCount = user.favoritesTotal,
+            subscribers = null,
+            subscribed = false,
+            subscriptionModel = null,
+            aliases = null,
+            channels = user.channels,
+            tabs = tabs,
+            videos = user.videos,
+            shorts = collectShorts(root),
         )
     }
 }

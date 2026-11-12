@@ -84,4 +84,15 @@
     <string name="xhamster_comment_owner">Author</string>
     <string name="xhamster_comments_closed">Comments are turned off for this video</string>
     <string name="xhamster_dislikes_count">%1$s dislikes</string>
+    <string name="xhamster_gallery_by">By %1$s</string>
+    <string name="xhamster_download_all">Download all photos</string>
+    <string name="xhamster_photo_comments_closed">Comments are turned off for this photo</string>
+    <string name="xhamster_tab_videos">Videos</string>
+    <string name="xhamster_tab_shorts">Short videos</string>
+    <string name="xhamster_n_shorts">%1$s short videos</string>
+    <string name="xhamster_shorts_empty">No short videos</string>
+    <string name="xhamster_shorts_play_failed">Couldn\'t play this short video</string>
+    <string name="xhamster_photo_likes">♥ %1$s</string>
+    <string name="xhamster_comments_button">Comments</string>
+    <string name="xhamster_close">Close</string>
 </resources>

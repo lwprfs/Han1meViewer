@@ -386,7 +386,7 @@ fun siteDrawerSections(context: Context, site: SiteType, loggedIn: Boolean): Lis
                     home,
                     checkIn,
                     entry(str(R.string.search), R.drawable.ic_baseline_search_24, RouVideoSearchRoute()),
-                    entry(str(R.string.rouvideo_categories), R.drawable.baseline_grid_24, RouVideoCategoriesRoute),
+                    entry(str(R.string.rouvideo_categories), R.drawable.ic_drawer_category, RouVideoCategoriesRoute),
                 ),
             ),
             SiteDrawerSection(
@@ -414,10 +414,10 @@ fun siteDrawerSections(context: Context, site: SiteType, loggedIn: Boolean): Lis
                     home,
                     checkIn,
                     entry(str(R.string.search), R.drawable.ic_baseline_search_24, XHamsterSearchRoute()),
-                    entry(str(R.string.xhamster_categories), R.drawable.baseline_grid_24, XHamsterCategoriesRoute),
-                    entry(str(R.string.xhamster_channels), R.drawable.baseline_grid_24, XHamsterChannelsRoute),
-                    entry(str(R.string.xhamster_creators), R.drawable.baseline_grid_24, XHamsterCreatorsRoute),
-                    entry(str(R.string.xhamster_photos), R.drawable.baseline_grid_24, XHamsterPhotosRoute),
+                    entry(str(R.string.xhamster_categories), R.drawable.ic_drawer_category, XHamsterCategoriesRoute),
+                    entry(str(R.string.xhamster_channels), R.drawable.ic_drawer_channel, XHamsterChannelsRoute),
+                    entry(str(R.string.xhamster_creators), R.drawable.ic_drawer_creator, XHamsterCreatorsRoute),
+                    entry(str(R.string.xhamster_photos), R.drawable.ic_drawer_photos, XHamsterPhotosRoute),
                 ),
             ),
             SiteDrawerSection(

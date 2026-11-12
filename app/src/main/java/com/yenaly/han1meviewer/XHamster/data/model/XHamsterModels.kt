@@ -154,3 +154,90 @@ data class XHamsterAccountSettings(
     val profileVisibility: String?,
     val privacy: List<XHamsterLink>,
 )
+
+data class XHamsterPhoto(
+    val id: Long,
+    val thumbUrl: String,
+    val fullUrl: String,
+    val width: Int,
+    val height: Int,
+    val commentsCount: Int,
+    val pageUrl: String,
+    val alt: String,
+)
+
+data class XHamsterGalleryInfo(
+    val id: Long,
+    val title: String,
+    val description: String?,
+    val pageUrl: String,
+    val photosTotal: Long?,
+    val views: Long?,
+    val authorName: String?,
+    val authorPath: String?,
+    val createdSec: Long?,
+    val tags: List<XHamsterLink>,
+)
+
+data class XHamsterGalleryPage(
+    val info: XHamsterGalleryInfo,
+    val photos: List<XHamsterPhoto>,
+    val nextUrl: String?,
+)
+
+data class XHamsterPhotoDetail(
+    val photoId: Long,
+    val likes: Long?,
+    val dislikes: Long?,
+    val views: Long?,
+    val commentsTotal: Long,
+    val comments: XHamsterCommentsPage,
+)
+
+data class XHamsterShort(
+    val id: Long,
+    val title: String,
+    val pageUrl: String,
+    val videoUrl: String,
+    val coverUrl: String,
+    val views: Long?,
+)
+
+data class XHamsterShortsPage(
+    val items: List<XHamsterShort>,
+    val nextUrl: String?,
+)
+
+data class XHamsterProfileTab(
+    val title: String,
+    val path: String,
+    val count: Long?,
+    val selected: Boolean = false,
+)
+
+data class XHamsterEntityProfile(
+    val path: String,
+    val kind: Kind,
+    val entityId: Long,
+    val name: String,
+    val avatarUrl: String?,
+    val country: String?,
+    val verified: Boolean,
+    val isPublic: Boolean,
+    val isMine: Boolean,
+    val videoCount: Long?,
+    val shortsCount: Long?,
+    val photosCount: Long?,
+    val viewsCount: Long?,
+    val favoritesCount: Long?,
+    val subscribers: Long?,
+    val subscribed: Boolean,
+    val subscriptionModel: String?,
+    val aliases: String?,
+    val channels: List<XHamsterChannel>,
+    val tabs: List<XHamsterProfileTab>,
+    val videos: List<com.yenaly.han1meviewer.logic.model.HanimeInfo>,
+    val shorts: List<XHamsterShort>,
+) {
+    enum class Kind { CREATOR, USER }
+}

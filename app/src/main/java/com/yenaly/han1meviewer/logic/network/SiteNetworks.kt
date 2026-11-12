@@ -150,7 +150,7 @@ object SiteNetworks {
             siteType = SiteType.XHAMSTER,
             displayName = applicationContext.getString(R.string.site_xhamster_name),
 
-            catalogKey = null,
+            catalogKey = "xhamster",
             defaultUrls = { listOf("https://xhamster.com") },
             trailingSlash = false,
             cloudflareFronted = true,

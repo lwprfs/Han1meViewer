@@ -368,6 +368,9 @@ object XHamsterParser {
         )
     }
 
+    fun parseCommentList(list: JsonArray?): List<XHamsterComment> =
+        nestReplies(list.orEmpty().mapNotNull { parseComment(it) })
+
     fun parseCommentsPage(body: String, requestedPage: Int): XHamsterCommentsPage? {
         val root = runCatching { json.parseToJsonElement(body) as? JsonObject }.getOrNull()
             ?: return null

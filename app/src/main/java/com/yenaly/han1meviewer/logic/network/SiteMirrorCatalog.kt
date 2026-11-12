@@ -25,6 +25,7 @@ object SiteMirrorCatalog {
             name = "MissAV",
             entryPath = "/cn",
             hosts = listOf(
+                "www.missav9.net",
                 "www.thisav66.com",
                 "www.thisav33.com",
                 "www.missav09.com",
@@ -316,6 +317,7 @@ object SiteMirrorCatalog {
             name = "18av",
             entryPath = "/enter",
             hosts = listOf(
+                "www.18av1.net",
                 "www.18av02.com",
                 "www.18av01.cc",
                 "www.18av.ws",

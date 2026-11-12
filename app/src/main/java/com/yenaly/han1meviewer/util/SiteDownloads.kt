@@ -371,12 +371,14 @@ object SiteImageSaver {
         urls: List<String>,
         segments: List<String>,
         baseName: String,
+        client: OkHttpClient = FapFolderNetwork.sharedOkHttpClient,
+        headers: Map<String, String> = fapHeaders(),
         onResult: (SaveResult) -> Unit,
     ) {
         val appContext = context.applicationContext
         scope.launch {
             val result = saveBatch(
-                appContext, urls, segments, baseName, onProgress = null,
+                appContext, urls, segments, baseName, client, headers, onProgress = null,
             )
             withContext(Dispatchers.Main) { onResult(result) }
         }

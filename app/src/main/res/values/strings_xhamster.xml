@@ -84,4 +84,15 @@
     <string name="xhamster_comment_owner">作者</string>
     <string name="xhamster_comments_closed">此影片已關閉留言功能</string>
     <string name="xhamster_dislikes_count">%1$s 倒讚</string>
+    <string name="xhamster_gallery_by">作者：%1$s</string>
+    <string name="xhamster_download_all">下載全部圖片</string>
+    <string name="xhamster_photo_comments_closed">此圖片已關閉留言功能</string>
+    <string name="xhamster_tab_videos">影片</string>
+    <string name="xhamster_tab_shorts">短影片</string>
+    <string name="xhamster_n_shorts">%1$s 部短影片</string>
+    <string name="xhamster_shorts_empty">沒有短影片</string>
+    <string name="xhamster_shorts_play_failed">無法播放此短影片</string>
+    <string name="xhamster_photo_likes">♥ %1$s</string>
+    <string name="xhamster_comments_button">留言</string>
+    <string name="xhamster_close">關閉</string>
 </resources>

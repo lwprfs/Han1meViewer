@@ -30,7 +30,8 @@ import com.yenaly.han1meviewer.XHamster.ui.entities.XHamsterChannelsScreen
 import com.yenaly.han1meviewer.XHamster.ui.entities.XHamsterCreatorDashboardScreen
 import com.yenaly.han1meviewer.XHamster.ui.entities.XHamsterCreatorsScreen
 import com.yenaly.han1meviewer.XHamster.ui.entities.XHamsterPhotosScreen
-import com.yenaly.han1meviewer.XHamster.ui.entities.XHamsterProfileScreen
+import com.yenaly.han1meviewer.XHamster.ui.gallery.XHamsterGalleryScreen
+import com.yenaly.han1meviewer.XHamster.ui.profile.XHamsterProfileScreen
 import com.yenaly.han1meviewer.XHamster.ui.entities.XHamsterTopCreatorVideosScreen
 import com.yenaly.han1meviewer.XHamster.ui.home.XHamsterHomeScreen
 import com.yenaly.han1meviewer.XHamster.ui.search.XHamsterSearchScreen
@@ -99,6 +100,12 @@ object XHamsterAccountSettingsRoute
 
 @Serializable
 data class XHamsterProfileRoute(val path: String, val title: String)
+
+@Serializable
+data class XHamsterGalleryRoute(val url: String, val title: String)
+
+private fun isProfilePath(path: String): Boolean =
+    path.startsWith("/users/") || path.startsWith("/creators/") || path.startsWith("/pornstars/")
 
 @Composable
 fun XHamsterNavHost(
@@ -202,7 +209,7 @@ fun XHamsterNavHost(
                     navController.navigateSafely(XHamsterCategoryRoute(path, title))
                 },
                 onNavigateToUploader = { path, title ->
-                    if (path.startsWith("/users/")) {
+                    if (isProfilePath(path)) {
                         navController.navigateSafely(XHamsterProfileRoute(path, title))
                     } else {
                         navController.navigateSafely(XHamsterCategoryRoute(path, title))
@@ -217,7 +224,11 @@ fun XHamsterNavHost(
                 onOpenDashboard = { navController.navigateSafely(XHamsterDashboardRoute) },
                 onOpenSettings = { navController.navigateSafely(XHamsterAccountSettingsRoute) },
                 onOpenPath = { path, title ->
-                    navController.navigateSafely(XHamsterCategoryRoute(path, title))
+                    if (isProfilePath(path)) {
+                        navController.navigateSafely(XHamsterProfileRoute(path, title))
+                    } else {
+                        navController.navigateSafely(XHamsterCategoryRoute(path, title))
+                    }
                 },
             )
         }
@@ -265,7 +276,7 @@ fun XHamsterNavHost(
             XHamsterCreatorsScreen(
                 onBack = { navController.popBackStackSafely() },
                 onOpenCreator = { path, title ->
-                    navController.navigateSafely(XHamsterCategoryRoute(path, title))
+                    navController.navigateSafely(XHamsterProfileRoute(path, title))
                 },
                 onOpenTopVideos = { navController.navigateSafely(XHamsterTopCreatorVideosRoute) },
             )
@@ -283,9 +294,27 @@ fun XHamsterNavHost(
         composable<XHamsterPhotosRoute> {
             XHamsterPhotosScreen(
                 onBack = { navController.popBackStackSafely() },
-                onOpenGallery = { url -> openInBrowser(activity, url) },
+                onOpenGallery = { url ->
+                    navController.navigateSafely(XHamsterGalleryRoute(url, ""))
+                },
                 onOpenAuthor = { path, title ->
                     navController.navigateSafely(XHamsterProfileRoute(path, title))
+                },
+            )
+        }
+
+        composable<XHamsterGalleryRoute> {
+            val route = it.toRoute<XHamsterGalleryRoute>()
+            XHamsterGalleryScreen(
+                url = route.url,
+                title = route.title,
+                onBack = { navController.popBackStackSafely() },
+                onOpenAuthor = { path, title ->
+                    if (isProfilePath(path)) {
+                        navController.navigateSafely(XHamsterProfileRoute(path, title))
+                    } else {
+                        navController.navigateSafely(XHamsterCategoryRoute(path, title))
+                    }
                 },
             )
         }
@@ -300,7 +329,11 @@ fun XHamsterNavHost(
                     navController.navigateSafely(XHamsterVideoRoute(code))
                 },
                 onOpenPath = { path, title ->
-                    navController.navigateSafely(XHamsterCategoryRoute(path, title))
+                    if (isProfilePath(path)) {
+                        navController.navigateSafely(XHamsterProfileRoute(path, title))
+                    } else {
+                        navController.navigateSafely(XHamsterCategoryRoute(path, title))
+                    }
                 },
             )
         }

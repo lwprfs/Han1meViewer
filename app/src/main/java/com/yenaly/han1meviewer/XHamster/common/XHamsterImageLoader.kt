@@ -46,6 +46,8 @@ object XHamsterImageLoader {
 
     private val callFactory = Call.Factory { request -> imageClient().newCall(request) }
 
+    fun downloadClient(): OkHttpClient = imageClient()
+
     fun isCoverUrl(url: HttpUrl): Boolean = isCdnHost(url.host)
 
     fun isCdnHost(host: String): Boolean {
