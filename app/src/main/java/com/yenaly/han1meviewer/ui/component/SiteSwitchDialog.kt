@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -164,9 +165,16 @@ fun SiteSwitchDialog(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
-                            .size(width = 4.dp, height = 20.dp)
+                            .size(width = 4.dp, height = 22.dp)
                             .clip(RoundedCornerShape(2.dp))
-                            .background(MaterialTheme.colorScheme.primary),
+                            .background(
+                                androidx.compose.ui.graphics.Brush.verticalGradient(
+                                    listOf(
+                                        MaterialTheme.colorScheme.primary,
+                                        MaterialTheme.colorScheme.tertiary,
+                                    )
+                                )
+                            ),
                     )
                     Spacer(Modifier.width(SpacingNormal))
                     Text(
@@ -200,33 +208,18 @@ fun SiteSwitchDialog(
                 SiteSwitchCurrentCard(option = current, onClick = onDismiss)
             }
 
-            others.chunked(SITE_GRID_COLUMNS).forEach { rowOptions ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(IntrinsicSize.Max),
-                    horizontalArrangement = Arrangement.spacedBy(SpacingNormal),
-                ) {
-                    rowOptions.forEach { option ->
-                        SiteSwitchTile(
-                            option = option,
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight(),
-                            onClick = {
-                                onSiteSelected(option.siteType)
-                                onDismiss()
-                            },
-                        )
-                    }
-                    repeat(SITE_GRID_COLUMNS - rowOptions.size) { Spacer(Modifier.weight(1f)) }
-                }
+            others.forEach { option ->
+                SiteSwitchRow(
+                    option = option,
+                    onClick = {
+                        onSiteSelected(option.siteType)
+                        onDismiss()
+                    },
+                )
             }
         }
     }
 }
-
-private const val SITE_GRID_COLUMNS = 3
 
 @Composable
 private fun SiteLogo(option: SiteSwitchOption, boxSize: Dp, logoSize: Dp) {
@@ -235,7 +228,7 @@ private fun SiteLogo(option: SiteSwitchOption, boxSize: Dp, logoSize: Dp) {
             .size(boxSize)
             .clip(RoundedCornerShape(14.dp))
             .background(
-                if (option.logoRes != null) MaterialTheme.colorScheme.surfaceContainerHighest
+                if (option.logoRes != null) MaterialTheme.colorScheme.surfaceContainerHigh
                 else MaterialTheme.colorScheme.primaryContainer
             ),
         contentAlignment = Alignment.Center,
@@ -273,9 +266,9 @@ private fun SiteSwitchCurrentCard(
             .clip(shape)
             .clickable(onClick = onClick),
         shape = shape,
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-        border = BorderStroke(1.5.dp, option.accentColor.copy(alpha = 0.65f)),
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        border = BorderStroke(1.5.dp, option.accentColor.copy(alpha = 0.7f)),
     ) {
         Row(
             modifier = Modifier
@@ -296,7 +289,7 @@ private fun SiteSwitchCurrentCard(
                 Text(
                     text = option.description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.75f),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -311,7 +304,7 @@ private fun SiteSwitchCurrentCard(
 }
 
 @Composable
-private fun SiteSwitchTile(
+private fun SiteSwitchRow(
     option: SiteSwitchOption,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -319,31 +312,41 @@ private fun SiteSwitchTile(
     val shape = RoundedCornerShape(18.dp)
     Surface(
         modifier = modifier
+            .fillMaxWidth()
             .clip(shape)
             .clickable(onClick = onClick),
         shape = shape,
         color = MaterialTheme.colorScheme.surfaceContainer,
         contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 14.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             SiteLogo(option, boxSize = 48.dp, logoSize = 36.dp)
-            Text(
-                text = option.name,
-                style = MaterialTheme.typography.labelLarge,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = option.name,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = option.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             Box(
                 modifier = Modifier
-                    .size(width = 18.dp, height = 3.dp)
-                    .clip(RoundedCornerShape(2.dp))
+                    .size(10.dp)
+                    .clip(CircleShape)
                     .background(option.accentColor),
             )
         }

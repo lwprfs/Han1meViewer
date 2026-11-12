@@ -170,21 +170,13 @@ private fun MainDrawerPrimaryItems(
         MainDrawerDestination.Settings,
         MainDrawerDestination.DailyCheckIn,
     )
-    Column {
+    Column(modifier = Modifier.padding(top = 4.dp)) {
         primaryItems.forEach { item ->
-            NavigationDrawerItem(
-                label = { Text(stringResource(item.titleRes)) },
-                icon = {
-                    Icon(
-                        painter = painterResource(item.iconRes),
-                        contentDescription = stringResource(item.titleRes),
-                    )
-                },
+            DrawerNavItem(
+                title = stringResource(item.titleRes),
+                iconRes = item.iconRes,
                 selected = selectedDestination == item,
-                onClick = {
-                    onDrawerItemSelected(item)
-                },
-                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                onClick = { onDrawerItemSelected(item) },
             )
         }
     }
@@ -197,31 +189,14 @@ private fun MainDrawerSection(
     selectedDestination: MainDrawerDestination?,
     onItemClick: (MainDrawerDestination) -> Unit,
 ) {
-    HorizontalDivider(
-        modifier = Modifier.padding(start = 28.dp, end = 28.dp, top = 12.dp, bottom = 6.dp),
-        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
-    )
-    Text(
-        text = stringResource(titleRes),
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 28.dp, end = 16.dp, top = 10.dp, bottom = 6.dp),
-    )
+    DrawerSectionHeader(stringResource(titleRes))
     Column {
         items.forEach { item ->
-            NavigationDrawerItem(
-                label = { Text(stringResource(item.titleRes)) },
-                icon = {
-                    Icon(
-                        painter = painterResource(item.iconRes),
-                        contentDescription = stringResource(item.titleRes),
-                    )
-                },
+            DrawerNavItem(
+                title = stringResource(item.titleRes),
+                iconRes = item.iconRes,
                 selected = selectedDestination == item,
                 onClick = { onItemClick(item) },
-                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
             )
         }
     }

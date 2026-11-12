@@ -493,14 +493,7 @@ fun SiteDrawerContent(
             },
             onSwitchSiteClick = onSwitchSiteClick,
         )
-        sections.forEachIndexed { index, section ->
-            if (section.entries.isEmpty()) return@forEachIndexed
-            if (index > 0) {
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 28.dp, vertical = 6.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
-                )
-            }
+        sections.filter { it.entries.isNotEmpty() }.forEach { section ->
             DrawerSectionHeader(section.title)
             section.entries.forEach { entry ->
                 DrawerItem(entry) {
@@ -509,51 +502,76 @@ fun SiteDrawerContent(
                 }
             }
         }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(24.dp))
     }
 }
 
+/** Small primary-coloured section label, shared by every drawer. */
 @Composable
-private fun DrawerSectionHeader(title: String) {
+internal fun DrawerSectionHeader(title: String) {
     Text(
-        text = title,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        text = title.uppercase(),
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.SemiBold,
+        letterSpacing = 0.8.sp,
+        color = MaterialTheme.colorScheme.primary,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 28.dp, end = 16.dp, top = 10.dp, bottom = 6.dp),
+            .padding(start = 28.dp, end = 16.dp, top = 18.dp, bottom = 6.dp),
     )
 }
 
+/** One drawer row with the shared look (rounded, tonal when selected). */
 @Composable
-private fun DrawerItem(entry: SiteDrawerEntry, onClick: () -> Unit) {
+internal fun DrawerNavItem(
+    title: String,
+    iconRes: Int,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
     NavigationDrawerItem(
         label = {
             Text(
-                entry.title,
+                title,
                 style = MaterialTheme.typography.labelLarge,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         },
         icon = {
             Icon(
-                painterResource(entry.iconRes),
+                painterResource(iconRes),
                 contentDescription = null,
                 modifier = Modifier.size(22.dp),
             )
         },
-        selected = false,
+        selected = selected,
         onClick = onClick,
-        shape = RoundedCornerShape(28.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = NavigationDrawerItemDefaults.colors(
             unselectedContainerColor = Color.Transparent,
             unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
             unselectedTextColor = MaterialTheme.colorScheme.onSurface,
+            selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+            selectedIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            selectedTextColor = MaterialTheme.colorScheme.onSecondaryContainer,
         ),
-        modifier = Modifier.padding(horizontal = 12.dp),
+        modifier = Modifier
+            .padding(horizontal = 12.dp, vertical = 1.dp)
+            .height(52.dp),
+    )
+}
+
+@Composable
+private fun DrawerItem(entry: SiteDrawerEntry, onClick: () -> Unit) {
+    DrawerNavItem(
+        title = entry.title,
+        iconRes = entry.iconRes,
+        selected = false,
+        onClick = onClick,
     )
 }
 
@@ -564,103 +582,13 @@ private fun SiteDrawerHeader(
     onStatusClick: (() -> Unit)?,
     onSwitchSiteClick: () -> Unit,
 ) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp)
-            .padding(top = 12.dp, bottom = 8.dp),
-        shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.primaryContainer,
-        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                AsyncImage(
-                    model = status.avatarUrl,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(CircleShape)
-                        .then(
-                            if (onStatusClick != null) Modifier.clickable(onClick = onStatusClick)
-                            else Modifier
-                        ),
-                    contentScale = ContentScale.Crop,
-                    placeholder = painterResource(id = R.drawable.bg_default_header),
-                    fallback = painterResource(id = R.drawable.bg_default_header),
-                    error = painterResource(id = R.drawable.bg_default_header),
-                )
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(start = 14.dp, end = 8.dp)
-                        .then(
-                            if (onStatusClick != null) Modifier.clickable(onClick = onStatusClick)
-                            else Modifier
-                        ),
-                ) {
-                    Text(
-                        text = status.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    if (status.subtitle.isNotBlank()) {
-                        Text(
-                            text = status.subtitle,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f),
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(top = 2.dp),
-                        )
-                    }
-                }
-            }
-            Spacer(Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Surface(
-                    shape = RoundedCornerShape(50),
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
-                    contentColor = MaterialTheme.colorScheme.onSurface,
-                ) {
-                    Text(
-                        text = CrossSiteNavigator.siteLabel(site),
-                        style = MaterialTheme.typography.labelLarge,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    )
-                }
-                FilledTonalButton(
-                    onClick = onSwitchSiteClick,
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
-                    colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
-                        contentColor = MaterialTheme.colorScheme.onSurface,
-                    ),
-                    modifier = Modifier.height(36.dp),
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_baseline_switch_24),
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        text = stringResource(R.string.switch_site),
-                        style = MaterialTheme.typography.labelLarge,
-                        maxLines = 1,
-                    )
-                }
-            }
-        }
-    }
+    DrawerHeaderCard(
+        avatarModel = status.avatarUrl,
+        title = status.title,
+        subtitle = status.subtitle,
+        badge = CrossSiteNavigator.siteLabel(site),
+        onSwitchSiteClick = onSwitchSiteClick,
+        onAvatarClick = onStatusClick,
+        onTitleClick = onStatusClick,
+    )
 }
