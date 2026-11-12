@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.SupJav.ui.video
 
+import com.yenaly.han1meviewer.ui.screen.rememberVideoGridColumns
 import com.yenaly.han1meviewer.ui.component.SiteBackWithHomeButton
 import com.yenaly.han1meviewer.util.PlayerOrientation
 import androidx.compose.ui.res.stringResource
@@ -673,11 +674,12 @@ private fun SupJavVideoContent(
                 SiteVideoSectionHeader(title = stringResource(R.string.supjav_related))
             }
             item(key = "related_grid") {
+                val relatedColumns = rememberVideoGridColumns()
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
-                    maxItemsInEachRow = 2,
+                    maxItemsInEachRow = relatedColumns,
                 ) {
                     info.related.forEach { item ->
                         SiteVideoCard(
@@ -690,7 +692,9 @@ private fun SupJavVideoContent(
                                 .get(LocalContext.current),
                         )
                     }
-                    if (info.related.size % 2 == 1) Spacer(Modifier.weight(1f))
+                    repeat((relatedColumns - info.related.size % relatedColumns) % relatedColumns) {
+                        Spacer(Modifier.weight(1f))
+                    }
                 }
             }
         }

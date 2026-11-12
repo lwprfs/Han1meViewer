@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.XHamster.ui.home
 
+import com.yenaly.han1meviewer.ui.screen.rememberVideoGridColumns
 import com.yenaly.han1meviewer.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
@@ -67,8 +68,9 @@ fun XHamsterVideoGrid(
                     .filter { it }
                     .collect { onLoadMore() }
             }
+            val videoColumns = rememberVideoGridColumns()
             LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 160.dp),
+                columns = GridCells.Fixed(videoColumns),
                 state = gridState,
                 modifier = modifier.fillMaxSize(),
                 contentPadding = PaddingValues(12.dp),

@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.yenaly.han1meviewer.ui.screen.rememberVideoGridColumns
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.RouVideo.common.RouVideoFormat
 import com.yenaly.han1meviewer.RouVideo.common.RouVideoImageLoader
@@ -93,8 +94,9 @@ fun RouVideoVideoGrid(
                     .filter { it }
                     .collect { onLoadMore() }
             }
+            val videoColumns = rememberVideoGridColumns()
             LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 160.dp),
+                columns = GridCells.Fixed(videoColumns),
                 state = gridState,
                 modifier = modifier.fillMaxSize(),
                 contentPadding = PaddingValues(12.dp),

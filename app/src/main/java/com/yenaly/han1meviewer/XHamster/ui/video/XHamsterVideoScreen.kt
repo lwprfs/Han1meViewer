@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import com.yenaly.han1meviewer.ui.screen.rememberVideoGridColumns
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterComment
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterUploader
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
@@ -653,20 +654,25 @@ private fun XHamsterVideoDetailsPage(
                     fontWeight = FontWeight.Bold,
                 )
             }
-            items(info.related.chunked(2), key = { row -> row.first().videoCode }) { row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    row.forEach { video ->
-                        SiteVideoCard(
-                            title = video.title,
-                            coverUrl = video.coverUrl,
-                            onClick = { onNavigateToVideo(video.videoCode) },
-                            modifier = Modifier.weight(1f),
-                            views = video.views,
-                            duration = video.duration,
-                            imageLoader = imageLoader,
-                        )
+            item(key = "related_grid") {
+                val relatedColumns = rememberVideoGridColumns()
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    info.related.chunked(relatedColumns).forEach { row ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            row.forEach { video ->
+                                SiteVideoCard(
+                                    title = video.title,
+                                    coverUrl = video.coverUrl,
+                                    onClick = { onNavigateToVideo(video.videoCode) },
+                                    modifier = Modifier.weight(1f),
+                                    views = video.views,
+                                    duration = video.duration,
+                                    imageLoader = imageLoader,
+                                )
+                            }
+                            repeat(relatedColumns - row.size) { Spacer(modifier = Modifier.weight(1f)) }
+                        }
                     }
-                    if (row.size == 1) Spacer(modifier = Modifier.weight(1f))
                 }
             }
         }

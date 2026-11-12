@@ -41,6 +41,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.yenaly.han1meviewer.ui.screen.rememberVideoGridColumns
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.RouVideo.common.RouVideoTagLabels
 import com.yenaly.han1meviewer.RouVideo.common.RouVideoConstants
@@ -204,8 +205,9 @@ private fun SearchLanding(
         )
         return
     }
+    val videoColumns = rememberVideoGridColumns()
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 160.dp),
+        columns = GridCells.Fixed(videoColumns),
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(12.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),

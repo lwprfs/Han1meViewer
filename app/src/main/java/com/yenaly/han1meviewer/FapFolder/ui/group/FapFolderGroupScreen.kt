@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.FapFolder.ui.group
 
+import com.yenaly.han1meviewer.ui.screen.rememberVideoGridColumns
 import com.yenaly.han1meviewer.FapFolder.ui.video.FapFolderVideoPlaylist
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
@@ -721,7 +722,8 @@ private fun GroupMediaTab(
 ) {
     val isPhotos = uiState.activeTab == FapFolderGroupTab.PHOTOS
     val gridState: LazyGridState = rememberLazyGridState()
-    val columns = if (isPhotos) 3 else 2
+    val videoColumns = rememberVideoGridColumns()
+    val columns = if (isPhotos) 3 else videoColumns
 
     LaunchedEffect(
         gridState,

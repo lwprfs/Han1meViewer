@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.FapFolder.ui.profile
 
+import com.yenaly.han1meviewer.ui.screen.rememberVideoGridColumns
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
 import androidx.compose.foundation.background
@@ -439,7 +440,8 @@ private fun ProfileGridTab(
         else -> emptyList()
     }
 
-    val columns = if (uiState.activeTab == FapFolderProfileTab.VIDEOS) 2 else 3
+    val videoColumns = rememberVideoGridColumns()
+    val columns = if (uiState.activeTab == FapFolderProfileTab.VIDEOS) videoColumns else 3
 
     LazyVerticalGrid(
         state = gridState,
