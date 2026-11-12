@@ -59,7 +59,6 @@ import com.yenaly.han1meviewer.HentaiMama.ui.components.HentaiMamaSeriesCardView
 import com.yenaly.han1meviewer.HentaiMama.ui.components.HentaiMamaVideoCard
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
-import com.yenaly.han1meviewer.ui.component.SiteQuickAction
 import com.yenaly.han1meviewer.ui.component.SiteWelcomeHeader
 import com.yenaly.han1meviewer.logic.model.HanimeInfo
 import com.yenaly.han1meviewer.ui.component.SiteBarIconButton
@@ -142,17 +141,7 @@ fun HentaiMamaHomeScreen(
                         verticalArrangement = Arrangement.spacedBy(SpacingNormal),
                     ) {
                         item(key = "welcome") {
-                            val searchLabel = stringResource(R.string.search)
-                            val historyLabel = stringResource(R.string.watch_history)
-                            val settingsLabel = stringResource(R.string.settings)
-                            SiteWelcomeHeader(
-                                siteName = "HentaiMama",
-                                actions = listOf(
-                                    SiteQuickAction(searchLabel, R.drawable.ic_baseline_search_24) { onNavigateToSearch(null) },
-                                    SiteQuickAction(historyLabel, R.drawable.ic_baseline_history_24, onNavigateToHistory),
-                                    SiteQuickAction(settingsLabel, R.drawable.ic_baseline_settings_24, onNavigateToSettings),
-                                ),
-                            )
+                            SiteWelcomeHeader(siteName = "HentaiMama")
                         }
                         categoryRows.forEach { row ->
                             val key = row.category.key

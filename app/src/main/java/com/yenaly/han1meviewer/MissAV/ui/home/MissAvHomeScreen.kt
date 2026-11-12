@@ -50,7 +50,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yenaly.han1meviewer.R
-import com.yenaly.han1meviewer.ui.component.SiteQuickAction
 import com.yenaly.han1meviewer.ui.component.SiteWelcomeHeader
 import com.yenaly.han1meviewer.logic.state.WebsiteState
 import com.yenaly.han1meviewer.ui.component.SiteBarIconButton
@@ -191,17 +190,7 @@ private fun HomeContent(
         verticalArrangement = Arrangement.spacedBy(SpacingNormal),
     ) {
         item(key = "welcome") {
-            val searchLabel = stringResource(R.string.search)
-            val historyLabel = stringResource(R.string.watch_history)
-            val settingsLabel = stringResource(R.string.settings)
-            SiteWelcomeHeader(
-                siteName = "MissAV",
-                actions = listOf(
-                    SiteQuickAction(searchLabel, R.drawable.ic_baseline_search_24) { onNavigateToSearch(null) },
-                    SiteQuickAction(historyLabel, R.drawable.ic_baseline_history_24, onNavigateToHistory),
-                    SiteQuickAction(settingsLabel, R.drawable.ic_baseline_settings_24, onNavigateToSettings),
-                ),
-            )
+            SiteWelcomeHeader(siteName = "MissAV")
         }
         if (popular.isNotEmpty()) {
             item(key = "popular_header") {

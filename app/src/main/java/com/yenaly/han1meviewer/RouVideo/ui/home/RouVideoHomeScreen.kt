@@ -24,7 +24,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yenaly.han1meviewer.ui.component.SitePullToRefresh
 import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.R
-import com.yenaly.han1meviewer.ui.component.SiteQuickAction
 import com.yenaly.han1meviewer.ui.component.SiteWelcomeHeader
 import com.yenaly.han1meviewer.RouVideo.common.RouVideoConstants
 import com.yenaly.han1meviewer.RouVideo.common.RouVideoConstants.SeriesFilter
@@ -159,11 +158,6 @@ fun RouVideoHomeScreen(
                         SiteWelcomeHeader(
                             siteName = "RouVideo",
                             horizontalPadding = 0.dp,
-                            actions = listOf(
-                                SiteQuickAction(stringResource(R.string.search), R.drawable.ic_baseline_search_24, { onNavigateToSearch(null) }),
-                                SiteQuickAction(stringResource(R.string.rouvideo_categories), R.drawable.ic_drawer_category, onNavigateToCategories),
-                                SiteQuickAction(stringResource(R.string.watch_history), R.drawable.ic_baseline_history_24, onNavigateToHistory),
-                            ),
                         )
                     },
                     state = state,
