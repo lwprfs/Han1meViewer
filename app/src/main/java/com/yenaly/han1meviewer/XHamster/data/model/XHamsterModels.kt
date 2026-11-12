@@ -245,6 +245,9 @@ data class XHamsterEntityProfile(
     val tabs: List<XHamsterProfileTab>,
     val videos: List<com.yenaly.han1meviewer.logic.model.HanimeInfo>,
     val shorts: List<XHamsterShort>,
+    /** Channel only: tag filters and sort options shown above the video list. */
+    val tags: List<XHamsterOption> = emptyList(),
+    val sorts: List<XHamsterOption> = emptyList(),
 ) {
     enum class Kind { CREATOR, CHANNEL, USER }
 }

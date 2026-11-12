@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import com.yenaly.han1meviewer.XHamster.data.model.XHamsterOption
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -224,7 +225,7 @@ private fun ProfileContent(
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when (tabs.getOrElse(selected) { ProfileTab.VIDEOS }) {
-                ProfileTab.VIDEOS -> ProfileVideos(videosPath, onNavigateToVideo)
+                ProfileTab.VIDEOS -> ProfileVideos(videosPath, profile.tags, profile.sorts, onNavigateToVideo)
                 ProfileTab.SHORTS -> ProfileShorts(
                     path = shortsPath,
                     preview = profile.shorts,
@@ -296,16 +297,65 @@ private fun ProfileHeader(
 }
 
 @Composable
-private fun ProfileVideos(path: String, onNavigateToVideo: (String) -> Unit) {
+private fun ProfileVideos(
+    basePath: String,
+    tags: List<XHamsterOption>,
+    sorts: List<XHamsterOption>,
+    onNavigateToVideo: (String) -> Unit,
+) {
+    var tag by remember(basePath) { mutableStateOf<String?>(null) }
+    val defaultSort = sorts.firstOrNull { it.selected }?.path
+    var sort by remember(basePath) { mutableStateOf(defaultSort) }
+
+    // tag links already look like "/channels/x?tag=y"; the sort is appended on top.
+    val path = remember(basePath, tag, sort) {
+        val start = tag ?: basePath
+        if (sort != null && sort != defaultSort) {
+            start + (if (start.contains('?')) "&" else "?") + "sort=$sort"
+        } else start
+    }
     val vm: XHamsterListViewModel = viewModel(key = "xh-profile-videos-$path")
     val state by vm.state.collectAsStateWithLifecycle()
     LaunchedEffect(path) { vm.setSource(XHamsterSource.Path(path)) }
-    XHamsterVideoGrid(
-        state = state,
-        onRetry = { vm.refresh() },
-        onLoadMore = { vm.loadMore() },
-        onOpenVideo = onNavigateToVideo,
-    )
+
+    Column(Modifier.fillMaxSize()) {
+        if (sorts.isNotEmpty()) {
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(sorts, key = { "sort-" + it.path }) { option ->
+                    FilterChip(
+                        selected = sort == option.path,
+                        onClick = { sort = option.path },
+                        label = { Text(option.name) },
+                    )
+                }
+            }
+        }
+        if (tags.isNotEmpty()) {
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(tags, key = { "tag-" + it.path }) { option ->
+                    FilterChip(
+                        selected = tag == option.path,
+                        onClick = { tag = if (tag == option.path) null else option.path },
+                        label = { Text(option.name) },
+                    )
+                }
+            }
+        }
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            XHamsterVideoGrid(
+                state = state,
+                onRetry = { vm.refresh() },
+                onLoadMore = { vm.loadMore() },
+                onOpenVideo = onNavigateToVideo,
+            )
+        }
+    }
 }
 
 @Composable

@@ -647,6 +647,21 @@ object XHamsterEntityParser {
         val videos = XHamsterParser.parseCards(
             layout.obj("videoListProps")?.arr("videoThumbProps")
         )
+        val filters = layout.obj("tagsListWithFiltersProps")
+        val tags = filters?.obj("compactEntitiesListProps")?.arr("categoriesItems").orEmpty()
+            .mapNotNull { it as? JsonObject }
+            .mapNotNull { o ->
+                val label = o.str("label") ?: return@mapNotNull null
+                val url = o.str("url") ?: return@mapNotNull null
+                XHamsterOption(label, pathOf(url), o.flag("isSelected"))
+            }
+        val sorts = filters?.obj("collapsableFiltersProps")?.arr("orderList").orEmpty()
+            .mapNotNull { it as? JsonObject }
+            .mapNotNull { o ->
+                val label = o.str("label") ?: return@mapNotNull null
+                val value = o.str("value") ?: return@mapNotNull null
+                XHamsterOption(label, value, o.flag("selected"))
+            }
         val entityId = sub?.lng("id")
             ?: root.obj("channelInfo")?.lng("id")
             ?: layout.obj("extraData")?.lng("channelId")
@@ -674,6 +689,8 @@ object XHamsterEntityParser {
             tabs = tabs,
             videos = videos,
             shorts = emptyList(),
+            tags = tags,
+            sorts = sorts,
         )
     }
 

@@ -105,7 +105,8 @@ data class XHamsterProfileRoute(val path: String, val title: String)
 data class XHamsterGalleryRoute(val url: String, val title: String)
 
 private fun isProfilePath(path: String): Boolean =
-    path.startsWith("/users/") || path.startsWith("/creators/") || path.startsWith("/pornstars/")
+    path.startsWith("/users/") || path.startsWith("/creators/") || path.startsWith("/pornstars/") ||
+            path.startsWith("/channels/")
 
 @Composable
 fun XHamsterNavHost(
@@ -206,7 +207,11 @@ fun XHamsterNavHost(
                     navController.navigateSafely(XHamsterVideoRoute(code))
                 },
                 onNavigateToPath = { path, title ->
-                    navController.navigateSafely(XHamsterCategoryRoute(path, title))
+                    if (isProfilePath(path)) {
+                        navController.navigateSafely(XHamsterProfileRoute(path, title))
+                    } else {
+                        navController.navigateSafely(XHamsterCategoryRoute(path, title))
+                    }
                 },
                 onNavigateToUploader = { path, title ->
                     if (isProfilePath(path)) {
@@ -267,7 +272,11 @@ fun XHamsterNavHost(
             XHamsterChannelsScreen(
                 onBack = { navController.popBackStackSafely() },
                 onOpenChannel = { path, title ->
-                    navController.navigateSafely(XHamsterCategoryRoute(path, title))
+                    if (isProfilePath(path)) {
+                        navController.navigateSafely(XHamsterProfileRoute(path, title))
+                    } else {
+                        navController.navigateSafely(XHamsterCategoryRoute(path, title))
+                    }
                 },
             )
         }
