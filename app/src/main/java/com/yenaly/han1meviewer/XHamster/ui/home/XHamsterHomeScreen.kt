@@ -21,7 +21,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yenaly.han1meviewer.ui.component.SitePullToRefresh
+import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.ui.component.SiteQuickAction
+import com.yenaly.han1meviewer.ui.component.SiteWelcomeHeader
 import com.yenaly.han1meviewer.XHamster.common.XHamsterConstants
 import com.yenaly.han1meviewer.ui.component.SiteBarIconButton
 import com.yenaly.han1meviewer.ui.component.SiteChipRow
@@ -94,6 +97,17 @@ fun XHamsterHomeScreen(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
             ) {
                 XHamsterVideoGrid(
+                    header = {
+                        SiteWelcomeHeader(
+                            siteName = "XHamster",
+                            horizontalPadding = 0.dp,
+                            actions = listOf(
+                                SiteQuickAction(stringResource(R.string.search), R.drawable.ic_baseline_search_24, { onNavigateToSearch(null) }),
+                                SiteQuickAction(stringResource(R.string.xhamster_categories), R.drawable.ic_drawer_category, onNavigateToCategories),
+                                SiteQuickAction(stringResource(R.string.watch_history), R.drawable.ic_baseline_history_24, onNavigateToHistory),
+                            ),
+                        )
+                    },
                     state = state,
                     onRetry = { viewModel.refresh() },
                     onLoadMore = { viewModel.loadMore() },

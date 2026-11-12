@@ -61,6 +61,10 @@ import com.yenaly.han1meviewer.ui.navigation.settings.NetworkSettingsRoute
 import com.yenaly.han1meviewer.ui.navigation.settings.PlayerSettingsRoute
 import com.yenaly.han1meviewer.ui.navigation.settings.SitePlayerSettingsRoute
 import com.yenaly.han1meviewer.ui.navigation.settings.UnifiedHistoryRoute
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -473,7 +477,11 @@ fun SiteDrawerContent(
                 appEntries(context),
             )
 
-    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
+    ) {
         SiteDrawerHeader(
             site = site,
             status = status,
@@ -485,68 +493,67 @@ fun SiteDrawerContent(
             },
             onSwitchSiteClick = onSwitchSiteClick,
         )
-        sections.forEach { section ->
-            if (section.entries.isEmpty()) return@forEach
+        sections.forEachIndexed { index, section ->
+            if (section.entries.isEmpty()) return@forEachIndexed
+            if (index > 0) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 28.dp, vertical = 6.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+                )
+            }
             DrawerSectionHeader(section.title)
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp),
-                shape = RoundedCornerShape(20.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
-            ) {
-                Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                    section.entries.forEach { entry ->
-                        DrawerItem(entry) {
-                            onClose()
-                            entry.onClick(navController)
-                        }
-                    }
+            section.entries.forEach { entry ->
+                DrawerItem(entry) {
+                    onClose()
+                    entry.onClick(navController)
                 }
             }
         }
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(16.dp))
     }
 }
 
 @Composable
 private fun DrawerSectionHeader(title: String) {
-    Row(
+    Text(
+        text = title,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 28.dp, end = 16.dp, top = 16.dp, bottom = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(width = 4.dp, height = 14.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(MaterialTheme.colorScheme.primary),
-        )
-        Spacer(Modifier.width(8.dp))
-        Text(
-            text = title.uppercase(),
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 1.2.sp,
-            color = MaterialTheme.colorScheme.primary,
-        )
-    }
+            .padding(start = 28.dp, end = 16.dp, top = 10.dp, bottom = 6.dp),
+    )
 }
 
 @Composable
 private fun DrawerItem(entry: SiteDrawerEntry, onClick: () -> Unit) {
     NavigationDrawerItem(
-        label = { Text(entry.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        icon = { Icon(painterResource(entry.iconRes), contentDescription = null) },
+        label = {
+            Text(
+                entry.title,
+                style = MaterialTheme.typography.labelLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        },
+        icon = {
+            Icon(
+                painterResource(entry.iconRes),
+                contentDescription = null,
+                modifier = Modifier.size(22.dp),
+            )
+        },
         selected = false,
         onClick = onClick,
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(28.dp),
         colors = NavigationDrawerItemDefaults.colors(
             unselectedContainerColor = Color.Transparent,
-            unselectedIconColor = MaterialTheme.colorScheme.primary,
+            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            unselectedTextColor = MaterialTheme.colorScheme.onSurface,
         ),
-        modifier = Modifier.padding(horizontal = 4.dp),
+        modifier = Modifier.padding(horizontal = 12.dp),
     )
 }
 
@@ -557,80 +564,102 @@ private fun SiteDrawerHeader(
     onStatusClick: (() -> Unit)?,
     onSwitchSiteClick: () -> Unit,
 ) {
-    ElevatedCard(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp)
             .padding(top = 12.dp, bottom = 8.dp),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        ),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp),
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            AsyncImage(
-                model = status.avatarUrl,
-                contentDescription = null,
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(CircleShape)
-                    .then(
-                        if (onStatusClick != null) Modifier.clickable(onClick = onStatusClick)
-                        else Modifier
-                    ),
-                contentScale = ContentScale.Crop,
-                placeholder = painterResource(id = R.drawable.bg_default_header),
-                fallback = painterResource(id = R.drawable.bg_default_header),
-                error = painterResource(id = R.drawable.bg_default_header),
-            )
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(start = 16.dp, end = 8.dp)
-                    .then(
-                        if (onStatusClick != null) Modifier.clickable(onClick = onStatusClick)
-                        else Modifier
-                    ),
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = status.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                AsyncImage(
+                    model = status.avatarUrl,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(CircleShape)
+                        .then(
+                            if (onStatusClick != null) Modifier.clickable(onClick = onStatusClick)
+                            else Modifier
+                        ),
+                    contentScale = ContentScale.Crop,
+                    placeholder = painterResource(id = R.drawable.bg_default_header),
+                    fallback = painterResource(id = R.drawable.bg_default_header),
+                    error = painterResource(id = R.drawable.bg_default_header),
                 )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = status.subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = CrossSiteNavigator.siteLabel(site),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 14.dp, end = 8.dp)
+                        .then(
+                            if (onStatusClick != null) Modifier.clickable(onClick = onStatusClick)
+                            else Modifier
+                        ),
+                ) {
+                    Text(
+                        text = status.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    if (status.subtitle.isNotBlank()) {
+                        Text(
+                            text = status.subtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(top = 2.dp),
+                        )
+                    }
+                }
             }
-            Column(
-                modifier = Modifier.clickable(onClick = onSwitchSiteClick),
-                horizontalAlignment = Alignment.CenterHorizontally,
+            Spacer(Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_baseline_switch_24),
-                    contentDescription = stringResource(R.string.switch_site),
-                    modifier = Modifier.padding(6.dp),
-                )
-                Text(
-                    text = stringResource(R.string.switch_site),
-                    style = MaterialTheme.typography.labelSmall,
-                )
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                ) {
+                    Text(
+                        text = CrossSiteNavigator.siteLabel(site),
+                        style = MaterialTheme.typography.labelLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    )
+                }
+                FilledTonalButton(
+                    onClick = onSwitchSiteClick,
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                    ),
+                    modifier = Modifier.height(36.dp),
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_baseline_switch_24),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = stringResource(R.string.switch_site),
+                        style = MaterialTheme.typography.labelLarge,
+                        maxLines = 1,
+                    )
+                }
             }
         }
     }

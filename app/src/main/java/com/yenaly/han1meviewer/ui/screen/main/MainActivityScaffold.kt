@@ -84,7 +84,6 @@ fun MainActivityScaffold(
                     onAvatarLongClick = onAvatarLongClick,
                     onSwitchSiteClick = onSwitchSiteClick,
                 )
-                Spacer(modifier = Modifier.height(8.dp))
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -198,15 +197,17 @@ private fun MainDrawerSection(
     selectedDestination: MainDrawerDestination?,
     onItemClick: (MainDrawerDestination) -> Unit,
 ) {
-    Spacer(modifier = Modifier.height(8.dp))
-    HorizontalDivider()
+    HorizontalDivider(
+        modifier = Modifier.padding(start = 28.dp, end = 28.dp, top = 12.dp, bottom = 6.dp),
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+    )
     Text(
         text = stringResource(titleRes),
-        style = MaterialTheme.typography.titleSmall,
+        style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 28.dp, vertical = 12.dp),
+            .padding(start = 28.dp, end = 16.dp, top = 10.dp, bottom = 6.dp),
     )
     Column {
         items.forEach { item ->

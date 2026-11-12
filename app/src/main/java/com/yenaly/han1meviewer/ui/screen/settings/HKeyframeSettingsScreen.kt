@@ -117,12 +117,7 @@ fun HKeyframeSettingsScreen(
 
 @Composable
 private fun HKeyframeGroupTitle(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier,
-    )
+    com.yenaly.han1meviewer.ui.component.SettingSectionHeader(title)
 }
 
 @Preview(showBackground = true)

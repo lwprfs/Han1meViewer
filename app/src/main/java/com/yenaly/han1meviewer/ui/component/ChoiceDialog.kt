@@ -35,7 +35,7 @@ fun ChoiceDialog(
                 modifier = Modifier
                     .heightIn(max = 420.dp)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 options.forEach { (label, value) ->
                     SettingChoiceItem(

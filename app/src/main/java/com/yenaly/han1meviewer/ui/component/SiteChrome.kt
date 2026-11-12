@@ -88,7 +88,7 @@ fun SiteSearchTopBar(
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 3.dp,
+        tonalElevation = 2.dp,
         modifier = modifier.fillMaxWidth(),
     ) {
         Row(
@@ -793,6 +793,10 @@ fun <T> SiteChipRow(
                 onClick = { onSelect(item) },
                 label = { Text(label(item)) },
                 shape = RoundedCornerShape(20.dp),
+                colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                ),
             )
         }
     }

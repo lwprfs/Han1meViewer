@@ -41,30 +41,19 @@ private val historySiteNames = listOf(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SettingsHistoryAllSitesCard(onClick: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-    ) {
+    com.yenaly.han1meviewer.ui.component.SettingTile(onClick = onClick) {
         Column(
-            modifier = Modifier
-                .clickable(onClick = onClick)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_history_all_sites),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(28.dp),
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                com.yenaly.han1meviewer.ui.component.SettingIconBadge(
+                    iconRes = R.drawable.ic_history_all_sites,
                 )
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 12.dp),
-                ) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = stringResource(R.string.hist_all_sites_title),
                         style = MaterialTheme.typography.titleSmall,
@@ -76,9 +65,14 @@ fun SettingsHistoryAllSitesCard(onClick: () -> Unit) {
                         ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp),
                     )
                 }
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -87,8 +81,8 @@ fun SettingsHistoryAllSitesCard(onClick: () -> Unit) {
                 historySiteNames.forEach { name ->
                     Surface(
                         shape = RoundedCornerShape(50),
-                        color = MaterialTheme.colorScheme.secondaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     ) {
                         Text(
                             text = name,
@@ -152,13 +146,13 @@ fun SettingsUpdateStatusEntry(
                     progress = { ui.progress / 100f },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = 28.dp, vertical = 2.dp),
                 )
             } else {
                 LinearProgressIndicator(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = 28.dp, vertical = 2.dp),
                 )
             }
         }

@@ -44,10 +44,10 @@ fun HomePageTopBar(
     modifier: Modifier = Modifier
 ) {
     val placeholders = stringArrayResource(R.array.search_placeholders)
-    val randomHint = placeholders.random()
+    val randomHint = remember(placeholders) { placeholders.random() }
     Surface(
         color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 2.dp,
+        tonalElevation = 3.dp,
         modifier = modifier.fillMaxWidth()
     ) {
         Row(
@@ -69,7 +69,7 @@ fun HomePageTopBar(
                     .weight(1f)
                     .height(48.dp)
                     .clip(RoundedCornerShape(28.dp))
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest)
                     .clickable(
                         indication = null,
                         interactionSource = remember { MutableInteractionSource() }

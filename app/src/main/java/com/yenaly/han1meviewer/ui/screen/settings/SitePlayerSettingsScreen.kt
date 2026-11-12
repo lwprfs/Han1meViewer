@@ -167,7 +167,7 @@ fun SitePlayerSettingsScreen(site: SiteType, modifier: Modifier = Modifier) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 FilledTonalButton(onClick = { SitePlayerSettings.setAllSwitches(site, true) }) {
@@ -182,15 +182,7 @@ fun SitePlayerSettingsScreen(site: SiteType, modifier: Modifier = Modifier) {
             val rows = ids.mapNotNull { listedSpecs[it] }
             if (rows.isEmpty()) return@forEach
             item(key = "group_$groupTitle") {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = groupTitle,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                    )
-                    HorizontalDivider()
-                }
+                com.yenaly.han1meviewer.ui.component.SettingSectionHeader(groupTitle)
             }
             items(rows, key = { it.id }) { spec ->
                 val enabled = SitePlayerSettings.isEnabled(site, spec.id)

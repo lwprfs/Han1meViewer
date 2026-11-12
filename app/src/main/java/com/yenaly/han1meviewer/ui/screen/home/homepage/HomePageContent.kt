@@ -13,6 +13,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.ui.component.SiteQuickAction
+import com.yenaly.han1meviewer.ui.component.SiteWelcomeHeader
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -125,6 +128,27 @@ fun HomePageContent(
                     )
                 )
             }
+        }
+        item(key = "welcome") {
+            val searchLabel = stringResource(R.string.search)
+            val previewLabel = stringResource(R.string.hanime_list)
+            val menuLabel = stringResource(R.string.open_menu)
+            SiteWelcomeHeader(
+                siteName = "Hanime1",
+                modifier = Modifier.padding(top = 4.dp),
+                horizontalPadding = HomeHeroHorizontalPadding,
+                actions = listOf(
+                    SiteQuickAction(searchLabel, R.drawable.ic_baseline_search_24) {
+                        onEvent(HomeUiEvent.OpenSearchPage())
+                    },
+                    SiteQuickAction(previewLabel, R.drawable.ic_baseline_newspaper_24) {
+                        onEvent(HomeUiEvent.NavigateToPreview)
+                    },
+                    SiteQuickAction(menuLabel, R.drawable.ic_settings_apps_24) {
+                        onEvent(HomeUiEvent.OpenDrawer)
+                    },
+                ),
+            )
         }
         categories.forEach { category ->
             item(key = "category_${category.titleRes}") {

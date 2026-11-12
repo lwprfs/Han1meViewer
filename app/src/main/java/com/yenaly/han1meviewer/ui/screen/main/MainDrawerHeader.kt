@@ -6,6 +6,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,8 +16,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -49,95 +51,84 @@ fun MainDrawerHeader(
     onAvatarLongClick: () -> Unit,
     onSwitchSiteClick: () -> Unit,
 ) {
-    ElevatedCard(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp)
             .padding(top = 12.dp, bottom = 8.dp),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        ),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp)
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(140.dp)
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            AsyncImage(
-                model = avatarUrl,
-                contentDescription = null,
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(CircleShape)
-                    .combinedClickable(
-                        onClick = onAvatarClick,
-                        onLongClick = onAvatarLongClick
-                    ),
-                contentScale = ContentScale.Crop,
-                placeholder = painterResource(id = R.drawable.bg_default_header),
-                fallback = painterResource(id = R.drawable.bg_default_header),
-                error = painterResource(id = R.drawable.bg_default_header),
-            )
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(start = 16.dp, end = 8.dp)
-                    .align(Alignment.CenterVertically)
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = when {
-                        isLoading -> stringResource(R.string.loading)
-                        isLoggedIn -> username
-                            ?: stringResource(R.string.refresh_page_or_login_expired)
-
-                        else -> stringResource(R.string.not_logged_in)
-                    },
-                    style = MaterialTheme.typography.titleLarge,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = currentSite,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-            Column(
-                modifier = Modifier
-                    .width(IntrinsicSize.Min)
-                    .align(Alignment.Top)
-                    .padding(top = 6.dp)
-                    .clickable(
-                        onClick = onSwitchSiteClick,
-                        indication = ripple(bounded = false),
-                        interactionSource = remember { MutableInteractionSource() }
-                    ),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Box(
+                AsyncImage(
+                    model = avatarUrl,
+                    contentDescription = null,
                     modifier = Modifier
-                        .size(36.dp)
-                        .padding(6.dp),
-                    contentAlignment = Alignment.Center
+                        .size(56.dp)
+                        .clip(CircleShape)
+                        .combinedClickable(
+                            onClick = onAvatarClick,
+                            onLongClick = onAvatarLongClick,
+                        ),
+                    contentScale = ContentScale.Crop,
+                    placeholder = painterResource(id = R.drawable.bg_default_header),
+                    fallback = painterResource(id = R.drawable.bg_default_header),
+                    error = painterResource(id = R.drawable.bg_default_header),
+                )
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 14.dp, end = 8.dp),
                 ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_baseline_switch_24),
-                        contentDescription = stringResource(R.string.switch_site)
+                    Text(
+                        text = when {
+                            isLoading -> stringResource(R.string.loading)
+                            isLoggedIn -> username
+                                ?: stringResource(R.string.refresh_page_or_login_expired)
+
+                            else -> stringResource(R.string.not_logged_in)
+                        },
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = currentSite,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = 2.dp),
                     )
                 }
-
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            FilledTonalButton(
+                onClick = onSwitchSiteClick,
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
+                colors = ButtonDefaults.filledTonalButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                ),
+                modifier = Modifier
+                    .align(Alignment.End)
+                    .height(36.dp),
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_baseline_switch_24),
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(6.dp))
                 Text(
                     text = stringResource(R.string.switch_site),
-                    style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.alpha(0.7f),
-                    textAlign = TextAlign.Center
+                    style = MaterialTheme.typography.labelLarge,
+                    maxLines = 1,
                 )
             }
         }

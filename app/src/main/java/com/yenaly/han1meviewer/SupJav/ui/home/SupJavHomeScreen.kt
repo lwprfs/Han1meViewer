@@ -28,6 +28,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yenaly.han1meviewer.ui.component.SitePullToRefresh
 import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.ui.component.SiteQuickAction
+import com.yenaly.han1meviewer.ui.component.SiteWelcomeHeader
 import com.yenaly.han1meviewer.SupJav.common.SupJavConstants
 import com.yenaly.han1meviewer.ui.component.SiteBarIconButton
 import com.yenaly.han1meviewer.ui.component.SiteChipRow
@@ -92,6 +94,16 @@ fun SupJavHomeScreen(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
             ) {
                 SupJavVideoGrid(
+                    header = {
+                        SiteWelcomeHeader(
+                            siteName = "SupJav",
+                            horizontalPadding = 0.dp,
+                            actions = listOf(
+                                SiteQuickAction(stringResource(R.string.search), R.drawable.ic_baseline_search_24, { onNavigateToSearch(null) }),
+                                SiteQuickAction(stringResource(R.string.watch_history), R.drawable.ic_baseline_history_24, onNavigateToHistory),
+                            ),
+                        )
+                    },
                     state = state,
                     onRetry = { viewModel.refresh() },
                     onLoadMore = { viewModel.loadMore() },

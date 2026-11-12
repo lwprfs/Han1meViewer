@@ -613,15 +613,7 @@ fun HomeSettingsScreen(
 
 @Composable
 private fun SettingsGroupTitle(title: String) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-        )
-        HorizontalDivider()
-    }
+    com.yenaly.han1meviewer.ui.component.SettingSectionHeader(title)
 }
 
 @Preview(showBackground = true, widthDp = 420, heightDp = 1000)

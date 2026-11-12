@@ -50,6 +50,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.ui.component.SiteQuickAction
+import com.yenaly.han1meviewer.ui.component.SiteWelcomeHeader
 import com.yenaly.han1meviewer.logic.state.WebsiteState
 import com.yenaly.han1meviewer.ui.component.SiteBarIconButton
 import com.yenaly.han1meviewer.ui.component.SiteSearchTopBar
@@ -146,6 +148,8 @@ fun MissAvHomeScreen(
                         onRetryCategory = viewModel::retryCategory,
                         onNavigateToVideo = onNavigateToVideo,
                         onNavigateToSearch = onNavigateToSearch,
+                        onNavigateToHistory = onNavigateToHistory,
+                        onNavigateToSettings = onNavigateToSettings,
                     )
                 }
             }
@@ -160,6 +164,8 @@ private fun HomeContent(
     onRetryCategory: (MissAvHomeCategory) -> Unit,
     onNavigateToVideo: (String, String) -> Unit,
     onNavigateToSearch: (String?) -> Unit,
+    onNavigateToHistory: () -> Unit,
+    onNavigateToSettings: () -> Unit,
 ) {
     val (cardWidth, _) = rememberCardResponsiveWidth()
     val popular = (homeState as? WebsiteState.Success)?.info?.popularVideos.orEmpty()
@@ -184,6 +190,19 @@ private fun HomeContent(
         contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(SpacingNormal),
     ) {
+        item(key = "welcome") {
+            val searchLabel = stringResource(R.string.search)
+            val historyLabel = stringResource(R.string.watch_history)
+            val settingsLabel = stringResource(R.string.settings)
+            SiteWelcomeHeader(
+                siteName = "MissAV",
+                actions = listOf(
+                    SiteQuickAction(searchLabel, R.drawable.ic_baseline_search_24) { onNavigateToSearch(null) },
+                    SiteQuickAction(historyLabel, R.drawable.ic_baseline_history_24, onNavigateToHistory),
+                    SiteQuickAction(settingsLabel, R.drawable.ic_baseline_settings_24, onNavigateToSettings),
+                ),
+            )
+        }
         if (popular.isNotEmpty()) {
             item(key = "popular_header") {
                 SiteSectionHeader(

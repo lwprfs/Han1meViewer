@@ -40,6 +40,7 @@ fun SupJavVideoGrid(
     onRetry: () -> Unit,
     onLoadMore: () -> Unit,
     onOpenVideo: (String) -> Unit,
+    header: (@Composable () -> Unit)? = null,
     modifier: Modifier = Modifier,
     emptyHint: String = stringResource(R.string.supjav_nothing_here),
     gridState: LazyGridState = rememberLazyGridState(),
@@ -77,6 +78,9 @@ fun SupJavVideoGrid(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
+                if (header != null) {
+                    item(span = { GridItemSpan(maxLineSpan) }) { header() }
+                }
                 items(state.items, key = { it.videoCode }) { video ->
                     SiteVideoCard(
                         title = video.title,

@@ -66,6 +66,7 @@ fun RouVideoVideoGrid(
     onRetry: () -> Unit,
     onLoadMore: () -> Unit,
     onOpenVideo: (String) -> Unit,
+    header: (@Composable () -> Unit)? = null,
     modifier: Modifier = Modifier,
     emptyHint: String = stringResource(R.string.rouvideo_nothing_here),
     skipTag: String? = null,
@@ -103,6 +104,9 @@ fun RouVideoVideoGrid(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
+                if (header != null) {
+                    item(span = { GridItemSpan(maxLineSpan) }) { header() }
+                }
                 items(state.items, key = { it.id }) { card ->
                     RouVideoCardItem(
                         card = card,

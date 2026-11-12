@@ -239,12 +239,7 @@ private fun CustomParamsDialog(
 
 @Composable
 private fun MpvGroupTitle(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-    )
+    com.yenaly.han1meviewer.ui.component.SettingSectionHeader(title)
 }
 
 @Preview(showBackground = true, widthDp = 420, heightDp = 900)

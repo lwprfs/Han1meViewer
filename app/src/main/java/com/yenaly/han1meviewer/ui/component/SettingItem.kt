@@ -1,28 +1,171 @@
 package com.yenaly.han1meviewer.ui.component
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.ui.preview.ComponentPreview
 import kotlin.math.roundToInt
+
+private val TileShape = RoundedCornerShape(20.dp)
+private val BadgeShape = RoundedCornerShape(12.dp)
+
+/**
+ * Section label shown above a group of setting tiles.
+ * Shared by every settings screen so headers look identical everywhere.
+ */
+@Composable
+fun SettingSectionHeader(
+    title: String,
+    modifier: Modifier = Modifier,
+) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(start = 28.dp, end = 16.dp, top = 24.dp, bottom = 8.dp),
+    )
+}
+
+/** Rounded tonal square that holds a setting icon. */
+@Composable
+fun SettingIconBadge(
+    iconRes: Int,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    SettingIconBadgeBox(modifier, enabled) {
+        Icon(
+            painter = painterResource(iconRes),
+            contentDescription = null,
+            modifier = Modifier.size(22.dp),
+        )
+    }
+}
+
+@Composable
+fun SettingIconBadge(
+    imageVector: ImageVector,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    SettingIconBadgeBox(modifier, enabled) {
+        Icon(
+            imageVector = imageVector,
+            contentDescription = null,
+            modifier = Modifier.size(22.dp),
+        )
+    }
+}
+
+@Composable
+private fun SettingIconBadgeBox(
+    modifier: Modifier,
+    enabled: Boolean,
+    icon: @Composable () -> Unit,
+) {
+    val container = MaterialTheme.colorScheme.secondaryContainer
+    val content = MaterialTheme.colorScheme.onSecondaryContainer
+    Box(
+        modifier = modifier
+            .size(40.dp)
+            .clip(BadgeShape)
+            .background(if (enabled) container else container.copy(alpha = 0.5f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        androidx.compose.runtime.CompositionLocalProvider(
+            androidx.compose.material3.LocalContentColor provides
+                    if (enabled) content else content.copy(alpha = 0.5f),
+            content = icon,
+        )
+    }
+}
+
+/**
+ * Rounded card-like container used by every setting row so that rows
+ * stacked in a LazyColumn read as a tidy list of tiles.
+ */
+@Composable
+fun SettingTile(
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    enabled: Boolean = true,
+    content: @Composable () -> Unit,
+) {
+    val tileModifier = modifier
+        .fillMaxWidth()
+        .padding(horizontal = 12.dp, vertical = 2.dp)
+    if (onClick != null) {
+        Surface(
+            onClick = onClick,
+            enabled = enabled,
+            modifier = tileModifier,
+            shape = TileShape,
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            content = content,
+        )
+    } else {
+        Surface(
+            modifier = tileModifier,
+            shape = TileShape,
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            content = content,
+        )
+    }
+}
+
+@Composable
+private fun SettingTexts(
+    title: String,
+    summary: String?,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    val alpha = if (enabled) 1f else 0.38f
+    Column(modifier = modifier) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha),
+        )
+        if (!summary.isNullOrBlank()) {
+            Text(
+                text = summary,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha),
+                modifier = Modifier.padding(top = 2.dp),
+            )
+        }
+    }
+}
 
 @Composable
 fun SettingSwitchItem(
@@ -34,42 +177,26 @@ fun SettingSwitchItem(
     iconRes: Int? = null,
     enabled: Boolean = true,
 ) {
-    val contentAlpha = if (enabled) 1f else 0.38f
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(enabled = enabled) { onCheckedChange(!checked) }
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    SettingTile(
+        modifier = modifier,
+        onClick = { onCheckedChange(!checked) },
+        enabled = enabled,
     ) {
-        iconRes?.let {
-            Icon(
-                painter = painterResource(it),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary.copy(alpha = contentAlpha),
-                modifier = Modifier.size(22.dp),
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            iconRes?.let { SettingIconBadge(it, enabled = enabled) }
+            SettingTexts(title, summary, Modifier.weight(1f), enabled)
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                enabled = enabled,
             )
         }
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
-            )
-            if (!summary.isNullOrBlank()) {
-                Text(
-                    text = summary,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha),
-                )
-            }
-        }
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            enabled = enabled
-        )
     }
 }
 
@@ -83,44 +210,32 @@ fun SettingNavigationItem(
     iconRes: Int? = null,
     enabled: Boolean = true,
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        iconRes?.let {
-            Icon(
-                painter = painterResource(it),
-                contentDescription = null,
-                tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(22.dp),
-            )
-        }
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (!summary.isNullOrBlank()) {
+    SettingTile(modifier = modifier, onClick = onClick, enabled = enabled) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            iconRes?.let { SettingIconBadge(it, enabled = enabled) }
+            SettingTexts(title, summary, Modifier.weight(1f), enabled)
+            if (!valueText.isNullOrBlank()) {
                 Text(
-                    text = summary,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = valueText,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(0.6f, fill = false),
                 )
             }
-        }
-        if (!valueText.isNullOrBlank()) {
-            Text(
-                text = valueText,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
     }
 }
 
@@ -132,41 +247,23 @@ fun SettingInfoItem(
     valueText: String? = null,
     iconRes: Int? = null,
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        iconRes?.let {
-            Icon(
-                painter = painterResource(it),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(22.dp),
-            )
-        }
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            if (!summary.isNullOrBlank()) {
+    SettingTile(modifier = modifier) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            iconRes?.let { SettingIconBadge(it) }
+            SettingTexts(title, summary, Modifier.weight(1f))
+            if (!valueText.isNullOrBlank()) {
                 Text(
-                    text = summary,
-                    style = MaterialTheme.typography.bodySmall,
+                    text = valueText,
+                    style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-        }
-        if (!valueText.isNullOrBlank()) {
-            Text(
-                text = valueText,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }
@@ -187,45 +284,34 @@ fun SettingSliderItem(
     } else {
         0
     }
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+    SettingTile(modifier = modifier) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            iconRes?.let {
-                Icon(
-                    painter = painterResource(it),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(22.dp),
-                )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                iconRes?.let { SettingIconBadge(it) }
+                SettingTexts(title, summary, Modifier.weight(1f))
             }
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface,
+            Slider(
+                value = value.toFloat(),
+                onValueChange = { onValueChange(it.roundToInt()) },
+                valueRange = valueRange.first.toFloat()..valueRange.last.toFloat(),
+                steps = totalSteps.coerceAtLeast(0),
             )
         }
-        if (!summary.isNullOrBlank()) {
-            Text(
-                text = summary,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Slider(
-            value = value.toFloat(),
-            onValueChange = { onValueChange(it.roundToInt()) },
-            valueRange = valueRange.first.toFloat()..valueRange.last.toFloat(),
-            steps = totalSteps.coerceAtLeast(0),
-        )
     }
 }
+
+/**
+ * Selectable row used inside dialogs and sheets. The selected row gets a
+ * tonal highlight instead of only a trailing check mark.
+ */
 @Composable
 fun SettingChoiceItem(
     title: String,
@@ -235,42 +321,52 @@ fun SettingChoiceItem(
     summary: String? = null,
     iconRes: Int? = null,
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    val shape = RoundedCornerShape(16.dp)
+    Surface(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        shape = shape,
+        color = if (selected) MaterialTheme.colorScheme.secondaryContainer
+        else androidx.compose.ui.graphics.Color.Transparent,
+        contentColor = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
+        else MaterialTheme.colorScheme.onSurface,
     ) {
-        iconRes?.let {
-            Icon(
-                painter = painterResource(it),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(22.dp),
-            )
-        }
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            if (!summary.isNullOrBlank()) {
-                Text(
-                    text = summary,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            iconRes?.let {
+                Icon(
+                    painter = painterResource(it),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp),
                 )
             }
-        }
-        if (selected) {
-            Icon(
-                imageVector = Icons.Filled.CheckCircle,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                if (!summary.isNullOrBlank()) {
+                    Text(
+                        text = summary,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp),
+                    )
+                }
+            }
+            if (selected) {
+                Icon(
+                    imageVector = Icons.Filled.CheckCircle,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
         }
     }
 }

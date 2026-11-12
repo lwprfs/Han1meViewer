@@ -2,7 +2,7 @@ package com.yenaly.han1meviewer.ui.component.appbar
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -32,6 +32,7 @@ fun HanimeTopAppBar(
         colors = if (scrollBehavior != null) {
             topAppBarColors(
                 containerColor = MaterialTheme.colorScheme.surface,
+                scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                 titleContentColor = MaterialTheme.colorScheme.onSurface,
             )
         } else {
@@ -57,7 +58,7 @@ fun HanimeTopAppBar(
         },
         navigationIcon = {
             if (onBack != null) {
-                FilledIconButton(onClick = onBack) {
+                FilledTonalIconButton(onClick = onBack) {
                     Icon(
                         painter = painterResource(R.drawable.ic_baseline_arrow_back_24),
                         contentDescription = stringResource(R.string.back),
