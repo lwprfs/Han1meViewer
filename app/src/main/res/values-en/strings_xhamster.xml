@@ -95,4 +95,7 @@
     <string name="xhamster_photo_likes">♥ %1$s</string>
     <string name="xhamster_comments_button">Comments</string>
     <string name="xhamster_close">Close</string>
+    <string name="xhamster_short_like">Like</string>
+    <string name="xhamster_short_mute">Mute</string>
+    <string name="xhamster_short_unmute">Unmute</string>
 </resources>

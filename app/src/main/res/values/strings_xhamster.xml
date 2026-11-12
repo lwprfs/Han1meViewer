@@ -95,4 +95,7 @@
     <string name="xhamster_photo_likes">♥ %1$s</string>
     <string name="xhamster_comments_button">留言</string>
     <string name="xhamster_close">關閉</string>
+    <string name="xhamster_short_like">喜歡</string>
+    <string name="xhamster_short_mute">靜音</string>
+    <string name="xhamster_short_unmute">開啟聲音</string>
 </resources>

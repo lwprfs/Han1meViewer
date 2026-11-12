@@ -10,6 +10,7 @@ import com.yenaly.han1meviewer.XHamster.data.model.XHamsterEntityProfile
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterGallery
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterGalleryPage
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterPhotoDetail
+import com.yenaly.han1meviewer.XHamster.data.model.XHamsterShortMeta
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterShortsPage
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterOption
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterPage
@@ -24,6 +25,7 @@ import com.yenaly.han1meviewer.XHamster.data.model.XHamsterUploader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
@@ -108,6 +110,84 @@ object XHamsterRepo {
 
     suspend fun shorts(url: String): Result<XHamsterShortsPage> = runCatching {
         XHamsterEntityParser.parseShortsPage(fetchHtml(rebase(url)))
+    }
+
+    /**
+     * Resolves the real (audio) stream and rating of short videos. The shorts grid only has the
+     * silent preview clip, so the player needs this before it can play with sound.
+     */
+    suspend fun shortMetas(
+        ids: List<Long>,
+        referer: String,
+    ): Result<Map<Long, XHamsterShortMeta>> = runCatching {
+        withContext(Dispatchers.IO) {
+            if (ids.isEmpty()) return@withContext emptyMap()
+            val joined = ids.joinToString("%2C")
+            val attempts = listOf(
+                "",
+                "&type=person-index&pageType=amateurPage",
+                "&type=channel-index&pageType=channelPage",
+            )
+            var last: Throwable? = null
+            for (extra in attempts) {
+                val url = "${XHamsterConstants.BASE_URL}/api/v1/moments-by-id-list" +
+                        "?env=mobile&isWithSettings=0&checkPrivileges=1$extra&ids=$joined"
+                try {
+                    val response = XHamsterNetwork.service.getJson(url, ajaxHeaders(referer))
+                    if (!response.isSuccessful) throw IOException("HTTP ${response.code()}")
+                    val body = response.body()?.string() ?: throw IOException("Empty response")
+                    val parsed = XHamsterEntityParser.parseMomentsMeta(body)
+                    if (parsed.isNotEmpty()) return@withContext parsed
+                } catch (e: IOException) {
+                    last = e
+                }
+            }
+            throw last ?: IOException("No short video data")
+        }
+    }
+
+    /** Like (or remove the like of) a video / short. Returns the new liked state. */
+    suspend fun setLiked(
+        videoId: Long,
+        like: Boolean,
+        referer: String,
+    ): Result<Boolean> = runCatching {
+        withContext(Dispatchers.IO) {
+            if (!XHamsterNetwork.hasAuthCookies()) throw IOException("LOGIN_REQUIRED")
+            val payload = if (like) {
+                buildJsonObject {
+                    put("stats", buildJsonObject {
+                        put("moment", buildJsonObject {
+                            put("watched_time", 1)
+                            put("referrer_block", "mono")
+                        })
+                    })
+                    put("watchId", UUID.randomUUID().toString())
+                    put("statsPrevUrl", referer)
+                    put("entityModel", "videoModel")
+                    put("entityId", videoId)
+                    put("isLike", true)
+                }
+            } else {
+                buildJsonObject { put("videoId", videoId) }
+            }.toString()
+            val endpoint = if (like) "rating/rate" else "rating/undo-video"
+            val response = XHamsterNetwork.service.post(
+                "${XHamsterConstants.BASE_URL}/api/front/$endpoint",
+                payload.toRequestBody(
+                    (if (like) "text/plain;charset=UTF-8" else "application/json").toMediaType()
+                ),
+                ajaxHeaders(referer),
+            )
+            if (!response.isSuccessful) throw IOException("HTTP ${response.code()}")
+            val body = response.body()?.string().orEmpty()
+            val ok = (runCatching { sync.parseToJsonElement(body) }.getOrNull() as? JsonObject)
+                ?.let { o ->
+                    ((o["result"] ?: o["ok"]) as? JsonPrimitive)?.booleanOrNull
+                } ?: false
+            if (!ok) throw IOException("Rating was rejected")
+            like
+        }
     }
 
     suspend fun categories(): Result<List<XHamsterOption>> = runCatching {
@@ -210,15 +290,17 @@ object XHamsterRepo {
                     put("name", "entitySubscriptionModelSync")
                     put("requestData", buildJsonObject {
                         put("model", buildJsonObject {
-                            put("id", id)
+                            put("id", JsonNull)
                             put("${'$'}id", UUID.randomUUID().toString())
                             put("modelName", "entitySubscriptionModel")
-                            put("entityModelName", entityModel)
-                            put("entityId", id)
-                            put("subscribed", subscribe)
-                            put("itemState", if (subscribe) "created" else "removed")
+                            put("itemState", "unchanged")
+                            put("entityModel", entityModel)
+                            put("entityID", id)
+                            put("state", subscribe)
                         })
-                        put("trusted", true)
+                        put("watchId", UUID.randomUUID().toString())
+                        put("statsPrevUrl", refererUrl ?: XHamsterConstants.BASE_URL + "/")
+                        put("statsVideoId", id)
                     })
                 })
             }.toString()

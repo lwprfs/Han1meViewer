@@ -203,6 +203,13 @@ data class XHamsterShort(
     val views: Long?,
 )
 
+/** Extra info for a short video, fetched from `moments-by-id-list` (real stream + rating). */
+data class XHamsterShortMeta(
+    val streamUrl: String?,
+    val likes: Long,
+    val liked: Boolean,
+)
+
 data class XHamsterShortsPage(
     val items: List<XHamsterShort>,
     val nextUrl: String?,
@@ -239,5 +246,5 @@ data class XHamsterEntityProfile(
     val videos: List<com.yenaly.han1meviewer.logic.model.HanimeInfo>,
     val shorts: List<XHamsterShort>,
 ) {
-    enum class Kind { CREATOR, USER }
+    enum class Kind { CREATOR, CHANNEL, USER }
 }

@@ -15,6 +15,7 @@ import com.yenaly.han1meviewer.XHamster.data.model.XHamsterPhoto
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterPhotoDetail
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterProfileTab
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterShort
+import com.yenaly.han1meviewer.XHamster.data.model.XHamsterShortMeta
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterShortsPage
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterLink
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterListPage
@@ -570,7 +571,10 @@ object XHamsterEntityParser {
     }
 
     private fun parseTabs(root: JsonObject?, basePath: String): List<XHamsterProfileTab> {
-        val tabs = (root?.obj("uiTabSetComponent") ?: root?.obj("layoutPage")?.obj("uiTabSetComponent"))
+        val layout = root?.obj("layoutPage")
+        val tabs = (root?.obj("uiTabSetComponent")
+            ?: layout?.obj("uiTabSetComponent")
+            ?: layout?.obj("channelLandingInfoProps")?.obj("tabSetProps"))
             ?.arr("items").orEmpty()
         return tabs.mapNotNull { el ->
             val tab = el as? JsonObject ?: return@mapNotNull null
@@ -626,8 +630,81 @@ object XHamsterEntityParser {
         )
     }
 
+    /** Channel pages keep their data under `layoutPage.channelLandingInfoProps`. */
+    private fun parseChannelProfile(html: String, path: String): XHamsterEntityProfile? {
+        val root = XHamsterParser.extractInitials(html) ?: return null
+        val layout = root.obj("layoutPage") ?: return null
+        val info = layout.obj("channelLandingInfoProps") ?: return null
+        val sponsor = info.obj("sponsorChannel")
+        val sub = info.obj("subscribeButtonsProps")?.obj("subscribeButtonProps")
+        val document = doc(html)
+        val name = sponsor?.str("channelName")
+            ?: layout.str("pageTitle")?.substringBefore(" Porn")?.trim()?.takeIf { it.isNotBlank() }
+            ?: document.selectFirst("meta[property=og:title]")?.attr("content")?.takeIf { it.isNotBlank() }
+            ?: return null
+        val tabs = parseTabs(root, path)
+        val shortsTab = tabs.firstOrNull { it.path.endsWith("/shorts") }
+        val videos = XHamsterParser.parseCards(
+            layout.obj("videoListProps")?.arr("videoThumbProps")
+        )
+        val entityId = sub?.lng("id")
+            ?: root.obj("channelInfo")?.lng("id")
+            ?: layout.obj("extraData")?.lng("channelId")
+            ?: 0L
+        return XHamsterEntityProfile(
+            path = path,
+            kind = XHamsterEntityProfile.Kind.CHANNEL,
+            entityId = entityId,
+            name = name,
+            avatarUrl = sponsor?.str("siteLogoURL") ?: sponsor?.str("thumbURL"),
+            country = null,
+            verified = false,
+            isPublic = true,
+            isMine = false,
+            videoCount = sponsor?.lng("videoCount"),
+            shortsCount = shortsTab?.count,
+            photosCount = null,
+            viewsCount = sponsor?.lng("viewsCount"),
+            favoritesCount = null,
+            subscribers = sub?.lng("subscribers"),
+            subscribed = sub?.flag("subscribed") == true,
+            subscriptionModel = sub?.str("modelName") ?: "channelModel",
+            aliases = null,
+            channels = emptyList(),
+            tabs = tabs,
+            videos = videos,
+            shorts = emptyList(),
+        )
+    }
+
+    /** Parses `moments-by-id-list` into id -> real stream / rating info. */
+    fun parseMomentsMeta(json: String): Map<Long, XHamsterShortMeta> {
+        val root = runCatching { kotlinx.serialization.json.Json.parseToJsonElement(json) }
+            .getOrNull() as? JsonObject ?: return emptyMap()
+        val out = LinkedHashMap<Long, XHamsterShortMeta>()
+        root.arr("items").orEmpty().forEach { el ->
+            val o = el as? JsonObject ?: return@forEach
+            val id = o.lng("id") ?: return@forEach
+            val sources = o.obj("sources")
+            val hls = sources?.obj("hls")?.obj("h264")?.str("url")
+            val progressive = sources?.obj("standard")?.arr("h264").orEmpty()
+                .mapNotNull { it as? JsonObject }
+                .filter { it.str("quality") != "auto" }
+                .maxByOrNull { it.str("quality")?.filter(Char::isDigit)?.toIntOrNull() ?: 0 }
+                ?.str("url")
+            val rating = o.obj("ratingModel")
+            out[id] = XHamsterShortMeta(
+                streamUrl = hls ?: progressive,
+                likes = rating?.lng("likes") ?: 0L,
+                liked = (rating?.lng("state") ?: 0L) > 0L,
+            )
+        }
+        return out
+    }
+
     fun parseEntityProfile(html: String, path: String): XHamsterEntityProfile? {
         parseCreatorProfile(html, path)?.let { return it }
+        parseChannelProfile(html, path)?.let { return it }
         val user = parseProfile(html) ?: return null
         val root = XHamsterParser.extractInitials(html)
         val tabs = parseTabs(root, path).ifEmpty {
