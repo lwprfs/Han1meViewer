@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="local_playlists">Local playlists</string>
+    <string name="local_playlist_create">New playlist</string>
+    <string name="local_playlist_rename">Rename playlist</string>
+    <string name="local_playlist_name">Playlist name</string>
+    <string name="local_playlist_add">Add to playlist</string>
+    <string name="local_playlist_saved">Playlists updated</string>
+    <string name="local_playlist_empty">No playlists yet</string>
+    <string name="local_playlist_empty_items">This playlist is empty</string>
+    <string name="local_playlist_count">%1$d videos</string>
+    <string name="nav_library">Library</string>
+    <string name="nav_settings">Settings</string>
+</resources>

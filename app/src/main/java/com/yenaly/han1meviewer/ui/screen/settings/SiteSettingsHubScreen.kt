@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.ui.screen.settings
 
+import androidx.compose.runtime.SideEffect
 import android.os.Build
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -69,6 +70,26 @@ data class SiteSettingsEntry(
     val onClick: () -> Unit,
 )
 
+/**
+ * Holds the current site's own settings entries so the shared (app-wide) settings screen can show
+ * them — and only them — while that site is active. Entries of any other site are never shown.
+ */
+object SiteSettingsRegistry {
+    var site by mutableStateOf<SiteType?>(null)
+        private set
+    var entries by mutableStateOf<List<SiteSettingsEntry>>(emptyList())
+        private set
+
+    fun publish(site: SiteType, entries: List<SiteSettingsEntry>) {
+        if (this.site != site) this.site = site
+        this.entries = entries
+    }
+
+    /** Entries to show right now: only those that belong to the active site. */
+    val activeEntries: List<SiteSettingsEntry>
+        get() = if (site == Preferences.siteType) entries else emptyList()
+}
+
 private const val APP_LANGUAGE_KEY = "app_language"
 
 private enum class HubDialog { DarkMode, ThemeColor, AppLanguage, GridColumns, CardCount }
@@ -86,6 +107,7 @@ fun SiteSettingsHubScreen(
     onOpenUnifiedHistory: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
+    SideEffect { SiteSettingsRegistry.publish(site, siteEntries) }
     var refreshKey by remember { mutableIntStateOf(0) }
     var dialog by remember { mutableStateOf<HubDialog?>(null) }
 

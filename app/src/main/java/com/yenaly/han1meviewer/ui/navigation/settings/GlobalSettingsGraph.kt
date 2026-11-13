@@ -30,6 +30,9 @@ import kotlinx.serialization.Serializable
 @Serializable
 object UnifiedHistoryRoute
 
+@Serializable
+object LocalPlaylistsRoute
+
 fun NavGraphBuilder.registerGlobalSettingsRoutes(
     activity: MainActivity,
     navController: NavHostController,
@@ -187,6 +190,12 @@ fun NavGraphBuilder.registerUnifiedHistoryRoute(
 ) {
     composable<UnifiedHistoryRoute> {
         UnifiedHistoryScreen(
+            activity = activity,
+            onBack = { navController.popBackStackSafely() },
+        )
+    }
+    composable<LocalPlaylistsRoute> {
+        com.yenaly.han1meviewer.ui.screen.library.LocalPlaylistsScreen(
             activity = activity,
             onBack = { navController.popBackStackSafely() },
         )

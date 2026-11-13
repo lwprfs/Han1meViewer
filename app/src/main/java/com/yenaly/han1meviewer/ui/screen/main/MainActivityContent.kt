@@ -134,6 +134,69 @@ fun MainActivityContent(
                 else -> false
             }
         }
+        val atLibrary = remember(backStackEntry) {
+            val d = backStackEntry?.destination
+            d?.hasRoute(com.yenaly.han1meviewer.ui.navigation.settings.LocalPlaylistsRoute::class) == true ||
+                    d?.hasRoute(com.yenaly.han1meviewer.XHamster.ui.navigation.XHamsterLibraryRoute::class) == true
+        }
+        val atSiteSettings = remember(backStackEntry, currentSite) {
+            val d = backStackEntry?.destination
+            when (currentSite) {
+                SiteType.MISSAV -> d?.hasRoute(com.yenaly.han1meviewer.MissAV.ui.navigation.MissAvSettingsHubRoute::class) == true
+                SiteType.HENTAIMAMA -> d?.hasRoute(com.yenaly.han1meviewer.HentaiMama.ui.navigation.HentaiMamaSettingsHubRoute::class) == true
+                SiteType.ONAIR -> d?.hasRoute(com.yenaly.han1meviewer.OnAir.ui.navigation.OnAirSettingsRoute::class) == true
+                SiteType.FAPFOLDER -> d?.hasRoute(com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderSettingsRoute::class) == true
+                SiteType.SUPJAV -> d?.hasRoute(com.yenaly.han1meviewer.SupJav.ui.navigation.SupJavSettingsHubRoute::class) == true
+                SiteType.ROUVIDEO -> d?.hasRoute(com.yenaly.han1meviewer.RouVideo.ui.navigation.RouVideoSettingsHubRoute::class) == true
+                SiteType.XHAMSTER -> d?.hasRoute(com.yenaly.han1meviewer.XHamster.ui.navigation.XHamsterSettingsHubRoute::class) == true
+                else -> false
+            }
+        }
+        val siteNavItems: List<SiteNavItem>? = if (isHanimeFamilySite) null else listOf(
+            SiteNavItem(
+                key = "home",
+                icon = androidx.compose.material.icons.Icons.Filled.Home,
+                title = stringResource(R.string.home_page),
+                selected = isAtSiteHome,
+                onClick = { NavigationManager.navigateToHome() },
+            ),
+            SiteNavItem(
+                key = "library",
+                icon = androidx.compose.material.icons.Icons.Filled.VideoLibrary,
+                title = stringResource(R.string.nav_library),
+                selected = atLibrary,
+                onClick = {
+                    if (currentSite == SiteType.XHAMSTER) {
+                        composeNavController.navigateSafely(
+                            com.yenaly.han1meviewer.XHamster.ui.navigation.XHamsterLibraryRoute("FAVORITES"),
+                        )
+                    } else {
+                        composeNavController.navigateSafely(
+                            com.yenaly.han1meviewer.ui.navigation.settings.LocalPlaylistsRoute,
+                        )
+                    }
+                },
+            ),
+            SiteNavItem(
+                key = "settings",
+                icon = androidx.compose.material.icons.Icons.Filled.Settings,
+                title = stringResource(R.string.nav_settings),
+                selected = atSiteSettings,
+                onClick = {
+                    val route: Any? = when (currentSite) {
+                        SiteType.MISSAV -> com.yenaly.han1meviewer.MissAV.ui.navigation.MissAvSettingsHubRoute
+                        SiteType.HENTAIMAMA -> com.yenaly.han1meviewer.HentaiMama.ui.navigation.HentaiMamaSettingsHubRoute
+                        SiteType.ONAIR -> com.yenaly.han1meviewer.OnAir.ui.navigation.OnAirSettingsRoute
+                        SiteType.FAPFOLDER -> com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderSettingsRoute
+                        SiteType.SUPJAV -> com.yenaly.han1meviewer.SupJav.ui.navigation.SupJavSettingsHubRoute
+                        SiteType.ROUVIDEO -> com.yenaly.han1meviewer.RouVideo.ui.navigation.RouVideoSettingsHubRoute
+                        SiteType.XHAMSTER -> com.yenaly.han1meviewer.XHamster.ui.navigation.XHamsterSettingsHubRoute
+                        else -> null
+                    }
+                    if (route != null) composeNavController.navigateSafely(route)
+                },
+            ),
+        )
         val drawerAvailable = if (isHanimeFamilySite) {
             currentMainDestination.drawerEnabled
         } else {
@@ -185,7 +248,9 @@ fun MainActivityContent(
 
         MainActivityScaffold(
             selectedDestination = selectedTopLevelDestination,
-            showNavigationSuite = isHanimeFamilySite && currentMainDestination.showNavigationSuite,
+            showNavigationSuite = if (isHanimeFamilySite) currentMainDestination.showNavigationSuite
+            else (isAtSiteHome || atLibrary || atSiteSettings),
+            siteItems = siteNavItems,
             snackbarHostState = snackbarHostState,
             drawerState = drawerState,
             drawerEnabled = drawerAvailable,

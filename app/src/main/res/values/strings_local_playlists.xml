@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="local_playlists">本機播放清單</string>
+    <string name="local_playlist_create">新增播放清單</string>
+    <string name="local_playlist_rename">重新命名播放清單</string>
+    <string name="local_playlist_name">播放清單名稱</string>
+    <string name="local_playlist_add">加入播放清單</string>
+    <string name="local_playlist_saved">播放清單已更新</string>
+    <string name="local_playlist_empty">尚無播放清單</string>
+    <string name="local_playlist_empty_items">此播放清單是空的</string>
+    <string name="local_playlist_count">%1$d 部影片</string>
+    <string name="nav_library">資料庫</string>
+    <string name="nav_settings">設定</string>
+</resources>

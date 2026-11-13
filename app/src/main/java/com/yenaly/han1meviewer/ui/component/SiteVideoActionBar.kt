@@ -68,6 +68,19 @@ fun SiteVideoActionBar(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var showCheckInDialog by remember { mutableStateOf(false) }
+    var showPlaylistDialog by remember { mutableStateOf(false) }
+    if (showPlaylistDialog) {
+        com.yenaly.han1meviewer.ui.screen.library.LocalPlaylistPickerDialog(
+            item = com.yenaly.han1meviewer.logic.local.LocalPlaylistItem(
+                site = site.name,
+                videoCode = videoCode,
+                title = title,
+                coverUrl = coverUrl,
+                webUrl = webUrl,
+            ),
+            onDismiss = { showPlaylistDialog = false },
+        )
+    }
     var todayCount by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(site, videoCode) {
@@ -171,6 +184,13 @@ fun SiteVideoActionBar(
                 }
             },
         )
+        if (com.yenaly.han1meviewer.logic.local.LocalPlaylistStore.usesLocalPlaylists(site)) {
+            SiteVideoActionButton(
+                iconRes = R.drawable.ic_baseline_list_24,
+                label = stringResource(R.string.local_playlist_add),
+                onClick = { showPlaylistDialog = true },
+            )
+        }
         if (!webUrl.isNullOrBlank()) {
             SiteVideoActionButton(
                 iconRes = R.drawable.ic_baseline_share_24,

@@ -432,6 +432,20 @@ fun HomeSettingsScreen(
 
             // 网络、下载和关键帧直接展示对应设置页，不再经过重复的聚合页。
             SettingsCategory.Network -> {
+                val siteEntries = SiteSettingsRegistry.activeEntries
+                if (siteEntries.isNotEmpty()) {
+                    item { SettingsGroupTitle(stringResource(R.string.current_site_settings)) }
+                    siteEntries.forEach { entry ->
+                        item(key = "site_${entry.key}") {
+                            SettingNavigationItem(
+                                title = entry.title,
+                                summary = entry.subtitle,
+                                iconRes = R.drawable.ic_settings_list_24,
+                                onClick = entry.onClick,
+                            )
+                        }
+                    }
+                }
                 if (com.yenaly.han1meviewer.RouVideo.common.RouVideoTranslation.available) {
                     item {
                         SettingNavigationItem(

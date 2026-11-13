@@ -65,14 +65,32 @@ private val RailItemSpacing = 4.dp
  * 展开宽度下导航轨可通过第五个箭头按钮折叠/展开标签；详情页面通过
  * [showNavigationSuite] 控制导航组件显示或隐藏。
  */
+data class SiteNavItem(
+    val key: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val title: String,
+    val selected: Boolean,
+    val onClick: () -> Unit,
+)
+
 @Composable
 private fun MainActivityScaffoldInner(
     selectedDestination: MainTopLevelDestination?,
     showNavigationSuite: Boolean,
     snackbarHostState: SnackbarHostState,
     onDestinationSelected: (MainTopLevelDestination) -> Boolean,
+    siteItems: List<SiteNavItem>? = null,
     content: @Composable () -> Unit,
 ) {
+    val navEntries: List<SiteNavItem> = siteItems ?: MainTopLevelDestination.entries.map { d ->
+        SiteNavItem(
+            key = d.name,
+            icon = d.icon,
+            title = stringResource(d.titleRes),
+            selected = selectedDestination == d,
+            onClick = { onDestinationSelected(d) },
+        )
+    }
     val adaptiveInfo = currentWindowAdaptiveInfoV2()
     val windowSizeClass = adaptiveInfo.windowSizeClass
     val isExpandedWidth = windowSizeClass.isWidthAtLeastBreakpoint(
@@ -167,17 +185,17 @@ private fun MainActivityScaffoldInner(
         },
         state = navigationSuiteState,
         navigationItems = {
-            MainTopLevelDestination.entries.forEach { destination ->
+            navEntries.forEach { destination ->
                 NavigationSuiteItem(
-                    selected = selectedDestination == destination,
-                    onClick = { onDestinationSelected(destination) },
+                    selected = destination.selected,
+                    onClick = destination.onClick,
                     icon = {
                         Icon(
                             imageVector = destination.icon,
                             contentDescription = null,
                         )
                     },
-                    label = { Text(stringResource(destination.titleRes)) },
+                    label = { Text(destination.title) },
                     navigationSuiteType = bottomNavigationType,
                 )
             }
@@ -196,11 +214,11 @@ private fun MainActivityScaffoldInner(
                         Arrangement.spacedBy(0.dp)
                     },
                 ) {
-                    MainTopLevelDestination.entries.forEach { destination ->
+                    navEntries.forEach { destination ->
                         WideNavigationRailItem(
                             railExpanded = shouldExpandRail,
-                            selected = selectedDestination == destination,
-                            onClick = { onDestinationSelected(destination) },
+                            selected = destination.selected,
+                            onClick = destination.onClick,
                             modifier = Modifier.height(RailItemHeight),
                             icon = {
                                 Icon(
@@ -208,12 +226,12 @@ private fun MainActivityScaffoldInner(
                                     contentDescription = if (shouldExpandRail) {
                                         null
                                     } else {
-                                        stringResource(destination.titleRes)
+                                        destination.title
                                     },
                                 )
                             },
                             label = if (shouldExpandRail) {
-                                { Text(stringResource(destination.titleRes)) }
+                                { Text(destination.title) }
                             } else {
                                 null
                             },
@@ -330,6 +348,7 @@ fun MainActivityScaffold(
     drawerState: DrawerState = androidx.compose.material3.rememberDrawerState(DrawerValue.Closed),
     drawerEnabled: Boolean = false,
     siteDrawerContent: (@Composable () -> Unit)? = null,
+    siteItems: List<SiteNavItem>? = null,
     content: @Composable () -> Unit,
 ) {
     if (siteDrawerContent == null) {
@@ -338,6 +357,7 @@ fun MainActivityScaffold(
             showNavigationSuite = showNavigationSuite,
             snackbarHostState = snackbarHostState,
             onDestinationSelected = onDestinationSelected,
+            siteItems = siteItems,
             content = content,
         )
         return
@@ -357,6 +377,7 @@ fun MainActivityScaffold(
             showNavigationSuite = showNavigationSuite,
             snackbarHostState = snackbarHostState,
             onDestinationSelected = onDestinationSelected,
+            siteItems = siteItems,
             content = content,
         )
     }
