@@ -161,6 +161,17 @@ jobs:
           path: app/build/outputs/apk/release/HANiEX-v*.apk
           if-no-files-found: error
 
+      # R8 混淆映射：崩溃日志里的 a/b/k 之类类名可用它还原
+      - name: Upload R8 mapping
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r8-mapping-${{ github.sha }}
+          path: |
+            app/build/outputs/mapping/release/mapping.txt
+            app/build/outputs/mapping/release/configuration.txt
+          if-no-files-found: warn
+
       - name: Upload CI delta package (CI build #1 back)
         if: steps.ci_delta.outputs.base_1 != ''
         uses: actions/upload-artifact@v4

@@ -49,7 +49,7 @@
 
 # kotlinx.serialization：Navigation 类型安全路由会在运行时反射查找序列化器，
 # R8 重命名/裁剪后会抛出 "Serializer for class 'x' is not found"。
--keepattributes *Annotation*, InnerClasses, Signature
+-keepattributes *Annotation*, InnerClasses, Signature, EnclosingMethod
 -keep,includedescriptorclasses class **$$serializer { *; }
 -keepclassmembers @kotlinx.serialization.Serializable class ** {
     *** Companion;
@@ -59,4 +59,8 @@
 -keepclasseswithmembers class ** {
     kotlinx.serialization.KSerializer serializer(...);
 }
--keep @kotlinx.serialization.Serializable class com.yenaly.han1meviewer.** { *; }
+# 任何包里的 @Serializable 类（路由、数据模型）都完整保留
+-keep @kotlinx.serialization.Serializable class ** { *; }
+-keep class kotlinx.serialization.** { *; }
+# 保留应用自身类名：即使仍有反射失败，崩溃信息里也能看到真实类名
+-keepnames class com.yenaly.han1meviewer.**
