@@ -51,6 +51,8 @@ object MediaControlsSettingsRoute
 
 @Serializable
 object TranslationCacheRoute
+
+@Serializable
 object AboutAppRoute
 
 enum class SettingsDestinationSpec(
