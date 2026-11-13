@@ -35,7 +35,7 @@ import com.yenaly.han1meviewer.FapFolder.ui.components.FapFolderCommentCard
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.ui.component.LoadMoreFooter
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 
 internal fun LazyListScope.fapFolderCommentItems(
     post: FapFolderPost,

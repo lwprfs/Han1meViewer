@@ -37,7 +37,7 @@ import com.yenaly.han1meviewer.ui.component.SettingNavigationItem
 import com.yenaly.han1meviewer.HentaiMama.cloudflare.HentaiMamaCloudflareCookieManager
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaCookieJar
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 
 private val SERVER_OPTIONS: List<Pair<String, String>> = listOf(
     applicationContext.getString(R.string.hm_automatic_first_available) to HentaiMamaVideoSettings.SERVER_AUTO,

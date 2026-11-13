@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -35,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.coordinatorlayout.widget.CoordinatorLayout
+import androidx.core.app.ShareCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -42,6 +44,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.window.core.layout.WindowSizeClass
 import cn.jzvd.JZMediaInterface
 import cn.jzvd.Jzvd
 import coil.load
@@ -82,13 +85,10 @@ import com.yenaly.han1meviewer.ui.viewmodel.CommentViewModel
 import com.yenaly.han1meviewer.ui.viewmodel.VideoViewModel
 import com.yenaly.han1meviewer.util.checkBadGuy
 import com.yenaly.han1meviewer.util.loadAssetAs
-import com.yenaly.yenaly_libs.utils.OrientationManager
-import com.yenaly.yenaly_libs.utils.applicationContext
-import com.yenaly.yenaly_libs.utils.browse
-import com.yenaly.yenaly_libs.utils.copyToClipboard
-import com.yenaly.yenaly_libs.utils.dp
-import com.yenaly.yenaly_libs.utils.shareText
-import com.yenaly.yenaly_libs.utils.startActivity
+import com.yenaly.han1meviewer.util.OrientationManager
+import com.yenaly.han1meviewer.util.browse
+import com.yenaly.han1meviewer.util.copyToClipboard
+import com.yenaly.han1meviewer.util.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -151,6 +151,9 @@ fun VideoRouteHostScreen(
     var showAddHKeyframeDialog by remember { mutableStateOf<Pair<Long, String>?>(null) }
     var unsubscribeArtist by remember { mutableStateOf<HanimeVideo.Artist?>(null) }
     var showDownloadPermissionDialog by remember { mutableStateOf(false) }
+    val useLargeVideoLayout = currentWindowAdaptiveInfoV2()
+        .windowSizeClass
+        .isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND)
 
     val actions = remember(activity, scope, viewModel, genres) {
         VideoRouteActions(
@@ -266,7 +269,7 @@ fun VideoRouteHostScreen(
                 viewModel.setPipMode(isInPip)
                 if (isInPip) {
                     viewModel.setPlayerHeightDp(MATCH_PARENT)
-                } else if (Preferences.tabletMode &&
+                } else if (useLargeVideoLayout &&
                     activity.resources.configuration.orientation != Configuration.ORIENTATION_LANDSCAPE
                 ) {
                     viewModel.setPlayerHeightDp(350.dp)
@@ -348,7 +351,13 @@ fun VideoRouteHostScreen(
                 onRequestOpenDownloadPermissionSettings = actions::openDownloadPermissionSettings,
                 onOpenWebPage = actions::openVideoWebPage,
                 onOpenOriginalComic = actions::openOriginalComic,
-                onOpenShare = { content, title -> shareText(content, title) },
+                onOpenShare = { content, title ->
+                    ShareCompat.IntentBuilder(activity)
+                        .setType("text/plain")
+                        .setText(content)
+                        .setChooserTitle(title)
+                        .startChooser()
+                },
                 onCopyText = {
                     it.copyToClipboard()
                     GlobalToasts.show(activity.getString(R.string.copy_to_clipboard), level = GlobalToasts.ToastLevel.INFO)
@@ -411,7 +420,7 @@ fun VideoRouteHostScreen(
 
     DisposableEffect(lifecycleOwner, activity, player, shell, route.videoCode) {
         val orientationManager = OrientationManager(activity) { orientation ->
-            if (!Preferences.tabletMode &&
+            if (!useLargeVideoLayout &&
                 Jzvd.CURRENT_JZVD != null &&
                 (player.state == Jzvd.STATE_PLAYING || player.state == Jzvd.STATE_PAUSE) &&
                 player.screen != Jzvd.SCREEN_TINY &&
@@ -487,7 +496,7 @@ fun VideoRouteHostScreen(
             if (activity.resources.getBoolean(R.bool.isTablet)) {
                 activity.navController.popBackStack()
             }
-            activity.startActivity<MainActivity>()
+            activity.startActivity(Intent(activity, MainActivity::class.java))
         }
         player.onKeyframeClickListener = { view ->
             player.clickHKeyframe(view)
@@ -534,7 +543,7 @@ fun VideoRouteHostScreen(
             viewModel.setAppBarExpanded(route.videoCode, verticalOffset == 0)
         }
         shell.setExpanded(expanded = viewModel.isAppBarExpanded(route.videoCode), animate = false)
-        val initialHeight = if (Preferences.tabletMode) {
+        val initialHeight = if (useLargeVideoLayout) {
             350.dp
         } else {
             250.dp
@@ -553,7 +562,7 @@ fun VideoRouteHostScreen(
         isSideRelatedCollapsed,
     ) {
         if (hostUiState.isInPipMode) return@LaunchedEffect
-        val height = if (Preferences.tabletMode) {
+        val height = if (useLargeVideoLayout) {
             if (isSideRelatedCollapsed) 500.dp else 400.dp
         } else {
             250.dp
@@ -685,17 +694,24 @@ fun VideoRouteHostScreen(
     }
 
     VideoShellContent(
-        isTabletMode = Preferences.tabletMode,
+        isExpandedLayout = useLargeVideoLayout,
         isInPipMode = hostUiState.isInPipMode,
         relatedItems = relatedItems,
+        relatedAsTab = Preferences.relatedVideoAsTab,
         onHideRelatedInIntroChange = { viewModel.hideRelatedInIntro = it },
-        onSideRelatedCollapsedChange = { isSideRelatedCollapsed = it },
+        onSidePaneCollapsedChange = { isSideRelatedCollapsed = it },
+        onTabsBesidePlayerChange = { beside ->
+            if (beside) viewModel.setAppBarBottomInsetPx(0)
+        },
         onOpenVideo = { item -> activity.showVideoDetailFragment(item.videoCode) },
         mainHostFactory = {
+            shell.restoreCollapsedStructure()
             shell.mainHostView.also { view ->
                 (view.parent as? ViewGroup)?.removeView(view)
             }
         },
+        playerHostFactory = { shell.takePlayerHost() },
+        tabsHostFactory = { shell.takeTabsHost() },
         modifier = Modifier.fillMaxSize(),
     )
 
@@ -769,24 +785,37 @@ private class VideoRouteShell(
         }
     }
 
+    /** [videoPlayerHost] 在折叠工具栏中的原始布局参数，拆分后复原用。 */
+    private val videoPlayerHostParams = CollapsingToolbarLayout.LayoutParams(
+        MATCH_PARENT,
+        WRAP_CONTENT,
+    ).apply {
+        collapseMode = CollapsingToolbarLayout.LayoutParams.COLLAPSE_MODE_PARALLAX
+        parallaxMultiplier = 1f
+    }
+
+    /** [videoTabsHost] 在 CoordinatorLayout 中的原始布局参数（含滚动避让行为），拆分后复原用。 */
+    private val videoTabsHostParams = CoordinatorLayout.LayoutParams(
+        MATCH_PARENT,
+        MATCH_PARENT,
+    ).apply {
+        behavior = AppBarLayout.ScrollingViewBehavior()
+    }
+
     private val videoPlayerHost = FrameLayout(context).apply {
-        layoutParams = CollapsingToolbarLayout.LayoutParams(
-            MATCH_PARENT,
-            WRAP_CONTENT,
-        ).apply {
-            collapseMode = CollapsingToolbarLayout.LayoutParams.COLLAPSE_MODE_PARALLAX
-            parallaxMultiplier = 1f
-        }
+        layoutParams = videoPlayerHostParams
     }
 
     private val videoTabsHost = ComposeView(context).apply {
-        layoutParams = CoordinatorLayout.LayoutParams(
-            MATCH_PARENT,
-            MATCH_PARENT,
-        ).apply {
-            behavior = AppBarLayout.ScrollingViewBehavior()
-        }
+        layoutParams = videoTabsHostParams
     }
+
+    /**
+     * 平板横屏分栏布局中 tabs 是否已被拆出 CoordinatorLayout。
+     *
+     * 拆出后 tabs 不再位于 AppBar 下方，避让 AppBar 的滚动内边距应固定为 0。
+     */
+    private var tabsDetachedFromCoordinator = false
 
     init {
         videoPlayerHost.addView(playerView, ViewGroup.LayoutParams(MATCH_PARENT, 250.dp))
@@ -798,6 +827,36 @@ private class VideoRouteShell(
 
     val mainHostView: View
         get() = rootView
+
+    /** 把 tabs 宿主拆出 CoordinatorLayout，交给 Compose 分栏布局挂载到右栏。 */
+    fun takeTabsHost(): ComposeView {
+        tabsDetachedFromCoordinator = true
+        (videoTabsHost.parent as? ViewGroup)?.removeView(videoTabsHost)
+        videoTabsHost.layoutParams = ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT)
+        return videoTabsHost
+    }
+
+    /** 把播放器宿主拆出折叠工具栏，交给 Compose 分栏布局挂载到左栏。 */
+    fun takePlayerHost(): FrameLayout {
+        (videoPlayerHost.parent as? ViewGroup)?.removeView(videoPlayerHost)
+        videoPlayerHost.layoutParams = ViewGroup.LayoutParams(MATCH_PARENT, WRAP_CONTENT)
+        return videoPlayerHost
+    }
+
+    /** 恢复手机布局结构：播放器宿主回到折叠工具栏，tabs 回到 CoordinatorLayout。 */
+    fun restoreCollapsedStructure() {
+        tabsDetachedFromCoordinator = false
+        if (videoPlayerHost.parent !== collapsingToolbarLayout) {
+            (videoPlayerHost.parent as? ViewGroup)?.removeView(videoPlayerHost)
+            videoPlayerHost.layoutParams = videoPlayerHostParams
+            collapsingToolbarLayout.addView(videoPlayerHost)
+        }
+        if (videoTabsHost.parent !== rootView) {
+            (videoTabsHost.parent as? ViewGroup)?.removeView(videoTabsHost)
+            videoTabsHost.layoutParams = videoTabsHostParams
+            rootView.addView(videoTabsHost, 0)
+        }
+    }
 
     fun setTabsHostContent(content: @Composable () -> Unit) {
         videoTabsHost.setViewCompositionStrategy(
@@ -818,7 +877,12 @@ private class VideoRouteShell(
 
     fun setOnOffsetChanged(onChanged: (totalScrollRange: Int, verticalOffset: Int) -> Unit) {
         appBarLayout.addOnOffsetChangedListener { appBar, verticalOffset ->
-            onChanged(appBar.totalScrollRange, verticalOffset)
+            if (tabsDetachedFromCoordinator) {
+                // tabs 已拆至右栏，不再需要避让 AppBar 的滚动内边距
+                onChanged(0, 0)
+            } else {
+                onChanged(appBar.totalScrollRange, verticalOffset)
+            }
         }
     }
 

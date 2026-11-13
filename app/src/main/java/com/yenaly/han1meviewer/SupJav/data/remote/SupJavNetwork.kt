@@ -6,7 +6,7 @@ import com.yenaly.han1meviewer.logic.network.HDns
 import com.yenaly.han1meviewer.logic.network.HProxySelector
 import com.yenaly.han1meviewer.logic.network.interceptor.UrlLoggingInterceptor
 import com.yenaly.han1meviewer.logic.network.interceptor.UserAgentInterceptor
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import java.util.concurrent.TimeUnit

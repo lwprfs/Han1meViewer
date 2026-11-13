@@ -1,6 +1,6 @@
 package com.yenaly.han1meviewer.HentaiMama.ui.series
 
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 import androidx.compose.ui.res.stringResource
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar

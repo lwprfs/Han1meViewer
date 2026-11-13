@@ -3,7 +3,7 @@ package com.yenaly.han1meviewer.FapFolder.ui.video
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import com.yenaly.han1meviewer.util.PlayerOrientation
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.saveable.rememberSaveable
 import android.widget.FrameLayout

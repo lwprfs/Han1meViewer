@@ -34,6 +34,10 @@ import com.yenaly.han1meviewer.XHamster.ui.gallery.XHamsterGalleryScreen
 import com.yenaly.han1meviewer.XHamster.ui.profile.XHamsterProfileScreen
 import com.yenaly.han1meviewer.XHamster.ui.entities.XHamsterTopCreatorVideosScreen
 import com.yenaly.han1meviewer.XHamster.ui.home.XHamsterHomeScreen
+import com.yenaly.han1meviewer.XHamster.ui.discover.XHamsterDiscoverActions
+import com.yenaly.han1meviewer.XHamster.ui.entities.XHamsterStarsScreen
+import com.yenaly.han1meviewer.XHamster.ui.library.XHamsterCollectionScreen
+import com.yenaly.han1meviewer.XHamster.ui.library.XHamsterLibraryScreen
 import com.yenaly.han1meviewer.XHamster.ui.search.XHamsterSearchScreen
 import com.yenaly.han1meviewer.XHamster.ui.settings.XHamsterSettingsScreen
 import com.yenaly.han1meviewer.XHamster.ui.video.XHamsterVideoScreen
@@ -104,6 +108,15 @@ data class XHamsterProfileRoute(val path: String, val title: String)
 @Serializable
 data class XHamsterGalleryRoute(val url: String, val title: String)
 
+@Serializable
+data class XHamsterLibraryRoute(val tab: String = "HISTORY")
+
+@Serializable
+data class XHamsterCollectionRoute(val path: String, val title: String)
+
+@Serializable
+object XHamsterStarsRoute
+
 private fun isProfilePath(path: String): Boolean =
     path.startsWith("/users/") || path.startsWith("/creators/") || path.startsWith("/pornstars/") ||
             path.startsWith("/channels/")
@@ -122,6 +135,15 @@ fun XHamsterNavHost(
         delay(50)
         NavigationManager.initialize(navController, SiteType.XHAMSTER)
     }
+
+    val discover = XHamsterDiscoverActions(
+        onOpenCreator = { path, title -> navController.navigateSafely(XHamsterProfileRoute(path, title)) },
+        onOpenChannel = { path, title -> navController.navigateSafely(XHamsterCategoryRoute(path, title)) },
+        onOpenVideo = { code -> navController.navigateSafely(XHamsterVideoRoute(code)) },
+        onSeeCreators = { navController.navigateSafely(XHamsterStarsRoute) },
+        onSeeChannels = { navController.navigateSafely(XHamsterChannelsRoute) },
+        onSeeSubscriptions = { navController.navigateSafely(XHamsterLibraryRoute("SUBSCRIPTIONS")) },
+    )
 
     NavHost(
         navController = navController,
@@ -143,6 +165,8 @@ fun XHamsterNavHost(
                     },
                     onOpenDrawer = onOpenDrawer,
                     onSwitchSite = { activity.requestSiteSwitch() },
+                    onNavigateToLibrary = { navController.navigateSafely(XHamsterLibraryRoute(it)) },
+                    discover = discover,
                 )
             }
         }
@@ -194,6 +218,43 @@ fun XHamsterNavHost(
                 onNavigateToVideo = { code ->
                     navController.navigateSafely(XHamsterVideoRoute(code))
                 },
+                onOpenGallery = { url -> navController.navigateSafely(XHamsterGalleryRoute(url, "")) },
+                onOpenAuthor = { path, title ->
+                    if (isProfilePath(path)) navController.navigateSafely(XHamsterProfileRoute(path, title))
+                    else navController.navigateSafely(XHamsterCategoryRoute(path, title))
+                },
+                discover = discover,
+            )
+        }
+
+        composable<XHamsterLibraryRoute> {
+            val route = it.toRoute<XHamsterLibraryRoute>()
+            XHamsterLibraryScreen(
+                initialTab = route.tab,
+                onBack = { navController.popBackStackSafely() },
+                onNavigateToVideo = { code -> navController.navigateSafely(XHamsterVideoRoute(code)) },
+                onOpenCollection = { path, title ->
+                    navController.navigateSafely(XHamsterCollectionRoute(path, title))
+                },
+                discover = discover,
+            )
+        }
+
+        composable<XHamsterCollectionRoute> {
+            val route = it.toRoute<XHamsterCollectionRoute>()
+            XHamsterCollectionScreen(
+                path = route.path,
+                title = route.title,
+                onBack = { navController.popBackStackSafely() },
+                onNavigateToVideo = { code -> navController.navigateSafely(XHamsterVideoRoute(code)) },
+            )
+        }
+
+        composable<XHamsterStarsRoute> {
+            XHamsterStarsScreen(
+                onBack = { navController.popBackStackSafely() },
+                onOpenStar = { path, title -> navController.navigateSafely(XHamsterProfileRoute(path, title)) },
+                discover = discover,
             )
         }
 

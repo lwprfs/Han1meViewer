@@ -25,8 +25,8 @@ import com.yenaly.han1meviewer.logic.state.VideoLoadingState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
 import com.yenaly.han1meviewer.ui.viewmodel.AppViewModel.csrfToken
 import com.yenaly.han1meviewer.util.TagLocalizer
-import com.yenaly.yenaly_libs.base.YenalyViewModel
-import com.yenaly.yenaly_libs.utils.dp
+import com.yenaly.han1meviewer.base.BaseViewModel
+import com.yenaly.han1meviewer.util.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -47,7 +47,12 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
-class VideoViewModel(application: Application) : YenalyViewModel(application) {
+/**
+ * @project Hanime1
+ * @author Yenaly Liew
+ * @time 2022/06/17 017 19:01
+ */
+class VideoViewModel(application: Application) : BaseViewModel(application) {
 
     data class IntroScrollState(
         val firstVisibleItemIndex: Int = 0,
@@ -85,6 +90,7 @@ class VideoViewModel(application: Application) : YenalyViewModel(application) {
 
     var fromDownload = false
 
+    // 相关影片在别处展示时（独立标签页开关开启，或平板横屏分栏布局），简介底部不显示相关列表
     var hideRelatedInIntro by mutableStateOf(false)
     var hKeyframes: HKeyframeEntity? = null
     private val _videoList = MutableLiveData<List<HanimeInfo>>()

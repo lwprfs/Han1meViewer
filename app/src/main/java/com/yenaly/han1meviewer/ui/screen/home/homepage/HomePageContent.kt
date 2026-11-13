@@ -1,6 +1,7 @@
 package com.yenaly.han1meviewer.ui.screen.home.homepage
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -48,8 +49,11 @@ fun HomePageContent(
     val heroItems = remember(data.page, categories) {
         buildHomeHeroItems(data.page, categories)
     }
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
     val heroSpec = rememberHomeHeroSpec(
-        hasSideContent = announcements.isNotEmpty() || heroItems.size > 1
+        hasSideContent = announcements.isNotEmpty() || heroItems.size > 1,
+        containerWidth = maxWidth,
+        containerHeight = maxHeight,
     )
     val heroPagerState = rememberPagerState(pageCount = { heroItems.size.coerceAtLeast(1) })
     val scope = rememberCoroutineScope()
@@ -62,14 +66,7 @@ fun HomePageContent(
     val sidePanelWidth = (heroSpec as? HomeHeroSpec.Constrained)?.panelWidth
     val showAnnouncementInSidePanel = sidePanelWidth != null && announcements.isNotEmpty()
 
-    LazyColumn(modifier = modifier.fillMaxSize()) {
-        item(key = "welcome") {
-            SiteWelcomeHeader(
-                siteName = "Hanime1",
-                modifier = Modifier.padding(top = 4.dp),
-                horizontalPadding = HomeHeroHorizontalPadding,
-            )
-        }
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
         item(key = "banner") {
             when (heroSpec) {
                 HomeHeroSpec.Default -> BannerCarousel(
@@ -155,6 +152,7 @@ fun HomePageContent(
                 )
             }
         }
+    }
     }
 }
 

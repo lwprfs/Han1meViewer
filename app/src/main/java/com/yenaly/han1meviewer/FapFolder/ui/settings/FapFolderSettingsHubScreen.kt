@@ -56,7 +56,7 @@ import com.yenaly.han1meviewer.FapFolder.data.local.FapFolderHistoryRepo
 import com.yenaly.han1meviewer.FapFolder.data.local.FapFolderSearchHistoryRepo
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.GlobalToasts
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 import kotlinx.coroutines.launch
 
 private data class FapFolderHubEntry(

@@ -50,7 +50,7 @@ import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaOptions
 import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaOrder
 import com.yenaly.han1meviewer.R
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 
 private enum class FilterTab(val title: String) {
     ORDER(applicationContext.getString(R.string.hm_order)),

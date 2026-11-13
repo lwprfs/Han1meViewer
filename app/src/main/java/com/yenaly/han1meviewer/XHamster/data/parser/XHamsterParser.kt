@@ -292,6 +292,7 @@ object XHamsterParser {
             commentsTotal = commentsTotal,
             comments = comments,
             entityId = entity?.lng("id") ?: model?.lng("id"),
+            engagement = XHamsterListsParser.parseEngagement(root, entity?.lng("id") ?: model?.lng("id")),
         )
     }
 

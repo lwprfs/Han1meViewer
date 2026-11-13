@@ -1,6 +1,6 @@
 package com.yenaly.han1meviewer.util
 
-import com.yenaly.yenaly_libs.utils.LanguageHelper
+import com.yenaly.han1meviewer.base.AppLocale
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.DecimalFormat
@@ -69,7 +69,7 @@ object DisplayTextLocalizer {
         }
     }
 
-    private fun language(): String = LanguageHelper.preferredLanguage.language
+    private fun language(): String = AppLocale.preferredLanguage.language
 
     private fun formatNumber(value: Double): String {
         val df = DecimalFormat("#,###.#")

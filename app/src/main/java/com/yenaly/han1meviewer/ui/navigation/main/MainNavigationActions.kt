@@ -1,46 +1,57 @@
 package com.yenaly.han1meviewer.ui.navigation.main
 
 import android.content.Intent
+import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import com.yenaly.han1meviewer.ui.navigation.navigateSafely
 import com.yenaly.han1meviewer.ui.navigation.settings.HomeSettingsRoute
+import com.yenaly.han1meviewer.ui.navigation.settings.SettingsCategory
+import com.yenaly.han1meviewer.ui.navigation.settings.SettingsCategoryRoute
 import kotlinx.serialization.json.Json
 
-private val loginRequiredDrawerItems = setOf(
-    MainDrawerDestination.FavVideo,
-    MainDrawerDestination.WatchLater,
-    MainDrawerDestination.Playlist,
-    MainDrawerDestination.Subscription,
-)
-
-fun NavHostController.navigateDrawerDestination(
-    destination: MainDrawerDestination,
+fun NavHostController.navigateTopLevelDestination(
+    destination: MainTopLevelDestination,
     isLoggedIn: Boolean,
     onRequireLogin: () -> Unit,
 ): Boolean {
-    if (destination in loginRequiredDrawerItems && !isLoggedIn) {
+    if (destination.requiresLogin && !isLoggedIn) {
         onRequireLogin()
         return false
     }
 
-    when (destination) {
-        MainDrawerDestination.Home -> {
-
-            if (!popBackStack(HomeRoute, inclusive = false)) {
-                navigateSafely(HomeRoute) { launchSingleTop = true }
-            }
+    navigateSafely(destination.route) {
+        popUpTo(HomeRoute) {
+            saveState = true
         }
-        MainDrawerDestination.Settings -> navigateSafely(HomeSettingsRoute) { launchSingleTop = true }
-        MainDrawerDestination.DailyCheckIn -> navigateSafely(DailyCheckInRoute) { launchSingleTop = true }
-        MainDrawerDestination.WatchLater -> navigateSafely(MyWatchLaterRoute) { launchSingleTop = true }
-        MainDrawerDestination.FavVideo -> navigateSafely(MyFavVideoRoute) { launchSingleTop = true }
-        MainDrawerDestination.Playlist -> navigateSafely(MyPlaylistRoute) { launchSingleTop = true }
-        MainDrawerDestination.Subscription -> navigateSafely(SubscriptionRoute) { launchSingleTop = true }
-        MainDrawerDestination.CreatorCenter -> navigateSafely(CreatorCenterRoute) { launchSingleTop = true }
-        MainDrawerDestination.WatchHistory -> navigateSafely(WatchHistoryRoute) { launchSingleTop = true }
-        MainDrawerDestination.Download -> navigateSafely(DownloadRoute) { launchSingleTop = true }
+        launchSingleTop = true
+        restoreState = true
     }
     return true
+}
+
+/**
+ * 切换设置一级分类。
+ *
+ * 只保留“设置首页 + 当前分类”，避免平板双栏反复点击分类时不断入栈。
+ */
+fun NavController.navigateSettingsCategoryDestination(category: SettingsCategory) {
+    navigateSafely(SettingsCategoryRoute(category.key)) {
+        popUpTo(HomeSettingsRoute) {
+            inclusive = false
+        }
+        launchSingleTop = true
+    }
+}
+
+/**
+ * 进入设置二级页面。
+ *
+ * 使用普通入栈，保证从二级页面返回时回到所属分类，而不是直接回到设置首页。
+ */
+fun NavController.navigateSettingsDestination(route: Any) {
+    navigateSafely(route) {
+        launchSingleTop = true
+    }
 }
 
 fun NavHostController.handleMainIntent(intent: Intent) {

@@ -14,8 +14,8 @@ import com.yenaly.han1meviewer.logic.state.WebsiteState
 import com.yenaly.han1meviewer.worker.HUpdateWorker
 import com.yenaly.han1meviewer.worker.HanimeDownloadManagerV2
 import com.yenaly.han1meviewer.worker.HanimeDownloadWorker
-import com.yenaly.yenaly_libs.base.YenalyViewModel
-import com.yenaly.yenaly_libs.utils.application
+import com.yenaly.han1meviewer.base.BaseViewModel
+import com.yenaly.han1meviewer.util.application
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -24,7 +24,12 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-object AppViewModel : YenalyViewModel(application), IHCsrfToken {
+/**
+ * @project Han1meViewer
+ * @author Yenaly Liew
+ * @time 2024/03/29 029 18:00
+ */
+object AppViewModel : BaseViewModel(application), IHCsrfToken {
 
     override var csrfToken: String? = null
 

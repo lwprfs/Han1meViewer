@@ -6,13 +6,13 @@ import android.widget.TextView
 import androidx.annotation.LayoutRes
 import com.chad.library.adapter4.BaseQuickAdapter
 import com.yenaly.han1meviewer.R
-import com.yenaly.yenaly_libs.utils.applicationContext
-import kotlin.contracts.ExperimentalContracts
-import kotlin.contracts.contract
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
-fun com.chad.library.adapter4.BaseQuickAdapter<*, *>.setStateViewLayout(
+/**
+ * 设置状态视图
+ *
+ * 必须在绑定 RV 后才能调用，因为用了 BaseQuickAdapter 里面的 context
+ */
+fun BaseQuickAdapter<*, *>.setStateViewLayout(
     @LayoutRes layoutRes: Int,
     text: String? = null,
 ) {
@@ -22,7 +22,10 @@ fun com.chad.library.adapter4.BaseQuickAdapter<*, *>.setStateViewLayout(
     stateView = view
 }
 
-fun com.chad.library.adapter4.BaseQuickAdapter<*, *>.setStateViewLayout(
+/**
+ * 设置状态视图
+ */
+fun BaseQuickAdapter<*, *>.setStateViewLayout(
     view: View,
     text: String? = null,
 ) {

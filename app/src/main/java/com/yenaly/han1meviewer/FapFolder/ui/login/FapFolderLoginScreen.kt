@@ -53,7 +53,7 @@ import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderAuthRepo
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderAuthResult
 import com.yenaly.han1meviewer.FapFolder.data.remote.FapFolderCredentialStore
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 

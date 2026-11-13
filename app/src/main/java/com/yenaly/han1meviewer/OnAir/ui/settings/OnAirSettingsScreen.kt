@@ -69,7 +69,7 @@ import com.yenaly.han1meviewer.OnAir.data.remote.OnAirNetwork
 import com.yenaly.han1meviewer.OnAir.data.remote.OnAirNetworkRepo
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
 import com.yenaly.han1meviewer.ui.component.GlobalToasts
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 

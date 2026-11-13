@@ -11,7 +11,7 @@ import com.yenaly.han1meviewer.util.getUpdateIfExists
 import com.yenaly.han1meviewer.util.installApkPackageForResult
 import com.yenaly.han1meviewer.util.updateFile
 import com.yenaly.han1meviewer.worker.HUpdateWorker
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

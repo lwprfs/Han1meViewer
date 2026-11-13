@@ -51,7 +51,7 @@ import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.ui.theme.SpacingLarge
 import com.yenaly.han1meviewer.ui.theme.SpacingNormal
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 
 data class SiteSwitchOption(
     val name: String,

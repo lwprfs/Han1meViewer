@@ -7,7 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.yenaly.han1meviewer.FapFolder.data.local.FapFolderHistoryEntity
 import com.yenaly.han1meviewer.FapFolder.data.local.FapFolderHistoryRepo
 import com.yenaly.han1meviewer.R
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update

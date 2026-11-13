@@ -1,5 +1,10 @@
 package com.yenaly.han1meviewer.XHamster.ui.entities
 
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.yenaly.han1meviewer.XHamster.data.model.XHamsterGallery
+import com.yenaly.han1meviewer.XHamster.data.remote.XHamsterUserRepo
+import com.yenaly.han1meviewer.XHamster.ui.discover.XHamsterDiscoverActions
+import com.yenaly.han1meviewer.XHamster.ui.discover.XHamsterDiscoverStrips
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -732,6 +737,164 @@ fun XHamsterAccountSettingsScreen(
                         modifier = Modifier.padding(16.dp),
                         style = MaterialTheme.typography.titleSmall,
                     )
+                }
+            }
+        }
+    }
+}
+
+
+// ───────────────────────── photo search results ─────────────────────────
+
+class XHamsterPhotoSearchViewModel : XHamsterPagedViewModel<XHamsterGallery>() {
+    override suspend fun load(url: String): Result<XHamsterPage<XHamsterGallery>> =
+        XHamsterUserRepo.photoSearch(url)
+
+    override fun keyOf(item: XHamsterGallery): Any = item.id
+}
+
+@Composable
+fun XHamsterPhotoSearchResults(
+    url: String,
+    onOpenGallery: (url: String) -> Unit,
+    onOpenAuthor: (path: String, title: String) -> Unit,
+    viewModel: XHamsterPhotoSearchViewModel = viewModel(),
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    LaunchedEffect(url) { viewModel.setUrl(url) }
+    val gridState = rememberLazyGridState()
+    NearEndEffect(gridState, state.items.size) { viewModel.loadMore() }
+    when {
+        state.isLoading && state.items.isEmpty() -> SiteLoadingContent()
+        state.error != null && state.items.isEmpty() ->
+            SiteErrorContent(message = state.error, onRetry = { viewModel.refresh() })
+
+        state.items.isEmpty() -> SiteEmptyContent(hint = stringResource(R.string.xhamster_no_results))
+        else -> LazyVerticalGrid(
+            columns = GridCells.Adaptive(minSize = 150.dp),
+            state = gridState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            items(state.items, key = { it.id }) { gallery ->
+                Card(Modifier.fillMaxWidth().clickable { onOpenGallery(gallery.url) }) {
+                    EntityImage(gallery.coverUrl, Modifier.fillMaxWidth().size(width = 150.dp, height = 150.dp))
+                    Column(Modifier.padding(8.dp)) {
+                        Text(gallery.title, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        gallery.photosCount?.let {
+                            Text(
+                                stringResource(R.string.xhamster_n_photos, it.toString()),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        gallery.authorName?.let { name ->
+                            Text(
+                                name,
+                                modifier = Modifier.clickable { gallery.authorPath?.let { onOpenAuthor(it, name) } },
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ───────────────────────── stars ─────────────────────────
+
+private enum class StarTab(val titleRes: Int, val path: String) {
+    POPULAR(R.string.xhamster_stars_popular, "/pornstars"),
+    CELEBRITIES(R.string.xhamster_stars_celebrities, "/celebrities"),
+    CREATORS(R.string.xhamster_creators, "/creators"),
+    COUNTRIES(R.string.xhamster_stars_countries, ""),
+}
+
+@Composable
+fun XHamsterStarsScreen(
+    onBack: () -> Unit,
+    onOpenStar: (path: String, title: String) -> Unit,
+    discover: XHamsterDiscoverActions,
+    viewModel: XHamsterCreatorsViewModel = viewModel(),
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    var tabName by rememberSaveable { mutableStateOf(StarTab.POPULAR.name) }
+    val tab = StarTab.valueOf(tabName)
+    var countries by remember { mutableStateOf<List<XHamsterOption>>(emptyList()) }
+    var countryPath by rememberSaveable { mutableStateOf("") }
+    LaunchedEffect(tab) {
+        if (tab == StarTab.COUNTRIES && countries.isEmpty()) {
+            XHamsterUserRepo.starCountries().onSuccess {
+                countries = it
+                if (countryPath.isBlank()) countryPath = it.firstOrNull()?.path.orEmpty()
+            }
+        }
+    }
+    val url = if (tab == StarTab.COUNTRIES) countryPath else tab.path
+    LaunchedEffect(url) { if (url.isNotBlank()) viewModel.setUrl(XHamsterConstants.listUrl(url)) }
+    val listState = rememberLazyListState()
+    NearEndEffect(listState, state.items.size) { viewModel.loadMore() }
+
+    EntityScaffold(stringResource(R.string.xhamster_stars), onBack) {
+        Column(Modifier.fillMaxSize()) {
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(StarTab.entries.toList(), key = { it.name }) { t ->
+                    FilterChip(
+                        selected = t == tab,
+                        onClick = { tabName = t.name },
+                        label = { Text(stringResource(t.titleRes)) },
+                    )
+                }
+            }
+            if (tab == StarTab.COUNTRIES) OptionChips(countries, countryPath) { countryPath = it.path }
+            when {
+                state.isLoading && state.items.isEmpty() -> SiteLoadingContent()
+                state.error != null && state.items.isEmpty() ->
+                    SiteErrorContent(message = state.error, onRetry = { viewModel.refresh() })
+
+                else -> LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    item(key = "discover") { XHamsterDiscoverStrips(discover, showFeed = false) }
+                    if (state.items.isEmpty()) item(key = "empty") {
+                        SiteEmptyContent(hint = stringResource(R.string.xhamster_nothing_here))
+                    }
+                    items(state.items, key = { it.path }) { star ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onOpenStar(star.path, star.name) }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            EntityImage(star.avatarUrl, Modifier.size(56.dp), circle = true)
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    if (star.verified) "${star.name} ✓" else star.name,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                )
+                                formatCount(star.videoCount)?.let {
+                                    Text(
+                                        stringResource(R.string.xhamster_n_videos, it),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

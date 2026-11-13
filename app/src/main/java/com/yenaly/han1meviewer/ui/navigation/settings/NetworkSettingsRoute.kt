@@ -2,9 +2,18 @@ package com.yenaly.han1meviewer.ui.navigation.settings
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
 import android.util.Log
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -16,9 +25,13 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import androidx.core.net.toUri
 import com.yenaly.han1meviewer.EMPTY_STRING
@@ -48,11 +61,12 @@ import com.yenaly.han1meviewer.ui.component.ConfirmDialog
 import com.yenaly.han1meviewer.ui.component.GlobalToasts
 import com.yenaly.han1meviewer.ui.screen.settings.DelayResultUi
 import com.yenaly.han1meviewer.ui.screen.settings.DohTestResultUi
+import com.yenaly.han1meviewer.ui.screen.runAfterUiSettles
 import com.yenaly.han1meviewer.ui.screen.settings.MirrorRowUi
 import com.yenaly.han1meviewer.ui.screen.settings.NetworkSettingsScreen
 import com.yenaly.han1meviewer.ui.screen.settings.NetworkSettingsUiState
-import com.yenaly.yenaly_libs.ActivityManager
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.ActivityManager
+import com.yenaly.han1meviewer.util.applicationContext
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Request
 import java.net.InetAddress
@@ -84,6 +98,7 @@ private fun rebuildAllNetworks() {
 @Composable
 fun NetworkSettingsRouteScreen() {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     var refreshKey by remember { mutableIntStateOf(0) }
 
     var editingSite by remember { mutableStateOf(Preferences.siteType) }
@@ -101,6 +116,7 @@ fun NetworkSettingsRouteScreen() {
     var showCustomMirrorWarningConfirm by remember { mutableStateOf(false) }
     var showDohConflictConfirm by remember { mutableStateOf(false) }
     var showSocks5Warning by remember { mutableStateOf(false) }
+    var showApplyDeepLinksDialog by remember { mutableStateOf(false) }
     var pendingDomainValue by remember { mutableStateOf("") }
     var pendingSite by remember { mutableStateOf(editingSite) }
     var pendingUseCustomMirrorSite by remember { mutableStateOf(false) }
@@ -132,6 +148,7 @@ fun NetworkSettingsRouteScreen() {
     val invalidIpOrPort = stringResource(R.string.invalid_ip_or_port)
     val defaultLabel = stringResource(R.string.default_)
 
+    val actionNotSupport = stringResource(R.string.action_app_open_by_default_settings_not_support)
     fun stopDelayTest() {
         isDelayTesting = false
         delayHandler.removeCallbacksAndMessages(null)
@@ -470,6 +487,7 @@ fun NetworkSettingsRouteScreen() {
             rebuildAllNetworks()
             refreshKey++
         },
+        onOpenApplyDeepLinks = { showApplyDeepLinksDialog = true },
     )
 
     ConfirmDialog(
@@ -480,6 +498,7 @@ fun NetworkSettingsRouteScreen() {
         dismissText = stringResource(R.string.cancel),
         cancelable = false,
         onConfirm = {
+            showDomainRestartConfirm = false
             if (pendingDomainValue.isNotEmpty()) {
                 SiteNetworkPrefs.setSelectedMirrorUrl(pendingSite, pendingDomainValue)
             }
@@ -492,7 +511,9 @@ fun NetworkSettingsRouteScreen() {
             if (pendingSite.sharesHanimeLogin()) {
                 logout()
             }
-            ActivityManager.restart(killProcess = true)
+            coroutineScope.runAfterUiSettles {
+                ActivityManager.restart(killProcess = true)
+            }
         },
         onDismiss = {
             pendingDomainValue = ""
@@ -520,7 +541,12 @@ fun NetworkSettingsRouteScreen() {
         confirmText = stringResource(R.string.confirm),
         dismissText = stringResource(R.string.cancel),
         cancelable = false,
-        onConfirm = { ActivityManager.restart(killProcess = true) },
+        onConfirm = {
+            showHostsRestartConfirm = false
+            coroutineScope.runAfterUiSettles {
+                ActivityManager.restart(killProcess = true)
+            }
+        },
         onDismiss = { showHostsRestartConfirm = false },
     )
 
@@ -602,6 +628,56 @@ fun NetworkSettingsRouteScreen() {
             confirmButton = {
                 TextButton(onClick = { showSocks5Warning = false }) {
                     Text(stringResource(R.string.confirm))
+                }
+            },
+        )
+    }
+
+    if (showApplyDeepLinksDialog) {
+        AlertDialog(
+            onDismissRequest = { showApplyDeepLinksDialog = false },
+            title = { Text(stringResource(R.string.apply_deep_links)) },
+            text = {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(stringResource(R.string.apply_deep_links_summary))
+                    Text(stringResource(R.string.apply_deep_links_tips))
+                    Image(
+                        painter = painterResource(R.drawable.apply_deep_links),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showApplyDeepLinksDialog = false
+                    try {
+                        val intent = Intent().apply {
+                            action = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                Settings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS
+                            } else {
+                                Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+                            }
+                            addCategory(Intent.CATEGORY_DEFAULT)
+                            data = "package:${context.packageName}".toUri()
+                            flags = Intent.FLAG_ACTIVITY_NO_HISTORY or
+                                    Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
+                        }
+                        context.startActivity(intent)
+                    } catch (e: Exception) {
+                        GlobalToasts.show(actionNotSupport, level = GlobalToasts.ToastLevel.WARNING)
+                        e.printStackTrace()
+                    }
+                }) {
+                    Text(stringResource(R.string.go_to_settings))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showApplyDeepLinksDialog = false }) {
+                    Text(stringResource(R.string.cancel))
                 }
             },
         )

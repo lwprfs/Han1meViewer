@@ -56,7 +56,7 @@ object HentaiMamaOptions {
 
     private fun loadGenreGroups(): LinkedHashMap<String, List<String>> {
         val raw = runCatching {
-            com.yenaly.yenaly_libs.utils.applicationContext.assets
+            com.yenaly.han1meviewer.util.applicationContext.assets
                 .open("hentaimama_options/genres.json")
                 .use { it.bufferedReader().readText() }
         }.getOrNull() ?: return LinkedHashMap()

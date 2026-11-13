@@ -7,7 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.yenaly.han1meviewer.OnAir.data.model.OnAirChatMessage
 import com.yenaly.han1meviewer.OnAir.data.remote.OnAirChatRepo
 import com.yenaly.han1meviewer.R
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow

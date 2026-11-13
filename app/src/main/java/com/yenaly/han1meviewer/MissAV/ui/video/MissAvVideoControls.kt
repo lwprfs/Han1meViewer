@@ -84,7 +84,7 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import coil3.compose.AsyncImage
 import com.yenaly.han1meviewer.ui.component.content.ErrorContent
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 import java.io.File
 import java.io.InputStream
 import java.nio.charset.StandardCharsets

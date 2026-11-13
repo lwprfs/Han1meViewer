@@ -1,6 +1,6 @@
 package com.yenaly.han1meviewer.FapFolder.ui.navigation
 
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 import androidx.compose.ui.res.stringResource
 import com.yenaly.han1meviewer.ui.navigation.popBackStackSafely
 import androidx.compose.foundation.layout.Arrangement

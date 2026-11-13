@@ -37,14 +37,24 @@ import com.yenaly.han1meviewer.XHamster.ui.home.XHamsterSource
 import com.yenaly.han1meviewer.XHamster.ui.home.XHamsterVideoGrid
 import com.yenaly.han1meviewer.ui.component.SiteBackButton
 import com.yenaly.han1meviewer.ui.component.SiteTopAppBar
+import com.yenaly.han1meviewer.ui.component.SiteChipRow
+import com.yenaly.han1meviewer.XHamster.ui.discover.XHamsterDiscoverActions
+import com.yenaly.han1meviewer.XHamster.ui.discover.XHamsterDiscoverStrips
+import com.yenaly.han1meviewer.XHamster.ui.entities.XHamsterPhotoSearchResults
+import com.yenaly.han1meviewer.XHamster.ui.profile.ProfileShorts
 
 @Composable
 fun XHamsterSearchScreen(
     initialQuery: String?,
     onBack: () -> Unit,
     onNavigateToVideo: (String) -> Unit,
+    onOpenGallery: (String) -> Unit,
+    onOpenAuthor: (path: String, title: String) -> Unit,
+    discover: XHamsterDiscoverActions,
     viewModel: XHamsterListViewModel = viewModel(),
 ) {
+    var scope by rememberSaveable { mutableStateOf("videos") }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     val state by viewModel.state.collectAsStateWithLifecycle()
     var query by rememberSaveable { mutableStateOf(initialQuery.orEmpty()) }
     var submitted by rememberSaveable { mutableStateOf(initialQuery.orEmpty()) }
@@ -107,13 +117,41 @@ fun XHamsterSearchScreen(
         Column(modifier = Modifier
             .fillMaxSize()
             .padding(padding)) {
+            SiteChipRow(
+                options = listOf("videos", "photos", "shorts"),
+                selected = scope,
+                label = {
+                    ctx.getString(
+                        when (it) {
+                            "photos" -> R.string.xhamster_photos
+                            "shorts" -> R.string.xhamster_shorts
+                            else -> R.string.xhamster_search_videos
+                        },
+                    )
+                },
+                onSelect = { scope = it },
+                key = { it },
+            )
+            val encoded = java.net.URLEncoder.encode(submitted, "UTF-8")
             if (submitted.isBlank()) {
                 Text(
                     text = stringResource(R.string.xhamster_search_prompt),
                     modifier = Modifier.padding(16.dp),
                 )
-            } else {
-                XHamsterVideoGrid(
+                Column(Modifier.padding(horizontal = 12.dp)) { XHamsterDiscoverStrips(discover) }
+            } else when (scope) {
+                "photos" -> XHamsterPhotoSearchResults(
+                    url = XHamsterConstants.listUrl("/photos/search/$encoded"),
+                    onOpenGallery = onOpenGallery,
+                    onOpenAuthor = onOpenAuthor,
+                )
+
+                "shorts" -> ProfileShorts(
+                    path = "/shorts/search/$encoded",
+                    preview = emptyList(),
+                )
+
+                else -> XHamsterVideoGrid(
                     state = state,
                     onRetry = { viewModel.refresh() },
                     onLoadMore = { viewModel.loadMore() },

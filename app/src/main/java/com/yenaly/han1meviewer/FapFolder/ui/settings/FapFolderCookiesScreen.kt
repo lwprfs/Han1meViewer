@@ -65,7 +65,7 @@ import com.yenaly.han1meviewer.FapFolder.data.local.FapFolderProfileCache
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderUserProfile
 import com.yenaly.han1meviewer.FapFolder.ui.gate.FapFolderGateState
 import com.yenaly.han1meviewer.ui.component.GlobalToasts
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 import kotlinx.coroutines.launch
 import androidx.compose.ui.platform.LocalClipboard
 

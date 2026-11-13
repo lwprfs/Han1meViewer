@@ -1,6 +1,6 @@
 package com.yenaly.han1meviewer.OnAir.ui.navigation
 
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 import com.yenaly.han1meviewer.R
 import androidx.compose.ui.res.stringResource
 import com.yenaly.han1meviewer.ui.navigation.popBackStackSafely

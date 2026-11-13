@@ -63,7 +63,7 @@ import com.yenaly.han1meviewer.ui.component.SelectableTag
 import com.yenaly.han1meviewer.ui.component.SiteBarIconButton
 import com.yenaly.han1meviewer.ui.component.SiteSearchTopBar
 import com.yenaly.han1meviewer.ui.component.SiteSwitchButton
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter

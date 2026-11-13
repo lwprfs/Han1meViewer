@@ -70,7 +70,7 @@ import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
 import com.yenaly.han1meviewer.util.formatRelativeTime
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 

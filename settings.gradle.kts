@@ -14,4 +14,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "HANiEX"
-include(":app", ":yenaly_libs")
+include(":app")

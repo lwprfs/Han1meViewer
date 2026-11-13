@@ -49,7 +49,7 @@ import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.FapFolder.data.local.FapFolderSearchHelper
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderSearchHistoryEntry
 import com.yenaly.han1meviewer.FapFolder.data.model.FapFolderSearchTab
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

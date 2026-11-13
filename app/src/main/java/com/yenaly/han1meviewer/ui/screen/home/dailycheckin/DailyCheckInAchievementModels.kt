@@ -1,6 +1,6 @@
 package com.yenaly.han1meviewer.ui.screen.home.dailycheckin
 
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.viewmodel.MonthlyStats
 

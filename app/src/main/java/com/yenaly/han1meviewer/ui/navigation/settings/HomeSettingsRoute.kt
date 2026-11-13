@@ -2,25 +2,17 @@ package com.yenaly.han1meviewer.ui.navigation.settings
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.Intent
 import android.os.Build
-import android.provider.Settings
-import android.text.method.LinkMovementMethod
-import android.widget.TextView
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
-import androidx.annotation.RequiresApi
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -42,12 +34,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.edit
-import androidx.core.net.toUri
-import androidx.core.text.parseAsHtml
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.firebase.Firebase
 import com.google.firebase.analytics.analytics
@@ -74,13 +65,14 @@ import com.yenaly.han1meviewer.ui.screen.home.homepage.defaultHomeCategoryPrefer
 import com.yenaly.han1meviewer.ui.screen.home.homepage.hiddenHomeCategoryKeys
 import com.yenaly.han1meviewer.ui.screen.home.homepage.homeCategoryOrder
 import com.yenaly.han1meviewer.ui.screen.home.homepage.saveHomeCategoryPreferences
+import com.yenaly.han1meviewer.ui.screen.runAfterUiSettles
 import com.yenaly.han1meviewer.ui.theme.ThemeColorPreset
 import com.yenaly.han1meviewer.ui.viewmodel.AppViewModel
 import com.yenaly.han1meviewer.util.ThemeUtils
-import com.yenaly.yenaly_libs.ActivityManager
-import com.yenaly.yenaly_libs.utils.applicationContext
-import com.yenaly.yenaly_libs.utils.browse
-import com.yenaly.yenaly_libs.utils.folderSize
+import com.yenaly.han1meviewer.util.ActivityManager
+import com.yenaly.han1meviewer.util.applicationContext
+import com.yenaly.han1meviewer.util.browse
+import com.yenaly.han1meviewer.util.folderSize
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -90,6 +82,7 @@ private const val HOME_DEFAULT_VIDEO_QUALITY = "default_video_quality"
 private const val HOME_SHOW_PLAYED_INDICATOR = "show_played_indicator"
 private const val HOME_WATCHED_PROGRESS_THRESHOLD = "watched_progress_threshold"
 private const val HOME_SEARCH_PAGINATION = "search_pagination"
+private const val HOME_RELATED_VIDEO_AS_TAB = "related_video_as_tab"
 private const val HOME_ALLOW_PIP_MODE = "allow_pip_mode"
 private const val HOME_UPDATE_POPUP_INTERVAL_DAYS = "update_popup_interval_days"
 private const val HOME_USE_CI_UPDATE_CHANNEL = "use_ci_update_channel"
@@ -99,9 +92,7 @@ private const val HOME_USE_DARK_MODE = "use_dark_mode"
 private const val HOME_ALLOW_RESUME_PLAYBACK = "allow_resume_playback"
 private const val HOME_SEARCH_ARTIST_IGNORE_VIDEO_TYPE = "search_artist_ignore_video_type"
 private const val HOME_DISABLE_MOBILE_DATA_WARNING = "disable_mobile_data_warning"
-private const val HOME_COLLAPSE_DOWNLOADED_GROUP = "collapse_downloaded_group"
 private const val HOME_DISABLE_PREDICTIVE_BACK = "disable_predictive_back"
-private const val HOME_TABLET_MODE = "tablet_mode"
 private const val HOME_SHOW_EXIT_CONFIRM = "show_exit_confirm"
 private const val HOME_DISABLE_COMMENTS = "disable_comments"
 private const val HOME_USE_LOCK_SCREEN = "use_lock_screen"
@@ -118,10 +109,10 @@ private const val HOME_HORIZONTAL_CARD_COUNT_MEDIUM = "horizontal_card_count_med
 private const val HOME_HORIZONTAL_CARD_COUNT_EXPANDED = "horizontal_card_count_expanded"
 
 @SuppressLint("LocalContextGetResourceValueCall")
-@RequiresApi(Build.VERSION_CODES.S)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeSettingsRouteScreen(
+fun SettingsCategoryRouteScreen(
+    category: SettingsCategory,
     activity: MainActivity,
     onNavigateToPlayerSettings: () -> Unit,
     onNavigateToHKeyframeSettings: () -> Unit,
@@ -130,7 +121,32 @@ fun HomeSettingsRouteScreen(
     onNavigateToUnifiedHistory: () -> Unit = {},
     onNavigateToTranslationSettings: () -> Unit = {},
     onNavigateToUpdateStatus: () -> Unit = {},
+    onNavigateToHKeyframes: () -> Unit,
+    onNavigateToSharedHKeyframes: () -> Unit,
+    onNavigateToAboutPage: () -> Unit,
 ) {
+    when (category) {
+        SettingsCategory.Network -> {
+            NetworkSettingsRouteScreen()
+            return
+        }
+
+        SettingsCategory.Download -> {
+            DownloadSettingsRouteScreen(activity = activity)
+            return
+        }
+
+        SettingsCategory.Keyframes -> {
+            HKeyframeSettingsRouteScreen(
+                onNavigateToHKeyframes = onNavigateToHKeyframes,
+                onNavigateToSharedHKeyframes = onNavigateToSharedHKeyframes,
+            )
+            return
+        }
+
+        else -> Unit
+    }
+
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val versionState by AppViewModel.versionFlow.collectAsStateWithLifecycle()
@@ -141,13 +157,18 @@ fun HomeSettingsRouteScreen(
     var showRestartConfirmDialog by remember { mutableStateOf(false) }
     var showAnalyticsDialog by remember { mutableStateOf(false) }
     var showLauncherPicker by remember { mutableStateOf(false) }
-    var showApplyDeepLinksDialog by remember { mutableStateOf(false) }
     var pendingImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
     var showExportSelection by remember { mutableStateOf(false) }
     var pendingExportSections by remember {
         mutableStateOf<Set<BackupManager.Section>>(BackupManager.Section.entries.toSet())
     }
     var importSections by remember { mutableStateOf<Set<BackupManager.Section>?>(null) }
+
+    // 弹窗的选中回调会先更新 activeDialog 关闭弹窗；延迟两帧再重建 Activity，
+    // 避免 Activity.recreate() 阻塞主线程导致弹窗停留。
+    fun recreateAfterDialogDismiss() {
+        coroutineScope.runAfterUiSettles { activity.recreate() }
+    }
 
     val backupExportSuccess = stringResource(R.string.backup_export_success)
     val backupExportFailed = stringResource(R.string.backup_export_failed)
@@ -159,7 +180,6 @@ fun HomeSettingsRouteScreen(
     val clearSuccess = stringResource(R.string.clear_success)
     val clearFailed = stringResource(R.string.clear_failed)
     val fakeIconHint = stringResource(R.string.fake_icon_hint)
-    val actionNotSupport = stringResource(R.string.action_app_open_by_default_settings_not_support)
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -246,6 +266,7 @@ fun HomeSettingsRouteScreen(
     }
 
     HomeSettingsScreen(
+        category = category,
         state = uiState,
         onVideoLanguageChange = { value ->
             if (value != Preferences.videoLanguage) {
@@ -261,8 +282,13 @@ fun HomeSettingsRouteScreen(
         onDarkModeChange = { value ->
             if (value != Preferences.useDarkMode) {
                 saveString(HOME_USE_DARK_MODE, value)
-                ThemeUtils.applyDarkModeFromPreferences(context)
-                activity.recreate()
+                // 立即刷新设置项状态；follow_system 与 always_off 在浅色系统下
+                // 可能不会触发 Activity 重建，必须手动刷新才能看到选择变化
+                refreshKey++
+                // AppCompatDelegate 会自行重建 Activity；先等待弹窗关闭再切换
+                coroutineScope.runAfterUiSettles {
+                    ThemeUtils.applyDarkModeFromPreferences(context)
+                }
             }
         },
         onAllowPipModeChange = { enabled ->
@@ -292,6 +318,10 @@ fun HomeSettingsRouteScreen(
             saveBoolean(HOME_SEARCH_PAGINATION, it)
             refreshKey++
         },
+        onRelatedVideoAsTabChange = {
+            saveBoolean(HOME_RELATED_VIDEO_AS_TAB, it)
+            refreshKey++
+        },
         onSearchArtistIgnoreVideoTypeChange = {
             saveBoolean(HOME_SEARCH_ARTIST_IGNORE_VIDEO_TYPE, it)
             refreshKey++
@@ -304,20 +334,12 @@ fun HomeSettingsRouteScreen(
             saveBoolean(HOME_DISABLE_PREDICTIVE_BACK, it)
             refreshKey++
         },
-        onTabletModeChange = {
-            saveBoolean(HOME_TABLET_MODE, it)
-            refreshKey++
-        },
         onShowExitConfirmChange = {
             saveBoolean(HOME_SHOW_EXIT_CONFIRM, it)
             refreshKey++
         },
         onDisableCommentsChange = {
             saveBoolean(HOME_DISABLE_COMMENTS, it)
-            refreshKey++
-        },
-        onCollapseDownloadedGroupChange = {
-            saveBoolean(HOME_COLLAPSE_DOWNLOADED_GROUP, it)
             refreshKey++
         },
         onSearchGridColumnsConfigChange = { config ->
@@ -337,13 +359,13 @@ fun HomeSettingsRouteScreen(
         onThemeColorChange = { key ->
             saveString(HOME_THEME_COLOR, key)
             refreshKey++
-            activity.recreate()
+            recreateAfterDialogDismiss()
         },
         onPureBlackDarkModeChange = { enabled ->
             if (enabled != Preferences.pureBlackDarkMode) {
                 saveBoolean(HOME_PURE_BLACK_DARK_MODE, enabled)
                 refreshKey++
-                activity.recreate()
+                recreateAfterDialogDismiss()
             }
         },
         onHomeCategoryPreferencesChange = { order, hiddenKeys ->
@@ -413,7 +435,7 @@ fun HomeSettingsRouteScreen(
             if (old != value) {
                 Preferences.preferenceSp.edit { putString(HOME_APP_LANGUAGE, value) }
                 refreshKey++
-                activity.recreate()
+                recreateAfterDialogDismiss()
             }
         },
         onCheckUpdate = {
@@ -428,12 +450,9 @@ fun HomeSettingsRouteScreen(
             Preferences.preferenceSp.edit { putInt(HOME_UPDATE_POPUP_INTERVAL_DAYS, it) }
             refreshKey++
         },
-        onOpenApplyDeepLinks = {
-            showApplyDeepLinksDialog = true
-        },
         onOpenFakeLauncherIcon = { showLauncherPicker = true },
         onOpenOpenSourceLicense = { showLicenseScreen = true },
-        onOpenAbout = {},
+        onOpenAboutPage = onNavigateToAboutPage,
         onClearCache = {
             val cacheDir = context.cacheDir
             val folderSize = cacheDir?.folderSize ?: 0L
@@ -536,21 +555,15 @@ fun HomeSettingsRouteScreen(
     }
 
     if (showAnalyticsDialog) {
-        val message = stringResource(R.string.about_analytics_summary).parseAsHtml()
-        val analyticsMessage = remember { message }
+        val analyticsHtml = stringResource(R.string.about_analytics_summary)
+        val analyticsMessage = remember(analyticsHtml) {
+            AnnotatedString.fromHtml(analyticsHtml)
+        }
         AlertDialog(
             onDismissRequest = {},
             title = { Text(stringResource(R.string.about_analytics)) },
             text = {
-                AndroidView(
-                    factory = { ctx ->
-                        TextView(ctx).apply {
-                            text = analyticsMessage
-                            movementMethod = LinkMovementMethod.getInstance()
-                            setPadding(0, 0, 0, 0)
-                        }
-                    },
-                )
+                Text(text = analyticsMessage)
             },
             confirmButton = {
                 TextButton(onClick = { showAnalyticsDialog = false }) {
@@ -578,7 +591,10 @@ fun HomeSettingsRouteScreen(
         dismissText = stringResource(R.string.cancel),
         cancelable = false,
         onConfirm = {
-            ActivityManager.restart(killProcess = true)
+            showRestartConfirmDialog = false
+            coroutineScope.runAfterUiSettles {
+                ActivityManager.restart(killProcess = true)
+            }
         },
         onDismiss = { showRestartConfirmDialog = false },
     )
@@ -634,50 +650,6 @@ fun HomeSettingsRouteScreen(
         }
     }
 
-    if (showApplyDeepLinksDialog) {
-        AlertDialog(
-            onDismissRequest = { showApplyDeepLinksDialog = false },
-            title = { Text(stringResource(R.string.apply_deep_links)) },
-            text = {
-                Column(
-                    modifier = Modifier.verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(stringResource(R.string.apply_deep_links_summary))
-                    Text(stringResource(R.string.apply_deep_links_tips))
-                    Image(
-                        painter = painterResource(R.drawable.apply_deep_links),
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    showApplyDeepLinksDialog = false
-                    try {
-                        val intent = Intent().apply {
-                            action = Settings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS
-                            addCategory(Intent.CATEGORY_DEFAULT)
-                            data = "package:${context.packageName}".toUri()
-                            flags = Intent.FLAG_ACTIVITY_NO_HISTORY or Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
-                        }
-                        activity.startActivity(intent)
-                    } catch (e: Exception) {
-                        GlobalToasts.show(actionNotSupport, level = GlobalToasts.ToastLevel.WARNING)
-                        e.printStackTrace()
-                    }
-                }) {
-                    Text(stringResource(R.string.go_to_settings))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showApplyDeepLinksDialog = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            },
-        )
-    }
 }
 
 private data class LauncherItem(
@@ -734,14 +706,13 @@ private fun buildHomeSettingsUiState(
         showPlayedIndicator = Preferences.showPlayedIndicator,
         watchedProgressThreshold = Preferences.watchedProgressThreshold,
         searchPagination = Preferences.searchPagination,
+        relatedVideoAsTab = Preferences.relatedVideoAsTab,
         searchArtistIgnoreVideoType = Preferences.searchArtistIgnoreVideoType,
         disableMobileDataWarning = Preferences.disableMobileDataWarning,
         disablePredictiveBack = Preferences.disablePredictiveBack,
-        tabletMode = Preferences.tabletMode,
         showExitConfirm = Preferences.showExitConfirm,
         disableComments = Preferences.preferenceSp.getBoolean(HOME_DISABLE_COMMENTS, false),
         collapseDownloadedGroup = Preferences.collapseDownloadedGroup,
-        useDynamicColor = Preferences.useDynamicColor,
         useCIUpdateChannel = Preferences.useCIUpdateChannel,
         updateInstaller = Preferences.updateInstaller,
         updateInstallerLabel = updateInstallerLabel,

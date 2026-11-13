@@ -56,7 +56,7 @@ import com.yenaly.han1meviewer.OnAir.data.remote.OnAirNetworkRepo
 import com.yenaly.han1meviewer.OnAir.ui.home.InfiniteScrollFooter
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.ui.component.lazy.LazyVerticalGrid
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 

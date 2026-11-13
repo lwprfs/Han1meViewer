@@ -69,7 +69,7 @@ import com.yenaly.han1meviewer.ui.component.SiteLoadingContent
 import com.yenaly.han1meviewer.ui.component.SiteSwitchButton
 import com.yenaly.han1meviewer.ui.theme.SpacingLarge
 import com.yenaly.han1meviewer.ui.theme.SpacingNormal
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

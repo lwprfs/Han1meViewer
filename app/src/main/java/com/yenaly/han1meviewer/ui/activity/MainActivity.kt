@@ -11,14 +11,12 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.res.Configuration
-import android.content.res.Resources
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -57,6 +55,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -89,6 +90,7 @@ import com.yenaly.han1meviewer.PermissionRequester
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.SiteType
+import com.yenaly.han1meviewer.base.BaseFragmentActivity
 import com.yenaly.han1meviewer.logout
 import com.yenaly.han1meviewer.logic.network.HanimeNetwork
 import com.yenaly.han1meviewer.ui.component.SiteSwitchDialog
@@ -98,34 +100,38 @@ import com.yenaly.han1meviewer.ui.navigation.NavigationManager
 import com.yenaly.han1meviewer.ui.navigation.PendingVideoOpen
 import com.yenaly.han1meviewer.ui.navigation.main.AccountRoute
 import com.yenaly.han1meviewer.ui.navigation.main.UnifiedMainNavHost
+import com.yenaly.han1meviewer.ui.navigation.main.VideoRoute
 import com.yenaly.han1meviewer.ui.navigation.navigateSafely
 import com.yenaly.han1meviewer.ui.navigation.settings.SettingsPreferenceKeys
 import com.yenaly.han1meviewer.ui.screen.home.homepage.HomePageViewModel
 import com.yenaly.han1meviewer.ui.screen.main.MainActivityContent
 import com.yenaly.han1meviewer.ui.component.GlobalToasts
 import com.yenaly.han1meviewer.videoUrlRegex
-import com.yenaly.yenaly_libs.base.frame.FrameActivity
-import com.yenaly.yenaly_libs.utils.showSnackBar
-import com.yenaly.yenaly_libs.utils.textFromClipboard
+import com.yenaly.han1meviewer.util.textFromClipboard
+import com.yenaly.han1meviewer.util.ClipboardVideoLinkGuard
+import com.yenaly.han1meviewer.util.ActivityManager
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import java.util.Locale
 import com.yenaly.han1meviewer.MissAV.common.MissAvConstants
 import com.yenaly.han1meviewer.MissAV.data.remote.MissAvNetwork
 import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaConstants
 import com.yenaly.han1meviewer.HentaiMama.data.remote.HentaiMamaNetwork
 
-class MainActivity : FrameActivity(), PermissionRequester {
+class MainActivity : BaseFragmentActivity(), PermissionRequester {
 
     val viewModel: HomePageViewModel by viewModels()
 
     lateinit var navController: NavHostController
+    val snackbarHostState = SnackbarHostState()
     private var showAuthGuard by mutableStateOf(true)
 
     private val pendingNavigationRequests = Channel<Intent>(Channel.BUFFERED)
     private var currentVideoHost: VideoPageHost? = null
+    private var pendingClipboardCheck = false
 
     var showSiteSwitchConfirm by mutableStateOf(false)
         private set
@@ -200,8 +206,8 @@ class MainActivity : FrameActivity(), PermissionRequester {
                 activity = this,
                 viewModel = viewModel,
                 pendingNavigationRequests = remember { pendingNavigationRequests.receiveAsFlow() },
+                snackbarHostState = snackbarHostState,
                 showAuthGuard = showAuthGuard,
-                onOpenAccount = { navController.navigateSafely(AccountRoute) },
                 onLogoutClick = { requestLogout(false) },
                 onRequireLogin = { gotoLoginActivity() },
                 onSwitchSiteClick = { requestSiteSwitch() },
@@ -236,7 +242,6 @@ class MainActivity : FrameActivity(), PermissionRequester {
                 setKeepOnScreenCondition { !hasAuthenticated }
             }
         }
-        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
         val prefs = PreferenceManager.getDefaultSharedPreferences(this)
@@ -284,10 +289,6 @@ class MainActivity : FrameActivity(), PermissionRequester {
                 com.yenaly.han1meviewer.logic.update.UpdateManager.install(this@MainActivity)
             }
         }
-    }
-
-    override fun attachBaseContext(newBase: Context) {
-        super.attachBaseContext(applyAppLocale(newBase))
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -575,12 +576,16 @@ class MainActivity : FrameActivity(), PermissionRequester {
     override fun onStart() {
         super.onStart()
         registerPipReceiver()
-        window.decorView.post {
-            textFromClipboard?.let {
-                videoUrlRegex.find(it)?.groupValues?.get(1)?.let { videoCode ->
-                    showFindRelatedLinkSnackBar(videoCode)
-                }
-            }
+        pendingClipboardCheck = true
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        // Android 10+ 只有在窗口获得焦点时才能读取剪贴板。
+        // 每次回到应用只检查一次，避免弹窗等焦点变化导致重复读取。
+        if (hasFocus && pendingClipboardCheck) {
+            pendingClipboardCheck = false
+            ClipboardVideoLinkGuard.findNewVideoCode()?.let(::showClipboardLinkSnackbar)
         }
     }
 
@@ -604,32 +609,20 @@ class MainActivity : FrameActivity(), PermissionRequester {
         runCatching { unregisterReceiver(pipActionReceiver) }
     }
 
-    private fun applyAppLocale(context: Context): Context {
-        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-        val lang = prefs.getString("app_language", "system") ?: "system"
-
-        val newLocale = when (lang) {
-            "zh-rCN" -> Locale.SIMPLIFIED_CHINESE
-            "zh" -> Locale.TRADITIONAL_CHINESE
-            "en" -> Locale.ENGLISH
-            "ja" -> Locale.JAPANESE
-            else -> Resources.getSystem().configuration.locales.get(0)
-        }
-
-        Locale.setDefault(newLocale)
-
-        val config = Configuration(context.resources.configuration)
-        config.setLocale(newLocale)
-        return context.createConfigurationContext(config)
-    }
-
     override fun onSupportNavigateUp(): Boolean {
         return navController.navigateUp() || super.onSupportNavigateUp()
     }
 
-    private fun showFindRelatedLinkSnackBar(videoCode: String) {
-        showSnackBar(R.string.detect_ha1_related_link_in_clipboard, Snackbar.LENGTH_LONG) {
-            setAction(R.string.enter) {
+    private fun showClipboardLinkSnackbar(videoCode: String) {
+        lifecycleScope.launch {
+            snackbarHostState.currentSnackbarData?.dismiss()
+            val result = snackbarHostState.showSnackbar(
+                message = getString(R.string.detect_ha1_related_link_in_clipboard),
+                actionLabel = getString(R.string.enter),
+                withDismissAction = true,
+                duration = SnackbarDuration.Long,
+            )
+            if (result == SnackbarResult.ActionPerformed) {
                 showVideoDetailFragment(videoCode)
             }
         }

@@ -6,10 +6,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.XHamster.common.XHamsterSettings
+import com.yenaly.han1meviewer.XHamster.data.model.XHamsterCollection
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterComment
+import com.yenaly.han1meviewer.XHamster.data.model.XHamsterCommentResult
+import com.yenaly.han1meviewer.XHamster.data.model.XHamsterEngagement
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterDetail
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterStream
+import com.yenaly.han1meviewer.XHamster.data.remote.XHamsterAuth
 import com.yenaly.han1meviewer.XHamster.data.remote.XHamsterRepo
+import com.yenaly.han1meviewer.XHamster.data.remote.XHamsterUserRepo
 import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,6 +51,27 @@ data class XHamsterSubscribeState(
 
 enum class SubscribeMessage { LoginRequired, Failed }
 
+/** Rating / favourites state of the current video for the signed-in user. */
+data class XHamsterEngagementState(
+    val engagement: XHamsterEngagement? = null,
+    val collections: List<XHamsterCollection> = emptyList(),
+    val collectionsLoading: Boolean = false,
+    val busy: Boolean = false,
+) {
+    val watchLaterId: String? get() = collections.firstOrNull { it.isWatchLater }?.id
+    val inWatchLater: Boolean
+        get() = watchLaterId?.let { it in (engagement?.collectionIds ?: emptyList()) } == true
+    val inFavorites: Boolean
+        get() = (engagement?.collectionIds ?: emptyList()).any { it != watchLaterId }
+}
+
+enum class XHamsterMessage {
+    LoginRequired, ActionFailed, Favorited, FavoriteRemoved, WatchLaterAdded, WatchLaterRemoved,
+    PlaylistsSaved, CommentPosted, CommentCaptcha, CommentRejected,
+}
+
+data class XHamsterActionMessage(val type: XHamsterMessage, val detail: String? = null)
+
 class XHamsterVideoViewModel : ViewModel() {
 
     private companion object {
@@ -67,6 +93,19 @@ class XHamsterVideoViewModel : ViewModel() {
     private val _subscribe = MutableStateFlow(XHamsterSubscribeState())
     val subscribe: StateFlow<XHamsterSubscribeState> = _subscribe.asStateFlow()
 
+    private val _engagement = MutableStateFlow(XHamsterEngagementState())
+    val engagement: StateFlow<XHamsterEngagementState> = _engagement.asStateFlow()
+
+    private val _commentSending = MutableStateFlow(false)
+    val commentSending: StateFlow<Boolean> = _commentSending.asStateFlow()
+
+    private val _commentPostedTick = MutableStateFlow(0)
+    /** Increments every time a comment/reply was accepted by the server. */
+    val commentPostedTick: StateFlow<Int> = _commentPostedTick.asStateFlow()
+
+    private val _message = MutableStateFlow<XHamsterActionMessage?>(null)
+    val message: StateFlow<XHamsterActionMessage?> = _message.asStateFlow()
+
     private var currentId = ""
     private var loadJob: Job? = null
     private var commentsJob: Job? = null
@@ -80,6 +119,7 @@ class XHamsterVideoViewModel : ViewModel() {
         subscribeJob?.cancel()
         _comments.value = XHamsterCommentsState()
         _subscribe.value = XHamsterSubscribeState()
+        _engagement.value = XHamsterEngagementState()
         _detailState.value = XHamsterDetailState.Loading
         _streamError.value = null
         _playerState.update {
@@ -93,6 +133,8 @@ class XHamsterVideoViewModel : ViewModel() {
                         subscribed = detail.uploaderInfo?.subscribed == true,
                         subscribers = detail.uploaderInfo?.subscribers,
                     )
+                    _engagement.value = XHamsterEngagementState(engagement = detail.engagement)
+                    loadCollections()
                     seedComments(detail)
                     loadMoreComments()
                     val streams = XHamsterRepo.resolveStreams(detail)
@@ -195,6 +237,184 @@ class XHamsterVideoViewModel : ViewModel() {
     }
 
     fun consumeSubscribeMessage() = _subscribe.update { it.copy(message = null) }
+
+
+    // ───────────────────────── like / dislike / favourites ─────────────────────────
+
+    private fun currentDetail(): XHamsterDetail? =
+        (_detailState.value as? XHamsterDetailState.Success)?.detail
+
+    private fun postMessage(type: XHamsterMessage, detail: String? = null) {
+        _message.value = XHamsterActionMessage(type, detail)
+    }
+
+    fun consumeMessage() {
+        _message.value = null
+    }
+
+    private fun failureMessage(e: Throwable) {
+        if (e.message == XHamsterUserRepo.LOGIN_REQUIRED) postMessage(XHamsterMessage.LoginRequired)
+        else postMessage(XHamsterMessage.ActionFailed, e.message)
+    }
+
+    private fun withRating(old: XHamsterEngagement, target: Int): XHamsterEngagement {
+        var likes = old.likes ?: 0L
+        var dislikes = old.dislikes ?: 0L
+        when (old.ratingState) {
+            XHamsterEngagement.RATING_LIKED -> likes--
+            XHamsterEngagement.RATING_DISLIKED -> dislikes--
+        }
+        when (target) {
+            XHamsterEngagement.RATING_LIKED -> likes++
+            XHamsterEngagement.RATING_DISLIKED -> dislikes++
+        }
+        return old.copy(
+            ratingState = target,
+            likes = likes.coerceAtLeast(0L),
+            dislikes = dislikes.coerceAtLeast(0L),
+        )
+    }
+
+    /** Tap on thumb-up / thumb-down. Tapping the active one again clears the rating. */
+    fun rate(like: Boolean) {
+        val detail = currentDetail() ?: return
+        val state = _engagement.value
+        val old = state.engagement ?: return
+        if (state.busy) return
+        val wanted = if (like) XHamsterEngagement.RATING_LIKED else XHamsterEngagement.RATING_DISLIKED
+        val target = if (old.ratingState == wanted) XHamsterEngagement.RATING_NONE else wanted
+        _engagement.update { it.copy(engagement = withRating(old, target), busy = true) }
+        viewModelScope.launch {
+            XHamsterUserRepo.rate(old.entityId, like, old.watchId, detail.pageUrl)
+                .onSuccess { _engagement.update { it.copy(busy = false) } }
+                .onFailure { e ->
+                    Log.e(TAG, "rate failed", e)
+                    _engagement.update { it.copy(engagement = old, busy = false) }
+                    failureMessage(e)
+                }
+        }
+    }
+
+    fun loadCollections(force: Boolean = false) {
+        if (!XHamsterAuth.isLoggedIn) return
+        val state = _engagement.value
+        if (state.collectionsLoading || (!force && state.collections.isNotEmpty())) return
+        _engagement.update { it.copy(collectionsLoading = true) }
+        viewModelScope.launch {
+            XHamsterUserRepo.collections()
+                .onSuccess { list ->
+                    _engagement.update { it.copy(collections = list, collectionsLoading = false) }
+                }
+                .onFailure { e ->
+                    Log.e(TAG, "collections failed", e)
+                    _engagement.update { it.copy(collectionsLoading = false) }
+                }
+        }
+    }
+
+    private fun saveMembership(ids: List<String>, success: XHamsterMessage) {
+        val detail = currentDetail() ?: return
+        val state = _engagement.value
+        val old = state.engagement ?: return
+        if (state.busy) return
+        _engagement.update { it.copy(busy = true) }
+        viewModelScope.launch {
+            XHamsterUserRepo.setVideoCollections(old.entityId, ids, old.watchId, detail.pageUrl)
+                .onSuccess { confirmed ->
+                    _engagement.update {
+                        it.copy(
+                            engagement = old.copy(
+                                collectionIds = confirmed,
+                                isFavorite = confirmed.isNotEmpty(),
+                            ),
+                            busy = false,
+                        )
+                    }
+                    postMessage(success)
+                }
+                .onFailure { e ->
+                    Log.e(TAG, "favorite failed", e)
+                    _engagement.update { it.copy(busy = false) }
+                    failureMessage(e)
+                }
+        }
+    }
+
+    /** Heart button: adds to the default playlist, or removes from every playlist but Watch Later. */
+    fun toggleFavorite() {
+        val state = _engagement.value
+        val eng = state.engagement ?: return
+        val watchLater = state.watchLaterId
+        if (state.inFavorites) {
+            saveMembership(eng.collectionIds.filter { it == watchLater }, XHamsterMessage.FavoriteRemoved)
+        } else {
+            val default = state.collections.firstOrNull { it.isDefault }
+                ?: state.collections.firstOrNull { !it.isWatchLater }
+            if (default == null) {
+                loadCollections(force = true)
+                postMessage(XHamsterMessage.ActionFailed)
+                return
+            }
+            saveMembership(eng.collectionIds + default.id, XHamsterMessage.Favorited)
+        }
+    }
+
+    fun toggleWatchLater() {
+        val state = _engagement.value
+        val eng = state.engagement ?: return
+        val id = state.watchLaterId
+        if (id == null) {
+            loadCollections(force = true)
+            postMessage(XHamsterMessage.ActionFailed)
+            return
+        }
+        if (state.inWatchLater) {
+            saveMembership(eng.collectionIds - id, XHamsterMessage.WatchLaterRemoved)
+        } else {
+            saveMembership(eng.collectionIds + id, XHamsterMessage.WatchLaterAdded)
+        }
+    }
+
+    /** "Add to playlist" dialog: replace membership with exactly [ids]. */
+    fun setPlaylists(ids: Set<String>) = saveMembership(ids.toList(), XHamsterMessage.PlaylistsSaved)
+
+    // ───────────────────────── posting comments ─────────────────────────
+
+    fun postComment(text: String, replyTo: XHamsterComment?) {
+        val detail = currentDetail() ?: return
+        val entityId = detail.entityId ?: return
+        val body = text.trim()
+        if (body.isEmpty() || _commentSending.value) return
+        _commentSending.value = true
+        viewModelScope.launch {
+            val result = XHamsterUserRepo.postComment(
+                entityModel = "videoModel",
+                entityId = entityId,
+                text = body,
+                replyToId = replyTo?.id,
+                replyToName = replyTo?.author,
+                engagement = _engagement.value.engagement,
+                referer = detail.pageUrl,
+            )
+            _commentSending.value = false
+            when (result) {
+                XHamsterCommentResult.Posted -> {
+                    _commentPostedTick.update { it + 1 }
+                    postMessage(XHamsterMessage.CommentPosted)
+                    refreshComments()
+                }
+
+                XHamsterCommentResult.LoginRequired -> postMessage(XHamsterMessage.LoginRequired)
+                XHamsterCommentResult.CaptchaRequired -> postMessage(XHamsterMessage.CommentCaptcha)
+                is XHamsterCommentResult.Rejected -> postMessage(XHamsterMessage.CommentRejected, result.message)
+            }
+        }
+    }
+
+    fun refreshComments() {
+        _comments.update { it.copy(page = 0, hasMore = true, error = null, loading = false) }
+        loadMoreComments()
+    }
 
     private fun applyStreams(streams: List<XHamsterStream>) {
         val chosen = pick(streams)

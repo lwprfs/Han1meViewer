@@ -13,9 +13,9 @@ import com.yenaly.han1meviewer.ui.view.video.HMediaKernel
 import com.yenaly.han1meviewer.util.CookieString
 import com.yenaly.han1meviewer.util.SafFileManager
 import com.yenaly.han1meviewer.worker.HanimeDownloadManagerV2
-import com.yenaly.yenaly_libs.utils.applicationContext
-import com.yenaly.yenaly_libs.utils.getSpValue
-import com.yenaly.yenaly_libs.utils.putSpValue
+import com.yenaly.han1meviewer.util.applicationContext
+import com.yenaly.han1meviewer.util.getSpValue
+import com.yenaly.han1meviewer.util.putSpValue
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlin.time.Duration.Companion.days
 import kotlin.time.ExperimentalTime
@@ -52,6 +52,16 @@ object Preferences {
     var usageNoticeAccepted: Boolean
         get() = preferenceSp.getBoolean(USAGE_NOTICE_ACCEPTED, false)
         set(value) = preferenceSp.edit { putBoolean(USAGE_NOTICE_ACCEPTED, value) }
+
+    private const val LAST_HANDLED_CLIPBOARD = "last_handled_clipboard"
+
+    /**
+     * 最近一次读取并处理过的剪贴板内容。
+     * 用于避免同一段剪贴板文本在每次回到应用时重复弹出打开链接的提示。
+     */
+    var lastHandledClipboard: String
+        get() = getSpValue(LAST_HANDLED_CLIPBOARD, EMPTY_STRING)
+        set(value) = putSpValue(LAST_HANDLED_CLIPBOARD, value)
 
     val savedUserId: String
         get() = preferenceSp.getString(SAVED_USER_ID,"") ?: ""
@@ -213,6 +223,16 @@ object Preferences {
 
     val autoPlayNext: Boolean
         get() = preferenceSp.getBoolean(SettingsPreferenceKeys.AUTO_PLAY_NEXT, false)
+
+    /**
+     * 播放頁中「相關影片」是否作為跟隨在簡介、評論之後的獨立標籤頁顯示。
+     *
+     * 開啟後簡介底部不再內嵌相關影片列表；平板橫屏下標籤頁整體移至右側，
+     * 左欄僅剩播放器並垂直置中。關閉時平板橫屏同樣將標籤頁移至右側，
+     * 但相關影片顯示在播放器下方（與右側標籤頁互換位置）。
+     */
+    val relatedVideoAsTab: Boolean
+        get() = preferenceSp.getBoolean(SettingsPreferenceKeys.RELATED_VIDEO_AS_TAB, false)
 
     val searchPagination: Boolean
         get() = preferenceSp.getBoolean(SettingsPreferenceKeys.SEARCH_PAGINATION, false)
@@ -392,8 +412,6 @@ object Preferences {
 
     val useDarkMode: String
         get() = preferenceSp.getString(SettingsPreferenceKeys.USE_DARK_MODE,"always_off") ?: "always_off"
-    val useDynamicColor: Boolean
-        get() = preferenceSp.getBoolean(SettingsPreferenceKeys.USE_DYNAMIC_COLOR,false)
     val themeColor: String?
         get() = preferenceSp.getString(SettingsPreferenceKeys.THEME_COLOR, null)
     val pureBlackDarkMode: Boolean
@@ -409,9 +427,6 @@ object Preferences {
 
     val disablePredictiveBack: Boolean
         get() = preferenceSp.getBoolean(SettingsPreferenceKeys.DISABLE_PREDICTIVE_BACK, false)
-
-    val tabletMode: Boolean
-        get() = preferenceSp.getBoolean(SettingsPreferenceKeys.TABLET_MODE, false)
 
     val showExitConfirm: Boolean
         get() = preferenceSp.getBoolean(SettingsPreferenceKeys.SHOW_EXIT_CONFIRM, true)

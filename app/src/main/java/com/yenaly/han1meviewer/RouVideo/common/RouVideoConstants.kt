@@ -5,7 +5,7 @@ import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.logic.network.SiteNetworkPrefs
 import com.yenaly.han1meviewer.logic.network.SiteNetworks
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 import java.net.URLEncoder
 
 object RouVideoConstants {

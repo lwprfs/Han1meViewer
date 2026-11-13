@@ -48,6 +48,7 @@ data class XHamsterDetail(
     val commentsTotal: Long? = null,
     val comments: List<XHamsterComment> = emptyList(),
     val entityId: Long? = null,
+    val engagement: XHamsterEngagement? = null,
 )
 
 data class XHamsterUploader(
@@ -250,4 +251,51 @@ data class XHamsterEntityProfile(
     val sorts: List<XHamsterOption> = emptyList(),
 ) {
     enum class Kind { CREATOR, CHANNEL, USER }
+}
+
+/** The signed-in user's relationship to a video (rating + favourite state). */
+data class XHamsterEngagement(
+    val entityId: Long,
+    val userId: Long?,
+    val watchId: String?,
+    val likes: Long?,
+    val dislikes: Long?,
+    /** 0 = no rating, [RATING_LIKED] / [RATING_DISLIKED] otherwise. */
+    val ratingState: Int,
+    val isFavorite: Boolean,
+    val collectionIds: List<String>,
+) {
+    companion object {
+        const val RATING_NONE = 0
+        const val RATING_LIKED = 1
+        const val RATING_DISLIKED = -1
+    }
+}
+
+/** A favourites playlist ("collection"), including the built-in Default and Watch Later lists. */
+data class XHamsterCollection(
+    val id: String,
+    val title: String,
+    val path: String,
+    val quantity: Long?,
+    val isWatchLater: Boolean,
+    val isDefault: Boolean,
+    val visibility: String?,
+)
+
+/** One entry of the subscriptions feed (videos published by channels / creators the user follows). */
+data class XHamsterFeedItem(
+    val authorName: String,
+    val authorPath: String?,
+    val video: com.yenaly.han1meviewer.logic.model.HanimeInfo,
+)
+
+enum class XHamsterListKind { WATCH_HISTORY, FAVORITES, WATCH_LATER, LIKED, COLLECTION }
+
+sealed interface XHamsterCommentResult {
+    object Posted : XHamsterCommentResult
+    object LoginRequired : XHamsterCommentResult
+    /** The site wants a captcha for this comment; it cannot be solved in-app. */
+    object CaptchaRequired : XHamsterCommentResult
+    data class Rejected(val message: String?) : XHamsterCommentResult
 }

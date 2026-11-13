@@ -23,7 +23,7 @@ import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.res.stringResource
 import com.yenaly.han1meviewer.R
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 import kotlinx.coroutines.launch
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts

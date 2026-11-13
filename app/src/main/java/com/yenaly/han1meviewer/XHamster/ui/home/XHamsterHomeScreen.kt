@@ -28,6 +28,8 @@ import com.yenaly.han1meviewer.XHamster.common.XHamsterConstants
 import com.yenaly.han1meviewer.ui.component.SiteBarIconButton
 import com.yenaly.han1meviewer.ui.component.SiteChipRow
 import com.yenaly.han1meviewer.ui.component.SiteSearchTopBar
+import com.yenaly.han1meviewer.XHamster.ui.discover.XHamsterDiscoverActions
+import com.yenaly.han1meviewer.XHamster.ui.discover.XHamsterDiscoverStrips
 import com.yenaly.han1meviewer.ui.component.SiteSwitchButton
 
 @Composable
@@ -38,6 +40,8 @@ fun XHamsterHomeScreen(
     onNavigateToCategories: () -> Unit,
     onOpenDrawer: () -> Unit,
     onSwitchSite: () -> Unit,
+    onNavigateToLibrary: (String) -> Unit,
+    discover: XHamsterDiscoverActions,
     modifier: Modifier = Modifier,
     viewModel: XHamsterListViewModel = viewModel(),
 ) {
@@ -97,10 +101,13 @@ fun XHamsterHomeScreen(
             ) {
                 XHamsterVideoGrid(
                     header = {
-                        SiteWelcomeHeader(
-                            siteName = "XHamster",
-                            horizontalPadding = 0.dp,
-                        )
+                        Column {
+                            SiteWelcomeHeader(
+                                siteName = "XHamster",
+                                horizontalPadding = 0.dp,
+                            )
+                            XHamsterDiscoverStrips(discover)
+                        }
                     },
                     state = state,
                     onRetry = { viewModel.refresh() },

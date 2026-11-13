@@ -1,6 +1,6 @@
 package com.yenaly.han1meviewer.OnAir.ui.video
 
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 import com.yenaly.han1meviewer.ui.component.player.StreamFallback
 import com.yenaly.han1meviewer.ui.component.player.isDecoderProblem
 import com.yenaly.han1meviewer.R

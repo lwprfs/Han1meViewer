@@ -40,6 +40,8 @@ import com.yenaly.han1meviewer.XHamster.ui.navigation.XHamsterPhotosRoute
 import com.yenaly.han1meviewer.XHamster.ui.navigation.XHamsterCategoriesRoute
 import com.yenaly.han1meviewer.XHamster.ui.navigation.XHamsterCategoryRoute
 import com.yenaly.han1meviewer.XHamster.ui.navigation.XHamsterHistoryRoute
+import com.yenaly.han1meviewer.XHamster.ui.navigation.XHamsterLibraryRoute
+import com.yenaly.han1meviewer.XHamster.ui.navigation.XHamsterStarsRoute
 import com.yenaly.han1meviewer.XHamster.ui.navigation.XHamsterSearchRoute
 import com.yenaly.han1meviewer.XHamster.ui.navigation.XHamsterSettingsRoute
 import com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderCookiesRoute
@@ -422,22 +424,19 @@ fun siteDrawerSections(context: Context, site: SiteType, loggedIn: Boolean): Lis
                     entry(str(R.string.xhamster_channels), R.drawable.ic_drawer_channel, XHamsterChannelsRoute),
                     entry(str(R.string.xhamster_creators), R.drawable.ic_drawer_creator, XHamsterCreatorsRoute),
                     entry(str(R.string.xhamster_photos), R.drawable.ic_drawer_photos, XHamsterPhotosRoute),
+                    entry(str(R.string.xhamster_stars), R.drawable.ic_drawer_creator, XHamsterStarsRoute),
                 ),
             ),
             SiteDrawerSection(
                 library,
                 listOf(
                     entry(str(R.string.watch_history), history, XHamsterHistoryRoute),
-                    entry(
-                        str(R.string.xhamster_my_favorites),
-                        R.drawable.ic_baseline_favorite_24,
-                        XHamsterAccountRoute,
-                    ),
-                    entry(
-                        str(R.string.xhamster_my_subscriptions),
-                        R.drawable.ic_subscribtion,
-                        XHamsterCategoryRoute("/my/subscriptions", str(R.string.xhamster_my_subscriptions)),
-                    ),
+                    entry(str(R.string.xhamster_watch_history), history, XHamsterLibraryRoute("HISTORY")),
+                    entry(str(R.string.xhamster_my_favorites), R.drawable.ic_baseline_favorite_24, XHamsterLibraryRoute("FAVORITES")),
+                    entry(str(R.string.watch_later), R.drawable.ic_baseline_watch_later_24, XHamsterLibraryRoute("WATCH_LATER")),
+                    entry(str(R.string.xhamster_liked_videos), R.drawable.ic_baseline_thumb_up_alt_24, XHamsterLibraryRoute("LIKED")),
+                    entry(str(R.string.xhamster_playlists), R.drawable.ic_drawer_category, XHamsterLibraryRoute("PLAYLISTS")),
+                    entry(str(R.string.xhamster_my_subscriptions), R.drawable.ic_subscribtion, XHamsterLibraryRoute("SUBSCRIPTIONS")),
                 ),
             ),
             SiteDrawerSection(

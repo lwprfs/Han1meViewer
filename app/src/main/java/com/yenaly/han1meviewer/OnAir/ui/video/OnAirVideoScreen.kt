@@ -78,7 +78,7 @@ import com.yenaly.han1meviewer.ui.component.SiteVideoActionBar
 import com.yenaly.han1meviewer.OnAir.data.model.OnAirVideoTag
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
 import com.yenaly.han1meviewer.ui.screen.rememberRandomLoadingHint
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 

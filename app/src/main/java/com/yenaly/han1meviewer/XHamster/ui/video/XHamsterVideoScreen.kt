@@ -65,6 +65,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import com.yenaly.han1meviewer.XHamster.data.remote.XHamsterAuth
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -444,6 +447,9 @@ private fun XHamsterVideoContent(
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     val commentsState by viewModel.comments.collectAsStateWithLifecycle()
+    val commentSending by viewModel.commentSending.collectAsStateWithLifecycle()
+    val postedTick by viewModel.commentPostedTick.collectAsStateWithLifecycle()
+    XHamsterMessageEffect(viewModel)
     val total = commentsState.total ?: info.commentsTotal ?: info.comments.size.toLong()
     val tabs = remember(total) {
         listOf(
@@ -475,6 +481,9 @@ private fun XHamsterVideoContent(
                 onLoadMore = viewModel::loadMoreComments,
                 onRetry = viewModel::retryComments,
                 onOpenAuthor = onNavigateToUploader,
+                sending = commentSending,
+                postedTick = postedTick,
+                onSend = viewModel::postComment,
             )
         }
     }
@@ -522,6 +531,46 @@ private fun XHamsterVideoDetailsPage(
                         }
                 },
             )
+        }
+
+        item(key = "engagement") {
+            val engagement by viewModel.engagement.collectAsStateWithLifecycle()
+            var showPlaylists by rememberSaveable { mutableStateOf(false) }
+            var showReport by rememberSaveable { mutableStateOf(false) }
+            XHamsterEngagementBar(
+                state = engagement,
+                loggedIn = XHamsterAuth.isLoggedIn,
+                onLoginRequired = {
+                    Toast.makeText(
+                        context,
+                        R.string.xhamster_action_login_required,
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                },
+                onLike = { viewModel.rate(true) },
+                onDislike = { viewModel.rate(false) },
+                onFavorite = viewModel::toggleFavorite,
+                onWatchLater = viewModel::toggleWatchLater,
+                onPlaylists = {
+                    viewModel.loadCollections()
+                    showPlaylists = true
+                },
+                onReport = { showReport = true },
+            )
+            if (showPlaylists) {
+                XHamsterPlaylistPickerDialog(
+                    state = engagement,
+                    onDismiss = { showPlaylists = false },
+                    onSave = viewModel::setPlaylists,
+                )
+            }
+            if (showReport) {
+                XHamsterReportDialog(
+                    videoTitle = info.title,
+                    videoUrl = info.pageUrl,
+                    onDismiss = { showReport = false },
+                )
+            }
         }
 
         if (streamError != null) {
@@ -807,11 +856,21 @@ private fun XHamsterCommentsPage(
     onLoadMore: () -> Unit,
     onRetry: () -> Unit,
     onOpenAuthor: (String, String) -> Unit,
+    sending: Boolean,
+    postedTick: Int,
+    onSend: (String, XHamsterComment?) -> Unit,
 ) {
     val context = LocalContext.current
     val imageLoader = XHamsterImageLoader.get(context)
     val listState = rememberLazyListState()
     val expanded = remember { mutableStateOf(setOf<String>()) }
+    var replyTo by remember { mutableStateOf<XHamsterComment?>(null) }
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(postedTick) { replyTo = null }
+    val onReplyClick: (XHamsterComment) -> Unit = { target ->
+        replyTo = target
+        scope.launch { listState.animateScrollToItem(0) }
+    }
 
     LaunchedEffect(listState, state.hasMore, state.loading, state.items.size) {
         snapshotFlow {
@@ -834,6 +893,19 @@ private fun XHamsterCommentsPage(
         ),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
+        if (!state.writeDenied) {
+            item(key = "comment_composer") {
+                XHamsterCommentComposer(
+                    replyTo = replyTo,
+                    sending = sending,
+                    postedTick = postedTick,
+                    enabled = true,
+                    onCancelReply = { replyTo = null },
+                    onSend = { onSend(it, replyTo) },
+                )
+            }
+        }
+
         if (state.writeDenied) {
             item(key = "comments_closed") {
                 Text(
@@ -856,7 +928,7 @@ private fun XHamsterCommentsPage(
 
         items(state.items, key = { it.id }) { comment ->
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                XHamsterCommentRow(comment, imageLoader, onOpenAuthor)
+                XHamsterCommentRow(comment, imageLoader, onOpenAuthor, onReply = onReplyClick)
                 if (comment.replies.isNotEmpty()) {
                     val open = comment.id in expanded.value
                     Box(modifier = Modifier.padding(start = 42.dp)) {
@@ -892,7 +964,7 @@ private fun XHamsterCommentsPage(
                     if (open) {
                         comment.replies.forEach { reply ->
                             Box(modifier = Modifier.padding(start = 42.dp)) {
-                                XHamsterCommentRow(reply, imageLoader, onOpenAuthor, isReply = true)
+                                XHamsterCommentRow(reply, imageLoader, onOpenAuthor, isReply = true, onReply = onReplyClick)
                             }
                         }
                     }
@@ -953,6 +1025,7 @@ private fun XHamsterCommentRow(
     imageLoader: coil3.ImageLoader,
     onOpenAuthor: (String, String) -> Unit,
     isReply: Boolean = false,
+    onReply: ((XHamsterComment) -> Unit)? = null,
 ) {
     val avatarSize = if (isReply) 28.dp else 32.dp
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1038,6 +1111,16 @@ private fun XHamsterCommentRow(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            if (onReply != null) {
+                Text(
+                    text = stringResource(R.string.xhamster_comment_reply),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .clickable { onReply(comment) }
+                        .padding(vertical = 4.dp),
+                )
+            }
         }
     }
 }

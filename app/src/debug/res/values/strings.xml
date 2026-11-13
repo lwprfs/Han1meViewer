@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="hanime_app_name" translatable="false">HANiEX [Debug]</string>
+    <string name="app_launcher_name" translatable="false">HANiEX [Debug]</string>
 </resources>

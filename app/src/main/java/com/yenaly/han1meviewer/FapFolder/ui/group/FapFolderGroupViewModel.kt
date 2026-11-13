@@ -1,6 +1,6 @@
 package com.yenaly.han1meviewer.FapFolder.ui.group
 
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 import com.yenaly.han1meviewer.R
 import androidx.annotation.StringRes
 import android.app.Application

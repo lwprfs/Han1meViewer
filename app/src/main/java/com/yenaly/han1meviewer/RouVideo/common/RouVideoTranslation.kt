@@ -6,8 +6,8 @@ import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.SiteType
 import com.yenaly.han1meviewer.logic.network.HDns
 import com.yenaly.han1meviewer.logic.network.HProxySelector
-import com.yenaly.yenaly_libs.utils.LanguageHelper
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.base.AppLocale
+import com.yenaly.han1meviewer.util.applicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -103,7 +103,7 @@ object RouVideoTranslation {
     }
 
     val available: Boolean
-        get() = LanguageHelper.preferredLanguage.language.equals("en", ignoreCase = true)
+        get() = AppLocale.preferredLanguage.language.equals("en", ignoreCase = true)
 
     fun isActive(kind: Kind, site: SiteType = SiteType.ROUVIDEO): Boolean =
         available && enabled && siteEnabled(site) && when (kind) {

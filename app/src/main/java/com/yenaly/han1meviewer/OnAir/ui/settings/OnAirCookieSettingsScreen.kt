@@ -87,7 +87,7 @@ import com.yenaly.han1meviewer.OnAir.data.remote.OnAirTorStatus
 import com.yenaly.han1meviewer.OnAir.ui.gate.OnAirGateState
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
 import com.yenaly.han1meviewer.ui.component.GlobalToasts
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.ui.platform.LocalClipboard

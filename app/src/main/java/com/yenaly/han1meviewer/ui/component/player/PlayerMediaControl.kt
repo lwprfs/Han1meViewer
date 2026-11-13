@@ -16,7 +16,7 @@ import android.os.SystemClock
 import android.view.KeyEvent
 import androidx.core.content.ContextCompat
 import com.yenaly.han1meviewer.Preferences
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 
 object PlayerMediaControl {
 

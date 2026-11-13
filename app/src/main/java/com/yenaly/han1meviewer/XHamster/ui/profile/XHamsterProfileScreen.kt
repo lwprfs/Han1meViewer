@@ -359,7 +359,7 @@ private fun ProfileVideos(
 }
 
 @Composable
-private fun ProfileShorts(
+internal fun ProfileShorts(
     path: String,
     preview: List<XHamsterShort>,
     ownerName: String,

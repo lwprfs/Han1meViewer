@@ -32,7 +32,7 @@ import com.yenaly.han1meviewer.ui.component.SiteVideoActionBar
 import com.yenaly.han1meviewer.util.DownloadLayout
 import com.yenaly.han1meviewer.util.FapOwnerKind
 import com.yenaly.han1meviewer.util.SiteImageSaver
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 
 internal fun FapFolderPost.allImages(): List<FapFolderMedia.Image> {
     val out = LinkedHashMap<String, FapFolderMedia.Image>()

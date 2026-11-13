@@ -1,6 +1,6 @@
 package com.yenaly.han1meviewer.MissAV.ui.home
 
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 import com.yenaly.han1meviewer.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.AnimatedVisibility

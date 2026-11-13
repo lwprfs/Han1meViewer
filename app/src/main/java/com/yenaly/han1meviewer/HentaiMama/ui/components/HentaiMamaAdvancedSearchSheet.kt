@@ -54,7 +54,7 @@ import com.yenaly.han1meviewer.HentaiMama.common.HentaiMamaOptions
 import com.yenaly.han1meviewer.HentaiMama.data.local.HentaiMamaSearchHistoryEntry
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.lazy.LazyColumn
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 
 private data class AdvancedOption(val key: String, val label: String)
 

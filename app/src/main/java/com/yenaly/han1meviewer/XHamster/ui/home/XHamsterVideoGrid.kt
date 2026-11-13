@@ -89,6 +89,7 @@ fun XHamsterVideoGrid(
                         aspectRatio = 16f / 9f,
                         views = video.views,
                         duration = video.duration,
+                        subtitle = video.currentArtist?.takeIf { it.isNotBlank() },
                         imageLoader = imageLoader,
                     )
                 }

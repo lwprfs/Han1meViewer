@@ -5,7 +5,7 @@ import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.XHamster.common.XHamsterConstants
 import com.yenaly.han1meviewer.XHamster.data.model.XHamsterUser
 import com.yenaly.han1meviewer.XHamster.data.parser.XHamsterParser
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json

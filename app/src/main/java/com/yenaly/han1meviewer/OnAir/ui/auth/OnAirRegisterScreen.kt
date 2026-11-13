@@ -50,7 +50,7 @@ import com.yenaly.han1meviewer.OnAir.data.remote.OnAirAuthRepo
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.ui.component.GlobalToasts
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 import kotlinx.coroutines.launch
 
 private val usernamePattern = Regex("^[A-Za-z0-9_]{3,20}$")
