@@ -37,7 +37,6 @@ import `is`.xyz.mpv.MPVLib
 import java.net.ProxySelector
 import com.yenaly.han1meviewer.MissAV.data.remote.MissAvNetwork
 import com.yenaly.han1meviewer.MissAV.ui.video.MissAvSubtitleHelper
-import coil3.SingletonImageLoader
 import com.yenaly.han1meviewer.SupJav.common.SupJavImageLoader
 
 /**

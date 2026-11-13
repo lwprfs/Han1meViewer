@@ -15,7 +15,7 @@ import com.yenaly.han1meviewer.XHamster.data.model.XHamsterStream
 import com.yenaly.han1meviewer.XHamster.data.remote.XHamsterAuth
 import com.yenaly.han1meviewer.XHamster.data.remote.XHamsterRepo
 import com.yenaly.han1meviewer.XHamster.data.remote.XHamsterUserRepo
-import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.han1meviewer.util.applicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

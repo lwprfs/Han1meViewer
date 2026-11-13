@@ -816,8 +816,10 @@ fun SitePlayerSlider(
     onValueChangeFinished: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val sliderState = androidx.compose.runtime.remember { androidx.compose.material3.SliderState(value = value) }
+    androidx.compose.runtime.LaunchedEffect(value) { sliderState.value = value }
     Slider(
-        value = value,
+        state = sliderState,
         onValueChange = onValueChange,
         onValueChangeFinished = onValueChangeFinished,
         modifier = modifier,

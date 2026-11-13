@@ -1,5 +1,11 @@
 package com.yenaly.han1meviewer.ui.screen.main
 
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material.icons.filled.VideoLibrary
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.Icons
 import android.content.Intent
 import android.util.Log
 import androidx.compose.foundation.background
@@ -155,14 +161,14 @@ fun MainActivityContent(
         val siteNavItems: List<SiteNavItem>? = if (isHanimeFamilySite) null else listOf(
             SiteNavItem(
                 key = "home",
-                icon = androidx.compose.material.icons.Icons.Filled.Home,
+                icon = Icons.Filled.Home,
                 title = stringResource(R.string.home_page),
                 selected = isAtSiteHome,
                 onClick = { NavigationManager.navigateToHome() },
             ),
             SiteNavItem(
                 key = "library",
-                icon = androidx.compose.material.icons.Icons.Filled.VideoLibrary,
+                icon = Icons.Filled.VideoLibrary,
                 title = stringResource(R.string.nav_library),
                 selected = atLibrary,
                 onClick = {
@@ -179,7 +185,7 @@ fun MainActivityContent(
             ),
             SiteNavItem(
                 key = "settings",
-                icon = androidx.compose.material.icons.Icons.Filled.Settings,
+                icon = Icons.Filled.Settings,
                 title = stringResource(R.string.nav_settings),
                 selected = atSiteSettings,
                 onClick = {
@@ -198,7 +204,7 @@ fun MainActivityContent(
             ),
         )
         val drawerAvailable = if (isHanimeFamilySite) {
-            currentMainDestination.drawerEnabled
+            false
         } else {
             isAtSiteHome
         }

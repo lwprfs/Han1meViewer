@@ -1,7 +1,6 @@
 package com.yenaly.han1meviewer.XHamster.ui.entities
 
 import androidx.compose.runtime.saveable.rememberSaveable
-import com.yenaly.han1meviewer.XHamster.data.model.XHamsterGallery
 import com.yenaly.han1meviewer.XHamster.data.remote.XHamsterUserRepo
 import com.yenaly.han1meviewer.XHamster.ui.discover.XHamsterDiscoverActions
 import com.yenaly.han1meviewer.XHamster.ui.discover.XHamsterDiscoverStrips

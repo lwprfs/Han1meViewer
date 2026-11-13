@@ -1,6 +1,7 @@
 package com.yenaly.han1meviewer.ui.navigation.settings
 
-import com.yenaly.han1meviewer.ui.screen.settings.MediaControlsSettingsScreen
+import com.yenaly.han1meviewer.ui.navigation.main.navigateSettingsCategoryDestination
+com.yenaly.han1meviewer.ui.screen.settings.MediaControlsSettingsScreen
 import com.yenaly.han1meviewer.RouVideo.ui.settings.RouVideoTranslationCacheScreen
 import com.yenaly.han1meviewer.RouVideo.ui.settings.RouVideoTranslationSettingsScreen
 import com.yenaly.han1meviewer.ui.navigation.popBackStackSafely
@@ -47,9 +48,27 @@ fun NavGraphBuilder.registerGlobalSettingsRoutes(
             navController = navController,
             fallbackDestination = homeFallback,
         ) {
-            HomeSettingsRouteScreen(
+            SettingsHomeRouteScreen(
+                onOpenCategory = { category ->
+                    navController.navigateSettingsCategoryDestination(category)
+                },
+            )
+        }
+    }
+    composable<SettingsCategoryRoute> { entry ->
+        val route = entry.toRoute<SettingsCategoryRoute>()
+        val category = SettingsCategory.fromKey(route.categoryKey) ?: SettingsCategory.Appearance
+        SettingsScaffold(
+            navController = navController,
+            fallbackDestination = HomeSettingsRoute,
+        ) {
+            SettingsCategoryRouteScreen(
+                category = category,
                 activity = activity,
                 onNavigateToPlayerSettings = { navController.navigateSafely(PlayerSettingsRoute) },
+                onNavigateToHKeyframes = { navController.navigateSafely(HKeyframesRoute) },
+                onNavigateToSharedHKeyframes = { navController.navigateSafely(SharedHKeyframesRoute) },
+                onNavigateToAboutPage = { navController.navigateSafely(AboutAppRoute) },
                 onNavigateToHKeyframeSettings = { navController.navigateSafely(HKeyframeSettingsRoute) },
                 onNavigateToDownloadSettings = { navController.navigateSafely(DownloadSettingsRoute) },
                 onNavigateToNetworkSettings = { navController.navigateSafely(NetworkSettingsRoute) },

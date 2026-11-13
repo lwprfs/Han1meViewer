@@ -6,6 +6,10 @@ import android.widget.TextView
 import androidx.annotation.LayoutRes
 import com.chad.library.adapter4.BaseQuickAdapter
 import com.yenaly.han1meviewer.R
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
 /**
  * 设置状态视图

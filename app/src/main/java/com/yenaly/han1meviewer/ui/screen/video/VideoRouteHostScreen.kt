@@ -1,5 +1,6 @@
 package com.yenaly.han1meviewer.ui.screen.video
 
+import com.yenaly.han1meviewer.util.applicationContext
 import com.yenaly.han1meviewer.util.PlayerOrientation
 import android.app.PendingIntent
 import android.app.PictureInPictureParams

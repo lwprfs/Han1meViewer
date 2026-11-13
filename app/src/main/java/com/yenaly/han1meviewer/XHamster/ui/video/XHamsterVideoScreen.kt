@@ -13,6 +13,8 @@ import com.yenaly.han1meviewer.XHamster.data.model.XHamsterUploader
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
 import com.yenaly.han1meviewer.ui.screen.video.VideoTabItem
 import com.yenaly.han1meviewer.ui.screen.video.VideoTabsContent
+import com.yenaly.han1meviewer.ui.screen.video.VideoTabItem
+import com.yenaly.han1meviewer.ui.screen.video.VideoTabKind
 import androidx.compose.foundation.lazy.items
 import android.widget.Toast
 import androidx.compose.material3.Button
@@ -453,8 +455,8 @@ private fun XHamsterVideoContent(
     val total = commentsState.total ?: info.commentsTotal ?: info.comments.size.toLong()
     val tabs = remember(total) {
         listOf(
-            VideoTabItem(R.string.introduction),
-            VideoTabItem(R.string.comment, badgeCount = total.coerceIn(0L, 999L).toInt()),
+            VideoTabItem(VideoTabKind.INTRODUCTION, R.string.introduction),
+            VideoTabItem(VideoTabKind.COMMENT, R.string.comment, badgeCount = total.coerceIn(0L, 999L).toInt()),
         )
     }
     VideoTabsContent(

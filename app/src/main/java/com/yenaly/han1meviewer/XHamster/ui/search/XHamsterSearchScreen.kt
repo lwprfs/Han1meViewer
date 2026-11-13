@@ -149,6 +149,12 @@ fun XHamsterSearchScreen(
                 "shorts" -> ProfileShorts(
                     path = "/shorts/search/$encoded",
                     preview = emptyList(),
+                    ownerName = "",
+                    ownerAvatar = null,
+                    pageUrl = "",
+                    canSubscribe = false,
+                    subscribed = false,
+                    onToggleSubscribe = {},
                 )
 
                 else -> XHamsterVideoGrid(

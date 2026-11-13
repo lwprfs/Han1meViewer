@@ -120,6 +120,7 @@ enum class SettingsDestinationSpec(
     Update(
         routeKey = "update",
         titleRes = R.string.upd_screen_title,
+        iconRes = R.drawable.ic_baseline_info_24,
         screenClassName = "UpdateStatusScreen",
         routeClass = UpdateSettingsRoute::class,
     ),

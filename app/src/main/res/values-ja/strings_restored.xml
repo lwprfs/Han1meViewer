@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="open_menu">メニューを開く</string>
+    <string name="refresh_page_or_login_expired">ページを再読み込みしてみて\nログイン期限切れの可能性も</string>
+</resources>
