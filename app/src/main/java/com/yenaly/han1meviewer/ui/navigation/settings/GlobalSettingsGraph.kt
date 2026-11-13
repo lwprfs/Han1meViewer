@@ -1,7 +1,7 @@
 package com.yenaly.han1meviewer.ui.navigation.settings
 
 import com.yenaly.han1meviewer.ui.navigation.main.navigateSettingsCategoryDestination
-com.yenaly.han1meviewer.ui.screen.settings.MediaControlsSettingsScreen
+import com.yenaly.han1meviewer.ui.screen.settings.MediaControlsSettingsScreen
 import com.yenaly.han1meviewer.RouVideo.ui.settings.RouVideoTranslationCacheScreen
 import com.yenaly.han1meviewer.RouVideo.ui.settings.RouVideoTranslationSettingsScreen
 import com.yenaly.han1meviewer.ui.navigation.popBackStackSafely

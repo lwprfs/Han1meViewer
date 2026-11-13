@@ -13,7 +13,6 @@ import com.yenaly.han1meviewer.XHamster.data.model.XHamsterUploader
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
 import com.yenaly.han1meviewer.ui.screen.video.VideoTabItem
 import com.yenaly.han1meviewer.ui.screen.video.VideoTabsContent
-import com.yenaly.han1meviewer.ui.screen.video.VideoTabItem
 import com.yenaly.han1meviewer.ui.screen.video.VideoTabKind
 import androidx.compose.foundation.lazy.items
 import android.widget.Toast
