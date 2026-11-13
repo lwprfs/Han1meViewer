@@ -130,31 +130,31 @@ fun MainActivityContent(
         val isAtSiteHome = remember(backStackEntry, currentSite) {
             val d = backStackEntry?.destination
             when (currentSite) {
-                SiteType.MISSAV -> d?.hasRoute(MissAvHomeRoute::class) == true
-                SiteType.HENTAIMAMA -> d?.hasRoute(HentaiMamaHomeRoute::class) == true
-                SiteType.ONAIR -> d?.hasRoute(OnAirHomeRoute::class) == true
-                SiteType.FAPFOLDER -> d?.hasRoute(FapFolderHomeRoute::class) == true
-                SiteType.SUPJAV -> d?.hasRoute(SupJavHomeRoute::class) == true
-                SiteType.ROUVIDEO -> d?.hasRoute(RouVideoHomeRoute::class) == true
-                SiteType.XHAMSTER -> d?.hasRoute(XHamsterHomeRoute::class) == true
+                SiteType.MISSAV -> d.isRoute("com.yenaly.han1meviewer.MissAV.ui.navigation.MissAvHomeRoute")
+                SiteType.HENTAIMAMA -> d.isRoute("com.yenaly.han1meviewer.HentaiMama.ui.navigation.HentaiMamaHomeRoute")
+                SiteType.ONAIR -> d.isRoute("com.yenaly.han1meviewer.OnAir.ui.navigation.OnAirHomeRoute")
+                SiteType.FAPFOLDER -> d.isRoute("com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderHomeRoute")
+                SiteType.SUPJAV -> d.isRoute("com.yenaly.han1meviewer.SupJav.ui.navigation.SupJavHomeRoute")
+                SiteType.ROUVIDEO -> d.isRoute("com.yenaly.han1meviewer.RouVideo.ui.navigation.RouVideoHomeRoute")
+                SiteType.XHAMSTER -> d.isRoute("com.yenaly.han1meviewer.XHamster.ui.navigation.XHamsterHomeRoute")
                 else -> false
             }
         }
         val atLibrary = remember(backStackEntry) {
             val d = backStackEntry?.destination
-            d?.hasRoute(com.yenaly.han1meviewer.ui.navigation.settings.LocalPlaylistsRoute::class) == true ||
-                    d?.hasRoute(com.yenaly.han1meviewer.XHamster.ui.navigation.XHamsterLibraryRoute::class) == true
+            d.isRoute("com.yenaly.han1meviewer.ui.navigation.settings.LocalPlaylistsRoute") ||
+                    d.isRoute("com.yenaly.han1meviewer.XHamster.ui.navigation.XHamsterLibraryRoute")
         }
         val atSiteSettings = remember(backStackEntry, currentSite) {
             val d = backStackEntry?.destination
             when (currentSite) {
-                SiteType.MISSAV -> d?.hasRoute(com.yenaly.han1meviewer.MissAV.ui.navigation.MissAvSettingsHubRoute::class) == true
-                SiteType.HENTAIMAMA -> d?.hasRoute(com.yenaly.han1meviewer.HentaiMama.ui.navigation.HentaiMamaSettingsHubRoute::class) == true
-                SiteType.ONAIR -> d?.hasRoute(com.yenaly.han1meviewer.OnAir.ui.navigation.OnAirSettingsRoute::class) == true
-                SiteType.FAPFOLDER -> d?.hasRoute(com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderSettingsRoute::class) == true
-                SiteType.SUPJAV -> d?.hasRoute(com.yenaly.han1meviewer.SupJav.ui.navigation.SupJavSettingsHubRoute::class) == true
-                SiteType.ROUVIDEO -> d?.hasRoute(com.yenaly.han1meviewer.RouVideo.ui.navigation.RouVideoSettingsHubRoute::class) == true
-                SiteType.XHAMSTER -> d?.hasRoute(com.yenaly.han1meviewer.XHamster.ui.navigation.XHamsterSettingsHubRoute::class) == true
+                SiteType.MISSAV -> d.isRoute("com.yenaly.han1meviewer.MissAV.ui.navigation.MissAvSettingsHubRoute")
+                SiteType.HENTAIMAMA -> d.isRoute("com.yenaly.han1meviewer.HentaiMama.ui.navigation.HentaiMamaSettingsHubRoute")
+                SiteType.ONAIR -> d.isRoute("com.yenaly.han1meviewer.OnAir.ui.navigation.OnAirSettingsRoute")
+                SiteType.FAPFOLDER -> d.isRoute("com.yenaly.han1meviewer.FapFolder.ui.navigation.FapFolderSettingsRoute")
+                SiteType.SUPJAV -> d.isRoute("com.yenaly.han1meviewer.SupJav.ui.navigation.SupJavSettingsHubRoute")
+                SiteType.ROUVIDEO -> d.isRoute("com.yenaly.han1meviewer.RouVideo.ui.navigation.RouVideoSettingsHubRoute")
+                SiteType.XHAMSTER -> d.isRoute("com.yenaly.han1meviewer.XHamster.ui.navigation.XHamsterSettingsHubRoute")
                 else -> false
             }
         }
@@ -383,4 +383,14 @@ fun MainActivityContent(
         GlobalDialogHost()
         GlobalToastHost()
     }
+}
+
+
+/**
+ * Compares the destination's type-safe route string with a route class' serial name.
+ * (Avoids the reflective `hasRoute(KClass)` serializer lookup, which breaks under R8.)
+ */
+private fun androidx.navigation.NavDestination?.isRoute(serialName: String): Boolean {
+    val route = this?.route ?: return false
+    return route.substringBefore('/').substringBefore('?') == serialName
 }
